@@ -79,6 +79,7 @@ OBJECTS := \
 	$(OBJDIR)/ll.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/os.o \
+	$(OBJDIR)/path.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/string.o \
 	$(OBJDIR)/thread.o \
@@ -187,6 +188,9 @@ $(OBJDIR)/log.o: ../../base/src/log.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/os.o: ../../base/src/os.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/path.o: ../../base/src/path.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/proc.o: ../../base/src/proc.c

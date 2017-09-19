@@ -30,7 +30,7 @@ int16_t bake_crawler_addProject(
     bake_crawler _this,
     char *path)
 {
-    bake_project p = bake_project_new();
+    bake_project p = bake_project_new(path);
     if (!_this->projects) {
         _this->projects = corto_ll_new();
     }
@@ -50,18 +50,28 @@ int16_t bake_crawler_crawl(
     char *fullpath = corto_asprintf("%s/%s", wd, path);
     bool isProject = false;
 
-    if (corto_chdir(fullpath)) {
+    corto_path_clean(fullpath, fullpath);
+
+    if (corto_chdir(path)) {
         goto error;
     }
 
     if (corto_file_test("project.json")) {
         isProject = true;
+
+        corto_trace("found '%s'", fullpath);
+
         if (bake_crawler_addProject(_this, fullpath)) {
             goto error;
         }
     }
 
-    corto_ll files = corto_opendir(path);
+    corto_ll files = corto_opendir(".");
+    if (!files) {
+        corto_seterr("failed to open directory '%s': %s", fullpath, corto_lasterr());
+        goto error;
+    }
+
     corto_iter it = corto_ll_iter(files);
 
     while (corto_iter_hasNext(&it)) {
@@ -94,6 +104,11 @@ int16_t bake_crawler_crawl(
 
     corto_closedir(files);
 
+    if (corto_chdir(prev)) {
+        corto_seterr("failed to restore directory to '%s': %s", prev, corto_lasterr());
+        goto error;
+    }
+
     return 0;
 error:
     if (prev) free(prev);
@@ -109,7 +124,7 @@ int16_t bake_crawler_search(
     bake_crawler _this, 
     const char *path)
 {
-    return bake_crawler_crawl(_this, "", path);
+    return bake_crawler_crawl(_this, ".", path);
 }
 
 int16_t bake_crawler_walk(

@@ -26,8 +26,14 @@ struct bake_project_s {
     corto_ll use;
 };
 
-bake_project bake_project_new(void) 
+bake_project bake_project_new(char *id) 
 {
     bake_project result = corto_calloc(sizeof (struct bake_project_s));
+    result->id = strdup(id);
     return result;
 }
+
+char* bake_project_getId(bake_project _this) {
+    return _this->id;
+}
+

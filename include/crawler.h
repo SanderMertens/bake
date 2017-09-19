@@ -33,7 +33,7 @@ extern "C" {
 
 typedef struct bake_crawler_s* bake_crawler;
 
-typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project *project, void *ctx);
+typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project project, void *ctx);
 
 /** Create a new crawler 
  * 

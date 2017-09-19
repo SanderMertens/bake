@@ -33,7 +33,9 @@ extern "C" {
 
 typedef struct bake_project_s* bake_project;
 
-bake_project bake_project_new(void);
+bake_project bake_project_new(char *id);
+
+char* bake_project_getId(bake_project _this);
 
 #ifdef __cplusplus
 }

@@ -10,6 +10,7 @@ solution "bake"
     kind "ConsoleApp"
     language "C"
     location "build"
+
     files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c" }
     includedirs { ".", "../base" }
 
