@@ -58,9 +58,6 @@ int16_t bake_crawler_crawl(
 
     if (corto_file_test("project.json")) {
         isProject = true;
-
-        corto_trace("found '%s'", fullpath);
-
         if (bake_crawler_addProject(_this, fullpath)) {
             goto error;
         }
@@ -132,5 +129,16 @@ int16_t bake_crawler_walk(
     bake_crawler_cb action, 
     void *ctx)
 {
-
+    if (_this->projects) {
+        corto_iter it = corto_ll_iter(_this->projects);
+        while (corto_iter_hasNext(&it)) {
+            bake_project p = corto_iter_next(&it);
+            if (!action(_this, p, ctx)) {
+                return 0;
+            }
+        }
+    }
+    return 1;
 }
+
+

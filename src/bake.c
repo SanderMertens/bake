@@ -17,7 +17,7 @@
     }
 
 int bake_project_action(bake_crawler c, bake_project p, void *ctx) {
-    printf("project found!\n");
+    corto_ok("found '%s'", bake_project_getId(p));
 }
 
 int main(int argc, char* argv[]) {
