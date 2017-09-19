@@ -63,13 +63,11 @@ int16_t bake_crawler_crawl(
         }
     }
 
-    corto_ll files = corto_opendir(".");
-    if (!files) {
+    corto_iter it;
+    if (corto_dir_iter(".", &it)) {
         corto_seterr("failed to open directory '%s': %s", fullpath, corto_lasterr());
         goto error;
     }
-
-    corto_iter it = corto_ll_iter(files);
 
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
@@ -94,12 +92,11 @@ int16_t bake_crawler_crawl(
             }
 
             if (bake_crawler_crawl(_this, fullpath, file)) {
+                corto_iter_release(&it);
                 goto error;
             }
         }
     }
-
-    corto_closedir(files);
 
     if (corto_chdir(prev)) {
         corto_seterr("failed to restore directory to '%s': %s", prev, corto_lasterr());
@@ -138,7 +135,6 @@ int16_t bake_crawler_walk(
             }
         }
     }
+
     return 1;
 }
-
-
