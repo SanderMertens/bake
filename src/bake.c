@@ -54,6 +54,7 @@ int parseArgs(int argc, char *argv[])
 }
 
 int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
+    corto_log_push("default");
 
     /* Step 1: clean package hierarchy */
     if (bake_uninstall(p)) {
@@ -65,8 +66,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         goto error;
     }
 
+    corto_log_pop();
     return 1; /* continue */
 error:
+    corto_log_pop();
     return 0; /* stop */
 }
 
