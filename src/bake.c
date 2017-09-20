@@ -53,8 +53,14 @@ int parseArgs(int argc, char *argv[])
     return i + 1;
 }
 
-int bake_project_action(bake_crawler c, bake_project* p, void *ctx) {
-    corto_ok("found '%s' in '%s'", p->id, p->path);
+int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
+
+    /* Step 1: clean package hierarchy */
+    if (bake_uninstall(p)) {
+        goto error;
+    }
+
+    /* Step 2: preinstall files to package hierarchy */
     if (bake_preinstall(p)) {
         goto error;
     }
@@ -63,6 +69,18 @@ int bake_project_action(bake_crawler c, bake_project* p, void *ctx) {
 error:
     return 0; /* stop */
 }
+
+int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
+    return 1; /* continue */
+error:
+    return 0; /* stop */
+}
+
+int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
+    /* Uninstall package from package hierarchy */
+    return !bake_uninstall(p);
+}
+
 
 int main(int argc, char* argv[]) {
     int last_parsed = parseArgs(argc - 1, &argv[1]);
@@ -102,9 +120,27 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* Walk projects in correct dependency order */
-    if (!bake_crawler_walk(c, bake_project_action, NULL)) {
-        goto error;
+    if (argc == last_parsed) {
+        /* If after parsing arguments no actions were defined, execute the default
+         * action. */
+        if (!bake_crawler_walk(c, bake_action_default, NULL)) {
+            goto error;
+        }
+    } else {
+        bake_crawler_cb action;
+        int i;
+        for (i = last_parsed; i < argc; i ++) {
+            if (!strcmp(argv[i], "default")) action = bake_action_default;
+            else if (!strcmp(argv[i], "clean")) action = bake_action_clean;
+            else if (!strcmp(argv[i], "uninstall")) action = bake_action_uninstall;
+            else {
+                corto_error("unknown action '%s'", action);
+                continue;
+            }
+            if (!bake_crawler_walk(c, action, NULL)) {
+                goto error;
+            }
+        }
     }
 
     /* Cleanup resources */

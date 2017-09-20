@@ -27,16 +27,15 @@ int16_t bake_install_dir(
     char *projectPath,
     char *dir,
     char *platform,
-    bool softlink)
+    bool softlink,
+    FILE *uninstallFile)
 {
     corto_dirstack stack = NULL;
     corto_iter it;
 
     char *source;
     if (!platform) {
-        source = corto_asprintf("%s/%s", 
-            projectPath, 
-            dir);
+        source = corto_asprintf("%s/%s", projectPath, dir);
     } else {
         source = strdup(platform);
     }
@@ -65,7 +64,7 @@ int16_t bake_install_dir(
                 !strnicmp(file, strlen("windows-"), "windows-"))
             {
                 if (corto_os_match(file)) {
-                    if (bake_install_dir(id, projectPath, dir, file, softlink)) {
+                    if (bake_install_dir(id, projectPath, dir, file, softlink, uninstallFile)) {
                         goto error;
                     }
                 } else {
@@ -76,7 +75,7 @@ int16_t bake_install_dir(
             } else if (!stricmp(file, "everywhere")) 
             {
                 /* Always copy all contents in everywhere */
-                if (bake_install_dir(id, projectPath, dir, file, softlink)) {
+                if (bake_install_dir(id, projectPath, dir, file, softlink, uninstallFile)) {
                     goto error;
                 }
                 continue;
@@ -93,6 +92,7 @@ int16_t bake_install_dir(
         } else {
             if (corto_cp(file, dst)) goto error;
         }
+        fprintf(uninstallFile, "%s\n", dst);
         free(dst);
     }
 
@@ -106,26 +106,103 @@ error:
     return -1;
 }
 
+static
+char* bake_uninstaller_filename(
+    bake_project *project)
+{
+    return corto_envparse(
+        "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s/uninstaller.txt",
+        project->id);
+}
+
+static
+FILE* bake_uninstaller_open(
+    bake_project *project,
+    const char *mode)
+{
+    char *filename = bake_uninstaller_filename(project);
+    FILE *result = corto_file_open(filename, mode);
+    free(filename);
+
+    return result;
+}
+
+int16_t bake_uninstall(
+    bake_project *project)
+{
+    corto_iter it;
+    char *projectDir = corto_envparse(
+        "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+
+    /* Uninstall files are stored in the project directory, try uninstalling
+     * first by removing all files in uninstaller file. */
+    if (corto_file_test(projectDir)) {
+        char *filename = bake_uninstaller_filename(project);
+        if (corto_file_iter(filename, &it)) {
+            goto error;
+        }
+
+        while (corto_iter_hasNext(&it)) {
+            char *line = corto_iter_next(&it);
+            if (!line || !line[0]) continue; /* Skip empty lines in file */
+            if (corto_rm(line)) {
+                corto_warning("failed to uninstall file '%s' for '%s'", 
+                    line, 
+                    project->id);
+            }
+        }
+
+        /* Remove uninstaller */
+        corto_rm(filename);
+
+        /* Free project directory if it's empty (no nested packages) */
+        if (corto_dir_isEmpty(projectDir)) corto_rm(projectDir);
+        free(projectDir);
+    }
+
+    /* In the case of an unsuccessful or interrupted uninstallation, some parts
+     * may be left behind. Check for lingering directories, and clean up. */
+
+    /* If include directory exists and is empty, clean up */
+    char *inc = corto_envparse(
+        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", project->id);
+    if (corto_file_test(inc) && corto_dir_isEmpty(inc)) corto_rm(inc);
+
+    /* If etc directory exists and is empty, clean up */
+    char *etc = corto_envparse(
+        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", project->id);
+    if (corto_file_test(etc) && corto_dir_isEmpty(etc)) corto_rm(etc);
+
+    return 0;
+error:
+    return -1;
+}
 
 int16_t bake_preinstall(
     bake_project *project)
 {
+    FILE *uninstallFile = bake_uninstaller_open(project, "w");
+    if (!uninstallFile) {
+        goto error;
+    }
 
     if (!project->local) {
-        if (bake_install_dir(project->id, project->path, "include", NULL, true)) {
+        if (bake_install_dir(project->id, project->path, "include", NULL, true, uninstallFile)) {
             goto error;
         }
     }
 
-    if (bake_install_dir(project->id, project->path, "etc", NULL, true)) {
+    if (bake_install_dir(project->id, project->path, "etc", NULL, true, uninstallFile)) {
         goto error;
     }    
 
     if (project->kind == BAKE_LIBRARY) {
-        if (bake_install_dir(project->id, project->path, "lib", NULL, true)) {
+        if (bake_install_dir(project->id, project->path, "lib", NULL, true, uninstallFile)) {
             goto error;
         }
     }
+
+    fclose(uninstallFile);
 
     return 0;
 error:
@@ -135,12 +212,6 @@ error:
 int16_t bake_postinstall(
     char *id, 
     char *artefact)
-{
-    return 0;
-}
-
-int16_t bake_uninstall(
-    char *id)
 {
     return 0;
 }

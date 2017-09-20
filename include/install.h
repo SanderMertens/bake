@@ -60,7 +60,7 @@ int16_t bake_postinstall(
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_uninstall(
-    char *id);
+    bake_project *project);
 
 #ifdef __cplusplus
 }
