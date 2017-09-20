@@ -19,26 +19,6 @@
  * THE SOFTWARE.
  */
 
-/** @file
- * @section project Project API
- * @brief API that exposes details about a project.
- */
-
-#ifndef BAKE_PROJECT_H_
-#define BAKE_PROJECT_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct bake_project_s* bake_project;
-
-bake_project bake_project_new(char *id);
-
-char* bake_project_getId(bake_project _this);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+bake_project* bake_project_new(
+    const char *path,
+    const char *projectConfig);

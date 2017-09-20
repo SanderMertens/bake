@@ -20,24 +20,26 @@
  */
 
 #include <include/bake.h>
+#include "project.h"
 
 struct bake_crawler_s {
     corto_ll projects;
 };
 
-static
-int16_t bake_crawler_addProject(
+bake_project* bake_crawler_addProject(
     bake_crawler _this,
-    char *path)
+    const char *path,
+    const char *projectConfig)
 {
-    bake_project p = bake_project_new(path);
+    bake_project *p = bake_project_new(path, projectConfig);
+
     if (!_this->projects) {
         _this->projects = corto_ll_new();
     }
 
     corto_ll_append(_this->projects, p);
 
-    return 0;
+    return p;
 }
 
 static 
@@ -58,7 +60,7 @@ int16_t bake_crawler_crawl(
 
     if (corto_file_test("project.json")) {
         isProject = true;
-        if (bake_crawler_addProject(_this, fullpath)) {
+        if (!bake_crawler_addProject(_this, fullpath, "project.json")) {
             goto error;
         }
     }
@@ -114,6 +116,17 @@ bake_crawler bake_crawler_new(void)
     return corto_calloc(sizeof(struct bake_crawler_s));
 }
 
+void bake_crawler_free(bake_crawler _this)
+{
+    if (_this->projects) {
+        corto_iter it = corto_ll_iter(_this->projects);
+        while (corto_iter_hasNext(&it)) {
+            bake_project *p = corto_iter_next(&it);
+        }
+    }
+    free (_this);
+}
+
 int16_t bake_crawler_search(
     bake_crawler _this, 
     const char *path)
@@ -129,7 +142,7 @@ int16_t bake_crawler_walk(
     if (_this->projects) {
         corto_iter it = corto_ll_iter(_this->projects);
         while (corto_iter_hasNext(&it)) {
-            bake_project p = corto_iter_next(&it);
+            bake_project *p = corto_iter_next(&it);
             if (!action(_this, p, ctx)) {
                 return 0;
             }

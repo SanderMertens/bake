@@ -20,11 +20,11 @@ ifndef AR
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = ../obj/linux-32/Debug
+  OBJDIR     = ../.corto/obj/linux-32/Debug
   TARGETDIR  = ..
   TARGET     = $(TARGETDIR)/bake
   DEFINES   += -DDEBUG
-  INCLUDES  += -I.. -I../../base
+  INCLUDES  += -I.. -I../../base -I../../builder
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600
   CXXFLAGS  += $(CFLAGS) 
@@ -42,11 +42,11 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = ../obj/linux-32/Release
+  OBJDIR     = ../.corto/obj/linux-32/Release
   TARGETDIR  = ..
   TARGET     = $(TARGETDIR)/bake
   DEFINES   += -DNDEBUG
-  INCLUDES  += -I.. -I../../base
+  INCLUDES  += -I.. -I../../base -I../../builder
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600
   CXXFLAGS  += $(CFLAGS) 
@@ -66,6 +66,7 @@ endif
 OBJECTS := \
 	$(OBJDIR)/bake.o \
 	$(OBJDIR)/crawler.o \
+	$(OBJDIR)/install.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/base.o \
 	$(OBJDIR)/buffer.o \
@@ -149,6 +150,9 @@ $(OBJDIR)/bake.o: ../src/bake.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/crawler.o: ../src/crawler.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/install.o: ../src/install.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/project.o: ../src/project.c

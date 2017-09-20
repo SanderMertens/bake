@@ -33,13 +33,19 @@ extern "C" {
 
 typedef struct bake_crawler_s* bake_crawler;
 
-typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project project, void *ctx);
+typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project *project, void *ctx);
 
-/** Create a new crawler 
+/** Create a new crawler.
  * 
  * @return New crawler object.
  */
 bake_crawler bake_crawler_new(void);
+
+/** Free crawler.
+ * 
+ * @return New crawler object.
+ */
+void bake_crawler_free(bake_crawler _this);
 
 /** Search a path for projects.
  * 
@@ -50,6 +56,18 @@ bake_crawler bake_crawler_new(void);
 int16_t bake_crawler_search(
     bake_crawler _this, 
     const char *path);
+
+/** Manually add a project to the crawler.
+ * 
+ * @param _this A crawler object.
+ * @param id Package id of the project.
+ * @param path Location of the project.
+ * @return 0 if success, non-zero if failed.
+ */
+bake_project* bake_crawler_addProject(
+    bake_crawler _this,
+    const char *path,
+    const char *projectConfig); 
 
 /** Walk projects.
  * This walks projects found with bake_crawler_search in correct dependency

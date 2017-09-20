@@ -11,13 +11,13 @@ solution "bake"
     language "C"
     location "build"
 
-    files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c" }
-    includedirs { ".", "../base" }
+    files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c", "../builder/include" }
+    includedirs { ".", "../base", "../builder" }
 
     if os.is64bit then
-      objdir ("obj/" .. os.get() .. "-64")
+      objdir (".corto/obj/" .. os.get() .. "-64")
     else
-      objdir ("obj/" .. os.get() .. "-32")
+      objdir (".corto/obj/" .. os.get() .. "-32")
     end
 
     configuration "linux"

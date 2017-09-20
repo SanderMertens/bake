@@ -20,8 +20,8 @@
  */
 
 /** @file
- * @section crawler Crawler API
- * @brief API that searches a directory structure for corto projects.
+ * @section bake Bake build tool
+ * @brief This is the main header file of the bake build tool.
  */
 
 #ifndef BAKE_H_
@@ -30,11 +30,11 @@
 #include <include/base.h>
 #include <include/project.h>
 #include <include/crawler.h>
+#include <include/install.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #ifdef __cplusplus
 }

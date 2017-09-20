@@ -19,15 +19,51 @@
  * THE SOFTWARE.
  */
 
-#include <include/bake.h>
-#include "project.h"
+/** @file
+ * @section install Install files from project to package hierarchy
+ * @brief The installer copies include & etc files to the package hierarchy.
+ *        This is not the functionality that installs packages to the global
+ *        package hierarchy.
+ */
 
-bake_project* bake_project_new(
-    const char *path,
-    const char *projectConfig)    
-{
-    bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = strdup(path);
-    result->projectConfig = projectConfig ? strdup(projectConfig) : NULL;
-    return result;
+#ifndef BAKE_INSTALL_H_
+#define BAKE_INSTALL_H_
+
+#include <include/bake.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Copy static files to package hierarchy (pre build).
+ *
+ * @param id Project id.
+ * @param projectPath Path to the project source directory.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_preinstall(
+    bake_project *project);
+
+/** Copy artefact to package hierarchy (post build).
+ *
+ * @param id Project id.
+ * @param artefact Filename of the artefact to be copied.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_postinstall(
+    char *id, 
+    char *artefact);
+
+/** Remove files from package hierarchy for project.
+ *
+ * @param id Project id.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_uninstall(
+    char *id);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif
