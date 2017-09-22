@@ -19,14 +19,15 @@
  * THE SOFTWARE.
  */
 
-#include "bake.h"
+/** @file
+ * @section bake Bake build tool
+ * @brief This is the main header file of the bake build tool.
+ */
 
-bake_project* bake_project_new(
-    const char *path,
-    const char *projectConfig)    
-{
-    bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = strdup(path);
-    result->projectConfig = projectConfig ? strdup(projectConfig) : NULL;
-    return result;
-}
+/* Public includes */
+#include <bake/bake.h>
+
+/* Private includes */
+#include "project.h"
+#include "crawler.h"
+#include "install.h"

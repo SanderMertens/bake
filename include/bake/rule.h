@@ -24,17 +24,56 @@
  * @brief The builder provides an interface for building bake plugins.
  */
 
-#ifndef BAKE_H_
-#define BAKE_H_
-
-#include <corto/base.h>
-#include <bake/project.h>
-#include <bake/rule.h>
-#include <bake/builder.h>
+#ifndef BAKE_RULE_H_
+#define BAKE_RULE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef int16_t (*bake_rule_action_cb)(bake_project *p, const char *input, void *ctx);
+typedef char* (*bake_rule_map_cb)(bake_project *p, const char *input, void *ctx);
+
+/* Bake target is a convenience type wrapped by functions that lets users
+ * specify different kinds of targets as argument type. */
+typedef enum bake_rule_targetKind {
+    BAKE_RULE_TARGET_ONE,
+    BAKE_RULE_TARGET_N,
+    BAKE_RULE_TARGET_PATTERN
+} bake_rule_targetKind;
+
+typedef struct bake_rule_target {
+    bake_rule_targetKind kind;
+    union {
+        bake_rule_map_cb n;
+        const char *pattern;
+        const char *one;
+    } is;
+} bake_rule_target;
+
+typedef struct bake_node {
+    char *name;
+} bake_node;
+
+typedef struct bake_pattern {
+    bake_node super;
+    char *pattern;
+} bake_pattern;
+
+typedef struct bake_rule {
+    bake_node super;
+    char *source;
+    bake_rule_target *target;
+    bake_rule_action_cb action;
+} bake_rule;
+
+typedef struct bake_dependency_rule {
+    char *target;
+    bake_rule_target dependencies;
+    bake_rule_map_cb dep_mapping;
+    bake_rule_action_cb action;
+} bake_dependency_rule;
+
 
 #ifdef __cplusplus
 }

@@ -24,13 +24,6 @@
  * @brief API that searches a directory structure for corto projects.
  */
 
-#ifndef BAKE_CRAWLER_H_
-#define BAKE_CRAWLER_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct bake_crawler_s* bake_crawler;
 
 typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project *project, void *ctx);
@@ -57,6 +50,14 @@ int16_t bake_crawler_search(
     bake_crawler _this, 
     const char *path);
 
+/** Count number of projects found by searches.
+ * 
+ * @param _this A crawler object.
+ * @return Number of projects found.
+ */
+uint32_t bake_crawler_count(
+    bake_crawler _this);
+
 /** Manually add a project to the crawler.
  * 
  * @param _this A crawler object.
@@ -82,9 +83,3 @@ int16_t bake_crawler_walk(
     bake_crawler _this, 
     bake_crawler_cb action, 
     void *ctx);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif

@@ -1,5 +1,5 @@
 
-solution "bake"
+workspace "bake"
   configurations { "Debug", "Release" }
   location "build"
 
@@ -10,14 +10,15 @@ solution "bake"
     kind "ConsoleApp"
     language "C"
     location "build"
+    targetdir "."
 
-    files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c", "../builder/include" }
-    includedirs { ".", "../base", "../builder" }
+    files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c"}
+    includedirs { "include", "../base/include" }
 
     if os.is64bit then
-      objdir (".corto/obj/" .. os.get() .. "-64")
+      objdir (".corto/obj/" .. os.target() .. "-64")
     else
-      objdir (".corto/obj/" .. os.get() .. "-32")
+      objdir (".corto/obj/" .. os.target() .. "-32")
     end
 
     configuration "linux"
@@ -25,9 +26,9 @@ solution "bake"
 
     configuration "Debug"
       defines { "DEBUG" }
-      flags { "Symbols" }
+      symbols "On"
 
     configuration "Release"
       defines { "NDEBUG" }
-      flags { "Optimize" }
+      optimize "On"
 

@@ -1,6 +1,5 @@
 
-#include <include/bake.h>
-#include "project.h"
+#include "bake.h"
 
 #define PARSE_OPTION(short, long, action)\
     if (argv[i][0] == '-') {\
@@ -20,8 +19,11 @@
 /* Global variables for static project configuration (from command line) */
 static char *id = NULL;
 static char *path = ".";
+static char *sources = "src";
+static char *includes = "include";
 static char *language = "c";
 static char *kind = "library";
+static char *artefact = NULL;
 static bool managed = false;
 static bool local = false;
 
@@ -36,13 +38,16 @@ int parseArgs(int argc, char *argv[])
         if (argv[i][0] == '-') {
             PARSE_OPTION(0, "id", id = argv[i + 1]; i ++);
             PARSE_OPTION('p', "path", path = argv[i + 1]; i ++);
+            PARSE_OPTION('i', "includes", includes = argv[i + 1]; i ++);
+            PARSE_OPTION('s', "sources", sources = argv[i + 1]; i ++);
             PARSE_OPTION('l', "language", language = argv[i + 1]; i ++);
             PARSE_OPTION('k', "kind", kind = argv[i + 1] ; i ++);
+            PARSE_OPTION('a', "artefact", artefact = argv[i + 1] ; i ++);
             PARSE_OPTION(0, "managed", managed = true);
             PARSE_OPTION(0, "local", local = true);
             
             if (!parsed) {
-                fprintf(stderr, "unknown option '%s' (use bake --help to see available options)\n", argv[i]);
+                corto_seterr("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
                 return -1;
             }
         } else {
@@ -53,8 +58,20 @@ int parseArgs(int argc, char *argv[])
     return i + 1;
 }
 
+static
+int16_t bake_test_env(const char *env) {
+    if (!corto_getenv(env)) {
+        corto_seterr("environment variable '%s' is not set", env);
+        return -1;
+    }
+    return 0;
+}
+
+static
 int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
+
+    corto_ok("%s ['%s']", p->id, p->path);
 
     /* Step 1: clean package hierarchy */
     if (bake_uninstall(p)) {
@@ -66,6 +83,19 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         goto error;
     }
 
+    /* The next steps are only relevant if a language is configured */
+    if (p->language) {
+        //bake_builder b = bake_builder_new(p);
+
+        /* Step 3: if managed, generate code */
+
+        /* Step 4: build sources */
+
+        /* Step 5: postinstall build artefact */
+    }
+
+    corto_ok("%s ['%s']", p->id, p->path);
+
     corto_log_pop();
     return 1; /* continue */
 error:
@@ -73,26 +103,54 @@ error:
     return 0; /* stop */
 }
 
+static
 int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
     return 1; /* continue */
 error:
     return 0; /* stop */
 }
 
+static
+int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
+    corto_log_push("install");
+
+    /* Install package to package hierarchy */
+    if (bake_preinstall(p)) {
+        goto error;
+    }
+
+    if (artefact != NULL) {
+        if (bake_postinstall(p, artefact)) {
+            goto error;
+        }
+    }
+
+    corto_log_pop();
+    return 1;
+error:
+    corto_log_pop();
+    return 0;
+}
+
+static
 int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
     /* Uninstall package from package hierarchy */
     return !bake_uninstall(p);
 }
 
-
 int main(int argc, char* argv[]) {
+
+    /* Initialize base library */
+    base_init(argv[0]);
+
+    /* Verify environment variables */
+    if (bake_test_env("CORTO_HOME")) goto error;
+    if (bake_test_env("CORTO_TARGET")) goto error;
+
     int last_parsed = parseArgs(argc - 1, &argv[1]);
     if (last_parsed == -1) {
         goto error;
     }
-
-    /* Initialize base library */
-    base_init(argv[0]);
 
     /* Create crawler for finding corto projects */
     bake_crawler c = bake_crawler_new();
@@ -109,6 +167,8 @@ int main(int argc, char* argv[]) {
         p->language = language;
         p->managed = managed;
         p->local = local;
+        p->includes = includes;
+        p->sources = sources;
 
         if (!stricmp(kind, "library")) {
             p->kind = BAKE_LIBRARY;
@@ -123,6 +183,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (!bake_crawler_count(c)) {
+        corto_seterr("no projects found");
+        goto error;
+    }
+
     if (argc == last_parsed) {
         /* If after parsing arguments no actions were defined, execute the default
          * action. */
@@ -135,6 +200,7 @@ int main(int argc, char* argv[]) {
         for (i = last_parsed; i < argc; i ++) {
             if (!strcmp(argv[i], "default")) action = bake_action_default;
             else if (!strcmp(argv[i], "clean")) action = bake_action_clean;
+            else if (!strcmp(argv[i], "install")) action = bake_action_install;
             else if (!strcmp(argv[i], "uninstall")) action = bake_action_uninstall;
             else {
                 corto_error("unknown action '%s'", action);

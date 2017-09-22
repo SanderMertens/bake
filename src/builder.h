@@ -19,14 +19,5 @@
  * THE SOFTWARE.
  */
 
-#include "bake.h"
-
-bake_project* bake_project_new(
-    const char *path,
-    const char *projectConfig)    
-{
-    bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = strdup(path);
-    result->projectConfig = projectConfig ? strdup(projectConfig) : NULL;
-    return result;
-}
+bake_builder* bake_builder_new(
+    bake_project *project);

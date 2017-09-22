@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/bake.h>
+#include "bake.h"
 
 static
 int16_t bake_install_dir(
@@ -146,8 +146,13 @@ int16_t bake_uninstall(
 
     corto_log_push("uninstall");
 
+    corto_trace("%s ['%s']", project->id, project->path);
+
     char *projectDir = corto_envparse(
         "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+    if (!projectDir) {
+        goto error;
+    }
 
     /* Uninstall files are stored in the project directory, try uninstalling
      * first by removing all files in uninstaller file. */
@@ -197,6 +202,7 @@ int16_t bake_uninstall(
     free(etc);
 
 skip:
+    corto_ok("%s ['%s']", project->id, project->path);
     corto_log_pop();
     return 0;
 error:
@@ -208,6 +214,7 @@ int16_t bake_preinstall(
     bake_project *project)
 {
     corto_log_push("preinstall");
+    corto_trace("%s ['%s']", project->id, project->path);
 
     FILE *uninstallFile = bake_uninstaller_open(project, "w");
     if (!uninstallFile) {
@@ -215,17 +222,17 @@ int16_t bake_preinstall(
     }
 
     /* Install files to project-specific locations in package hierarchy */
-
     if (!project->local) {
-        if (bake_install_dir(project->id, project->path, "include", NULL, true, uninstallFile)) {
+        char *projectInclude = corto_asprintf("%s/%s", project->path, project->includes);
+        if (bake_install_dir(project->id, project->path, "include", projectInclude, true, uninstallFile)) {
+            free(projectInclude);
             goto error;
         }
+        free(projectInclude);
     }
-
     if (bake_install_dir(project->id, project->path, "etc", NULL, true, uninstallFile)) {
         goto error;
     }    
-
     if (project->kind == BAKE_LIBRARY) {
         if (bake_install_dir(project->id, project->path, "lib", NULL, true, uninstallFile)) {
             goto error;
@@ -233,23 +240,20 @@ int16_t bake_preinstall(
     }
 
     /* Install files to CORTO_TARGET directly from 'install' folder */
-
     char *installPath = corto_asprintf("%s/%s", project->path, "install");
-
+    if (bake_install_dir(NULL, installPath, "include", NULL, true, uninstallFile)) {
+        goto error;
+    }      
     if (bake_install_dir(NULL, installPath, "lib", NULL, true, uninstallFile)) {
         goto error;
     }
-
     if (bake_install_dir(NULL, installPath, "etc", NULL, true, uninstallFile)) {
         goto error;
-    }
-
-    if (bake_install_dir(NULL, installPath, "include", NULL, true, uninstallFile)) {
-        goto error;
-    }          
-
+    }        
     free(installPath);
     fclose(uninstallFile);
+
+    corto_ok("%s ['%s']", project->id, project->path);
     corto_log_pop();
     return 0;
 error:
@@ -259,8 +263,49 @@ error:
 }
 
 int16_t bake_postinstall(
-    char *id, 
+    bake_project *project, 
     char *artefact)
 {
+    char *kind, *subdir, *targetDir = NULL, *projectArtefact = NULL;
+    if (project->kind == BAKE_APPLICATION) {
+        kind = "bin";
+        subdir = "cortobin";
+    } else if (project->kind == BAKE_LIBRARY) {
+        kind = "lib";
+        subdir = "corto";
+    } else {
+        corto_seterr("unsupported project kind '%s'", project->kind);
+        goto error;
+    }
+
+    targetDir = corto_envparse(
+        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s", 
+        kind,
+        subdir,
+        project->id);
+    if (!targetDir) {
+        goto error;
+    }
+
+    projectArtefact = corto_asprintf("%s/%s", project->path, artefact);
+
+    if (!corto_file_test(projectArtefact)) {
+        corto_seterr("cannot find artefact '%s'", projectArtefact);
+        goto error;
+    }
+
+    if (corto_isdir(projectArtefact)) {
+        corto_seterr("specified artefact '%s' is a directory, expecting regular file", projectArtefact);
+        goto error;
+    }
+
+    if (corto_cp(projectArtefact, targetDir)) {
+        goto error;
+    }
+
     return 0;
+error:
+    if (targetDir) free(targetDir);
+    if (projectArtefact) free(projectArtefact);
+    return -1;
 }

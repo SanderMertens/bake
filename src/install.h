@@ -26,15 +26,6 @@
  *        package hierarchy.
  */
 
-#ifndef BAKE_INSTALL_H_
-#define BAKE_INSTALL_H_
-
-#include <include/bake.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Copy static files to package hierarchy (pre build).
  *
  * @param id Project id.
@@ -51,7 +42,7 @@ int16_t bake_preinstall(
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_postinstall(
-    char *id, 
+    bake_project *project, 
     char *artefact);
 
 /** Remove files from package hierarchy for project.
@@ -61,9 +52,3 @@ int16_t bake_postinstall(
  */
 int16_t bake_uninstall(
     bake_project *project);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif

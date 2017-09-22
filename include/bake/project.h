@@ -19,14 +19,38 @@
  * THE SOFTWARE.
  */
 
-#include "bake.h"
+/** @file
+ * @section project Project API
+ * @brief API that exposes details about a project.
+ */
 
-bake_project* bake_project_new(
-    const char *path,
-    const char *projectConfig)    
-{
-    bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = strdup(path);
-    result->projectConfig = projectConfig ? strdup(projectConfig) : NULL;
-    return result;
+#ifndef BAKE_PROJECT_H_
+#define BAKE_PROJECT_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum bake_project_kind {
+    BAKE_APPLICATION,
+    BAKE_LIBRARY
+} bake_project_kind;
+
+typedef struct bake_project {
+    char *id;
+    char *path;
+    char *sources;
+    char *includes;
+    char *projectConfig;
+    bake_project_kind kind;
+    bool local;
+    bool managed;
+    corto_ll use;
+    char *language;
+} bake_project;
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

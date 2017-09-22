@@ -19,8 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/bake.h>
-#include "project.h"
+#include "bake.h"
 
 struct bake_crawler_s {
     corto_ll projects;
@@ -134,6 +133,12 @@ int16_t bake_crawler_search(
     return bake_crawler_crawl(_this, ".", path);
 }
 
+uint32_t bake_crawler_count(
+    bake_crawler _this)
+{
+    return _this->projects ? corto_ll_size(_this->projects) : 0;
+}
+
 int16_t bake_crawler_walk(
     bake_crawler _this, 
     bake_crawler_cb action, 
@@ -151,3 +156,5 @@ int16_t bake_crawler_walk(
 
     return 1;
 }
+
+
