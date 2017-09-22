@@ -32,7 +32,7 @@
  * @param projectPath Path to the project source directory.
  * @return 0 if success, non-zero if failed.
  */
-int16_t bake_preinstall(
+int16_t bake_pre(
     bake_project *project);
 
 /** Copy artefact to package hierarchy (post build).
@@ -41,7 +41,7 @@ int16_t bake_preinstall(
  * @param artefact Filename of the artefact to be copied.
  * @return 0 if success, non-zero if failed.
  */
-int16_t bake_postinstall(
+int16_t bake_post(
     bake_project *project, 
     char *artefact);
 

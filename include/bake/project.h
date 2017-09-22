@@ -33,7 +33,8 @@ extern "C" {
 
 typedef enum bake_project_kind {
     BAKE_APPLICATION,
-    BAKE_LIBRARY
+    BAKE_LIBRARY,
+    BAKE_TOOL
 } bake_project_kind;
 
 typedef struct bake_project {

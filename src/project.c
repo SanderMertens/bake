@@ -30,3 +30,44 @@ bake_project* bake_project_new(
     result->projectConfig = projectConfig ? strdup(projectConfig) : NULL;
     return result;
 }
+
+char* bake_project_binaryPath(
+    bake_project *p)
+{
+    char *kind, *subdir;
+    if (p->kind == BAKE_APPLICATION) {
+        kind = "bin";
+        subdir = "cortobin";
+    } else if (p->kind == BAKE_LIBRARY) {
+        kind = "lib";
+        subdir = "corto";
+    } else if (p->kind == BAKE_TOOL) {
+        return corto_envparse(
+            "$CORTO_TARGET/bin");
+    } else {
+        corto_seterr("unsupported project kind '%s'", p->kind);
+        return NULL;
+    }
+
+    return corto_envparse(
+        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s", 
+        kind,
+        subdir,
+        p->id);
+}
+
+char* bake_project_includePath(
+    bake_project *p)
+{
+    return corto_envparse(
+        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", 
+        p->id);
+}
+
+char* bake_project_etcPath(
+    bake_project *p)
+{
+    return corto_envparse(
+        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", 
+        p->id);
+}

@@ -148,9 +148,15 @@ int16_t bake_crawler_walk(
         corto_iter it = corto_ll_iter(_this->projects);
         while (corto_iter_hasNext(&it)) {
             bake_project *p = corto_iter_next(&it);
+            corto_log_push(p->id);
+            corto_ok("entering directory '%s'", p->path);
             if (!action(_this, p, ctx)) {
+                corto_warning("build interrupted");
+                corto_log_pop();
                 return 0;
             }
+            corto_ok("leaving directory '%s'", p->path);
+            corto_log_pop();
         }
     }
 

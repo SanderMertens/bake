@@ -145,8 +145,7 @@ int16_t bake_uninstall(
     corto_iter it;
 
     corto_log_push("uninstall");
-
-    corto_trace("%s ['%s']", project->id, project->path);
+    corto_trace("begin");
 
     char *projectDir = corto_envparse(
         "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
@@ -202,7 +201,7 @@ int16_t bake_uninstall(
     free(etc);
 
 skip:
-    corto_ok("%s ['%s']", project->id, project->path);
+    corto_ok("done");
     corto_log_pop();
     return 0;
 error:
@@ -210,11 +209,11 @@ error:
     return -1;
 }
 
-int16_t bake_preinstall(
+int16_t bake_pre(
     bake_project *project)
 {
-    corto_log_push("preinstall");
-    corto_trace("%s ['%s']", project->id, project->path);
+    corto_log_push("pre");
+    corto_trace("begin");
 
     FILE *uninstallFile = bake_uninstaller_open(project, "w");
     if (!uninstallFile) {
@@ -253,7 +252,7 @@ int16_t bake_preinstall(
     free(installPath);
     fclose(uninstallFile);
 
-    corto_ok("%s ['%s']", project->id, project->path);
+    corto_ok("done");
     corto_log_pop();
     return 0;
 error:
@@ -262,27 +261,16 @@ error:
     return -1;
 }
 
-int16_t bake_postinstall(
+int16_t bake_post(
     bake_project *project, 
     char *artefact)
 {
-    char *kind, *subdir, *targetDir = NULL, *projectArtefact = NULL;
-    if (project->kind == BAKE_APPLICATION) {
-        kind = "bin";
-        subdir = "cortobin";
-    } else if (project->kind == BAKE_LIBRARY) {
-        kind = "lib";
-        subdir = "corto";
-    } else {
-        corto_seterr("unsupported project kind '%s'", project->kind);
-        goto error;
-    }
+    corto_log_push("post");
+    corto_trace("begin");
 
-    targetDir = corto_envparse(
-        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s", 
-        kind,
-        subdir,
-        project->id);
+    char *kind, *subdir, *targetDir = NULL, *projectArtefact = NULL;
+
+    targetDir = bake_project_binaryPath(project);
     if (!targetDir) {
         goto error;
     }
@@ -299,13 +287,20 @@ int16_t bake_postinstall(
         goto error;
     }
 
+    if (corto_mkdir(targetDir)) {
+        goto error;
+    }
+
     if (corto_cp(projectArtefact, targetDir)) {
         goto error;
     }
 
+    corto_ok("done");
+    corto_log_pop();
     return 0;
 error:
     if (targetDir) free(targetDir);
     if (projectArtefact) free(projectArtefact);
+    corto_log_pop();
     return -1;
 }

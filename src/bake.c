@@ -40,7 +40,7 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION('p', "path", path = argv[i + 1]; i ++);
             PARSE_OPTION('i', "includes", includes = argv[i + 1]; i ++);
             PARSE_OPTION('s', "sources", sources = argv[i + 1]; i ++);
-            PARSE_OPTION('l', "language", language = argv[i + 1]; i ++);
+            PARSE_OPTION('l', "lang", language = argv[i + 1]; i ++);
             PARSE_OPTION('k', "kind", kind = argv[i + 1] ; i ++);
             PARSE_OPTION('a', "artefact", artefact = argv[i + 1] ; i ++);
             PARSE_OPTION(0, "managed", managed = true);
@@ -70,16 +70,15 @@ int16_t bake_test_env(const char *env) {
 static
 int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
-
-    corto_ok("%s ['%s']", p->id, p->path);
+    corto_trace("begin");
 
     /* Step 1: clean package hierarchy */
     if (bake_uninstall(p)) {
         goto error;
     }
 
-    /* Step 2: preinstall files to package hierarchy */
-    if (bake_preinstall(p)) {
+    /* Step 2: pre-install files to package hierarchy */
+    if (bake_pre(p)) {
         goto error;
     }
 
@@ -91,11 +90,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
 
         /* Step 4: build sources */
 
-        /* Step 5: postinstall build artefact */
+        /* Step 5: post build artefact */
     }
 
-    corto_ok("%s ['%s']", p->id, p->path);
-
+    corto_ok("done");
     corto_log_pop();
     return 1; /* continue */
 error:
@@ -113,18 +111,20 @@ error:
 static
 int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("install");
+    corto_trace("begin");
 
     /* Install package to package hierarchy */
-    if (bake_preinstall(p)) {
+    if (bake_pre(p)) {
         goto error;
     }
 
     if (artefact != NULL) {
-        if (bake_postinstall(p, artefact)) {
+        if (bake_post(p, artefact)) {
             goto error;
         }
     }
 
+    corto_ok("done");
     corto_log_pop();
     return 1;
 error:
@@ -139,7 +139,8 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 int main(int argc, char* argv[]) {
-
+    corto_log_fmt("%c: %m");
+    
     /* Initialize base library */
     base_init(argv[0]);
 
@@ -174,6 +175,8 @@ int main(int argc, char* argv[]) {
             p->kind = BAKE_LIBRARY;
         } else if (!stricmp(kind, "application")) {
             p->kind = BAKE_APPLICATION;
+        } else if (!strcmp(kind, "tool")) {
+            p->kind = BAKE_TOOL;
         }
 
     } else {

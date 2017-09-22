@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-typedef int16_t (*bake_rule_action_cb)(bake_project *p, const char *input, void *ctx);
+typedef int16_t (*bake_rule_action_cb)(bake_project *p, corto_ll source, char *target, void *ctx);
 typedef char* (*bake_rule_map_cb)(bake_project *p, const char *input, void *ctx);
 
 /* Bake target is a convenience type wrapped by functions that lets users

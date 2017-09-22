@@ -31,6 +31,7 @@
 extern "C" {
 #endif
 
+
 typedef struct bake_builder bake_builder;
 
 typedef int16_t (*bake_builder_cb)(
@@ -42,8 +43,14 @@ typedef int16_t (*bake_builder_chain_cb)(
     void *ctx);
 
 struct bake_builder {
-    bake_project *project;
-    bool standalone;
+    
+    void (*pattern)(const char *name, const char *pattern);
+    void (*rule)(const char *name, const char *source, bake_rule_target target, bake_rule_action_cb action);
+    void (*dependency_rule)(const char *name, const char *deps, bake_rule_target dep_mapping, bake_rule_action_cb action);
+
+    bake_rule_target (*target_1)(const char *target);
+    bake_rule_target (*target_pattern)(const char *pattern);
+    bake_rule_target (*target_n)(bake_rule_map_cb mapping);
 };
 
 /** Add a pattern to a builder.
@@ -103,7 +110,7 @@ void bake_builder_rule(
 void bake_builder_dependency_rule(
     bake_builder *b, 
     const char *target, 
-    bake_rule_target *dependencies,
+    bake_rule_target *deps,
     bake_rule_map_cb dep_mapping,
     bake_rule_action_cb action);
 
