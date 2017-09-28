@@ -31,17 +31,17 @@
 extern "C" {
 #endif
 
-typedef struct bake_builder bake_builder;
+typedef struct bake_language bake_language;
 
-typedef int16_t (*bake_builder_cb)(
-    bake_builder _this,
+typedef int16_t (*bake_language_cb)(
+    bake_language _this,
     void *ctx);
 
-typedef int16_t (*bake_builder_chain_cb)(
-    bake_builder _this,
+typedef int16_t (*bake_language_chain_cb)(
+    bake_language _this,
     void *ctx);
 
-struct bake_builder {
+struct bake_language {
     char *package;
     corto_dl dl;
 
@@ -63,8 +63,8 @@ struct bake_builder {
  * @param name The name of the rule
  * @param pattern A pattern in idmatch format.
  */
-void bake_builder_pattern(
-    bake_builder *b, 
+void bake_language_pattern(
+    bake_language *b, 
     const char *name, 
     const char *pattern);
 
@@ -88,8 +88,8 @@ void bake_builder_pattern(
  * @param target The generated target files for the rule.
  * @param action The action to generate target from source.
  */
-void bake_builder_rule(
-    bake_builder *b, 
+void bake_language_rule(
+    bake_language *b, 
     const char *name, 
     const char *source,
     bake_rule_target target,
@@ -107,8 +107,8 @@ void bake_builder_rule(
  * @param dep_mapping The generated target files for the rule.
  * @param action The action to generate target from source.
  */
-void bake_builder_dependency_rule(
-    bake_builder *b, 
+void bake_language_dependency_rule(
+    bake_language *b, 
     const char *target, 
     bake_rule_target *deps,
     bake_rule_map_cb dep_mapping,

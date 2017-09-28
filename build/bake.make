@@ -85,9 +85,9 @@ OBJECTS := \
 	$(OBJDIR)/time.o \
 	$(OBJDIR)/util.o \
 	$(OBJDIR)/bake.o \
-	$(OBJDIR)/builder.o \
 	$(OBJDIR)/crawler.o \
 	$(OBJDIR)/install.o \
+	$(OBJDIR)/language.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/rule.o \
 
@@ -301,14 +301,6 @@ else
 	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/builder.o: ../src/builder.c
-	@echo $(notdir $<)
-ifeq (posix,$(SHELLTYPE))
-	$(SILENT) mkdir -p $(OBJDIR)
-else
-	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
-endif
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/crawler.o: ../src/crawler.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
@@ -318,6 +310,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/install.o: ../src/install.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/language.o: ../src/language.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

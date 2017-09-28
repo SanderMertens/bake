@@ -30,7 +30,7 @@
 #include <corto/base.h>
 #include <bake/project.h>
 #include <bake/rule.h>
-#include <bake/builder.h>
+#include <bake/language.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -74,9 +74,9 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
     corto_trace("begin");
 
-    bake_builder *b = NULL;
+    bake_language *b = NULL;
     if (p->language) {
-        b = bake_builder_get(p->language);
+        b = bake_language_get(p->language);
         if (!b) {
             goto error;
         }        

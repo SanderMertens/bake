@@ -3,13 +3,13 @@
 
 static corto_ll builders;
 
-typedef int (*buildmain_cb)(bake_builder *b);
+typedef int (*buildmain_cb)(bake_language *b);
 
-bake_builder* bake_builder_get(
+bake_language* bake_language_get(
     const char *language)
 {
     bool found = false;
-    bake_builder *b = NULL;
+    bake_language *b = NULL;
     char *package = corto_asprintf("driver/bake/%s", language);
 
     if (!builders) {
@@ -19,14 +19,14 @@ bake_builder* bake_builder_get(
     /* Check if builder is already loaded */
     corto_iter it = corto_ll_iter(builders);
     while (corto_iter_hasNext(&it) && !b) {
-        bake_builder *e = corto_iter_next(&it);
+        bake_language *e = corto_iter_next(&it);
         if (!strcmp(e->package, package)) {
             b = e;
         }
     }
 
     if (!b) {
-        bake_builder *b = corto_calloc(sizeof(bake_builder));
+        bake_language *b = corto_calloc(sizeof(bake_language));
 
         corto_dl dl = NULL;
         buildmain_cb _main = corto_load_sym(package, &dl, "bakemain");

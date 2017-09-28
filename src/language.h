@@ -20,5 +20,5 @@
  */
 
 /* Not thread safe */
-bake_builder* bake_builder_get(
+bake_language* bake_language_get(
     const char *language);
