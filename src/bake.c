@@ -28,6 +28,8 @@ static bool managed = false;
 static bool local = false;
 static bool skip_preinstall = false;
 
+corto_tls BAKE_LANGUAGE_KEY;
+
 static
 int parseArgs(int argc, char *argv[]) 
 {
@@ -74,10 +76,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
     corto_trace("begin");
 
-    bake_language *b = NULL;
+    bake_language *l = NULL;
     if (p->language) {
-        b = bake_language_get(p->language);
-        if (!b) {
+        l = bake_language_get(p->language);
+        if (!l) {
             goto error;
         }        
     }
@@ -156,6 +158,11 @@ int main(int argc, char* argv[]) {
     
     /* Initialize base library */
     base_init(argv[0]);
+    
+    /* Initialize thread key for language */
+    if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {
+        goto error;
+    }
 
     /* Verify environment variables */
     if (bake_test_env("CORTO_HOME")) goto error;

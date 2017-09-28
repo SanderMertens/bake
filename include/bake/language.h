@@ -20,12 +20,12 @@
  */
 
 /** @file
- * @section builder Builder framework for bake.
- * @brief The builder provides an interface for building bake plugins.
+ * @section language Builder framework for bake.
+ * @brief The language provides an interface for building bake plugins.
  */
 
-#ifndef BAKE_BUILDER_H_
-#define BAKE_BUILDER_H_
+#ifndef BAKE_LANGUAGE_H_
+#define BAKE_LANGUAGE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,21 +54,21 @@ struct bake_language {
     bake_rule_target (*target_n)(bake_rule_map_cb mapping);
 };
 
-/** Add a pattern to a builder.
+/** Add a pattern to a language.
  * A pattern is a idmatch-string matching a set of files. Patterns can be used
  * in rules to indicate a source or target. When a pattern is used as a
  * target in a rule and it does not match any files, the rule is executed.
  *
- * @param b The builder object.
+ * @param l The language object.
  * @param name The name of the rule
  * @param pattern A pattern in idmatch format.
  */
 void bake_language_pattern(
-    bake_language *b, 
+    bake_language *l, 
     const char *name, 
     const char *pattern);
 
-/** Add a rule to a builder.
+/** Add a rule to a language.
  * A rule specifies a relationship between a source and a target that indicates
  * to bake whether a target needs rebuilding. When a target needs rebuilding,
  * a specified rule action is invoked.
@@ -82,36 +82,36 @@ void bake_language_pattern(
  * for the specified sources. "n" means that for each source there is a target.
  * "pattern" indicate s
  *
- * @param b The builder object.
+ * @param l The language object.
  * @param name The name of the rule
  * @param source A pattern indicating a source.
  * @param target The generated target files for the rule.
  * @param action The action to generate target from source.
  */
 void bake_language_rule(
-    bake_language *b, 
+    bake_language *l, 
     const char *name, 
     const char *source,
     bake_rule_target target,
     bake_rule_action_cb action);
 
-/** Add a dependency rule to a builder.
+/** Add a dependency rule to a language.
  * Dependency rules allow for programatically adding dependencies to a target
  * that cannot be derived from a list of files. The requirement that introduced
  * this feature is to rebuild source files when one of the included header files
  * change.
  *
- * @param b The builder object.
+ * @param l The language object.
  * @param target The target for which to specify the dependencies.
  * @param dependencies A target indicating the source of the dependency information.
  * @param dep_mapping The generated target files for the rule.
  * @param action The action to generate target from source.
  */
 void bake_language_dependency_rule(
-    bake_language *b, 
+    bake_language *l, 
     const char *target, 
-    bake_rule_target *deps,
-    bake_rule_map_cb dep_mapping,
+    const char *deps,
+    bake_rule_target dep_mapping,
     bake_rule_action_cb action);
 
 #ifdef __cplusplus
