@@ -102,6 +102,9 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         /* Step 3: if managed, generate code */
 
         /* Step 4: build sources */
+        if (bake_language_build(l, p)) {
+            goto error;
+        }
 
         /* Step 5: install artefact */
     }

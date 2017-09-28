@@ -53,6 +53,7 @@ typedef struct bake_rule_target {
 
 typedef struct bake_node {
     const char *name;
+    corto_ll deps;
 } bake_node;
 
 typedef struct bake_pattern {

@@ -42,6 +42,7 @@ typedef int16_t (*bake_language_chain_cb)(
     void *ctx);
 
 struct bake_language {
+    char *name;
     char *package;
     corto_dl dl;
 
@@ -116,6 +117,17 @@ void bake_language_dependency_rule(
     const char *deps,
     bake_rule_target dep_mapping,
     bake_rule_action_cb action);
+
+/** Build a project of the specified language.
+ *
+ * @param l The language object.
+ * @param p The project to build.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_language_build(
+    bake_language *l,
+    bake_project *p);
+
 
 #ifdef __cplusplus
 }

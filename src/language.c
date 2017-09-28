@@ -108,11 +108,89 @@ bake_node* bake_node_find(
 }
 
 static
-void bake_node_add(
+void* bake_node_add(
     bake_language *l,
-    void *n)
+    void *n) /* void* to prevent excessive upcasting */
 {
     corto_ll_append(l->nodes, n);
+    return n;
+}
+
+static
+int16_t bake_node_addDependencies(
+    bake_language *l,
+    bake_node *node,
+    const char *pattern)
+{
+    char *str = corto_strdup(pattern);
+    const char *ptr = strtok(str, ",");
+    while (ptr) {
+        if (ptr[0] == '$') {
+            /* Create dependency to named node */
+            bake_node *dep = bake_node_find(l, &ptr[1]);
+            if (!dep) {
+                corto_seterr("dependency '%s' not found for rule '%s'",
+                    ptr, node->name);
+                goto error;
+            } else {
+                if (!node->deps) node->deps = corto_ll_new();
+                corto_ll_append(node->deps, dep);
+            }
+        } else {
+            /* Create dependency to anonymous pattern */
+            bake_pattern *pattern = bake_pattern_new(NULL, ptr);
+            if (!node->deps) node->deps = corto_ll_new();
+            corto_ll_append(node->deps, pattern);
+        }
+        ptr = strtok(NULL, ",");
+    }
+    free(str);
+    return 0;
+error:
+    free(str);
+    return -1;
+}
+
+static
+int16_t bake_node_addToTarget(
+    bake_language *l,
+    bake_node *node,
+    bake_rule_target *target)
+{
+    const char *pattern = NULL;
+    if (target->kind == BAKE_RULE_TARGET_ONE) {
+        corto_assert(
+            target->is.one != NULL, "invalid rule for rule '%s'", node->name);
+        pattern = target->is.one;
+    } else if (target->kind == BAKE_RULE_TARGET_PATTERN) {
+        corto_assert(
+            target->is.pattern != NULL, "invalid rule for rule '%s'", node->name);
+        pattern = target->is.pattern;
+    }
+
+    /* If target specifies n targets, target is dynamic and there is no node
+     * representing the target. */
+    if (pattern) {
+        if (pattern[0] != '$') {
+            corto_seterr("target '%s' for rule '%s' does not refer named node",
+                target->is.one, node->name);
+            goto error;
+        }
+
+        bake_node *targetNode = bake_node_find(l, &pattern[1]);
+        if (!targetNode) {
+            corto_seterr("unresolved target '%s' for node '%s'",
+                pattern, node->name);
+            goto error;
+        }
+
+        if (!targetNode->deps) targetNode->deps = corto_ll_new();
+        corto_ll_append(targetNode->deps, node);
+    }
+
+    return 0;
+error:
+    return -1;
 }
 
 void bake_language_pattern(
@@ -139,7 +217,9 @@ void bake_language_rule(
         l->error = 1;
         corto_error("rule '%s' redeclared with source = '%s'", name, source);
     } else {
-        bake_node_add(l, bake_rule_new(name, source, target, action));
+        bake_node *n = bake_node_add(l, bake_rule_new(name, source, target, action));
+        if (bake_node_addDependencies(l, n, source)) l->error = 1;
+        if (bake_node_addToTarget(l, n, &target)) l->error = 1;
     }
 }
 
@@ -156,6 +236,57 @@ void bake_language_dependency_rule(
     } else {
         bake_node_add(l, bake_dependency_rule_new(name, deps, dep_mapping, action));
     }
+}
+
+static
+int16_t bake_node_walkDependencies(
+    bake_language *l,
+    bake_node *n,
+    bake_project *p)
+{
+    corto_trace("evaluating rule '%s'", n->name);
+    corto_log_push((char*)n->name);
+    corto_iter it = corto_ll_iter(n->deps);
+    while (corto_iter_hasNext(&it)) {
+        bake_node *e = corto_iter_next(&it);
+        if (e->deps) {
+            if (bake_node_walkDependencies(l, e, p)) {
+                goto error;
+            }
+        }
+    }
+    corto_log_pop();
+    return 0;
+error:
+    corto_log_pop();
+    return -1;
+}
+
+int16_t bake_language_build(
+    bake_language *l,
+    bake_project *p)
+{
+    corto_log_push("build");
+    corto_trace("begin");
+    bake_node *root = bake_node_find(l, "ARTEFACT");
+    if (!root) {
+        corto_critical("root ARTEFACT node not found in language object");
+    }
+
+    if (root->deps) {
+        if (bake_node_walkDependencies(l, root, p)) {
+            goto error;
+        }
+    } else {
+        /* no dependencies for artefact? nothing needs to be built. */
+    }
+
+    corto_trace("end");
+    corto_log_pop();
+    return 0;
+error:
+    corto_log_pop();
+    return -1;
 }
 
 bake_language* bake_language_get(
@@ -195,8 +326,6 @@ bake_language* bake_language_get(
         corto_dl dl = NULL;
         buildmain_cb _main = corto_load_sym(package, &dl, "bakemain");
 
-        corto_tls_set(BAKE_LANGUAGE_KEY, l);
-
         if (!_main) {
             corto_seterr("failed load '%s': %s", 
                 package,
@@ -205,6 +334,15 @@ bake_language* bake_language_get(
         }
         l->dl = dl;
 
+        /* Set language object in tls so callbacks can retrieve the language
+         * object without having to explicitly specify it. */
+        corto_tls_set(BAKE_LANGUAGE_KEY, l);
+
+        /* Create built-in nodes */
+        bake_language_pattern(l, "ARTEFACT", NULL); /* Build root */
+        bake_language_pattern(l, "DEFINITION", NULL); /* Code-gen root */
+
+        /* Run 'bakemain' which will load the rules for the language */
         if (_main(l)) {
             corto_seterr("bakemain for '%s' failed: %s", 
                 language, 
@@ -217,7 +355,9 @@ bake_language* bake_language_get(
             goto error;
         }
 
-        l->package = strdup(package);
+        l->name = corto_strdup(language);
+        l->package = corto_strdup(package);
+
         corto_ll_append(languages, l);
     }
 
@@ -229,4 +369,3 @@ error:
     if (package) free(package);
     return NULL;
 }
-
