@@ -52,6 +52,9 @@ struct bake_language {
     bake_rule_target (*target_1)(const char *target);
     bake_rule_target (*target_pattern)(const char *pattern);
     bake_rule_target (*target_n)(bake_rule_map_cb mapping);
+
+    corto_ll nodes;
+    int16_t error;
 };
 
 /** Add a pattern to a language.

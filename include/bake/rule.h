@@ -20,8 +20,8 @@
  */
 
 /** @file
- * @section builder Builder framework for bake.
- * @brief The builder provides an interface for building bake plugins.
+ * @section rule Types used for specifying bake rules.
+ * @brief Rules generate a sequence of build actions for a given set of files.
  */
 
 #ifndef BAKE_RULE_H_
@@ -52,28 +52,44 @@ typedef struct bake_rule_target {
 } bake_rule_target;
 
 typedef struct bake_node {
-    char *name;
+    const char *name;
 } bake_node;
 
 typedef struct bake_pattern {
     bake_node super;
-    char *pattern;
+    const char *pattern;
 } bake_pattern;
 
 typedef struct bake_rule {
     bake_node super;
-    char *source;
-    bake_rule_target *target;
+    const char *source;
+    bake_rule_target target;
     bake_rule_action_cb action;
 } bake_rule;
 
 typedef struct bake_dependency_rule {
-    char *target;
-    bake_rule_target dependencies;
-    bake_rule_map_cb dep_mapping;
+    bake_node super;
+    const char *target;
+    const char *deps;
+    bake_rule_target dep_mapping;
     bake_rule_action_cb action;
 } bake_dependency_rule;
 
+bake_pattern* bake_pattern_new(
+    const char *name, 
+    const char *pattern);
+
+bake_rule* bake_rule_new(
+    const char *name, 
+    const char *source, 
+    bake_rule_target target, 
+    bake_rule_action_cb action);
+
+bake_dependency_rule* bake_dependency_rule_new(
+    const char *name, 
+    const char *deps, 
+    bake_rule_target dep_mapping, 
+    bake_rule_action_cb action);
 
 #ifdef __cplusplus
 }

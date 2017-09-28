@@ -1,3 +1,23 @@
+/* Copyright (c) 2010-2017 the corto developers
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include "bake.h"
 
@@ -68,11 +88,44 @@ bake_rule_target bake_language_target_n_cb(
     return result;
 }
 
+static
+bake_node* bake_node_find(
+    bake_language *l,
+    const char *name)
+{
+    corto_iter it = corto_ll_iter(l->nodes);
+    bake_node *result = NULL;
+
+    while (corto_iter_hasNext(&it)) {
+        bake_node *e = corto_iter_next(&it);
+        if (!strcmp(e->name, name)) {
+            result = e;
+            break;
+        }
+    }
+
+    return result;
+}
+
+static
+void bake_node_add(
+    bake_language *l,
+    void *n)
+{
+    corto_ll_append(l->nodes, n);
+}
+
 void bake_language_pattern(
     bake_language *l,     
     const char *name, 
-    const char *pattern) {
-
+    const char *pattern) 
+{
+    if (bake_node_find(l, name)) {
+        l->error = 1;
+        corto_error("pattern '%s' redeclared with value '%s'", name, pattern);
+    } else {
+        bake_node_add(l, bake_pattern_new(name, pattern));
+    }
 }
 
 void bake_language_rule(
@@ -82,7 +135,12 @@ void bake_language_rule(
     bake_rule_target target, 
     bake_rule_action_cb action) 
 {
-
+    if (bake_node_find(l, name)) {
+        l->error = 1;
+        corto_error("rule '%s' redeclared with source = '%s'", name, source);
+    } else {
+        bake_node_add(l, bake_rule_new(name, source, target, action));
+    }
 }
 
 void bake_language_dependency_rule(
@@ -92,7 +150,12 @@ void bake_language_dependency_rule(
     bake_rule_target dep_mapping, 
     bake_rule_action_cb action) 
 {
-
+    if (bake_node_find(l, name)) {
+        l->error = 1;
+        corto_error("rule '%s' redeclared with dependencies = '%s'", name, deps);
+    } else {
+        bake_node_add(l, bake_dependency_rule_new(name, deps, dep_mapping, action));
+    }
 }
 
 bake_language* bake_language_get(
@@ -126,8 +189,13 @@ bake_language* bake_language_get(
         l->target_pattern = bake_language_target_pattern_cb;
         l->target_n = bake_language_target_n_cb;
 
+        l->nodes = corto_ll_new();
+        l->error = 0;
+
         corto_dl dl = NULL;
         buildmain_cb _main = corto_load_sym(package, &dl, "bakemain");
+
+        corto_tls_set(BAKE_LANGUAGE_KEY, l);
 
         if (!_main) {
             corto_seterr("failed load '%s': %s", 
@@ -142,6 +210,10 @@ bake_language* bake_language_get(
                 language, 
                 corto_lasterr());
             free(l);
+            goto error;
+        }
+
+        if (l->error) {
             goto error;
         }
 
