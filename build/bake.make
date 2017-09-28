@@ -75,6 +75,7 @@ OBJECTS := \
 	$(OBJDIR)/iter.o \
 	$(OBJDIR)/jsw_rbtree.o \
 	$(OBJDIR)/ll.o \
+	$(OBJDIR)/load.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/path.o \
@@ -213,6 +214,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ll.o: ../../base/src/ll.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/load.o: ../../base/src/load.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

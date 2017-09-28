@@ -31,7 +31,6 @@
 extern "C" {
 #endif
 
-
 typedef struct bake_builder bake_builder;
 
 typedef int16_t (*bake_builder_cb)(
@@ -43,7 +42,9 @@ typedef int16_t (*bake_builder_chain_cb)(
     void *ctx);
 
 struct bake_builder {
-    
+    char *package;
+    corto_dl dl;
+
     void (*pattern)(const char *name, const char *pattern);
     void (*rule)(const char *name, const char *source, bake_rule_target target, bake_rule_action_cb action);
     void (*dependency_rule)(const char *name, const char *deps, bake_rule_target dep_mapping, bake_rule_action_cb action);
@@ -93,7 +94,6 @@ void bake_builder_rule(
     const char *source,
     bake_rule_target target,
     bake_rule_action_cb action);
-
 
 /** Add a dependency rule to a builder.
  * Dependency rules allow for programatically adding dependencies to a target

@@ -31,3 +31,4 @@
 #include "project.h"
 #include "crawler.h"
 #include "install.h"
+#include "builder.h"

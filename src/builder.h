@@ -19,5 +19,6 @@
  * THE SOFTWARE.
  */
 
-bake_builder* bake_builder_new(
-    bake_project *project);
+/* Not thread safe */
+bake_builder* bake_builder_get(
+    const char *language);

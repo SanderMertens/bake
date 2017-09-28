@@ -26,6 +26,7 @@ static char *kind = "library";
 static char *artefact = NULL;
 static bool managed = false;
 static bool local = false;
+static bool skip_preinstall = false;
 
 static
 int parseArgs(int argc, char *argv[]) 
@@ -45,6 +46,7 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION('a', "artefact", artefact = argv[i + 1] ; i ++);
             PARSE_OPTION(0, "managed", managed = true);
             PARSE_OPTION(0, "local", local = true);
+            PARSE_OPTION(0, "skip-preinstall", skip_preinstall = true);
             
             if (!parsed) {
                 corto_seterr("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
@@ -72,25 +74,34 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
     corto_trace("begin");
 
+    bake_builder *b = NULL;
+    if (p->language) {
+        b = bake_builder_get(p->language);
+        if (!b) {
+            goto error;
+        }        
+    }
+
     /* Step 1: clean package hierarchy */
     if (bake_uninstall(p)) {
         goto error;
     }
 
     /* Step 2: pre-install files to package hierarchy */
-    if (bake_pre(p)) {
-        goto error;
+    if (!skip_preinstall) {
+        if (bake_pre(p)) {
+            goto error;
+        }
     }
 
     /* The next steps are only relevant if a language is configured */
     if (p->language) {
-        //bake_builder b = bake_builder_new(p);
 
         /* Step 3: if managed, generate code */
 
         /* Step 4: build sources */
 
-        /* Step 5: post build artefact */
+        /* Step 5: install artefact */
     }
 
     corto_ok("done");
@@ -114,8 +125,10 @@ int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
     corto_trace("begin");
 
     /* Install package to package hierarchy */
-    if (bake_pre(p)) {
-        goto error;
+    if (!skip_preinstall) {
+        if (bake_pre(p)) {
+            goto error;
+        }
     }
 
     if (artefact != NULL) {
@@ -139,7 +152,7 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 int main(int argc, char* argv[]) {
-    corto_log_fmt("%c: %m");
+    corto_log_fmt("%V %F:%L %c: %m");
     
     /* Initialize base library */
     base_init(argv[0]);
