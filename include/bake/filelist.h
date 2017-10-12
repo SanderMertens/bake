@@ -20,25 +20,28 @@
  */
 
 /** @file
- * @section builder Builder framework for bake.
- * @brief The builder provides an interface for building bake plugins.
+ * @section filelist API for retrieving and comparing lists of files.
+ * @brief A filelist is used to evaluate whether rule actions should be invoked.
  */
 
-#ifndef BAKE_H_
-#define BAKE_H_
+typedef struct bake_file {
+    char *name;
+    uint64_t timestamp;
+} bake_file;
 
-#include <corto/base.h>
-#include <bake/project.h>
-#include <bake/filelist.h>
-#include <bake/rule.h>
-#include <bake/language.h>
+typedef struct bake_filelist {
+    char *path;
+    char *pattern;
+    corto_ll files;
+    int16_t (*set)(const char *pattern);
+} bake_filelist;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+bake_filelist* bake_filelist_new(
+    const char *path, const char *pattern);
 
-#ifdef __cplusplus
-}
-#endif
+int16_t bake_filelist_set(
+    bake_filelist *fl,
+    const char *pattern);
 
-#endif
+uint64_t bake_filelist_count(
+    bake_filelist *fl);

@@ -86,6 +86,7 @@ OBJECTS := \
 	$(OBJDIR)/util.o \
 	$(OBJDIR)/bake.o \
 	$(OBJDIR)/crawler.o \
+	$(OBJDIR)/filelist.o \
 	$(OBJDIR)/install.o \
 	$(OBJDIR)/language.o \
 	$(OBJDIR)/project.o \
@@ -302,6 +303,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/crawler.o: ../src/crawler.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/filelist.o: ../src/filelist.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

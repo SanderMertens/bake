@@ -24,6 +24,7 @@
 static corto_ll languages;
 
 extern corto_tls BAKE_LANGUAGE_KEY;
+extern corto_tls BAKE_FILELIST_KEY;
 
 typedef int (*buildmain_cb)(bake_language *l);
 
@@ -59,16 +60,6 @@ void bake_language_dependency_rule_cb(
 }
 
 static 
-bake_rule_target bake_language_target_1_cb(
-    const char *target) 
-{
-    bake_rule_target result;
-    result.kind = BAKE_RULE_TARGET_ONE;
-    result.is.one = target;
-    return result;
-}
-
-static 
 bake_rule_target bake_language_target_pattern_cb(
     const char *pattern) 
 {
@@ -79,13 +70,21 @@ bake_rule_target bake_language_target_pattern_cb(
 }
 
 static 
-bake_rule_target bake_language_target_n_cb(
+bake_rule_target bake_language_target_map_cb(
     bake_rule_map_cb mapping) 
 {
     bake_rule_target result;
-    result.kind = BAKE_RULE_TARGET_N;
-    result.is.n = mapping;
+    result.kind = BAKE_RULE_TARGET_MAP;
+    result.is.map = mapping;
     return result;
+}
+
+static 
+void bake_language_artefact_cb(
+    bake_rule_artefact_cb artefact) 
+{
+    bake_language *l = corto_tls_get(BAKE_LANGUAGE_KEY);
+    l->artefact_cb = artefact;
 }
 
 static
@@ -158,11 +157,7 @@ int16_t bake_node_addToTarget(
     bake_rule_target *target)
 {
     const char *pattern = NULL;
-    if (target->kind == BAKE_RULE_TARGET_ONE) {
-        corto_assert(
-            target->is.one != NULL, "invalid rule for rule '%s'", node->name);
-        pattern = target->is.one;
-    } else if (target->kind == BAKE_RULE_TARGET_PATTERN) {
+    if (target->kind == BAKE_RULE_TARGET_PATTERN) {
         corto_assert(
             target->is.pattern != NULL, "invalid rule for rule '%s'", node->name);
         pattern = target->is.pattern;
@@ -173,7 +168,7 @@ int16_t bake_node_addToTarget(
     if (pattern) {
         if (pattern[0] != '$') {
             corto_seterr("target '%s' for rule '%s' does not refer named node",
-                target->is.one, node->name);
+                pattern, node->name);
             goto error;
         }
 
@@ -213,7 +208,10 @@ void bake_language_rule(
     bake_rule_target target, 
     bake_rule_action_cb action) 
 {
-    if (bake_node_find(l, name)) {
+    if (!source && target.kind == BAKE_RULE_TARGET_MAP) {
+        l->error = 1;
+        corto_error("rule '%s' has mapped target but no source to map from", name);
+    } else if (bake_node_find(l, name)) {
         l->error = 1;
         corto_error("rule '%s' redeclared with source = '%s'", name, source);
     } else {
@@ -239,23 +237,60 @@ void bake_language_dependency_rule(
 }
 
 static
-int16_t bake_node_walkDependencies(
+bake_filelist* bake_node_eval_pattern(
+    bake_language *l,
+    bake_node *n,
+    bake_project *p)
+{
+    corto_trace("evaluating pattern '%s'", n->name);
+
+    return bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+}
+
+static
+bake_filelist* bake_node_eval_rule(
     bake_language *l,
     bake_node *n,
     bake_project *p)
 {
     corto_trace("evaluating rule '%s'", n->name);
-    corto_log_push((char*)n->name);
-    corto_iter it = corto_ll_iter(n->deps);
-    while (corto_iter_hasNext(&it)) {
-        bake_node *e = corto_iter_next(&it);
-        if (e->deps) {
-            if (bake_node_walkDependencies(l, e, p)) {
-                goto error;
+    return NULL;
+}
+
+
+static
+int16_t bake_node_eval(
+    bake_language *l,
+    bake_node *n,
+    bake_project *p,
+    bake_filelist *targets)
+{
+    bake_filelist *target_fl = NULL;
+
+    if (n->kind == BAKE_RULE_PATTERN) {
+        target_fl = bake_node_eval_pattern(l, n, p);
+    } else if (n->kind == BAKE_RULE_RULE) {
+        target_fl = bake_node_eval_rule(l, n, p);
+    }
+
+    if (!target_fl) {
+        target_fl = targets;
+    }
+
+    if (target_fl) {
+        corto_log_push((char*)n->name);
+        if (n->deps) {
+            corto_iter it = corto_ll_iter(n->deps);
+            while (corto_iter_hasNext(&it)) {
+                bake_node *e = corto_iter_next(&it);
+                if (bake_node_eval(l, e, p, target_fl)) {
+                    goto error;
+                }
             }
         }
+        corto_log_pop();
     }
-    corto_log_pop();
+
     return 0;
 error:
     corto_log_pop();
@@ -268,17 +303,31 @@ int16_t bake_language_build(
 {
     corto_log_push("build");
     corto_trace("begin");
+
     bake_node *root = bake_node_find(l, "ARTEFACT");
     if (!root) {
         corto_critical("root ARTEFACT node not found in language object");
     }
 
-    if (root->deps) {
-        if (bake_node_walkDependencies(l, root, p)) {
-            goto error;
-        }
-    } else {
-        /* no dependencies for artefact? nothing needs to be built. */
+    /* Create filelist for artefact files */
+    char *binaryPath = bake_project_binaryPath(p);
+    bake_filelist *artefact_fl = bake_filelist_new(
+        binaryPath,
+        NULL
+    );
+
+    /* Populate filelist */
+    corto_tls_set(BAKE_FILELIST_KEY, artefact_fl);
+    l->artefact_cb(artefact_fl, p);
+
+    if (!bake_filelist_count(artefact_fl)) {
+        corto_seterr("no artefacts specified for project '%s' by language", p->id);
+        goto error;
+    }
+
+    /* Evaluate root node */
+    if (bake_node_eval(l, root, p, artefact_fl)) {
+        goto error;
     }
 
     corto_trace("end");
@@ -316,9 +365,9 @@ bake_language* bake_language_get(
         l->pattern = bake_language_pattern_cb;
         l->rule = bake_language_rule_cb;
         l->dependency_rule = bake_language_dependency_rule_cb;
-        l->target_1 = bake_language_target_1_cb;
         l->target_pattern = bake_language_target_pattern_cb;
-        l->target_n = bake_language_target_n_cb;
+        l->target_map = bake_language_target_map_cb;
+        l->artefact = bake_language_artefact_cb;
 
         l->nodes = corto_ll_new();
         l->error = 0;

@@ -33,25 +33,30 @@ extern "C" {
 
 typedef int16_t (*bake_rule_action_cb)(bake_project *p, corto_ll source, char *target, void *ctx);
 typedef char* (*bake_rule_map_cb)(bake_project *p, const char *input, void *ctx);
+typedef int16_t (*bake_rule_artefact_cb)(bake_filelist *fl, bake_project *p);
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */
 typedef enum bake_rule_targetKind {
-    BAKE_RULE_TARGET_ONE,
-    BAKE_RULE_TARGET_N,
+    BAKE_RULE_TARGET_MAP,
     BAKE_RULE_TARGET_PATTERN
 } bake_rule_targetKind;
+
+typedef enum bake_rule_kind {
+    BAKE_RULE_PATTERN,
+    BAKE_RULE_RULE
+} bake_rule_kind;
 
 typedef struct bake_rule_target {
     bake_rule_targetKind kind;
     union {
-        bake_rule_map_cb n;
+        bake_rule_map_cb map;
         const char *pattern;
-        const char *one;
     } is;
 } bake_rule_target;
 
 typedef struct bake_node {
+    bake_rule_kind kind;
     const char *name;
     corto_ll deps;
 } bake_node;
@@ -70,9 +75,8 @@ typedef struct bake_rule {
 
 typedef struct bake_dependency_rule {
     bake_node super;
-    const char *target;
+    bake_rule_target target;
     const char *deps;
-    bake_rule_target dep_mapping;
     bake_rule_action_cb action;
 } bake_dependency_rule;
 

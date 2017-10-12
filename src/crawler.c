@@ -65,7 +65,7 @@ int16_t bake_crawler_crawl(
     }
 
     corto_iter it;
-    if (corto_dir_iter(".", &it)) {
+    if (corto_dir_iter(".", NULL, &it)) {
         corto_seterr("failed to open directory '%s': %s", fullpath, corto_lasterr());
         goto error;
     }
@@ -151,19 +151,32 @@ int16_t bake_crawler_walk(
             corto_info("building '%s'", p->id);
             corto_log_push(p->id);
             corto_ok("entering directory '%s'", p->path);
+            char *prev = strdup(corto_cwd());
+            if (corto_chdir(p->path)) {
+                free(prev);
+                goto error;
+            }
             if (!action(_this, p, ctx)) {
                 if (!corto_lasterr()) {
                     corto_seterr("build interrupted");
                 }
                 corto_log_pop();
+                free(prev);
                 return 0;
             }
             corto_ok("leaving directory '%s'", p->path);
+            if (corto_chdir(p->path)) {
+                free(prev);
+                goto error;
+            }
+            free(prev);
             corto_log_pop();
         }
     }
 
     return 1;
+error:
+    return -1;
 }
 
 

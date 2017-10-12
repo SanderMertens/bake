@@ -26,6 +26,7 @@ bake_pattern* bake_pattern_new(
     const char *pattern)
 {
     bake_pattern *result = corto_calloc(sizeof(bake_pattern));
+    result->super.kind = BAKE_RULE_PATTERN;
     result->super.name = name;
     result->pattern = pattern;
     return result;
@@ -38,9 +39,10 @@ bake_rule* bake_rule_new(
     bake_rule_action_cb action) 
 {
     bake_rule *result = corto_calloc(sizeof(bake_rule));
+    result->super.kind = BAKE_RULE_RULE;    
     result->super.name = name;
-    result->source = source;
     result->target = target;
+    result->source = source;
     result->action = action;
     return result;
 }
@@ -53,10 +55,19 @@ bake_dependency_rule* bake_dependency_rule_new(
 {
     bake_dependency_rule *result = corto_calloc(sizeof(bake_dependency_rule));
     result->super.name = name;
+    result->target = dep_mapping;
     result->deps = deps;
-    result->dep_mapping = dep_mapping;
     result->action = action;
     return result;
 }
 
+bake_file* bake_file_new(
+    const char *name, 
+    uint64_t timestamp) 
+{
+    bake_file *result = corto_calloc(sizeof(bake_file));
+    result->name = strdup(name);
+    result->timestamp = timestamp;
+    return result;
+}
 

@@ -24,7 +24,6 @@
 static
 int16_t bake_install_dir(
     char *id,
-    char *projectPath,
     char *dir,
     char *subdir,
     bool softlink,
@@ -35,7 +34,7 @@ int16_t bake_install_dir(
 
     char *source;
     if (!subdir) {
-        source = corto_asprintf("%s/%s", projectPath, dir);
+        source = strdup(dir);
     } else {
         source = strdup(subdir);
     }
@@ -64,7 +63,7 @@ int16_t bake_install_dir(
 
     if (!(stack = corto_dirstack_push(stack, source))) goto error;
 
-    if (corto_dir_iter(".", &it)) goto error;
+    if (corto_dir_iter(".", NULL, &it)) goto error;
 
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
@@ -75,7 +74,7 @@ int16_t bake_install_dir(
                 !strnicmp(file, strlen("windows-"), "windows-"))
             {
                 if (corto_os_match(file)) {
-                    if (bake_install_dir(id, projectPath, dir, file, softlink, uninstallFile)) {
+                    if (bake_install_dir(id, dir, file, softlink, uninstallFile)) {
                         goto error;
                     }
                 } else {
@@ -86,7 +85,7 @@ int16_t bake_install_dir(
             } else if (!stricmp(file, "everywhere")) 
             {
                 /* Always copy all contents in everywhere */
-                if (bake_install_dir(id, projectPath, dir, file, softlink, uninstallFile)) {
+                if (bake_install_dir(id, dir, file, softlink, uninstallFile)) {
                     goto error;
                 }
                 continue;
@@ -222,41 +221,43 @@ int16_t bake_pre(
 
     /* Install files to project-specific locations in package hierarchy */
     if (!project->local) {
-        char *projectInclude = corto_asprintf("%s/%s", project->path, project->includes);
-        if (bake_install_dir(project->id, project->path, "include", projectInclude, true, uninstallFile)) {
-            free(projectInclude);
+        if (bake_install_dir(project->id, "include", project->includes, true, uninstallFile)) {
             goto error;
         }
-        free(projectInclude);
     }
-    if (bake_install_dir(project->id, project->path, "etc", NULL, true, uninstallFile)) {
+    if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
         goto error;
     }    
     if (project->kind == BAKE_LIBRARY) {
-        if (bake_install_dir(project->id, project->path, "lib", NULL, true, uninstallFile)) {
+        if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile)) {
             goto error;
         }
     }
 
     /* Install files to CORTO_TARGET directly from 'install' folder */
-    char *installPath = corto_asprintf("%s/%s", project->path, "install");
-    if (bake_install_dir(NULL, installPath, "include", NULL, true, uninstallFile)) {
-        goto error;
-    }      
-    if (bake_install_dir(NULL, installPath, "lib", NULL, true, uninstallFile)) {
-        goto error;
+    if (corto_file_test("install")) {
+        if (corto_chdir("install")) {
+            goto error;
+        }
+        if (bake_install_dir(NULL, "include", NULL, true, uninstallFile)) {
+            goto error;
+        }      
+        if (bake_install_dir(NULL, "lib", NULL, true, uninstallFile)) {
+            goto error;
+        }
+        if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
+            goto error;
+        }   
+        if (corto_chdir("..")) {
+            goto error;
+        }
     }
-    if (bake_install_dir(NULL, installPath, "etc", NULL, true, uninstallFile)) {
-        goto error;
-    }        
-    free(installPath);
     fclose(uninstallFile);
 
     corto_ok("done");
     corto_log_pop();
     return 0;
 error:
-    if (installPath) free(installPath);
     corto_log_pop();
     return -1;
 }
@@ -268,22 +269,20 @@ int16_t bake_post(
     corto_log_push("post");
     corto_trace("begin");
 
-    char *kind, *subdir, *targetDir = NULL, *projectArtefact = NULL;
+    char *kind, *subdir, *targetDir = NULL;
 
     targetDir = bake_project_binaryPath(project);
     if (!targetDir) {
         goto error;
     }
 
-    projectArtefact = corto_asprintf("%s/%s", project->path, artefact);
-
-    if (!corto_file_test(projectArtefact)) {
-        corto_seterr("cannot find artefact '%s'", projectArtefact);
+    if (!corto_file_test(artefact)) {
+        corto_seterr("cannot find artefact '%s'", artefact);
         goto error;
     }
 
-    if (corto_isdir(projectArtefact)) {
-        corto_seterr("specified artefact '%s' is a directory, expecting regular file", projectArtefact);
+    if (corto_isdir(artefact)) {
+        corto_seterr("specified artefact '%s' is a directory, expecting regular file", artefact);
         goto error;
     }
 
@@ -291,7 +290,7 @@ int16_t bake_post(
         goto error;
     }
 
-    if (corto_cp(projectArtefact, targetDir)) {
+    if (corto_cp(artefact, targetDir)) {
         goto error;
     }
 
@@ -300,7 +299,6 @@ int16_t bake_post(
     return 0;
 error:
     if (targetDir) free(targetDir);
-    if (projectArtefact) free(projectArtefact);
     corto_log_pop();
     return -1;
 }

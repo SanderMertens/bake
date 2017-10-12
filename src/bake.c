@@ -29,6 +29,7 @@ static bool local = false;
 static bool skip_preinstall = false;
 
 corto_tls BAKE_LANGUAGE_KEY;
+corto_tls BAKE_FILELIST_KEY;
 
 static
 int parseArgs(int argc, char *argv[]) 
@@ -164,6 +165,11 @@ int main(int argc, char* argv[]) {
     
     /* Initialize thread key for language */
     if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {
+        goto error;
+    }
+
+    /* Initialize thread key for filelist */
+    if (corto_tls_new(&BAKE_FILELIST_KEY, NULL)) {
         goto error;
     }
 

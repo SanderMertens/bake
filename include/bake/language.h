@@ -49,10 +49,12 @@ struct bake_language {
     void (*pattern)(const char *name, const char *pattern);
     void (*rule)(const char *name, const char *source, bake_rule_target target, bake_rule_action_cb action);
     void (*dependency_rule)(const char *name, const char *deps, bake_rule_target dep_mapping, bake_rule_action_cb action);
+    void (*artefact)(bake_rule_artefact_cb action);
 
-    bake_rule_target (*target_1)(const char *target);
     bake_rule_target (*target_pattern)(const char *pattern);
-    bake_rule_target (*target_n)(bake_rule_map_cb mapping);
+    bake_rule_target (*target_map)(bake_rule_map_cb mapping);
+
+    bake_rule_artefact_cb artefact_cb;
 
     corto_ll nodes;
     int16_t error;
