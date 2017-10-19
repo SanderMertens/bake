@@ -43,5 +43,16 @@ int16_t bake_filelist_set(
     bake_filelist *fl,
     const char *pattern);
 
+corto_iter bake_filelist_iter(
+    bake_filelist *fl);
+
+bake_file* bake_filelist_add(
+    bake_filelist *fl,
+    const char *filename);
+
+int16_t bake_filelist_addList(
+    bake_filelist *fl,
+    bake_filelist *src);
+
 uint64_t bake_filelist_count(
     bake_filelist *fl);

@@ -20,23 +20,26 @@
  */
 
 /** @file
- * @section builder Builder framework for bake.
- * @brief The builder provides an interface for building bake plugins.
+ * @section config Build configuration types
+ * @brief Types for communicating non-project specific configuration.
  */
 
-#ifndef BAKE_H_
-#define BAKE_H_
+#ifndef BAKE_CONFIG_H_
+#define BAKE_CONFIG_H_
 
 #include <corto/base.h>
-#include <bake/project.h>
-#include <bake/filelist.h>
-#include <bake/config.h>
-#include <bake/rule.h>
-#include <bake/language.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct bake_config {
+    const char *environment;
+    bool symbols;
+    bool debug;
+    bool optimizations;
+    bool coverage;
+} bake_config;
 
 #ifdef __cplusplus
 }

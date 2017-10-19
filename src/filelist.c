@@ -22,11 +22,15 @@ void bake_filelist_free(
 }
 
 static
-int16_t bake_filelist_add(
+bake_file* bake_filelist_add_intern(
     bake_filelist *fl,
     const char *filename,
     time_t timestamp)
 {
+    if (timestamp < 0) {
+        goto error;
+    }
+
     bake_file *bfile = corto_alloc(sizeof(bake_file));
     bfile->name = strdup(filename);
     bfile->timestamp = timestamp;
@@ -35,19 +39,23 @@ int16_t bake_filelist_add(
         fl->files = corto_ll_new();
     }
     corto_ll_append(fl->files, bfile);
+
+    if (timestamp) {
+        corto_debug("add '%s' with timestamp %d", filename, timestamp);
+    } else {
+        corto_debug("add '%s' with timestamp 0", filename);
+    }
+
+    return bfile;
+error: 
+    return NULL;
 }
 
 static
 int16_t bake_filelist_populate(
     bake_filelist *fl)
 {
-    char *cwd = strdup(corto_cwd());
-
-    if (fl->path) {
-        if (corto_chdir(fl->path)) {
-            goto error;
-        }
-    }
+    char *dir = NULL;
 
     /* Scan for path to start from */
     const char *pattern = fl->pattern;
@@ -64,15 +72,8 @@ int16_t bake_filelist_populate(
 
     corto_iter it;
     if (end != pattern) {
-        /* Change directory */
-        corto_id dir;
-        strcpy(dir, pattern);
+        dir = strdup(pattern);
         dir[end - pattern - 1] = '\0';
-
-        if (corto_chdir(dir)) {
-            corto_seterr("directory '%s' does not exist", dir);
-            goto error;
-        }
 
         if (end[-1] == '/') {
             end --;
@@ -83,12 +84,12 @@ int16_t bake_filelist_populate(
             }
         }
 
-        printf("end = %s\n", end);
-
-        if (corto_dir_iter(".", end, &it)) {
+        corto_trace("match pattern '%s' in '%s/%s'", end, corto_cwd(), dir);
+        if (corto_dir_iter(dir, end, &it)) {
             goto error;
         }
     } else {
+        corto_trace("match pattern '%s' in '%s'", pattern, corto_cwd());        
         if (corto_dir_iter(".", pattern, &it)) {
             goto error;
         }
@@ -98,29 +99,35 @@ int16_t bake_filelist_populate(
     int count = 0;
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
-        bake_filelist_add(fl, file, corto_lastmodified(file));
+        char *path = dir ? corto_asprintf("%s/%s", dir, file) : strdup(file);
+        if (!bake_filelist_add_intern(fl, path, corto_lastmodified(path))) {
+            free(path);
+            goto error;
+        }
+        free(path);
         count ++;
     }
 
     if (!count && !corto_idmatch_hasOperators(end)) {
-        corto_trace(
-            "pattern '%s' matched no files, adding '%s' with timestamp 0", 
-            end, strarg("%s/%s", fl->path, end));
-        bake_filelist_add(fl, strarg("%s/%s", fl->path, end), 0);
-    }
-
-    if (cwd) {
-        if (corto_chdir(cwd)) {
-            corto_seterr("failed to restore current directory to '%s'", cwd);
+        char *path = dir ? corto_asprintf("%s/%s", dir, end) : strdup(end);
+        if (!bake_filelist_add_intern(fl, path, 0)) {
+            free(path);
             goto error;
         }
+        free(path);
     }
 
-   if (cwd) free(cwd); 
+   if (dir) free(dir); 
     return 0;
 error:
-    if (cwd) free(cwd);
+    if (dir) free(dir);
     return -1;
+}
+
+corto_iter bake_filelist_iter(
+    bake_filelist *fl)
+{
+    return corto_ll_iterAlloc(fl->files);
 }
 
 int16_t bake_filelist_set(
@@ -169,8 +176,42 @@ error:
     return NULL;
 }
 
+bake_file* bake_filelist_add(
+    bake_filelist *fl,
+    const char *file)
+{
+    corto_assert(fl != NULL, "passed NULL filelist to filelist_add");
+    corto_assert(file != NULL, "passed NULL file to filelist_add");
+    if (corto_file_test(file)) {
+        return bake_filelist_add_intern(fl, file, corto_lastmodified(file));
+    } else {
+        return bake_filelist_add_intern(fl, file, 0);
+    }
+}
+
+int16_t bake_filelist_addList(
+    bake_filelist *fl,
+    bake_filelist *src)
+{
+    corto_assert(fl != NULL, "passed NULL to filelist_addlist");
+    if (!src) {
+        corto_seterr("no source filelist specified");
+        goto error;
+    }
+
+    corto_iter it = corto_ll_iter(src->files);
+    while (corto_iter_hasNext(&it)) {
+        corto_ll_append(fl->files, corto_iter_next(&it));
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 uint64_t bake_filelist_count(
     bake_filelist *fl)
 {
     return corto_ll_size(fl->files);
 }
+

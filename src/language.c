@@ -237,59 +237,116 @@ void bake_language_dependency_rule(
 }
 
 static
-bake_filelist* bake_node_eval_pattern(
-    bake_language *l,
-    bake_node *n,
-    bake_project *p)
+int16_t bake_assertPathForFile(
+    char *path)
 {
-    corto_trace("evaluating pattern '%s'", n->name);
+    char buffer[512];
+    strcpy(buffer, path);
+    char *ptr = strrchr(buffer, '/');
+    if (ptr) {
+        ptr[0] = '\0';
+    }
 
-    return bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+    if (!corto_file_test(buffer)) {
+        if (corto_mkdir(buffer)) {
+            goto error;
+        }
+    }
+
+    return 0;
+error:
+    return -1;
 }
-
-static
-bake_filelist* bake_node_eval_rule(
-    bake_language *l,
-    bake_node *n,
-    bake_project *p)
-{
-    corto_trace("evaluating rule '%s'", n->name);
-    return NULL;
-}
-
 
 static
 int16_t bake_node_eval(
     bake_language *l,
     bake_node *n,
     bake_project *p,
-    bake_filelist *targets)
+    bake_config *c,
+    bake_filelist *prev_target,
+    bake_filelist *outputs)
 {
-    bake_filelist *target_fl = NULL;
+    bake_filelist *targets = NULL, *inputs = NULL;
+
+    corto_log_push((char*)n->name);
 
     if (n->kind == BAKE_RULE_PATTERN) {
-        target_fl = bake_node_eval_pattern(l, n, p);
-    } else if (n->kind == BAKE_RULE_RULE) {
-        target_fl = bake_node_eval_rule(l, n, p);
+        corto_trace("evaluating pattern");
+        targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+    } else {
+        corto_trace("evaluating rule");
     }
 
-    if (!target_fl) {
-        target_fl = targets;
-    }
-
-    if (target_fl) {
-        corto_log_push((char*)n->name);
-        if (n->deps) {
-            corto_iter it = corto_ll_iter(n->deps);
-            while (corto_iter_hasNext(&it)) {
-                bake_node *e = corto_iter_next(&it);
-                if (bake_node_eval(l, e, p, target_fl)) {
-                    goto error;
-                }
+    /* Collect input files for node */
+    if (n->deps) {
+        bake_filelist *inputs = bake_filelist_new(NULL, NULL);
+        corto_iter it = corto_ll_iter(n->deps);
+        while (corto_iter_hasNext(&it)) {
+            bake_node *e = corto_iter_next(&it);
+            if (bake_node_eval(l, e, p, c, targets, inputs)) {
+                corto_seterr("dependency '%s' failed", e->name);
+                goto error;
             }
         }
-        corto_log_pop();
+
+        /* Generate target files */
+        if (n->kind == BAKE_RULE_RULE) {
+            bake_rule *r = (bake_rule*)n;
+
+            /* When rule specifies a map, generate targets from inputs */
+            if (r->target.kind == BAKE_RULE_TARGET_MAP) {
+                targets = bake_filelist_new(NULL, NULL);
+                corto_iter it = bake_filelist_iter(inputs);
+                int count = 0;
+                while (corto_iter_hasNext(&it)) {
+                    bake_file *src = corto_iter_next(&it);
+                    bake_file *dst = NULL;
+                    const char *map = r->target.is.map(p, src->name, NULL);
+                    if (!map) {
+                        corto_seterr("failed to map file '%s'", src->name);
+                        goto error;
+                    }
+                    if (!(dst = bake_filelist_add(targets, map))) {
+                        goto error;
+                    }
+
+                    count ++;
+                    if (src->timestamp > dst->timestamp) {
+                        corto_info("[%d%%] %s", 
+                            100 * count / bake_filelist_count(inputs),
+                            src->name);
+
+                        /* Make sure target directory exists */
+                        if (bake_assertPathForFile(dst->name)) {
+                            goto error;
+                        }
+
+                        if (r->action(p, c, src->name, dst->name, NULL)) {
+                            corto_seterr("'%s' failed to build", src->name);
+                            goto error;
+                        }
+                    } else {
+                        corto_info("[%d%%] %s (up to date)", 
+                            100 * count / bake_filelist_count(inputs),
+                            src->name);
+                    }
+                }
+
+            /* When rule specifies a pattern, generate targets from pattern */
+            } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN) {
+                targets = bake_filelist_new(NULL, r->target.is.pattern);
+            }
+        }
     }
+
+    /* Add targets to list of outputs (inputs for parent node) */
+    if (outputs && targets) {
+        bake_filelist_addList(outputs, targets);
+    }
+
+    corto_trace("done");
+    corto_log_pop();
 
     return 0;
 error:
@@ -299,7 +356,8 @@ error:
 
 int16_t bake_language_build(
     bake_language *l,
-    bake_project *p)
+    bake_project *p,
+    bake_config *c)
 {
     corto_log_push("build");
     corto_trace("begin");
@@ -326,7 +384,8 @@ int16_t bake_language_build(
     }
 
     /* Evaluate root node */
-    if (bake_node_eval(l, root, p, artefact_fl)) {
+    if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
+        corto_seterr("failed to build 'ARTEFACT'");
         goto error;
     }
 

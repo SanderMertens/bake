@@ -128,7 +128,8 @@ void bake_language_dependency_rule(
  */
 int16_t bake_language_build(
     bake_language *l,
-    bake_project *p);
+    bake_project *p,
+    bake_config *c);
 
 
 #ifdef __cplusplus

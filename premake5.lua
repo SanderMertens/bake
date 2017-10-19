@@ -4,7 +4,7 @@ workspace "bake"
   location "build"
 
   configuration { "linux", "gmake" }
-    buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600" }
+    buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600", "-rdynamic", "-Wl,--export-dynamic" }
 
   project "bake"
     kind "ConsoleApp"

@@ -27,6 +27,7 @@ static char *artefact = NULL;
 static bool managed = false;
 static bool local = false;
 static bool skip_preinstall = false;
+static bool skip_uninstall = false;
 
 corto_tls BAKE_LANGUAGE_KEY;
 corto_tls BAKE_FILELIST_KEY;
@@ -50,6 +51,7 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "managed", managed = true);
             PARSE_OPTION(0, "local", local = true);
             PARSE_OPTION(0, "skip-preinstall", skip_preinstall = true);
+            PARSE_OPTION(0, "skip-uninstall", skip_uninstall = true);
             
             if (!parsed) {
                 corto_seterr("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
@@ -77,6 +79,13 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     corto_log_push("default");
     corto_trace("begin");
 
+    bake_config config = {
+        .symbols = true,
+        .debug = true,
+        .optimizations = false,
+        .coverage = false
+    };
+
     bake_language *l = NULL;
     if (p->language) {
         l = bake_language_get(p->language);
@@ -86,8 +95,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     }
 
     /* Step 1: clean package hierarchy */
-    if (bake_uninstall(p)) {
-        goto error;
+    if (!skip_uninstall) {
+        if (bake_uninstall(p)) {
+            goto error;
+        }
     }
 
     /* Step 2: pre-install files to package hierarchy */
@@ -103,7 +114,8 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         /* Step 3: if managed, generate code */
 
         /* Step 4: build sources */
-        if (bake_language_build(l, p)) {
+        if (bake_language_build(l, p, &config)) {
+            corto_seterr("build failed");
             goto error;
         }
 
@@ -158,7 +170,7 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 int main(int argc, char* argv[]) {
-    corto_log_fmt("%V %F:%L %c: %m");
+    corto_log_fmt("%V %F:%L (%R) %c: %m");
     
     /* Initialize base library */
     base_init(argv[0]);
@@ -246,9 +258,9 @@ int main(int argc, char* argv[]) {
 
     /* Cleanup resources */
     bake_crawler_free(c);
-
+    base_deinit();
     return 0;
 error:
-    corto_error("%s", corto_lasterr());
+    base_deinit();
     return -1;
 }

@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-typedef int16_t (*bake_rule_action_cb)(bake_project *p, corto_ll source, char *target, void *ctx);
+typedef int16_t (*bake_rule_action_cb)(bake_project *p, bake_config *c, char *src, char *target, void *ctx);
 typedef char* (*bake_rule_map_cb)(bake_project *p, const char *input, void *ctx);
 typedef int16_t (*bake_rule_artefact_cb)(bake_filelist *fl, bake_project *p);
 

@@ -156,16 +156,16 @@ int16_t bake_crawler_walk(
                 free(prev);
                 goto error;
             }
+
             if (!action(_this, p, ctx)) {
-                if (!corto_lasterr()) {
-                    corto_seterr("build interrupted");
-                }
+                corto_seterr("project interrupted build");
                 corto_log_pop();
                 free(prev);
-                return 0;
+                goto error;
             }
+
             corto_ok("leaving directory '%s'", p->path);
-            if (corto_chdir(p->path)) {
+            if (corto_chdir(prev)) {
                 free(prev);
                 goto error;
             }
@@ -176,7 +176,7 @@ int16_t bake_crawler_walk(
 
     return 1;
 error:
-    return -1;
+    return 0;
 }
 
 
