@@ -126,7 +126,7 @@ void bake_language_dependency_rule(
  * @param p The project to build.
  * @return 0 if success, non-zero if failed.
  */
-int16_t bake_language_build(
+bake_filelist* bake_language_build(
     bake_language *l,
     bake_project *p,
     bake_config *c);

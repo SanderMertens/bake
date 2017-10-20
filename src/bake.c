@@ -114,12 +114,21 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         /* Step 3: if managed, generate code */
 
         /* Step 4: build sources */
-        if (bake_language_build(l, p, &config)) {
+        bake_filelist *artefacts = NULL;
+        if (!(artefacts = bake_language_build(l, p, &config))) {
             corto_seterr("build failed");
             goto error;
         }
 
         /* Step 5: install artefact */
+        bake_file *artefact = corto_ll_get(artefacts->files, 0);
+        if (!artefact) {
+            corto_seterr("artefact missing");
+            goto error;
+        }
+        if (bake_post(p, artefact->name)) {
+            goto error;
+        }
     }
 
     corto_ok("done");
@@ -171,6 +180,7 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 
 int main(int argc, char* argv[]) {
     corto_log_fmt("%V %F:%L (%R) %c: %m");
+    corto_log_embedCategories(false);
     
     /* Initialize base library */
     base_init(argv[0]);

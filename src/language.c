@@ -264,7 +264,7 @@ int16_t bake_node_eval(
     bake_node *n,
     bake_project *p,
     bake_config *c,
-    bake_filelist *prev_target,
+    bake_filelist *inherits,
     bake_filelist *outputs)
 {
     bake_filelist *targets = NULL, *inputs = NULL;
@@ -272,10 +272,15 @@ int16_t bake_node_eval(
     corto_log_push((char*)n->name);
 
     if (n->kind == BAKE_RULE_PATTERN) {
-        corto_trace("evaluating pattern");
-        targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+        if (((bake_pattern*)n)->pattern) {
+            corto_trace("evaluating pattern");
+            targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+        } else {
+            targets = inherits;
+        }
     } else {
         corto_trace("evaluating rule");
+        targets = inherits;
     }
 
     /* Collect input files for node */
@@ -313,8 +318,11 @@ int16_t bake_node_eval(
 
                     count ++;
                     if (src->timestamp > dst->timestamp) {
-                        corto_info("[%d%%] %s", 
+                        corto_info("%s[%s%3d%%%s] %s", 
+                            CORTO_NORMAL,
+                            CORTO_GREY,
                             100 * count / bake_filelist_count(inputs),
+                            CORTO_NORMAL,
                             src->name);
 
                         /* Make sure target directory exists */
@@ -327,15 +335,87 @@ int16_t bake_node_eval(
                             goto error;
                         }
                     } else {
-                        corto_info("[%d%%] %s (up to date)", 
+                        corto_ok("[%s%3d%%%s] %s%s%s", 
+                            CORTO_GREY,
                             100 * count / bake_filelist_count(inputs),
-                            src->name);
+                            CORTO_NORMAL,
+                            CORTO_GREEN,
+                            src->name,
+                            CORTO_NORMAL);
                     }
                 }
 
             /* When rule specifies a pattern, generate targets from pattern */
             } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN) {
-                targets = bake_filelist_new(NULL, r->target.is.pattern);
+                if (r->target.is.pattern[0] == '$') {
+                    targets = inherits;
+                } else {
+                    targets = bake_filelist_new(NULL, r->target.is.pattern);
+                }
+                if (!targets) {
+                    goto error;
+                }                    
+
+                /* Do n-to-n comparison between sources and targets. If the
+                 * target list is empty, it is possible that files still have to
+                 * be generated, in which case the rule must be executed. */
+                bool shouldBuild = false;
+
+                if (!bake_filelist_count(targets)) {
+                    shouldBuild = true;
+                } else {
+                    corto_iter src_iter = bake_filelist_iter(inputs);
+                    while (!shouldBuild && corto_iter_hasNext(&src_iter)) {
+                        bake_file *src = corto_iter_next(&src_iter);
+
+                        corto_iter dst_iter = bake_filelist_iter(targets);
+                        while (!shouldBuild && corto_iter_hasNext(&dst_iter)) {
+                            bake_file *dst = corto_iter_next(&dst_iter);
+                            if (!src->timestamp) {
+                                shouldBuild = true;
+                            } else if (src->timestamp > dst->timestamp) {
+                                shouldBuild = true;
+                            }
+                        }
+                    }
+                }
+
+                char *dst = NULL;
+                if (bake_filelist_count(targets) == 1) {
+                    bake_file *f = corto_ll_get(targets->files, 0);
+                    dst = f->name;
+                }
+
+                if (shouldBuild) {
+                    corto_buffer source_list = CORTO_BUFFER_INIT;
+                    corto_iter src_iter = bake_filelist_iter(inputs);
+                    int count = 0;
+                    while (corto_iter_hasNext(&src_iter)) {
+                        bake_file *src = corto_iter_next(&src_iter);
+                        if (count) {
+                            corto_buffer_appendstr(&source_list, " ");
+                        }
+                        corto_buffer_appendstr(&source_list, src->name);
+                        count ++;
+                    }
+
+                    char *source_list_str = corto_buffer_str(&source_list);
+                    if (r->action(p, c, source_list_str, dst, NULL)) {
+                        if (dst) {
+                            corto_seterr("'%s' failed to build", dst);
+                        } else {
+                            corto_seterr("rule '%s' failed to build", n->name);
+                        }
+                        free(source_list_str);
+                        goto error;
+                    } else {
+                        corto_info("%s", dst);
+                    }
+
+                    free(source_list_str);
+                } else {
+                    corto_info("%s%s%s", CORTO_GREEN, dst, CORTO_NORMAL);
+                }
             }
         }
     }
@@ -354,7 +434,7 @@ error:
     return -1;
 }
 
-int16_t bake_language_build(
+bake_filelist* bake_language_build(
     bake_language *l,
     bake_project *p,
     bake_config *c)
@@ -391,10 +471,10 @@ int16_t bake_language_build(
 
     corto_trace("end");
     corto_log_pop();
-    return 0;
+    return artefact_fl;
 error:
     corto_log_pop();
-    return -1;
+    return NULL;
 }
 
 bake_language* bake_language_get(

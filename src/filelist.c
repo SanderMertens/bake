@@ -145,7 +145,7 @@ int16_t bake_filelist_set(
     }
 }
 
-
+static
 int16_t bake_filelist_set_cb(
     const char *pattern) 
 {

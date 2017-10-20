@@ -286,8 +286,10 @@ int16_t bake_post(
         goto error;
     }
 
-    if (corto_mkdir(targetDir)) {
-        goto error;
+    if (!corto_file_test(targetDir)) {
+        if (corto_mkdir(targetDir)) {
+            goto error;
+        }
     }
 
     if (corto_cp(artefact, targetDir)) {
