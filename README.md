@@ -1,5 +1,5 @@
 # bake
-Existing buildtools are either not portable, not flexible or too rigid for what we envision: a cross-platform, cross-language buildtool that imposes a well defined structure on software projects. Our initial focus is embedded languages (C/C++) since the pain is felt most accutely there.
+Existing buildtools are either not portable, not flexible or too rigid for what we envision: a cross-platform, cross-language buildtool that "just works" by imposing a well defined structure on projects. Our initial focus is embedded languages (C/C++) since the pain is felt most accutely there.
 
 Bake is an opinionated tool that builds packages in a certain way to ensure packages are securely linked with (hardcoded paths), don't cause name collisions (hierarchical organization) and can be automatically installed (depdendency/version management).
 
