@@ -5,6 +5,8 @@ Bake is an opinionated tool that builds packages in a certain way to ensure pack
 
 The initial usecase for bake is to build the corto project (https://www.corto.io) and it shares some of its codebase (located in the https://www.github.com/cortoproject/base repository), but the tool will be generic and can be utilized outside of corto as well.
 
+Bake is an evolution of the rake-based corto buildsystem (located in the https://github.com/cortoproject/corto repository). In practice rake appears to be harder to port to older platforms than expected alongside with a couple of other hard-to-solve issues, which triggered a rebuild in native code.
+
 ## Getting Started
 Bake is currently under development. If you have ideas, feature requests or want to collaborate create an issue or contact me at sander@corto.io
 
