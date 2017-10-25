@@ -26,11 +26,11 @@
 
 typedef struct bake_file {
     char *name;
+    char *offset;
     uint64_t timestamp;
 } bake_file;
 
 typedef struct bake_filelist {
-    char *path;
     char *pattern;
     corto_ll files;
     int16_t (*set)(const char *pattern);
@@ -38,6 +38,9 @@ typedef struct bake_filelist {
 
 bake_filelist* bake_filelist_new(
     const char *path, const char *pattern);
+
+void bake_filelist_free(
+    bake_filelist* fl);
 
 int16_t bake_filelist_set(
     bake_filelist *fl,
@@ -49,6 +52,11 @@ corto_iter bake_filelist_iter(
 bake_file* bake_filelist_add(
     bake_filelist *fl,
     const char *filename);
+
+int16_t bake_filelist_addPattern(
+    bake_filelist *fl,
+    const char *offset,
+    const char *pattern);
 
 int16_t bake_filelist_addList(
     bake_filelist *fl,

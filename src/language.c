@@ -25,6 +25,7 @@ static corto_ll languages;
 
 extern corto_tls BAKE_LANGUAGE_KEY;
 extern corto_tls BAKE_FILELIST_KEY;
+extern corto_tls BAKE_PROJECT_KEY;
 
 typedef int (*buildmain_cb)(bake_language *l);
 
@@ -85,6 +86,28 @@ void bake_language_artefact_cb(
 {
     bake_language *l = corto_tls_get(BAKE_LANGUAGE_KEY);
     l->artefact_cb = artefact;
+}
+
+static
+void bake_language_exec_cb(
+    const char *cmd)
+{
+    char *envcmd = corto_envparse("%s", cmd);
+
+    int8_t ret = 0;
+    int sig = 0;
+    if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
+        if (!sig) {
+            corto_seterr("command failed with returncode %d: %s", ret, envcmd);
+        } else {
+            corto_seterr("command failed with signal %d: %s", sig, envcmd);
+        }
+
+        bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
+        p->error = true;
+    }
+
+    free(envcmd);
 }
 
 static
@@ -158,8 +181,6 @@ int16_t bake_node_addToTarget(
 {
     const char *pattern = NULL;
     if (target->kind == BAKE_RULE_TARGET_PATTERN) {
-        corto_assert(
-            target->is.pattern != NULL, "invalid rule for rule '%s'", node->name);
         pattern = target->is.pattern;
     }
 
@@ -193,9 +214,15 @@ void bake_language_pattern(
     const char *name, 
     const char *pattern) 
 {
-    if (bake_node_find(l, name)) {
-        l->error = 1;
-        corto_error("pattern '%s' redeclared with value '%s'", name, pattern);
+    bake_node *n;
+    if ((n = bake_node_find(l, name))) {
+        if (n->kind != BAKE_RULE_PATTERN) {
+            l->error = 1;
+            corto_error("'%s' redeclared as pattern", name);
+        } else {
+            ((bake_pattern*)n)->pattern = pattern;
+        }
+
     } else {
         bake_node_add(l, bake_pattern_new(name, pattern));
     }
@@ -208,12 +235,19 @@ void bake_language_rule(
     bake_rule_target target, 
     bake_rule_action_cb action) 
 {
+    bake_node *n;
     if (!source && target.kind == BAKE_RULE_TARGET_MAP) {
         l->error = 1;
         corto_error("rule '%s' has mapped target but no source to map from", name);
-    } else if (bake_node_find(l, name)) {
-        l->error = 1;
-        corto_error("rule '%s' redeclared with source = '%s'", name, source);
+    } else if ((n = bake_node_find(l, name))) {
+        if (n->kind != BAKE_RULE_RULE) {
+            l->error = 1;
+            corto_error("'%s' redeclared as rule", name);
+        } else {
+            ((bake_rule*)n)->source = source;
+            ((bake_rule*)n)->target = target;
+            ((bake_rule*)n)->action = action;
+        }
     } else {
         bake_node *n = bake_node_add(l, bake_rule_new(name, source, target, action));
         if (bake_node_addDependencies(l, n, source)) l->error = 1;
@@ -273,8 +307,33 @@ int16_t bake_node_eval(
 
     if (n->kind == BAKE_RULE_PATTERN) {
         if (((bake_pattern*)n)->pattern) {
+            bool isSources = false;
+
             corto_trace("evaluating pattern");
-            targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+            if (!stricmp(n->name, "SOURCES")) {
+                targets = bake_filelist_new(NULL, NULL); /* Create empty list */
+                isSources = true;
+
+                /* If this is the special SOURCES rule, apply the pattern to
+                 * every configured source directory */
+                corto_iter it = corto_ll_iter(p->sources);
+                corto_dirstack ds = NULL;
+                while (corto_iter_hasNext(&it)) {
+                    char *src = corto_iter_next(&it);
+                    ds = corto_dirstack_push(ds, src);
+                    if (bake_filelist_addPattern(targets, src, ((bake_pattern*)n)->pattern)) {
+                        goto error;
+                    }
+                    corto_dirstack_pop(ds);
+                }
+            } else {
+                /* If this is a regular pattern, match against project directory */
+                targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+            }
+
+            if (!targets) {
+                goto error;
+            }
         } else {
             targets = inherits;
         }
@@ -286,6 +345,10 @@ int16_t bake_node_eval(
     /* Collect input files for node */
     if (n->deps) {
         bake_filelist *inputs = bake_filelist_new(NULL, NULL);
+        if (!inputs) {
+            goto error;
+        }
+
         corto_iter it = corto_ll_iter(n->deps);
         while (corto_iter_hasNext(&it)) {
             bake_node *e = corto_iter_next(&it);
@@ -302,12 +365,15 @@ int16_t bake_node_eval(
             /* When rule specifies a map, generate targets from inputs */
             if (r->target.kind == BAKE_RULE_TARGET_MAP) {
                 targets = bake_filelist_new(NULL, NULL);
+                if (!targets) {
+                    goto error;
+                }
                 corto_iter it = bake_filelist_iter(inputs);
                 int count = 0;
                 while (corto_iter_hasNext(&it)) {
                     bake_file *src = corto_iter_next(&it);
                     bake_file *dst = NULL;
-                    const char *map = r->target.is.map(p, src->name, NULL);
+                    const char *map = r->target.is.map(l, p, src->name, NULL);
                     if (!map) {
                         corto_seterr("failed to map file '%s'", src->name);
                         goto error;
@@ -330,7 +396,18 @@ int16_t bake_node_eval(
                             goto error;
                         }
 
-                        if (r->action(p, c, src->name, dst->name, NULL)) {
+                        char *srcPath = src->name;
+                        if (src->offset) {
+                            srcPath = corto_asprintf("%s/%s", src->offset, src->name);
+                        }
+
+                        r->action(l, p, c, srcPath, dst->name, NULL);
+
+                        if (srcPath != src->name) {
+                            free(srcPath);
+                        }
+
+                        if (p->error) {
                             corto_seterr("'%s' failed to build", src->name);
                             goto error;
                         }
@@ -347,7 +424,7 @@ int16_t bake_node_eval(
 
             /* When rule specifies a pattern, generate targets from pattern */
             } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN) {
-                if (r->target.is.pattern[0] == '$') {
+                if (!r->target.is.pattern || r->target.is.pattern[0] == '$') {
                     targets = inherits;
                 } else {
                     targets = bake_filelist_new(NULL, r->target.is.pattern);
@@ -400,7 +477,8 @@ int16_t bake_node_eval(
                     }
 
                     char *source_list_str = corto_buffer_str(&source_list);
-                    if (r->action(p, c, source_list_str, dst, NULL)) {
+                    r->action(l, p, c, source_list_str, dst, NULL);
+                    if (p->error) {
                         if (dst) {
                             corto_seterr("'%s' failed to build", dst);
                         } else {
@@ -456,12 +534,14 @@ bake_filelist* bake_language_build(
 
     /* Populate filelist */
     corto_tls_set(BAKE_FILELIST_KEY, artefact_fl);
-    l->artefact_cb(artefact_fl, p);
+    l->artefact_cb(l, artefact_fl, p);
 
     if (!bake_filelist_count(artefact_fl)) {
         corto_seterr("no artefacts specified for project '%s' by language", p->id);
         goto error;
     }
+
+    corto_tls_set(BAKE_PROJECT_KEY, p     );
 
     /* Evaluate root node */
     if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
@@ -507,6 +587,7 @@ bake_language* bake_language_get(
         l->target_pattern = bake_language_target_pattern_cb;
         l->target_map = bake_language_target_map_cb;
         l->artefact = bake_language_artefact_cb;
+        l->exec = bake_language_exec_cb;
 
         l->nodes = corto_ll_new();
         l->error = 0;
@@ -527,7 +608,6 @@ bake_language* bake_language_get(
         corto_tls_set(BAKE_LANGUAGE_KEY, l);
 
         /* Create built-in nodes */
-        bake_language_pattern(l, "ARTEFACT", NULL); /* Build root */
         bake_language_pattern(l, "DEFINITION", NULL); /* Code-gen root */
 
         /* Run 'bakemain' which will load the rules for the language */

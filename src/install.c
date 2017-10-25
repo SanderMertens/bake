@@ -220,7 +220,7 @@ int16_t bake_pre(
     }
 
     /* Install files to project-specific locations in package hierarchy */
-    if (!project->local) {
+    if (project->public) {
         if (bake_install_dir(project->id, "include", project->includes, true, uninstallFile)) {
             goto error;
         }
@@ -286,10 +286,8 @@ int16_t bake_post(
         goto error;
     }
 
-    if (!corto_file_test(targetDir)) {
-        if (corto_mkdir(targetDir)) {
-            goto error;
-        }
+    if (corto_mkdir(targetDir)) {
+        goto error;
     }
 
     if (corto_cp(artefact, targetDir)) {

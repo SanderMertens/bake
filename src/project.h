@@ -20,8 +20,7 @@
  */
 
 bake_project* bake_project_new(
-    const char *path,
-    const char *projectConfig);
+    const char *path);
 
 char* bake_project_binaryPath(
     bake_project *p);

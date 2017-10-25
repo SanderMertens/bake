@@ -31,9 +31,11 @@
 extern "C" {
 #endif
 
-typedef int16_t (*bake_rule_action_cb)(bake_project *p, bake_config *c, char *src, char *target, void *ctx);
-typedef char* (*bake_rule_map_cb)(bake_project *p, const char *input, void *ctx);
-typedef int16_t (*bake_rule_artefact_cb)(bake_filelist *fl, bake_project *p);
+typedef struct bake_language bake_language;
+
+typedef void (*bake_rule_action_cb)(bake_language *l, bake_project *p, bake_config *c, char *src, char *target, void *ctx);
+typedef char* (*bake_rule_map_cb)(bake_language *l, bake_project *p, const char *input, void *ctx);
+typedef int16_t (*bake_rule_artefact_cb)(bake_language *l, bake_filelist *fl, bake_project *p);
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */

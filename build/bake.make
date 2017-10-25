@@ -89,6 +89,7 @@ OBJECTS := \
 	$(OBJDIR)/filelist.o \
 	$(OBJDIR)/install.o \
 	$(OBJDIR)/language.o \
+	$(OBJDIR)/parson.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/rule.o \
 
@@ -327,6 +328,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/language.o: ../src/language.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/parson.o: ../src/parson.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

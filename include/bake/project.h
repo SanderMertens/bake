@@ -37,17 +37,40 @@ typedef enum bake_project_kind {
     BAKE_TOOL
 } bake_project_kind;
 
+typedef enum bake_project_attrKind {
+    BAKE_ATTR_BOOLEAN,
+    BAKE_ATTR_STRING,
+    BAKE_ATTR_NUMBER,
+    BAKE_ATTR_ARRAY
+} bake_project_attrKind;
+
+typedef struct bake_project_attr {
+    char *name;
+    bake_project_attrKind kind;
+    union {
+        bool boolean;
+        char *string;
+        double number;
+        corto_ll array;
+    } is;
+} bake_project_attr;
+
 typedef struct bake_project {
     char *id;
-    char *path;
-    char *sources;
-    char *includes;
-    char *projectConfig;
     bake_project_kind kind;
-    bool local;
-    bool managed;
     corto_ll use;
+    bool public;
+    bool managed;
+    char *path;
+    corto_ll sources;
+    char *includes;
     char *language;
+    char *args;
+    corto_ll attributes;
+    bool error;
+
+    bake_project_attr* (*get_attr)(const char *name);
+    char* (*get_attr_string)(const char *name);
 } bake_project;
 
 #ifdef __cplusplus

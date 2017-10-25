@@ -67,8 +67,7 @@ uint32_t bake_crawler_count(
  */
 bake_project* bake_crawler_addProject(
     bake_crawler _this,
-    const char *path,
-    const char *projectConfig); 
+    const char *path); 
 
 /** Walk projects.
  * This walks projects found with bake_crawler_search in correct dependency

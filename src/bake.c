@@ -19,18 +19,21 @@
 /* Global variables for static project configuration (from command line) */
 static char *id = NULL;
 static char *path = ".";
-static char *sources = "src";
+static char *sources = NULL; /* 'src' is added by default */
 static char *includes = "include";
 static char *language = "c";
 static char *kind = "library";
 static char *artefact = NULL;
+static char *use = NULL;
+static char *args = NULL;
 static bool managed = false;
-static bool local = false;
+static bool public = true;
 static bool skip_preinstall = false;
 static bool skip_uninstall = false;
 
 corto_tls BAKE_LANGUAGE_KEY;
 corto_tls BAKE_FILELIST_KEY;
+corto_tls BAKE_PROJECT_KEY;
 
 static
 int parseArgs(int argc, char *argv[]) 
@@ -48,8 +51,10 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION('l', "lang", language = argv[i + 1]; i ++);
             PARSE_OPTION('k', "kind", kind = argv[i + 1] ; i ++);
             PARSE_OPTION('a', "artefact", artefact = argv[i + 1] ; i ++);
+            PARSE_OPTION('u', "use", use = argv[i + 1] ; i ++);
+            PARSE_OPTION(0, "args", args = argv[i + 1] ; i ++);
             PARSE_OPTION(0, "managed", managed = true);
-            PARSE_OPTION(0, "local", local = true);
+            PARSE_OPTION(0, "local", public = false);
             PARSE_OPTION(0, "skip-preinstall", skip_preinstall = true);
             PARSE_OPTION(0, "skip-uninstall", skip_uninstall = true);
             
@@ -75,7 +80,35 @@ int16_t bake_test_env(const char *env) {
 }
 
 static
+int16_t bake_project_logDetails(
+    bake_project *p)
+{
+    if (p->use) {
+        corto_iter it = corto_ll_iter(p->use);
+        while (corto_iter_hasNext(&it)) {
+            char *package = corto_iter_next(&it);
+            char *lib = corto_locate(package, NULL, CORTO_LOCATION_LIB);
+            if (!lib) {
+                goto error;
+            }
+            corto_info("use '%s' => '%s'", 
+                package, 
+                lib);
+            free(lib);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
 int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
+    if (bake_project_logDetails(p)) {
+        goto error;
+    }
+
     corto_log_push("default");
     corto_trace("begin");
 
@@ -195,6 +228,11 @@ int main(int argc, char* argv[]) {
         goto error;
     }
 
+    /* Initialize thread key for filelist */
+    if (corto_tls_new(&BAKE_PROJECT_KEY, NULL)) {
+        goto error;
+    }
+
     /* Verify environment variables */
     if (bake_test_env("CORTO_HOME")) goto error;
     if (bake_test_env("CORTO_TARGET")) goto error;
@@ -211,16 +249,33 @@ int main(int argc, char* argv[]) {
         bake_project *p;
 
         /* If id is specified, project config is provided on cmd line */
-        if (!(p = bake_crawler_addProject(c, path, NULL))) {
+        if (!(p = bake_crawler_addProject(c, path))) {
             goto error;
         }
 
         p->id = id;
         p->language = language;
         p->managed = managed;
-        p->local = local;
+        p->public = public;
         p->includes = includes;
-        p->sources = sources;
+        p->args = args;
+
+        if (sources) {
+            char *source_tokens = strdup(sources);
+            char *tok = strtok(source_tokens, "");
+            while (tok != NULL) {
+                corto_ll_append(p->sources, corto_strdup(tok));
+                tok = strtok(NULL, ",");
+            }
+        }
+
+        if (use) {
+            p->use = corto_ll_new();
+            char *ptr = strtok(use, ",");
+            do {
+                corto_ll_append(p->use, corto_strdup(ptr));
+            } while ((ptr = strtok(NULL, ",")));
+        }
 
         if (!stricmp(kind, "library")) {
             p->kind = BAKE_LIBRARY;
@@ -269,6 +324,9 @@ int main(int argc, char* argv[]) {
     /* Cleanup resources */
     bake_crawler_free(c);
     base_deinit();
+
+    printf("\n");
+
     return 0;
 error:
     base_deinit();

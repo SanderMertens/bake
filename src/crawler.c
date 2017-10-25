@@ -27,10 +27,9 @@ struct bake_crawler_s {
 
 bake_project* bake_crawler_addProject(
     bake_crawler _this,
-    const char *path,
-    const char *projectConfig)
+    const char *path)
 {
-    bake_project *p = bake_project_new(path, projectConfig);
+    bake_project *p = bake_project_new(path);
 
     if (!_this->projects) {
         _this->projects = corto_ll_new();
@@ -59,7 +58,7 @@ int16_t bake_crawler_crawl(
 
     if (corto_file_test("project.json")) {
         isProject = true;
-        if (!bake_crawler_addProject(_this, fullpath, "project.json")) {
+        if (!bake_crawler_addProject(_this, fullpath)) {
             goto error;
         }
     }

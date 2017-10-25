@@ -54,6 +54,8 @@ struct bake_language {
     bake_rule_target (*target_pattern)(const char *pattern);
     bake_rule_target (*target_map)(bake_rule_map_cb mapping);
 
+    void (*exec)(const char *cmd);
+
     bake_rule_artefact_cb artefact_cb;
 
     corto_ll nodes;
