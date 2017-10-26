@@ -138,6 +138,18 @@ uint32_t bake_crawler_count(
     return _this->projects ? corto_ll_size(_this->projects) : 0;
 }
 
+static
+const char* bake_project_kind_str(
+    bake_project_kind kind)
+{
+    switch(kind) {
+    case BAKE_TOOL: return "tool";
+    case BAKE_PACKAGE: return "package";
+    case BAKE_APPLICATION: return "application";
+    }
+    return "???";
+}
+
 int16_t bake_crawler_walk(
     bake_crawler _this, 
     bake_crawler_cb action, 
@@ -147,9 +159,8 @@ int16_t bake_crawler_walk(
         corto_iter it = corto_ll_iter(_this->projects);
         while (corto_iter_hasNext(&it)) {
             bake_project *p = corto_iter_next(&it);
-            corto_info("building '%s'", p->id);
             corto_log_push(p->id);
-            corto_ok("entering directory '%s'", p->path);
+            corto_info("Entering %s '%s' in '%s'", bake_project_kind_str(p->kind), p->id, p->path);
             char *prev = strdup(corto_cwd());
             if (corto_chdir(p->path)) {
                 free(prev);
@@ -163,7 +174,7 @@ int16_t bake_crawler_walk(
                 goto error;
             }
 
-            corto_ok("leaving directory '%s'", p->path);
+            corto_info("Leaving '%s'", p->id);
             if (corto_chdir(prev)) {
                 free(prev);
                 goto error;

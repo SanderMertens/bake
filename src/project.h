@@ -30,3 +30,15 @@ char* bake_project_includePath(
 
 char* bake_project_etcPath(
     bake_project *p);
+
+void bake_project_addSource(
+    bake_project *p,
+    const char *source);
+
+void bake_project_addInclude(
+    bake_project *p,
+    const char *include);
+
+void bake_project_use(
+    bake_project *p,
+    const char *use);

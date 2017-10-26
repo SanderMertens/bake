@@ -98,9 +98,9 @@ void bake_language_exec_cb(
     int sig = 0;
     if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
         if (!sig) {
-            corto_seterr("command failed with returncode %d: %s", ret, envcmd);
+            corto_seterr("%s (command returned %d)", envcmd, ret);
         } else {
-            corto_seterr("command failed with signal %d: %s", sig, envcmd);
+            corto_seterr("%s (command exited with signal %d)", envcmd, sig);
         }
 
         bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
@@ -396,21 +396,24 @@ int16_t bake_node_eval(
                             goto error;
                         }
 
+                        /* Invoke action */
                         char *srcPath = src->name;
                         if (src->offset) {
                             srcPath = corto_asprintf("%s/%s", src->offset, src->name);
                         }
-
                         r->action(l, p, c, srcPath, dst->name, NULL);
-
                         if (srcPath != src->name) {
                             free(srcPath);
                         }
 
+                        /* Check if error flag was set */
                         if (p->error) {
-                            corto_seterr("'%s' failed to build", src->name);
+                            corto_seterr("'%s': %s", src->name, corto_lasterr());
                             goto error;
                         }
+
+                        /* Update target with latest timestamp */
+                        dst->timestamp = corto_lastmodified(dst->name);
                     } else {
                         corto_ok("[%s%3d%%%s] %s%s%s", 
                             CORTO_GREY,
@@ -431,7 +434,7 @@ int16_t bake_node_eval(
                 }
                 if (!targets) {
                     goto error;
-                }                    
+                }
 
                 /* Do n-to-n comparison between sources and targets. If the
                  * target list is empty, it is possible that files still have to
@@ -480,9 +483,9 @@ int16_t bake_node_eval(
                     r->action(l, p, c, source_list_str, dst, NULL);
                     if (p->error) {
                         if (dst) {
-                            corto_seterr("'%s' failed to build", dst);
+                            corto_seterr("'%s': %s", dst, corto_lasterr());
                         } else {
-                            corto_seterr("rule '%s' failed to build", n->name);
+                            corto_seterr("rule '%s': %s", n->name, corto_lasterr());
                         }
                         free(source_list_str);
                         goto error;
@@ -549,12 +552,42 @@ bake_filelist* bake_language_build(
         goto error;
     }
 
-    corto_trace("end");
+    corto_trace("done");
     corto_log_pop();
     return artefact_fl;
 error:
     corto_log_pop();
     return NULL;
+}
+
+bake_filelist* bake_language_clean(
+    bake_language *l,
+    bake_project *p)
+{
+    corto_log_push("clean");
+    corto_trace("begin");
+
+    /* Clear .corto directory which contains object files / generated files */
+    corto_rm(".corto");
+
+    /* Retrieve artefacts */
+    char *binaryPath = bake_project_binaryPath(p);
+    bake_filelist *artefact_fl = bake_filelist_new(
+        binaryPath,
+        NULL
+    );    
+    corto_tls_set(BAKE_FILELIST_KEY, artefact_fl);
+    l->artefact_cb(l, artefact_fl, p);
+
+    /* Clean artefacts */
+    corto_iter it = bake_filelist_iter(artefact_fl);
+    while (corto_iter_hasNext(&it)) {
+        bake_file *f = corto_iter_next(&it);
+        corto_rm(f->name);
+    }
+
+    corto_trace("done");
+    corto_log_pop();
 }
 
 bake_language* bake_language_get(

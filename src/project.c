@@ -148,7 +148,7 @@ int16_t bake_project_parseMembers(
                 if (json_value_get_type(v) == JSONBoolean) {
                     p->managed = json_value_get_boolean(v);
                 } else {
-                    corto_seterr("expected JSON string for 'language' attribute");
+                    corto_seterr("expected JSON boolean for 'managed' attribute");
                     goto error;
                 }
             }
@@ -157,7 +157,7 @@ int16_t bake_project_parseMembers(
                 if (json_value_get_type(v) == JSONBoolean) {
                     p->public = json_value_get_boolean(v);
                 } else {
-                    corto_seterr("expected JSON string for 'language' attribute");
+                    corto_seterr("expected JSON string for 'public' attribute");
                     goto error;
                 }
             } 
@@ -169,10 +169,34 @@ int16_t bake_project_parseMembers(
                     for (i = 0; i < count; i ++) {
                         JSON_Value *v = json_array_get_value(a, i);
                         const char *src = json_value_get_string(v);
-                        corto_ll_append(p->sources, corto_strdup(src));
+                        bake_project_addSource(p, src);
                     }
                 }
             }
+
+            if (!strcmp(name, "includes")) {
+                if (json_value_get_type(v) == JSONArray) {
+                    JSON_Array *a = json_value_get_array(v);
+                    uint32_t i, count = json_array_get_count(a);
+                    for (i = 0; i < count; i ++) {
+                        JSON_Value *v = json_array_get_value(a, i);
+                        const char *src = json_value_get_string(v);
+                        bake_project_addInclude(p, src);
+                    }
+                }
+            } 
+
+            if (!strcmp(name, "use")) {
+                if (json_value_get_type(v) == JSONArray) {
+                    JSON_Array *a = json_value_get_array(v);
+                    uint32_t i, count = json_array_get_count(a);
+                    for (i = 0; i < count; i ++) {
+                        JSON_Value *v = json_array_get_value(a, i);
+                        const char *use = json_value_get_string(v);
+                        bake_project_use(p, use);
+                    }
+                }
+            } 
         }
     }
 
@@ -188,7 +212,6 @@ int16_t bake_project_parseConfig(
     const char *file = "project.json";
 
     if (corto_file_test("project.json")) {
-
         JSON_Value *j = json_parse_file(file);
         if (!j) {
             corto_seterr("failed to parse '%s'", file);
@@ -218,7 +241,7 @@ int16_t bake_project_parseConfig(
         if (!strcmp(j_type_member, "application")) {
             p->kind = BAKE_APPLICATION;
         } else if (!strcmp(j_type_member, "package")) {
-            p->kind = BAKE_LIBRARY;
+            p->kind = BAKE_PACKAGE;
         } else if (!strcmp(j_type_member, "tool")) {
             p->kind = BAKE_TOOL;
         }
@@ -329,6 +352,11 @@ bake_project* bake_project_new(
     result->sources = corto_ll_new();
     corto_ll_append(result->sources, "src");
 
+    result->includes = corto_ll_new();
+    corto_ll_append(result->includes, "include");
+
+    result->use = corto_ll_new();
+
     /* Parse project.json if available */
     if (bake_project_parseConfig(result)) {
         goto error;
@@ -350,7 +378,7 @@ char* bake_project_binaryPath(
     if (p->kind == BAKE_APPLICATION) {
         kind = "bin";
         subdir = "cortobin";
-    } else if (p->kind == BAKE_LIBRARY) {
+    } else if (p->kind == BAKE_PACKAGE) {
         kind = "lib";
         subdir = "corto";
     } else if (p->kind == BAKE_TOOL) {
@@ -383,3 +411,53 @@ char* bake_project_etcPath(
         "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", 
         p->id);
 }
+
+void bake_project_addSource(
+    bake_project *p,
+    const char *source)
+{
+    corto_iter it = corto_ll_iter(p->sources);
+    while (corto_iter_hasNext(&it)) {
+        char *project_source = corto_iter_next(&it);
+        if (!strcmp(project_source, source)) {
+            /* Duplicate */
+            return;
+        }
+    }
+
+    corto_ll_append(p->sources, corto_strdup(source));
+}
+
+void bake_project_addInclude(
+    bake_project *p,
+    const char *include)
+{
+    corto_iter it = corto_ll_iter(p->includes);
+    while (corto_iter_hasNext(&it)) {
+        char *project_include = corto_iter_next(&it);
+        if (!strcmp(project_include, include)) {
+            /* Duplicate */
+            return;
+        }
+    }
+
+    corto_ll_append(p->includes, corto_strdup(include)); 
+}
+
+void bake_project_use(
+    bake_project *p,
+    const char *use)
+{
+    corto_iter it = corto_ll_iter(p->use);
+    while (corto_iter_hasNext(&it)) {
+        char *project_use = corto_iter_next(&it);
+        if (!strcmp(project_use, use)) {
+            /* Duplicate */
+            return;
+        }
+    }
+
+    corto_ll_append(p->use, corto_strdup(use));    
+}
+
+

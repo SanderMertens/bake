@@ -18,7 +18,7 @@
 
 /* Global variables for static project configuration (from command line) */
 static char *id = NULL;
-static char *path = ".";
+static char *path = NULL;
 static char *sources = NULL; /* 'src' is added by default */
 static char *includes = "include";
 static char *language = "c";
@@ -30,6 +30,9 @@ static bool managed = false;
 static bool public = true;
 static bool skip_preinstall = false;
 static bool skip_uninstall = false;
+
+/* Combination of all paths specified on command line */
+static corto_ll paths = NULL;
 
 corto_tls BAKE_LANGUAGE_KEY;
 corto_tls BAKE_FILELIST_KEY;
@@ -63,7 +66,8 @@ int parseArgs(int argc, char *argv[])
                 return -1;
             }
         } else {
-            break;
+            /* Extract paths from commands */
+            corto_ll_append(paths, argv[i]);
         }
     }
 
@@ -174,6 +178,17 @@ error:
 
 static
 int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
+
+    if (p->language) {
+        bake_language *l = NULL;
+        l = bake_language_get(p->language);
+        if (!l) {
+            goto error;
+        }
+
+        bake_language_clean(l, p);     
+    }
+
     return 1; /* continue */
 error:
     return 0; /* stop */
@@ -212,12 +227,16 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 int main(int argc, char* argv[]) {
+    const char *action = "default";
+    char *path_tokens = NULL;
+    paths = corto_ll_new();
+
     corto_log_fmt("%V %F:%L (%R) %c: %m");
     corto_log_embedCategories(false);
     
     /* Initialize base library */
     base_init(argv[0]);
-    
+
     /* Initialize thread key for language */
     if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {
         goto error;
@@ -237,10 +256,48 @@ int main(int argc, char* argv[]) {
     if (bake_test_env("CORTO_HOME")) goto error;
     if (bake_test_env("CORTO_TARGET")) goto error;
 
-    int last_parsed = parseArgs(argc - 1, &argv[1]);
-    if (last_parsed == -1) {
-        goto error;
+    corto_trace("bake v1.0");
+
+    int last_parsed = 0;
+    if (argc > 1) {
+        int offset = 1;
+        if (argv[1][0] != '-') {
+            action = argv[1];
+            offset ++;
+        }
+
+        last_parsed = parseArgs(argc - offset, &argv[offset]);
+        if (last_parsed == -1) {
+            goto error;
+        }
     }
+
+    /* Parse path arguments for additional paths */
+    if (path) {
+        path_tokens = strdup(path);
+        char *tok = strtok(path_tokens, "");
+        while (tok != NULL) {
+            corto_ll_append(paths, tok);
+            tok = strtok(NULL, ",");
+        }
+    }
+
+    if (!corto_ll_size(paths)) {
+        corto_ll_append(paths, ".");
+    }
+
+    corto_log_push("init");
+    corto_trace("$CORTO_HOME = '%s'", corto_getenv("CORTO_HOME"));
+    corto_trace("$CORTO_TARGET = '%s'", corto_getenv("CORTO_TARGET"));
+
+    if (corto_log_verbosityGet() <= CORTO_TRACE) {
+        corto_iter it = corto_ll_iter(paths);
+        while (corto_iter_hasNext(&it)) {
+            char *path = corto_iter_next(&it);
+            corto_trace("searching '%s'", path);
+        }
+    }
+    corto_log_pop();
 
     /* Create crawler for finding corto projects */
     bake_crawler c = bake_crawler_new();
@@ -248,8 +305,14 @@ int main(int argc, char* argv[]) {
     if (id) {
         bake_project *p;
 
+        if (corto_ll_size(paths) > 1) {
+            corto_seterr(
+                "multiple paths specified for single project '%s'", id);
+            goto error;
+        }
+
         /* If id is specified, project config is provided on cmd line */
-        if (!(p = bake_crawler_addProject(c, path))) {
+        if (!(p = bake_crawler_addProject(c, corto_ll_get(paths, 0)))) {
             goto error;
         }
 
@@ -257,16 +320,26 @@ int main(int argc, char* argv[]) {
         p->language = language;
         p->managed = managed;
         p->public = public;
-        p->includes = includes;
         p->args = args;
 
         if (sources) {
             char *source_tokens = strdup(sources);
             char *tok = strtok(source_tokens, "");
             while (tok != NULL) {
-                corto_ll_append(p->sources, corto_strdup(tok));
+                bake_project_addSource(p, tok);
                 tok = strtok(NULL, ",");
             }
+            free(source_tokens);
+        }
+
+        if (includes) {
+            char *include_tokens = strdup(includes);
+            char *tok = strtok(include_tokens, "");
+            while (tok != NULL) {
+                bake_project_addInclude(p, tok);
+                tok = strtok(NULL, ",");
+            }
+            free(include_tokens);          
         }
 
         if (use) {
@@ -278,7 +351,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (!stricmp(kind, "library")) {
-            p->kind = BAKE_LIBRARY;
+            p->kind = BAKE_PACKAGE;
         } else if (!stricmp(kind, "application")) {
             p->kind = BAKE_APPLICATION;
         } else if (!strcmp(kind, "tool")) {
@@ -286,9 +359,13 @@ int main(int argc, char* argv[]) {
         }
 
     } else {
-        /* Crawl specified directory (default is current) */
-        if (bake_crawler_search(c, path)) {
-            goto error;
+        /* Crawl specified directories (default is current) */
+        corto_iter it = corto_ll_iter(paths);
+        while (corto_iter_hasNext(&it)) {
+            char *path = corto_iter_next(&it);
+            if (bake_crawler_search(c, path)) {
+                goto error;
+            }
         }
     }
 
@@ -297,27 +374,24 @@ int main(int argc, char* argv[]) {
         goto error;
     }
 
-    if (argc == last_parsed) {
+    if (!action) {
         /* If after parsing arguments no actions were defined, execute the default
          * action. */
         if (!bake_crawler_walk(c, bake_action_default, NULL)) {
             goto error;
         }
     } else {
-        bake_crawler_cb action;
-        int i;
-        for (i = last_parsed; i < argc; i ++) {
-            if (!strcmp(argv[i], "default")) action = bake_action_default;
-            else if (!strcmp(argv[i], "clean")) action = bake_action_clean;
-            else if (!strcmp(argv[i], "install")) action = bake_action_install;
-            else if (!strcmp(argv[i], "uninstall")) action = bake_action_uninstall;
-            else {
-                corto_error("unknown action '%s'", action);
-                continue;
-            }
-            if (!bake_crawler_walk(c, action, NULL)) {
-                goto error;
-            }
+        bake_crawler_cb action_cb;
+        if (!strcmp(action, "default")) action_cb = bake_action_default;
+        else if (!strcmp(action, "clean")) action_cb = bake_action_clean;
+        else if (!strcmp(action, "install")) action_cb = bake_action_install;
+        else if (!strcmp(action, "uninstall")) action_cb = bake_action_uninstall;
+        else {
+            corto_error("unknown action '%s'", action);
+            goto error;
+        }
+        if (!bake_crawler_walk(c, action_cb, NULL)) {
+            goto error;
         }
     }
 
@@ -326,6 +400,9 @@ int main(int argc, char* argv[]) {
     base_deinit();
 
     printf("\n");
+
+    if (path_tokens) free(path_tokens);
+    if (paths) corto_ll_free(paths);
 
     return 0;
 error:

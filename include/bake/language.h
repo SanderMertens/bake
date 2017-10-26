@@ -126,6 +126,7 @@ void bake_language_dependency_rule(
  *
  * @param l The language object.
  * @param p The project to build.
+ * @param c The build configuration.
  * @return 0 if success, non-zero if failed.
  */
 bake_filelist* bake_language_build(
@@ -133,6 +134,15 @@ bake_filelist* bake_language_build(
     bake_project *p,
     bake_config *c);
 
+/** Clean a project of the specified language.
+ *
+ * @param l The language object.
+ * @param p The project to clean.
+ * @return 0 if success, non-zero if failed.
+ */
+bake_filelist* bake_language_clean(
+    bake_language *l,
+    bake_project *p);
 
 #ifdef __cplusplus
 }

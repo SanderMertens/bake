@@ -146,58 +146,60 @@ int16_t bake_uninstall(
     corto_log_push("uninstall");
     corto_trace("begin");
 
-    char *projectDir = corto_envparse(
-        "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
-    if (!projectDir) {
-        goto error;
-    }
-
-    /* Uninstall files are stored in the project directory, try uninstalling
-     * first by removing all files in uninstaller file. */
-    if (corto_file_test(projectDir)) {
-        char *filename = bake_uninstaller_filename(project);
-        if (corto_file_iter(filename, &it)) {
-            corto_lasterr(); /* Catch last error */
-            corto_warning("missing uninstaller for project '%s'", project->id);
-            free(filename);
-            goto skip;
+    if (project->kind != BAKE_TOOL) {
+        char *projectDir = corto_envparse(
+            "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+        if (!projectDir) {
+            goto error;
         }
 
-        while (corto_iter_hasNext(&it)) {
-            char *line = corto_iter_next(&it);
-            if (!line || !line[0]) continue; /* Skip empty lines in file */
-            if (corto_rm(line)) {
-                corto_warning("failed to uninstall '%s' for '%s': %s", 
-                    line, 
-                    project->id,
-                    corto_lasterr());
+        /* Uninstall files are stored in the project directory, try uninstalling
+         * first by removing all files in uninstaller file. */
+        if (corto_file_test(projectDir)) {
+            char *filename = bake_uninstaller_filename(project);
+            if (corto_file_iter(filename, &it)) {
+                corto_lasterr(); /* Catch last error */
+                corto_warning("missing uninstaller for project '%s'", project->id);
+                free(filename);
+                goto skip;
             }
+
+            while (corto_iter_hasNext(&it)) {
+                char *line = corto_iter_next(&it);
+                if (!line || !line[0]) continue; /* Skip empty lines in file */
+                if (corto_rm(line)) {
+                    corto_warning("failed to uninstall '%s' for '%s': %s", 
+                        line, 
+                        project->id,
+                        corto_lasterr());
+                }
+            }
+
+            /* Remove uninstaller */
+            if (corto_rm(filename)) {
+                corto_warning("failed to remove '%s': %s", filename, corto_lasterr());
+            }
+
+            /* Free project directory if it's empty (no nested packages) */
+            if (corto_dir_isEmpty(projectDir)) corto_rm(projectDir);
+            free(projectDir);
         }
 
-        /* Remove uninstaller */
-        if (corto_rm(filename)) {
-            corto_warning("failed to remove '%s': %s", filename, corto_lasterr());
-        }
+        /* In the case of an unsuccessful or interrupted uninstallation, some parts
+         * may be left behind. Check for lingering directories, and clean up. */
 
-        /* Free project directory if it's empty (no nested packages) */
-        if (corto_dir_isEmpty(projectDir)) corto_rm(projectDir);
-        free(projectDir);
+        /* If include directory exists and is empty, clean up */
+        char *inc = corto_envparse(
+            "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", project->id);
+        if (corto_file_test(inc) && corto_dir_isEmpty(inc)) corto_rm(inc);
+        free(inc);
+
+        /* If etc directory exists and is empty, clean up */
+        char *etc = corto_envparse(
+            "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", project->id);
+        if (corto_file_test(etc) && corto_dir_isEmpty(etc)) corto_rm(etc);
+        free(etc);
     }
-
-    /* In the case of an unsuccessful or interrupted uninstallation, some parts
-     * may be left behind. Check for lingering directories, and clean up. */
-
-    /* If include directory exists and is empty, clean up */
-    char *inc = corto_envparse(
-        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", project->id);
-    if (corto_file_test(inc) && corto_dir_isEmpty(inc)) corto_rm(inc);
-    free(inc);
-
-    /* If etc directory exists and is empty, clean up */
-    char *etc = corto_envparse(
-        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", project->id);
-    if (corto_file_test(etc) && corto_dir_isEmpty(etc)) corto_rm(etc);
-    free(etc);
 
 skip:
     corto_ok("done");
@@ -214,45 +216,56 @@ int16_t bake_pre(
     corto_log_push("pre");
     corto_trace("begin");
 
-    FILE *uninstallFile = bake_uninstaller_open(project, "w");
-    if (!uninstallFile) {
-        goto error;
-    }
+    if (project->kind != BAKE_TOOL) {
+        FILE *uninstallFile = bake_uninstaller_open(project, "w");
+        if (!uninstallFile) {
+            goto error;
+        }
 
-    /* Install files to project-specific locations in package hierarchy */
-    if (project->public) {
-        if (bake_install_dir(project->id, "include", project->includes, true, uninstallFile)) {
-            goto error;
+        /* Install files to project-specific locations in package hierarchy */
+        if (project->public) {
+            corto_iter it = corto_ll_iter(project->includes);
+            while (corto_iter_hasNext(&it)) {
+                if (bake_install_dir(
+                    project->id, 
+                    "include", 
+                    corto_iter_next(&it), 
+                    true, 
+                    uninstallFile)) 
+                {
+                    goto error;
+                }
+            }
         }
-    }
-    if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
-        goto error;
-    }    
-    if (project->kind == BAKE_LIBRARY) {
-        if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile)) {
+        if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
             goto error;
+        }    
+        if (project->kind == BAKE_PACKAGE) {
+            if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile)) {
+                goto error;
+            }
         }
-    }
 
-    /* Install files to CORTO_TARGET directly from 'install' folder */
-    if (corto_file_test("install")) {
-        if (corto_chdir("install")) {
-            goto error;
+        /* Install files to CORTO_TARGET directly from 'install' folder */
+        if (corto_file_test("install")) {
+            if (corto_chdir("install")) {
+                goto error;
+            }
+            if (bake_install_dir(NULL, "include", NULL, true, uninstallFile)) {
+                goto error;
+            }      
+            if (bake_install_dir(NULL, "lib", NULL, true, uninstallFile)) {
+                goto error;
+            }
+            if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
+                goto error;
+            }   
+            if (corto_chdir("..")) {
+                goto error;
+            }
         }
-        if (bake_install_dir(NULL, "include", NULL, true, uninstallFile)) {
-            goto error;
-        }      
-        if (bake_install_dir(NULL, "lib", NULL, true, uninstallFile)) {
-            goto error;
-        }
-        if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
-            goto error;
-        }   
-        if (corto_chdir("..")) {
-            goto error;
-        }
+        fclose(uninstallFile);
     }
-    fclose(uninstallFile);
 
     corto_ok("done");
     corto_log_pop();
@@ -293,6 +306,8 @@ int16_t bake_post(
     if (corto_cp(artefact, targetDir)) {
         goto error;
     }
+
+    corto_info("installed '%s/%s'", targetDir, artefact);
 
     corto_ok("done");
     corto_log_pop();

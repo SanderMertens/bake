@@ -33,7 +33,7 @@ extern "C" {
 
 typedef enum bake_project_kind {
     BAKE_APPLICATION,
-    BAKE_LIBRARY,
+    BAKE_PACKAGE,
     BAKE_TOOL
 } bake_project_kind;
 
@@ -63,7 +63,7 @@ typedef struct bake_project {
     bool managed;
     char *path;
     corto_ll sources;
-    char *includes;
+    corto_ll includes;
     char *language;
     char *args;
     corto_ll attributes;
