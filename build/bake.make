@@ -80,6 +80,7 @@ OBJECTS := \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/path.o \
 	$(OBJDIR)/proc.o \
+	$(OBJDIR)/rb.o \
 	$(OBJDIR)/string.o \
 	$(OBJDIR)/thread.o \
 	$(OBJDIR)/time.o \
@@ -256,6 +257,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/proc.o: ../../base/src/proc.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/rb.o: ../../base/src/rb.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)
