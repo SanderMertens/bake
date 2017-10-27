@@ -283,6 +283,7 @@ int16_t bake_post(
     corto_trace("begin");
 
     char *kind, *subdir, *targetDir = NULL;
+    bool copy = false;
 
     targetDir = bake_project_binaryPath(project);
     if (!targetDir) {
@@ -303,11 +304,33 @@ int16_t bake_post(
         goto error;
     }
 
-    if (corto_cp(artefact, targetDir)) {
-        goto error;
-    }
+    char *targetBinary = corto_asprintf("%s/%s", targetDir, artefact);
+    if (!corto_file_test(targetBinary) || project->freshly_baked) {
+        if (corto_cp(artefact, targetDir)) {
+            goto error;
+        }
 
-    corto_info("installed '%s/%s'", targetDir, artefact);
+        /* Ensure that time on the local system has progressed past the point of the
+         * file timestamp. If the build is running in a VM, the clock between the
+         * client and host could be out of sync temporarily, which can result in
+         * strange behavior. */
+        char *installedArtefact = corto_asprintf("%s/%s", targetDir, artefact);
+        time_t t_artefact = corto_lastmodified(installedArtefact);
+        time_t t = time(NULL);
+        int i = 0;
+        while (t_artefact > time(NULL) && i < 10) {
+            corto_sleep(0, 100000000); /* sleep 100msec */
+            i ++;
+        }
+        if (i == 10) {
+            corto_warning(
+                "clock drift of >1sec between the OS clock and the filesystem detected");
+        }
+        free(installedArtefact);
+
+        corto_info("installed '%s/%s'", targetDir, artefact);
+    }
+    free(targetBinary);
 
     corto_ok("done");
     corto_log_pop();
