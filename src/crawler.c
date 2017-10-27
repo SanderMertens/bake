@@ -22,8 +22,14 @@
 #include "bake.h"
 
 struct bake_crawler_s {
-    corto_ll projects;
+    corto_rb nodes; /* tree optimizes looking up dependencies */
+    corto_ll leafs; /* projects that cannot act as dependencies */
 };
+
+static
+int project_cmp(void *ctx, const void* key1, const void* key2) {
+    return strcmp(key1, key2);
+}
 
 bake_project* bake_crawler_addProject(
     bake_crawler _this,
@@ -31,13 +37,54 @@ bake_project* bake_crawler_addProject(
 {
     bake_project *p = bake_project_new(path);
 
-    if (!_this->projects) {
-        _this->projects = corto_ll_new();
+    if (p->kind == BAKE_PACKAGE && p->public) {
+        if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp);
+        bake_project *found;
+        if ((found = corto_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
+            if (found->path) {
+                corto_seterr(
+                    "duplicate project '%s' found in '%s' (first found here: '%s')",
+                    p->id,
+                    found->path,
+                    p->path);
+                goto error;
+            } else {
+                /* This is a placeholder. Replace it with the actual project. */
+                p->dependents = found->dependents;
+                found->dependents = NULL;
+                bake_project_free(found);
+                corto_rb_set(_this->nodes, p->id, p);
+            }
+        }
+    } else {
+        if (!_this->leafs) _this->leafs = corto_ll_new();
+        corto_ll_append(_this->leafs, p);
     }
 
-    corto_ll_append(_this->projects, p);
+    /* Add dependency information */
+    p->unresolved_dependencies = corto_ll_size(p->use);
+
+    /* Add project to dependent lists of dependencies */
+    corto_iter it = corto_ll_iter(p->use);
+    while (corto_iter_hasNext(&it)) {
+        char *use = corto_iter_next(&it);
+        bake_project *dep = corto_rb_find(_this->nodes, use);
+        if (!dep) {
+            /* Create placeholder */
+            dep = bake_project_new(NULL);
+            dep->id = corto_strdup(use);
+            corto_rb_set(_this->nodes, dep->id, dep);
+        }
+
+        if (!dep->dependents) {
+            dep->dependents = corto_ll_new();
+        }
+        corto_ll_append(dep->dependents, p);
+    }
 
     return p;
+error:
+    return NULL;
 }
 
 static 
@@ -116,26 +163,53 @@ bake_crawler bake_crawler_new(void)
 
 void bake_crawler_free(bake_crawler _this)
 {
-    if (_this->projects) {
-        corto_iter it = corto_ll_iter(_this->projects);
+    if (_this->nodes) {
+        corto_iter it = corto_rb_iter(_this->nodes);
         while (corto_iter_hasNext(&it)) {
             bake_project *p = corto_iter_next(&it);
+            bake_project_free(p);
         }
+        corto_rb_free(_this->nodes);
+    }
+    if (_this->leafs) {
+        corto_iter it = corto_ll_iter(_this->leafs);
+        while (corto_iter_hasNext(&it)) {
+            bake_project *p = corto_iter_next(&it);
+            bake_project_free(p);
+        }
+        corto_ll_free(_this->leafs);
     }
     free (_this);
+}
+
+uint32_t bake_crawler_count(
+    bake_crawler _this)
+{
+    return (_this->nodes ? corto_rb_size(_this->nodes) : 0) +
+        (_this->leafs ? corto_ll_size(_this->leafs) : 0);
 }
 
 int16_t bake_crawler_search(
     bake_crawler _this, 
     const char *path)
 {
-    return bake_crawler_crawl(_this, ".", path);
-}
+    int ret = 0;
+    int count = bake_crawler_count(_this);
 
-uint32_t bake_crawler_count(
-    bake_crawler _this)
-{
-    return _this->projects ? corto_ll_size(_this->projects) : 0;
+    if (corto_file_test(path)) {
+        ret = bake_crawler_crawl(_this, ".", path);
+    } else {
+        corto_seterr("path '%s' not found", path);
+        goto error;
+    }
+
+    if (bake_crawler_count(_this) == count) {
+        corto_warning("no projects found in path '%s'", path);
+    }
+    
+    return ret;
+error:
+    return -1;
 }
 
 static
@@ -150,39 +224,127 @@ const char* bake_project_kind_str(
     return "???";
 }
 
+static
+int16_t bake_crawler_build_project(
+    bake_crawler _this, 
+    bake_crawler_cb action,
+    bake_project *p,
+    void *ctx)
+{
+    corto_info("entering %s '%s' in '%s'", bake_project_kind_str(p->kind), p->id, p->path);
+    char *prev = strdup(corto_cwd());
+    if (corto_chdir(p->path)) {
+        free(prev);
+        goto error;
+    }
+
+    if (!action(_this, p, ctx)) {
+        corto_seterr("build interrupted by '%s'", p->id);
+        free(prev);
+        goto error;
+    }
+
+    corto_info("leaving '%s'", p->id);
+    if (corto_chdir(prev)) {
+        free(prev);
+        goto error;
+    }
+    free(prev);
+    printf("\n");
+
+    p->built = true;
+
+    /* Decrease unresolved_dependencies of dependents */
+    if (p->dependents) {
+        corto_iter dep_it = corto_ll_iter(p->dependents);
+        while (corto_iter_hasNext(&dep_it)) {
+            bake_project *dependent = corto_iter_next(&dep_it);
+            dependent->unresolved_dependencies --;
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_crawler_collect_projects(
+    bake_crawler _this, 
+    bake_crawler_cb action,
+    void *ctx,
+    corto_iter *it,
+    corto_ll projects,
+    uint32_t *built)
+{
+    while (corto_iter_hasNext(it)) {
+        bake_project *p = corto_iter_next(it);
+
+        if (!p->path && !p->built) {
+            /* Decrease unresolved_dependencies counter of dependents since this
+             * project is a placeholder that will not be built */
+            corto_iter dep_it = corto_ll_iter(p->dependents);
+            while (corto_iter_hasNext(&dep_it)) {
+                bake_project *dependent = corto_iter_next(&dep_it);
+                dependent->unresolved_dependencies --;
+            }
+            p->built = true;
+            (*built) ++;
+            continue;
+        }
+
+        if (!p->built && !p->unresolved_dependencies) {
+            corto_ll_append(projects, p);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_crawler_walk(
     bake_crawler _this, 
     bake_crawler_cb action, 
     void *ctx)
 {
-    if (_this->projects) {
-        corto_iter it = corto_ll_iter(_this->projects);
-        while (corto_iter_hasNext(&it)) {
-            bake_project *p = corto_iter_next(&it);
-            corto_log_push(p->id);
-            corto_info("Entering %s '%s' in '%s'", bake_project_kind_str(p->kind), p->id, p->path);
-            char *prev = strdup(corto_cwd());
-            if (corto_chdir(p->path)) {
-                free(prev);
-                goto error;
-            }
+    corto_ll projects = corto_ll_new();
+    uint32_t to_build = 0, built = 0, total = bake_crawler_count(_this);
 
-            if (!action(_this, p, ctx)) {
-                corto_seterr("project interrupted build");
-                corto_log_pop();
-                free(prev);
+    do {
+        if (_this->nodes) {
+            corto_iter it = corto_rb_iter(_this->nodes);
+            if (bake_crawler_collect_projects(_this, action, ctx, &it, projects, &built)) {
                 goto error;
             }
-
-            corto_info("Leaving '%s'", p->id);
-            if (corto_chdir(prev)) {
-                free(prev);
-                goto error;
-            }
-            free(prev);
-            corto_log_pop();
         }
+        
+        if (_this->leafs) {
+            corto_iter it = corto_ll_iter(_this->leafs);
+            if (bake_crawler_collect_projects(_this, action, ctx, &it, projects, &built)) {
+                goto error;
+            }
+        }
+
+        to_build = corto_ll_size(projects);
+
+        corto_iter it = corto_ll_iter(projects);
+        bake_project *p;
+        while ((p = corto_ll_takeFirst(projects))) {
+            if (bake_crawler_build_project(_this, action, p, ctx)) {
+                goto error;
+            }
+            built ++;
+        }
+    } while (to_build);
+
+    if (built != total) {
+        corto_seterr("project dependency graph contains cycles (%d built vs %d total)",
+            built, total);
+        goto error;
     }
+
+    corto_ll_free(projects);
 
     return 1;
 error:

@@ -22,6 +22,9 @@
 bake_project* bake_project_new(
     const char *path);
 
+void bake_project_free(
+    bake_project *p);
+
 char* bake_project_binaryPath(
     bake_project *p);
 

@@ -260,6 +260,10 @@ int16_t bake_project_parseConfig(
         } else {
             /* Project has no attributes, using default values */
         }
+    } else {
+        /* If there is no project.json, bake can likely not detect if the
+         * project was rebuilt or not, so assuming yes. */
+        p->freshly_baked = true;
     }
 
     return 0;
@@ -341,13 +345,18 @@ bake_project* bake_project_new(
     const char *path)    
 {
     bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = strdup(path);
+    result->path = path ? strdup(path) : NULL;
 
     /* Default values */
     result->public = true;
     result->managed = true;
     result->get_attr = bake_project_getattr_cb;
     result->get_attr_string = bake_project_getattr_string_cb;
+    result->error = false;
+    result->freshly_baked = false;
+    result->artefact_outdated = false;
+    result->sources_outdated = false;
+    result->built = false;
 
     result->sources = corto_ll_new();
     corto_ll_append(result->sources, "src");
@@ -369,6 +378,16 @@ error:
         free(result);
     }
     return NULL;
+}
+
+void bake_project_free(
+    bake_project *p)
+{
+    if (p->path) free(p->path);
+    if (p->use) corto_ll_free(p->use);
+    if (p->sources) corto_ll_free(p->sources);
+    if (p->includes) corto_ll_free(p->includes);
+    free(p);
 }
 
 char* bake_project_binaryPath(

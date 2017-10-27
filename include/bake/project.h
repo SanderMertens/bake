@@ -56,6 +56,7 @@ typedef struct bake_project_attr {
 } bake_project_attr;
 
 typedef struct bake_project {
+    /* Static properties (managed by project) */
     char *id;
     bake_project_kind kind;
     corto_ll use;
@@ -67,8 +68,21 @@ typedef struct bake_project {
     char *language;
     char *args;
     corto_ll attributes;
-    bool error;
 
+    /* Runtime status (managed by language binding) */
+    bool error;
+    bool freshly_baked;
+
+    /* Should project be rebuilt (managed by bake action) */
+    bool artefact_outdated;
+    bool sources_outdated;
+
+    /* Dependency administration (managed by crawler) */
+    int unresolved_dependencies; /* number of dependencies still to be built */
+    corto_ll dependents; /* projects that depend on this project */
+    bool built;
+
+    /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);
     char* (*get_attr_string)(const char *name);
 } bake_project;
