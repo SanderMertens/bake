@@ -129,7 +129,7 @@ void bake_language_dependency_rule(
  * @param c The build configuration.
  * @return 0 if success, non-zero if failed.
  */
-bake_filelist* bake_language_build(
+int16_t bake_language_build(
     bake_language *l,
     bake_project *p,
     bake_config *c);
@@ -140,9 +140,19 @@ bake_filelist* bake_language_build(
  * @param p The project to clean.
  * @return 0 if success, non-zero if failed.
  */
-bake_filelist* bake_language_clean(
+int16_t bake_language_clean(
     bake_language *l,
     bake_project *p);
+
+/** Obtain artefact for a project
+ *
+ * @param l The language object.
+ * @param p The project for which to obtain the artefact.
+ * @return A string containing the name of the (installed) artefact or NULL if failed.
+ */
+char* bake_language_artefact(
+    bake_language *l,
+    bake_project*p);
 
 #ifdef __cplusplus
 }

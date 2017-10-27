@@ -98,9 +98,9 @@ void bake_language_exec_cb(
     int sig = 0;
     if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
         if (!sig) {
-            corto_seterr("%s (command returned %d)", envcmd, ret);
+            corto_seterr("#[white]%s#[normal] #[red](returned %d)#[normal]", envcmd, ret);
         } else {
-            corto_seterr("%s (command exited with signal %d)", envcmd, sig);
+            corto_seterr("#[white]%s#[normal] #[red](exited with signal %d)#[normal]", envcmd, sig);
         }
 
         bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
@@ -384,11 +384,8 @@ int16_t bake_node_eval(
 
                     count ++;
                     if (src->timestamp > dst->timestamp) {
-                        corto_info("%s[%s%3d%%%s] %s", 
-                            CORTO_NORMAL,
-                            CORTO_GREY,
+                        corto_info("#[white][%3d%%] #[bold]%s#[normal] #[green](changed)#[normal]", 
                             100 * count / bake_filelist_count(inputs),
-                            CORTO_NORMAL,
                             src->name);
 
                         /* Make sure target directory exists */
@@ -408,20 +405,18 @@ int16_t bake_node_eval(
 
                         /* Check if error flag was set */
                         if (p->error) {
-                            corto_seterr("'%s': %s", src->name, corto_lasterr());
+                            corto_seterr("command for task '%s' failed:\n%s\n", src->name, corto_lasterr());
                             goto error;
+                        } else {
+                            p->freshly_baked = true;
                         }
 
                         /* Update target with latest timestamp */
                         dst->timestamp = corto_lastmodified(dst->name);
                     } else {
-                        corto_ok("[%s%3d%%%s] %s%s%s", 
-                            CORTO_GREY,
+                        corto_trace("#[grey][%3d%%] %s", 
                             100 * count / bake_filelist_count(inputs),
-                            CORTO_NORMAL,
-                            CORTO_GREEN,
-                            src->name,
-                            CORTO_NORMAL);
+                            src->name);
                     }
                 }
 
@@ -480,22 +475,24 @@ int16_t bake_node_eval(
                     }
 
                     char *source_list_str = corto_buffer_str(&source_list);
+
+                    corto_info("#[bold]%s#[normal] #[green](rebuild)#[normal]", dst);
                     r->action(l, p, c, source_list_str, dst, NULL);
                     if (p->error) {
                         if (dst) {
-                            corto_seterr("'%s': %s", dst, corto_lasterr());
+                            corto_seterr("command for task '%s'failed:\n%s\n", dst, corto_lasterr());
                         } else {
                             corto_seterr("rule '%s': %s", n->name, corto_lasterr());
                         }
                         free(source_list_str);
                         goto error;
                     } else {
-                        corto_info("%s", dst);
+                        p->freshly_baked = true;
                     }
 
                     free(source_list_str);
                 } else {
-                    corto_info("%s%s%s", CORTO_GREEN, dst, CORTO_NORMAL);
+                    corto_trace("#[grey]%s", dst);
                 }
             }
         }
@@ -515,7 +512,7 @@ error:
     return -1;
 }
 
-bake_filelist* bake_language_build(
+int16_t bake_language_build(
     bake_language *l,
     bake_project *p,
     bake_config *c)
@@ -529,65 +526,80 @@ bake_filelist* bake_language_build(
     }
 
     /* Create filelist for artefact files */
+
+
+    /* Obtain artefact */
+    char *artefact = l->artefact_cb(l, p);
+    if (!artefact) {
+        corto_seterr("no artefacts specified for project '%s' by language", p->id);
+        goto error;
+    }
+
+    corto_tls_set(BAKE_PROJECT_KEY, p);
+
+    /* Evaluate root node */
     char *binaryPath = bake_project_binaryPath(p);
     bake_filelist *artefact_fl = bake_filelist_new(
         binaryPath,
         NULL
     );
-
-    /* Populate filelist */
-    corto_tls_set(BAKE_FILELIST_KEY, artefact_fl);
-    l->artefact_cb(l, artefact_fl, p);
-
-    if (!bake_filelist_count(artefact_fl)) {
-        corto_seterr("no artefacts specified for project '%s' by language", p->id);
-        goto error;
-    }
-
-    corto_tls_set(BAKE_PROJECT_KEY, p     );
-
-    /* Evaluate root node */
+    bake_filelist_add(artefact_fl, artefact);
     if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
         corto_seterr("failed to build 'ARTEFACT'");
         goto error;
     }
+    bake_filelist_free(artefact_fl);
 
-    corto_trace("done");
+    free(artefact);
+    free(binaryPath);
+
+    corto_ok("done");
     corto_log_pop();
-    return artefact_fl;
+    return 0;
 error:
+    if (artefact) free(artefact);
     corto_log_pop();
-    return NULL;
+    return -1;
 }
 
-bake_filelist* bake_language_clean(
+int16_t bake_language_clean(
     bake_language *l,
     bake_project *p)
 {
+    char *artefact = NULL;
     corto_log_push("clean");
     corto_trace("begin");
 
     /* Clear .corto directory which contains object files / generated files */
-    corto_rm(".corto");
+    if (corto_rm(".corto")) {
+        goto error;
+    }
 
-    /* Retrieve artefacts */
-    char *binaryPath = bake_project_binaryPath(p);
-    bake_filelist *artefact_fl = bake_filelist_new(
-        binaryPath,
-        NULL
-    );    
-    corto_tls_set(BAKE_FILELIST_KEY, artefact_fl);
-    l->artefact_cb(l, artefact_fl, p);
-
-    /* Clean artefacts */
-    corto_iter it = bake_filelist_iter(artefact_fl);
-    while (corto_iter_hasNext(&it)) {
-        bake_file *f = corto_iter_next(&it);
-        corto_rm(f->name);
+    /* Retrieve & clean artefact */ 
+    artefact = l->artefact_cb(l, p);
+    if (artefact) {
+        if (corto_rm(artefact)) {
+            goto error;
+        }
+        free(artefact);
     }
 
     corto_trace("done");
     corto_log_pop();
+
+    return 0;
+error:
+    if (artefact) free(artefact);
+    return -1;
+}
+
+char* bake_language_artefact(
+    bake_language *l,
+    bake_project*p)
+{
+    corto_assert(l != NULL, "no language specified for bake_language_artefact");
+    corto_assert(p != NULL, "no project specified for bake_language_artefact")
+    return l->artefact_cb(l, p);
 }
 
 bake_language* bake_language_get(
