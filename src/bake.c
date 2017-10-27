@@ -84,21 +84,64 @@ int16_t bake_test_env(const char *env) {
 }
 
 static
-int16_t bake_project_logDetails(
-    bake_project *p)
+int16_t bake_check_dependencies(
+    bake_language *l,
+    bake_project *p,
+    char *artefact)
 {
+    time_t artefact_modified = 0;
+    time_t project_modified = 0;
+
+    if (corto_file_test("project.json")) {
+        project_modified = corto_lastmodified("project.json");
+    }
+
+    if  (corto_file_test(artefact)) {
+        artefact_modified = corto_lastmodified(artefact);
+    }
+
+    if (artefact_modified && artefact_modified < project_modified) {
+        corto_info("cfg 'project.json' #[green](changed)#[normal]");
+        p->sources_outdated = true;
+    }
+
     if (p->use) {
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
             char *lib = corto_locate(package, NULL, CORTO_LOCATION_LIB);
             if (!lib) {
+                corto_info("use '%s' => #[red]missing#[normal]", 
+                    package, 
+                    lib);
+                corto_seterr("missing dependency '%s'", package);
                 goto error;
             }
-            corto_info("use '%s' => '%s'", 
-                package, 
-                lib);
+
+            time_t dep_modified = corto_lastmodified(lib);
+
+            if (!artefact_modified || dep_modified <= artefact_modified) {
+                corto_ok("use '%s' => '%s'", 
+                    package, 
+                    lib);
+            } else {
+                p->artefact_outdated = true;
+                corto_info("use '%s' => '%s' #[green](changed)#[normal]", 
+                    package, 
+                    lib);
+
+            }
             free(lib);
+        }
+    }
+
+    if (p->sources_outdated) {
+        if (bake_language_clean(l, p)) {
+            goto error;
+        }
+    } else if (p->artefact_outdated) {
+        if (corto_rm(artefact)) {
+            goto error;
         }
     }
 
@@ -109,8 +152,28 @@ error:
 
 static
 int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
-    if (bake_project_logDetails(p)) {
-        goto error;
+    bake_language *l = NULL;
+    char *artefact = NULL;
+
+    if (p->language) {
+        l = bake_language_get(p->language);
+        if (!l) {
+            goto error;
+        }
+
+        artefact = bake_language_artefact(l, p);
+        if (!artefact) {
+            corto_seterr("could not obtain artefact for project '%s'", p->id);
+            goto error;
+        }
+
+        if (bake_check_dependencies(l, p, artefact)) {
+            goto error;
+        }        
+    } else {
+        if (corto_file_test("src")) {
+            corto_warning("found 'src' directory but no language configured. add language to 'project.json'");
+        }
     }
 
     corto_log_push("default");
@@ -123,17 +186,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         .coverage = false
     };
 
-    bake_language *l = NULL;
-    if (p->language) {
-        l = bake_language_get(p->language);
-        if (!l) {
-            goto error;
-        }        
-    }
-
     /* Step 1: clean package hierarchy */
     if (!skip_uninstall) {
         if (bake_uninstall(p)) {
+            corto_log_pop();
             goto error;
         }
     }
@@ -141,6 +197,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     /* Step 2: pre-install files to package hierarchy */
     if (!skip_preinstall) {
         if (bake_pre(p)) {
+            corto_log_pop();
             goto error;
         }
     }
@@ -151,28 +208,28 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         /* Step 3: if managed, generate code */
 
         /* Step 4: build sources */
-        bake_filelist *artefacts = NULL;
-        if (!(artefacts = bake_language_build(l, p, &config))) {
+        if (bake_language_build(l, p, &config)) {
             corto_seterr("build failed");
+            corto_log_pop();
             goto error;
         }
 
-        /* Step 5: install artefact */
-        bake_file *artefact = corto_ll_get(artefacts->files, 0);
-        if (!artefact) {
-            corto_seterr("artefact missing");
-            goto error;
-        }
-        if (bake_post(p, artefact->name)) {
-            goto error;
+        /* Step 5: install artefact if project was rebuilt */
+        if (artefact) {
+            if (bake_post(p, artefact)) {
+                corto_log_pop();
+                goto error;
+            }
         }
     }
 
     corto_ok("done");
     corto_log_pop();
+
+    if (artefact) free(artefact);
     return 1; /* continue */
 error:
-    corto_log_pop();
+    if (artefact) free(artefact);
     return 0; /* stop */
 }
 
@@ -187,6 +244,22 @@ int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
         }
 
         bake_language_clean(l, p);     
+    }
+
+    return 1; /* continue */
+error:
+    return 0; /* stop */
+}
+
+static
+int bake_action_rebuild(bake_crawler c, bake_project* p, void *ctx) {
+
+    if (!bake_action_clean(c, p, ctx)) {
+        goto error;
+    }
+
+    if (!bake_action_default(c, p, ctx)) {
+        goto error;
     }
 
     return 1; /* continue */
@@ -382,8 +455,9 @@ int main(int argc, char* argv[]) {
         }
     } else {
         bake_crawler_cb action_cb;
-        if (!strcmp(action, "default")) action_cb = bake_action_default;
+        if (!strcmp(action, "build")) action_cb = bake_action_default;
         else if (!strcmp(action, "clean")) action_cb = bake_action_clean;
+        else if (!strcmp(action, "rebuild")) action_cb = bake_action_rebuild;
         else if (!strcmp(action, "install")) action_cb = bake_action_install;
         else if (!strcmp(action, "uninstall")) action_cb = bake_action_uninstall;
         else {
@@ -398,8 +472,6 @@ int main(int argc, char* argv[]) {
     /* Cleanup resources */
     bake_crawler_free(c);
     base_deinit();
-
-    printf("\n");
 
     if (path_tokens) free(path_tokens);
     if (paths) corto_ll_free(paths);
