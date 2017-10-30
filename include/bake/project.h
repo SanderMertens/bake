@@ -60,6 +60,8 @@ typedef struct bake_project {
     char *id;
     bake_project_kind kind;
     corto_ll use;
+    corto_ll use_build; /* packages required at compile time, but not runtime */
+    corto_ll link; /* All objects package needs to link with (contains located dependencies) */
     bool public;
     bool managed;
     char *path;
@@ -68,6 +70,9 @@ typedef struct bake_project {
     char *language;
     char *args;
     corto_ll attributes;
+
+    /* Project model file */
+    char *model;
 
     /* Runtime status (managed by language binding) */
     bool error;

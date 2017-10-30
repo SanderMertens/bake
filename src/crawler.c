@@ -24,6 +24,7 @@
 struct bake_crawler_s {
     corto_rb nodes; /* tree optimizes looking up dependencies */
     corto_ll leafs; /* projects that cannot act as dependencies */
+    uint32_t count;
 };
 
 static
@@ -36,6 +37,9 @@ bake_project* bake_crawler_addProject(
     const char *path)
 {
     bake_project *p = bake_project_new(path);
+    if (!p) {
+        return NULL;
+    }
 
     if (p->kind == BAKE_PACKAGE && p->public) {
         if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp);
@@ -81,6 +85,8 @@ bake_project* bake_crawler_addProject(
         }
         corto_ll_append(dep->dependents, p);
     }
+
+    _this->count ++;
 
     return p;
 error:
@@ -203,7 +209,7 @@ int16_t bake_crawler_search(
         goto error;
     }
 
-    if (bake_crawler_count(_this) == count) {
+    if (!ret && bake_crawler_count(_this) == count) {
         corto_warning("no projects found in path '%s'", path);
     }
     
@@ -225,11 +231,31 @@ const char* bake_project_kind_str(
 }
 
 static
+void bake_crawler_decrease_dependents(
+    bake_project *p,
+    corto_ll readyForBuild)
+{
+    if (p->dependents) {
+        corto_iter dep_it = corto_ll_iter(p->dependents);
+        while (corto_iter_hasNext(&dep_it)) {
+            bake_project *dependent = corto_iter_next(&dep_it);
+            dependent->unresolved_dependencies --;
+            if (!dependent->unresolved_dependencies) {
+                if (readyForBuild) {
+                    corto_ll_append(readyForBuild, dependent);
+                }
+            }
+        }
+    }
+}
+
+static
 int16_t bake_crawler_build_project(
     bake_crawler _this, 
     bake_crawler_cb action,
     bake_project *p,
-    void *ctx)
+    void *ctx,
+    corto_ll readyForBuild)
 {
     corto_info("entering %s '%s' in '%s'", bake_project_kind_str(p->kind), p->id, p->path);
     char *prev = strdup(corto_cwd());
@@ -239,7 +265,7 @@ int16_t bake_crawler_build_project(
     }
 
     if (!action(_this, p, ctx)) {
-        corto_seterr("build interrupted by '%s'", p->id);
+        corto_seterr("build interrupted by '%s': %s", p->id, corto_lasterr());
         free(prev);
         goto error;
     }
@@ -252,16 +278,8 @@ int16_t bake_crawler_build_project(
     free(prev);
     printf("\n");
 
-    p->built = true;
-
     /* Decrease unresolved_dependencies of dependents */
-    if (p->dependents) {
-        corto_iter dep_it = corto_ll_iter(p->dependents);
-        while (corto_iter_hasNext(&dep_it)) {
-            bake_project *dependent = corto_iter_next(&dep_it);
-            dependent->unresolved_dependencies --;
-        }
-    }
+    bake_crawler_decrease_dependents(p, readyForBuild);
 
     return 0;
 error:
@@ -269,38 +287,17 @@ error:
 }
 
 static
-int16_t bake_crawler_collect_projects(
+void bake_crawler_collect_projects(
     bake_crawler _this, 
-    bake_crawler_cb action,
-    void *ctx,
     corto_iter *it,
-    corto_ll projects,
-    uint32_t *built)
+    corto_ll readyForBuild)
 {
     while (corto_iter_hasNext(it)) {
         bake_project *p = corto_iter_next(it);
-
-        if (!p->path && !p->built) {
-            /* Decrease unresolved_dependencies counter of dependents since this
-             * project is a placeholder that will not be built */
-            corto_iter dep_it = corto_ll_iter(p->dependents);
-            while (corto_iter_hasNext(&dep_it)) {
-                bake_project *dependent = corto_iter_next(&dep_it);
-                dependent->unresolved_dependencies --;
-            }
-            p->built = true;
-            (*built) ++;
-            continue;
-        }
-
-        if (!p->built && !p->unresolved_dependencies) {
-            corto_ll_append(projects, p);
+        if (p->path && !p->unresolved_dependencies) {
+            corto_ll_append(readyForBuild, p);
         }
     }
-
-    return 0;
-error:
-    return -1;
 }
 
 int16_t bake_crawler_walk(
@@ -308,43 +305,48 @@ int16_t bake_crawler_walk(
     bake_crawler_cb action, 
     void *ctx)
 {
-    corto_ll projects = corto_ll_new();
-    uint32_t to_build = 0, built = 0, total = bake_crawler_count(_this);
+    corto_ll readyForBuild = corto_ll_new();
+    uint32_t built = 0;
 
-    do {
-        if (_this->nodes) {
-            corto_iter it = corto_rb_iter(_this->nodes);
-            if (bake_crawler_collect_projects(_this, action, ctx, &it, projects, &built)) {
-                goto error;
+    /* Decrease unresolved dependencies for placeholder projects */
+    if (_this->nodes) {
+        corto_iter it = corto_rb_iter(_this->nodes);
+        while (corto_iter_hasNext(&it)) {
+            bake_project *p = corto_iter_next(&it);
+            if (!p->path) {
+                bake_crawler_decrease_dependents(p, NULL);
             }
         }
-        
-        if (_this->leafs) {
-            corto_iter it = corto_ll_iter(_this->leafs);
-            if (bake_crawler_collect_projects(_this, action, ctx, &it, projects, &built)) {
-                goto error;
-            }
+    }
+
+    /* Collect initial projects */
+    if (_this->nodes) {
+        corto_iter it = corto_rb_iter(_this->nodes);
+        bake_crawler_collect_projects(_this, &it, readyForBuild);
+    }
+    
+    if (_this->leafs) {
+        corto_iter it = corto_ll_iter(_this->leafs);
+        bake_crawler_collect_projects(_this, &it, readyForBuild);
+    }
+
+    /* Walk projects (when dependencies are resolved the list will populate) */
+    bake_project *p;
+    while ((p = corto_ll_takeFirst(readyForBuild))) {
+        if (bake_crawler_build_project(_this, action, p, ctx, readyForBuild)) {
+            goto error;
         }
+        built ++;
+    }
 
-        to_build = corto_ll_size(projects);
-
-        corto_iter it = corto_ll_iter(projects);
-        bake_project *p;
-        while ((p = corto_ll_takeFirst(projects))) {
-            if (bake_crawler_build_project(_this, action, p, ctx)) {
-                goto error;
-            }
-            built ++;
-        }
-    } while (to_build);
-
-    if (built != total) {
+    /* If there are still unbuilt projects there must be a cycle in the graph */
+    if (built != _this->count) {
         corto_seterr("project dependency graph contains cycles (%d built vs %d total)",
-            built, total);
+            built, _this->count);
         goto error;
     }
 
-    corto_ll_free(projects);
+    corto_ll_free(readyForBuild);
 
     return 1;
 error:
