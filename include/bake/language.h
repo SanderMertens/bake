@@ -122,6 +122,18 @@ void bake_language_dependency_rule(
     bake_rule_target dep_mapping,
     bake_rule_action_cb action);
 
+/** Generate code for a project.
+ *
+ * @param l The language object.
+ * @param p The project for which to generate code.
+ * @param c The build configuration.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_language_generate(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c);
+
 /** Build a project of the specified language.
  *
  * @param l The language object.

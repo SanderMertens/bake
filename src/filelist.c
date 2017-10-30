@@ -70,13 +70,15 @@ int16_t bake_filelist_populate(
     const char *pattern)
 {
     char *dir = NULL;
+    bool skip = false;
 
-    /* Scan for path to start from */
+    /* Optimize filter evaluation by extracting static path from pattern */
     const char *ptr = pattern, *end = pattern;
     char ch;
     while ((ch = *ptr)) {
         if (ch == '/') {
             if (ptr[1] == '/') {
+                end = ptr;
                 break;
             } else {
                 end = ptr;
@@ -90,7 +92,7 @@ int16_t bake_filelist_populate(
     corto_iter it;
     if (end != pattern) {
         dir = strdup(pattern);
-        dir[end - pattern - 1] = '\0';
+        dir[end - pattern] = '\0';
 
         if (end[-1] == '/') {
             end --;
@@ -102,36 +104,43 @@ int16_t bake_filelist_populate(
         }
 
         corto_trace("match pattern '%s' in '%s/%s'", end, corto_cwd(), dir);
-        if (corto_dir_iter(dir, end, &it)) {
-            goto error;
+        if (corto_file_test(dir)) {
+            if (corto_dir_iter(dir, end, &it)) {
+                goto error;
+            }
+        } else {
+            corto_trace("directory '%s' does not exist, skipping pattern", dir);
+            skip = true;
         }
     } else {
-        corto_trace("match pattern '%s' in '%s'", pattern, corto_cwd());        
+        corto_trace("match pattern '%s' in '%s'", pattern, corto_cwd());
         if (corto_dir_iter(".", pattern, &it)) {
             goto error;
         }
     }
 
     /* Iterate directory, add matched files */
-    int count = 0;
-    while (corto_iter_hasNext(&it)) {
-        char *file = corto_iter_next(&it);
-        char *path = (dir && dir[0]) ? corto_asprintf("%s/%s", dir, file) : strdup(file);
-        if (!bake_filelist_add_intern(fl, path, offset, corto_lastmodified(path))) {
+    if (!skip) {
+        int count = 0;
+        while (corto_iter_hasNext(&it)) {
+            char *file = corto_iter_next(&it);
+            char *path = (dir && dir[0]) ? corto_asprintf("%s/%s", dir, file) : strdup(file);
+            if (!bake_filelist_add_intern(fl, path, offset, corto_lastmodified(path))) {
+                free(path);
+                goto error;
+            }
             free(path);
-            goto error;
+            count ++;
         }
-        free(path);
-        count ++;
-    }
 
-    if (!count && !corto_idmatch_hasOperators(end)) {
-        char *path = dir ? corto_asprintf("%s/%s", dir, end) : strdup(end);
-        if (!bake_filelist_add_intern(fl, path, offset, 0)) {
+        if (!count && !corto_idmatch_hasOperators(end)) {
+            char *path = dir ? corto_asprintf("%s/%s", dir, end) : strdup(end);
+            if (!bake_filelist_add_intern(fl, path, offset, 0)) {
+                free(path);
+                goto error;
+            }
             free(path);
-            goto error;
         }
-        free(path);
     }
 
    if (dir) free(dir); 

@@ -45,3 +45,6 @@ void bake_project_addInclude(
 void bake_project_use(
     bake_project *p,
     const char *use);
+
+char *bake_project_definitionFile(
+    bake_project *p);

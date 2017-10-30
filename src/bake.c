@@ -60,7 +60,13 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "local", public = false);
             PARSE_OPTION(0, "skip-preinstall", skip_preinstall = true);
             PARSE_OPTION(0, "skip-uninstall", skip_uninstall = true);
-            
+
+            PARSE_OPTION(0, "debug", corto_log_verbositySet(CORTO_DEBUG));
+            PARSE_OPTION(0, "trace", corto_log_verbositySet(CORTO_TRACE));
+            PARSE_OPTION(0, "ok", corto_log_verbositySet(CORTO_OK));
+            PARSE_OPTION(0, "warning", corto_log_verbositySet(CORTO_WARNING));
+            PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
+
             if (!parsed) {
                 corto_seterr("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
                 return -1;
@@ -206,6 +212,9 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     if (p->language) {
 
         /* Step 3: if managed, generate code */
+        if (bake_language_generate(l, p, &config)) {
+            goto error;
+        }
 
         /* Step 4: build sources */
         if (bake_language_build(l, p, &config)) {

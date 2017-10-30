@@ -137,6 +137,7 @@ int16_t bake_project_parseMembers(
             /* Parse generic project attributes */
             if (!strcmp(name, "language")) {
                 if (json_value_get_type(v) == JSONString) {
+                    if (p->language) free(p->language);
                     p->language = strdup(json_value_get_string(v));
                 } else {
                     corto_seterr("expected JSON string for 'language' attribute");
@@ -341,6 +342,34 @@ bake_project_attr* bake_project_getattr_cb(const char *name) {
     return bake_project_getattr(p, name);
 }
 
+static
+char *bake_project_modelFile(
+    bake_project *p)
+{
+    char *result = NULL;
+    corto_iter it;
+
+    if (corto_dir_iter(".", NULL, &it)) {
+        p->error = true;
+        goto error;
+    }
+
+    while (corto_iter_hasNext(&it)) {
+        char *file = corto_iter_next(&it);
+        if (!strncmp(file, "model.", strlen("model."))) {
+            result = corto_strdup(file);
+
+            /* Release iterator resources when prematurely quitting iteration */
+            corto_iter_release(&it);
+            break;
+        }
+    }
+
+    return result;
+error:
+    return NULL;
+}
+
 bake_project* bake_project_new(
     const char *path)    
 {
@@ -350,6 +379,7 @@ bake_project* bake_project_new(
     /* Default values */
     result->public = true;
     result->managed = true;
+    result->language = corto_strdup("c");
     result->get_attr = bake_project_getattr_cb;
     result->get_attr_string = bake_project_getattr_string_cb;
     result->error = false;
@@ -365,10 +395,34 @@ bake_project* bake_project_new(
     corto_ll_append(result->includes, "include");
 
     result->use = corto_ll_new();
+    result->use_build = corto_ll_new();
+    result->link = corto_ll_new();
 
     /* Parse project.json if available */
     if (bake_project_parseConfig(result)) {
         goto error;
+    }
+
+    /* Add packages required for building */
+    if (result->managed) {
+        /* Add extension package for model file */
+        result->model = bake_project_modelFile(result);
+        if (result->model) {
+            char *ext = strrchr(result->model, '.');
+            if (ext) {
+                ext ++;
+                corto_ll_append(result->use_build, corto_asprintf("driver/ext/%s", ext));
+            }
+        } else if (result->error) {
+            goto error;
+        }
+
+        /* Add generator packages for language binding */
+        corto_ll_append(
+            result->use_build, 
+            corto_asprintf("driver/gen/%s", 
+                result->language));
+
     }
 
     return result;

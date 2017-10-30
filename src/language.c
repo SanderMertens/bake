@@ -292,6 +292,199 @@ error:
     return -1;
 }
 
+static 
+bake_filelist* bake_node_eval_pattern(
+    bake_node *n,
+    bake_project *p)
+{
+    bool isSources = false;
+    bake_filelist *targets = NULL;
+
+    corto_trace("evaluating pattern");
+    if (!stricmp(n->name, "SOURCES")) {
+        targets = bake_filelist_new(NULL, NULL); /* Create empty list */
+        isSources = true;
+
+        /* If this is the special SOURCES rule, apply the pattern to
+         * every configured source directory */
+        corto_iter it = corto_ll_iter(p->sources);
+        corto_dirstack ds = NULL;
+        while (corto_iter_hasNext(&it)) {
+            char *src = corto_iter_next(&it);
+            ds = corto_dirstack_push(ds, src);
+            if (bake_filelist_addPattern(targets, src, ((bake_pattern*)n)->pattern)) {
+                goto error;
+            }
+            corto_dirstack_pop(ds);
+        }
+    } else if (!stricmp(n->name, "MODEL") && p->model) {
+        targets = bake_filelist_new(NULL, NULL); /* Create empty list */
+        if (!bake_filelist_add(targets, p->model)) {
+            goto error;
+        }
+    } else if (((bake_pattern*)n)->pattern) {
+        /* If this is a regular pattern, match against project directory */
+        targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
+    }
+
+    if (!targets) {
+        goto error;
+    }
+
+    return targets;
+error:
+    return NULL;
+}
+
+static
+int16_t bake_node_run_rule_map(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c,    
+    bake_rule *r,
+    bake_filelist *inputs,
+    bake_filelist *targets)
+{
+    corto_iter it = bake_filelist_iter(inputs);
+    int count = 0;
+    while (corto_iter_hasNext(&it)) {
+        bake_file *src = corto_iter_next(&it);
+        bake_file *dst = NULL;
+        const char *map = r->target.is.map(l, p, src->name, NULL);
+        if (!map) {
+            corto_seterr("failed to map file '%s'", src->name);
+            goto error;
+        }
+        if (!(dst = bake_filelist_add(targets, map))) {
+            goto error;
+        }
+
+        count ++;
+        if (src->timestamp > dst->timestamp) {
+            corto_info("#[white][%3d%%] #[bold]%s#[normal]", 
+                100 * count / bake_filelist_count(inputs),
+                src->name);
+
+            /* Make sure target directory exists */
+            if (bake_assertPathForFile(dst->name)) {
+                goto error;
+            }
+
+            /* Invoke action */
+            char *srcPath = src->name;
+            if (src->offset) {
+                srcPath = corto_asprintf("%s/%s", src->offset, src->name);
+            }
+            r->action(l, p, c, srcPath, dst->name, NULL);
+            if (srcPath != src->name) {
+                free(srcPath);
+            }
+
+            /* Check if error flag was set */
+            if (p->error) {
+                corto_seterr("command for task '%s' failed:\n%s\n", src->name, corto_lasterr());
+                goto error;
+            } else {
+                p->freshly_baked = true;
+            }
+
+            /* Update target with latest timestamp */
+            dst->timestamp = corto_lastmodified(dst->name);
+        } else {
+            corto_trace("#[grey][%3d%%] %s", 
+                100 * count / bake_filelist_count(inputs),
+                src->name);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_node_run_rule_pattern(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c,
+    bake_rule *r,
+    bake_filelist *inputs,
+    bake_filelist *targets)
+{
+    /* Do n-to-n comparison between sources and targets. If the
+     * target list is empty, it is possible that files still have to
+     * be generated, in which case the rule must be executed. */
+    bool shouldBuild = false;
+
+    if (!targets || !bake_filelist_count(targets)) {
+        shouldBuild = true;
+    } else {
+        corto_iter src_iter = bake_filelist_iter(inputs);
+        while (!shouldBuild && corto_iter_hasNext(&src_iter)) {
+            bake_file *src = corto_iter_next(&src_iter);
+
+            corto_iter dst_iter = bake_filelist_iter(targets);
+            while (!shouldBuild && corto_iter_hasNext(&dst_iter)) {
+                bake_file *dst = corto_iter_next(&dst_iter);
+                if (!src->timestamp) {
+                    shouldBuild = true;
+                } else if (src->timestamp > dst->timestamp) {
+                    shouldBuild = true;
+                }
+            }
+        }
+    }
+
+    char *dst = NULL;
+    if (bake_filelist_count(targets) == 1) {
+        bake_file *f = corto_ll_get(targets->files, 0);
+        dst = f->name;
+    }
+
+    if (shouldBuild && inputs && bake_filelist_count(inputs)) {
+        corto_buffer source_list = CORTO_BUFFER_INIT;
+        corto_iter src_iter = bake_filelist_iter(inputs);
+        int count = 0;
+        while (corto_iter_hasNext(&src_iter)) {
+            bake_file *src = corto_iter_next(&src_iter);
+            if (count) {
+                corto_buffer_appendstr(&source_list, " ");
+            }
+            corto_buffer_appendstr(&source_list, src->name);
+            count ++;
+        }
+
+        char *source_list_str = corto_buffer_str(&source_list);
+
+        if (dst) {
+            corto_info("#[bold]%s#[normal]", dst);
+        } else {
+            corto_info("from #[bold]%s#[normal]", source_list_str);
+        }
+
+        r->action(l, p, c, source_list_str, dst, NULL);
+        if (p->error) {
+            if (dst) {
+                corto_seterr("command for task '%s' failed:\n%s\n", dst, corto_lasterr());
+            } else {
+                corto_seterr("rule '%s': %s", ((bake_node*)r)->name, corto_lasterr());
+            }
+            free(source_list_str);
+            goto error;
+        } else {
+            p->freshly_baked = true;
+        }
+
+        free(source_list_str);
+    } else if (dst) {
+        corto_trace("#[grey]%s", dst);
+    }
+
+    return 0;
+error:
+    return -1;  
+}
+
 static
 int16_t bake_node_eval(
     bake_language *l,
@@ -306,35 +499,8 @@ int16_t bake_node_eval(
     corto_log_push((char*)n->name);
 
     if (n->kind == BAKE_RULE_PATTERN) {
-        if (((bake_pattern*)n)->pattern) {
-            bool isSources = false;
-
-            corto_trace("evaluating pattern");
-            if (!stricmp(n->name, "SOURCES")) {
-                targets = bake_filelist_new(NULL, NULL); /* Create empty list */
-                isSources = true;
-
-                /* If this is the special SOURCES rule, apply the pattern to
-                 * every configured source directory */
-                corto_iter it = corto_ll_iter(p->sources);
-                corto_dirstack ds = NULL;
-                while (corto_iter_hasNext(&it)) {
-                    char *src = corto_iter_next(&it);
-                    ds = corto_dirstack_push(ds, src);
-                    if (bake_filelist_addPattern(targets, src, ((bake_pattern*)n)->pattern)) {
-                        goto error;
-                    }
-                    corto_dirstack_pop(ds);
-                }
-            } else {
-                /* If this is a regular pattern, match against project directory */
-                targets = bake_filelist_new(NULL, ((bake_pattern*)n)->pattern);
-            }
-
-            if (!targets) {
-                goto error;
-            }
-        } else {
+        targets = bake_node_eval_pattern(n, p);
+        if (!targets) {
             targets = inherits;
         }
     } else {
@@ -349,6 +515,7 @@ int16_t bake_node_eval(
             goto error;
         }
 
+        /* Evaluate dependencies of node & collect its inputs */
         corto_iter it = corto_ll_iter(n->deps);
         while (corto_iter_hasNext(&it)) {
             bake_node *e = corto_iter_next(&it);
@@ -367,57 +534,9 @@ int16_t bake_node_eval(
                 targets = bake_filelist_new(NULL, NULL);
                 if (!targets) {
                     goto error;
-                }
-                corto_iter it = bake_filelist_iter(inputs);
-                int count = 0;
-                while (corto_iter_hasNext(&it)) {
-                    bake_file *src = corto_iter_next(&it);
-                    bake_file *dst = NULL;
-                    const char *map = r->target.is.map(l, p, src->name, NULL);
-                    if (!map) {
-                        corto_seterr("failed to map file '%s'", src->name);
-                        goto error;
-                    }
-                    if (!(dst = bake_filelist_add(targets, map))) {
-                        goto error;
-                    }
-
-                    count ++;
-                    if (src->timestamp > dst->timestamp) {
-                        corto_info("#[white][%3d%%] #[bold]%s#[normal] #[green](changed)#[normal]", 
-                            100 * count / bake_filelist_count(inputs),
-                            src->name);
-
-                        /* Make sure target directory exists */
-                        if (bake_assertPathForFile(dst->name)) {
-                            goto error;
-                        }
-
-                        /* Invoke action */
-                        char *srcPath = src->name;
-                        if (src->offset) {
-                            srcPath = corto_asprintf("%s/%s", src->offset, src->name);
-                        }
-                        r->action(l, p, c, srcPath, dst->name, NULL);
-                        if (srcPath != src->name) {
-                            free(srcPath);
-                        }
-
-                        /* Check if error flag was set */
-                        if (p->error) {
-                            corto_seterr("command for task '%s' failed:\n%s\n", src->name, corto_lasterr());
-                            goto error;
-                        } else {
-                            p->freshly_baked = true;
-                        }
-
-                        /* Update target with latest timestamp */
-                        dst->timestamp = corto_lastmodified(dst->name);
-                    } else {
-                        corto_trace("#[grey][%3d%%] %s", 
-                            100 * count / bake_filelist_count(inputs),
-                            src->name);
-                    }
+                }                
+                if (bake_node_run_rule_map(l, p, c, r, inputs, targets)) {
+                    goto error;
                 }
 
             /* When rule specifies a pattern, generate targets from pattern */
@@ -427,72 +546,18 @@ int16_t bake_node_eval(
                 } else {
                     targets = bake_filelist_new(NULL, r->target.is.pattern);
                 }
-                if (!targets) {
+
+                if (!targets && !bake_filelist_count(inputs)) {
+                    corto_seterr("no targets for rule");
                     goto error;
                 }
 
-                /* Do n-to-n comparison between sources and targets. If the
-                 * target list is empty, it is possible that files still have to
-                 * be generated, in which case the rule must be executed. */
-                bool shouldBuild = false;
-
-                if (!bake_filelist_count(targets)) {
-                    shouldBuild = true;
-                } else {
-                    corto_iter src_iter = bake_filelist_iter(inputs);
-                    while (!shouldBuild && corto_iter_hasNext(&src_iter)) {
-                        bake_file *src = corto_iter_next(&src_iter);
-
-                        corto_iter dst_iter = bake_filelist_iter(targets);
-                        while (!shouldBuild && corto_iter_hasNext(&dst_iter)) {
-                            bake_file *dst = corto_iter_next(&dst_iter);
-                            if (!src->timestamp) {
-                                shouldBuild = true;
-                            } else if (src->timestamp > dst->timestamp) {
-                                shouldBuild = true;
-                            }
-                        }
-                    }
+                if (!targets) {
+                    targets = bake_filelist_new(NULL, NULL);
                 }
 
-                char *dst = NULL;
-                if (bake_filelist_count(targets) == 1) {
-                    bake_file *f = corto_ll_get(targets->files, 0);
-                    dst = f->name;
-                }
-
-                if (shouldBuild) {
-                    corto_buffer source_list = CORTO_BUFFER_INIT;
-                    corto_iter src_iter = bake_filelist_iter(inputs);
-                    int count = 0;
-                    while (corto_iter_hasNext(&src_iter)) {
-                        bake_file *src = corto_iter_next(&src_iter);
-                        if (count) {
-                            corto_buffer_appendstr(&source_list, " ");
-                        }
-                        corto_buffer_appendstr(&source_list, src->name);
-                        count ++;
-                    }
-
-                    char *source_list_str = corto_buffer_str(&source_list);
-
-                    corto_info("#[bold]%s#[normal] #[green](rebuild)#[normal]", dst);
-                    r->action(l, p, c, source_list_str, dst, NULL);
-                    if (p->error) {
-                        if (dst) {
-                            corto_seterr("command for task '%s'failed:\n%s\n", dst, corto_lasterr());
-                        } else {
-                            corto_seterr("rule '%s': %s", n->name, corto_lasterr());
-                        }
-                        free(source_list_str);
-                        goto error;
-                    } else {
-                        p->freshly_baked = true;
-                    }
-
-                    free(source_list_str);
-                } else {
-                    corto_trace("#[grey]%s", dst);
+                if (bake_node_run_rule_pattern(l, p, c, r, inputs, targets)) {
+                    goto error;
                 }
             }
         }
@@ -512,6 +577,36 @@ error:
     return -1;
 }
 
+int16_t bake_language_generate(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c)
+{
+    if (p->model) {
+        corto_log_push("generate");
+        corto_trace("begin");
+
+        bake_node *root = bake_node_find(l, "GENERATED-SOURCES");
+        if (!root) {
+            corto_critical("root GENERATED-SOURCES node not found in language object");
+        }
+
+        corto_tls_set(BAKE_PROJECT_KEY, p);
+
+        if (bake_node_eval(l, root, p, c, NULL, NULL)) {
+            corto_log_pop();
+            goto error;
+        }
+
+        corto_trace("end");
+        corto_log_pop();
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_language_build(
     bake_language *l,
     bake_project *p,
@@ -520,13 +615,31 @@ int16_t bake_language_build(
     corto_log_push("build");
     corto_trace("begin");
 
+    /* Add dependencies to link list */
+    corto_iter it = corto_ll_iter(p->use);
+    while (corto_iter_hasNext(&it)) {
+        char *dep = corto_iter_next(&it);
+        char *lib = corto_locate(dep, NULL, CORTO_LOCATION_LIB);
+        if (!lib) {
+            corto_seterr("missing dependency '%s'", dep);
+            goto error;
+        }
+        corto_ll_append(p->link, lib);
+    }
+
+    /* If project is managed, add corto library to link */
+    if (p->managed) {
+        char *cortolib = corto_locate("corto", NULL, CORTO_LOCATION_LIB);
+        if (!cortolib) {
+            goto error;
+        }
+        corto_ll_append(p->link, cortolib);
+    }
+
     bake_node *root = bake_node_find(l, "ARTEFACT");
     if (!root) {
         corto_critical("root ARTEFACT node not found in language object");
     }
-
-    /* Create filelist for artefact files */
-
 
     /* Obtain artefact */
     char *artefact = l->artefact_cb(l, p);
@@ -653,7 +766,7 @@ bake_language* bake_language_get(
         corto_tls_set(BAKE_LANGUAGE_KEY, l);
 
         /* Create built-in nodes */
-        bake_language_pattern(l, "DEFINITION", NULL); /* Code-gen root */
+        bake_language_pattern(l, "MODEL", NULL); /* Code-gen source */
 
         /* Run 'bakemain' which will load the rules for the language */
         if (_main(l)) {
