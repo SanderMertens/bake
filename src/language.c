@@ -98,9 +98,11 @@ void bake_language_exec_cb(
     int sig = 0;
     if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
         if (!sig) {
-            corto_seterr("#[white]%s#[normal] #[red](returned %d)#[normal]", envcmd, ret);
+            corto_throw("command returned %d", ret);
+            corto_throw_detail("%s", envcmd);
         } else {
-            corto_seterr("#[white]%s#[normal] #[red](exited with signal %d)#[normal]", envcmd, sig);
+            corto_throw("command exited with signal %d", sig);
+            corto_throw_detail("%s", envcmd);
         }
 
         bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
@@ -151,7 +153,7 @@ int16_t bake_node_addDependencies(
             /* Create dependency to named node */
             bake_node *dep = bake_node_find(l, &ptr[1]);
             if (!dep) {
-                corto_seterr("dependency '%s' not found for rule '%s'",
+                corto_throw("dependency '%s' not found for rule '%s'",
                     ptr, node->name);
                 goto error;
             } else {
@@ -188,14 +190,14 @@ int16_t bake_node_addToTarget(
      * representing the target. */
     if (pattern) {
         if (pattern[0] != '$') {
-            corto_seterr("target '%s' for rule '%s' does not refer named node",
+            corto_throw("target '%s' for rule '%s' does not refer named node",
                 pattern, node->name);
             goto error;
         }
 
         bake_node *targetNode = bake_node_find(l, &pattern[1]);
         if (!targetNode) {
-            corto_seterr("unresolved target '%s' for node '%s'",
+            corto_throw("unresolved target '%s' for node '%s'",
                 pattern, node->name);
             goto error;
         }
@@ -352,7 +354,7 @@ int16_t bake_node_run_rule_map(
         bake_file *dst = NULL;
         const char *map = r->target.is.map(l, p, src->name, NULL);
         if (!map) {
-            corto_seterr("failed to map file '%s'", src->name);
+            corto_throw("failed to map file '%s'", src->name);
             goto error;
         }
         if (!(dst = bake_filelist_add(targets, map))) {
@@ -382,7 +384,7 @@ int16_t bake_node_run_rule_map(
 
             /* Check if error flag was set */
             if (p->error) {
-                corto_seterr("command for task '%s' failed:\n%s\n", src->name, corto_lasterr());
+                corto_throw("command for task '%s' failed", src->name);
                 goto error;
             } else {
                 p->freshly_baked = true;
@@ -465,9 +467,9 @@ int16_t bake_node_run_rule_pattern(
         r->action(l, p, c, source_list_str, dst, NULL);
         if (p->error) {
             if (dst) {
-                corto_seterr("command for task '%s' failed:\n%s\n", dst, corto_lasterr());
+                corto_throw("command for task '%s' failed", dst);
             } else {
-                corto_seterr("rule '%s': %s", ((bake_node*)r)->name, corto_lasterr());
+                corto_throw("rule failed");
             }
             free(source_list_str);
             goto error;
@@ -520,7 +522,7 @@ int16_t bake_node_eval(
         while (corto_iter_hasNext(&it)) {
             bake_node *e = corto_iter_next(&it);
             if (bake_node_eval(l, e, p, c, targets, inputs)) {
-                corto_seterr("dependency '%s' failed", e->name);
+                corto_throw("dependency '%s' failed", e->name);
                 goto error;
             }
         }
@@ -548,7 +550,7 @@ int16_t bake_node_eval(
                 }
 
                 if (!targets && !bake_filelist_count(inputs)) {
-                    corto_seterr("no targets for rule");
+                    corto_throw("no targets for rule");
                     goto error;
                 }
 
@@ -621,7 +623,7 @@ int16_t bake_language_build(
         char *dep = corto_iter_next(&it);
         char *lib = corto_locate(dep, NULL, CORTO_LOCATION_LIB);
         if (!lib) {
-            corto_seterr("missing dependency '%s'", dep);
+            corto_throw("missing dependency '%s'", dep);
             goto error;
         }
         corto_ll_append(p->link, lib);
@@ -644,7 +646,7 @@ int16_t bake_language_build(
     /* Obtain artefact */
     char *artefact = l->artefact_cb(l, p);
     if (!artefact) {
-        corto_seterr("no artefacts specified for project '%s' by language", p->id);
+        corto_throw("no artefacts specified for project '%s' by language", p->id);
         goto error;
     }
 
@@ -658,7 +660,7 @@ int16_t bake_language_build(
     );
     bake_filelist_add(artefact_fl, artefact);
     if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
-        corto_seterr("failed to build 'ARTEFACT'");
+        corto_throw("failed to build 'ARTEFACT'");
         goto error;
     }
     bake_filelist_free(artefact_fl);
@@ -754,9 +756,8 @@ bake_language* bake_language_get(
         buildmain_cb _main = corto_load_sym(package, &dl, "bakemain");
 
         if (!_main) {
-            corto_seterr("failed load '%s': %s", 
-                package,
-                corto_lasterr());
+            corto_throw("failed load '%s'", 
+                package);
             goto error;
         }
         l->dl = dl;
@@ -770,9 +771,8 @@ bake_language* bake_language_get(
 
         /* Run 'bakemain' which will load the rules for the language */
         if (_main(l)) {
-            corto_seterr("bakemain for '%s' failed: %s", 
-                language, 
-                corto_lasterr());
+            corto_throw("bakemain for '%s' failed", 
+                language);
             free(l);
             goto error;
         }

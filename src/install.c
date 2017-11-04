@@ -158,7 +158,7 @@ int16_t bake_uninstall(
         if (corto_file_test(projectDir)) {
             char *filename = bake_uninstaller_filename(project);
             if (corto_file_iter(filename, &it)) {
-                corto_lasterr(); /* Catch last error */
+                corto_catch(); /* Catch last error */
                 corto_warning("missing uninstaller for project '%s'", project->id);
                 free(filename);
                 goto skip;
@@ -168,16 +168,15 @@ int16_t bake_uninstall(
                 char *line = corto_iter_next(&it);
                 if (!line || !line[0]) continue; /* Skip empty lines in file */
                 if (corto_rm(line)) {
-                    corto_warning("failed to uninstall '%s' for '%s': %s", 
+                    corto_warning("failed to uninstall '%s' for '%s'", 
                         line, 
-                        project->id,
-                        corto_lasterr());
+                        project->id);
                 }
             }
 
             /* Remove uninstaller */
             if (corto_rm(filename)) {
-                corto_warning("failed to remove '%s': %s", filename, corto_lasterr());
+                corto_warning("failed to remove '%s'", filename);
             }
 
             /* Free project directory if it's empty (no nested packages) */
@@ -291,12 +290,12 @@ int16_t bake_post(
     }
 
     if (!corto_file_test(artefact)) {
-        corto_seterr("cannot find artefact '%s'", artefact);
+        corto_throw("cannot find artefact '%s'", artefact);
         goto error;
     }
 
     if (corto_isdir(artefact)) {
-        corto_seterr("specified artefact '%s' is a directory, expecting regular file", artefact);
+        corto_throw("specified artefact '%s' is a directory, expecting regular file", artefact);
         goto error;
     }
 

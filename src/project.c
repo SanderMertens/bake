@@ -140,7 +140,7 @@ int16_t bake_project_parseMembers(
                     if (p->language) free(p->language);
                     p->language = strdup(json_value_get_string(v));
                 } else {
-                    corto_seterr("expected JSON string for 'language' attribute");
+                    corto_throw("expected JSON string for 'language' attribute");
                     goto error;
                 }
             }
@@ -149,7 +149,7 @@ int16_t bake_project_parseMembers(
                 if (json_value_get_type(v) == JSONBoolean) {
                     p->managed = json_value_get_boolean(v);
                 } else {
-                    corto_seterr("expected JSON boolean for 'managed' attribute");
+                    corto_throw("expected JSON boolean for 'managed' attribute");
                     goto error;
                 }
             }
@@ -158,7 +158,7 @@ int16_t bake_project_parseMembers(
                 if (json_value_get_type(v) == JSONBoolean) {
                     p->public = json_value_get_boolean(v);
                 } else {
-                    corto_seterr("expected JSON string for 'public' attribute");
+                    corto_throw("expected JSON string for 'public' attribute");
                     goto error;
                 }
             } 
@@ -215,19 +215,19 @@ int16_t bake_project_parseConfig(
     if (corto_file_test("project.json")) {
         JSON_Value *j = json_parse_file(file);
         if (!j) {
-            corto_seterr("failed to parse '%s'", file);
+            corto_throw("failed to parse '%s'", file);
             goto error;
         }
 
         JSON_Object *jo = json_value_get_object(j);
         if (!jo) {
-            corto_seterr("failed to parse '%s' (expected object)", file);
+            corto_throw("failed to parse '%s' (expected object)", file);
             goto error;
         }
 
         const char *j_id_member = json_object_get_string(jo, "id");
         if (!j_id_member) {
-            corto_seterr("failed to parse '%s': missing 'id' member", file);
+            corto_throw("failed to parse '%s': missing 'id' member", file);
             goto error;
         }
 
@@ -235,7 +235,7 @@ int16_t bake_project_parseConfig(
 
         const char *j_type_member = json_object_get_string(jo, "type");
         if (!j_type_member) {
-            corto_seterr("failed to parse '%s': missing 'type' member", file);
+            corto_throw("failed to parse '%s': missing 'type' member", file);
             goto error;
         }
 
@@ -251,7 +251,7 @@ int16_t bake_project_parseConfig(
         if (j_value_member) {
             JSON_Object *jvo = json_value_get_object(j_value_member);
             if (!jvo) {
-                corto_seterr("failed to parse '%s': value member must be an object", file);
+                corto_throw("failed to parse '%s': value member must be an object", file);
                 goto error;
             }
 
@@ -458,7 +458,7 @@ char* bake_project_binaryPath(
         return corto_envparse(
             "$CORTO_TARGET/bin");
     } else {
-        corto_seterr("unsupported project kind '%s'", p->kind);
+        corto_throw("unsupported project kind '%s'", p->kind);
         return NULL;
     }
 

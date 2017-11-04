@@ -68,7 +68,7 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
 
             if (!parsed) {
-                corto_seterr("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
+                corto_throw("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
                 return -1;
             }
         } else {
@@ -83,7 +83,7 @@ int parseArgs(int argc, char *argv[])
 static
 int16_t bake_test_env(const char *env) {
     if (!corto_getenv(env)) {
-        corto_seterr("environment variable '%s' is not set", env);
+        corto_throw("environment variable '%s' is not set", env);
         return -1;
     }
     return 0;
@@ -120,7 +120,7 @@ int16_t bake_check_dependencies(
                 corto_info("use '%s' => #[red]missing#[normal]", 
                     package, 
                     lib);
-                corto_seterr("missing dependency '%s'", package);
+                corto_throw("missing dependency '%s'", package);
                 goto error;
             }
 
@@ -169,7 +169,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
 
         artefact = bake_language_artefact(l, p);
         if (!artefact) {
-            corto_seterr("could not obtain artefact for project '%s'", p->id);
+            corto_throw("could not obtain artefact for project '%s'", p->id);
             goto error;
         }
 
@@ -182,7 +182,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    corto_log_push("default");
+    corto_log_push("build");
     corto_trace("begin");
 
     bake_config config = {
@@ -218,7 +218,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
 
         /* Step 4: build sources */
         if (bake_language_build(l, p, &config)) {
-            corto_seterr("build failed");
+            corto_throw("build failed");
             corto_log_pop();
             goto error;
         }
@@ -309,7 +309,7 @@ int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 int main(int argc, char* argv[]) {
-    const char *action = "default";
+    const char *action = "build";
     char *path_tokens = NULL;
     paths = corto_ll_new();
 
@@ -388,7 +388,7 @@ int main(int argc, char* argv[]) {
         bake_project *p;
 
         if (corto_ll_size(paths) > 1) {
-            corto_seterr(
+            corto_throw(
                 "multiple paths specified for single project '%s'", id);
             goto error;
         }
@@ -452,7 +452,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (!bake_crawler_count(c)) {
-        corto_seterr("no projects found");
+        corto_throw("no projects found");
         goto error;
     }
 

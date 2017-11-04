@@ -46,7 +46,7 @@ bake_project* bake_crawler_addProject(
         bake_project *found;
         if ((found = corto_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
             if (found->path) {
-                corto_seterr(
+                corto_throw(
                     "duplicate project '%s' found in '%s' (first found here: '%s')",
                     p->id,
                     found->path,
@@ -118,7 +118,7 @@ int16_t bake_crawler_crawl(
 
     corto_iter it;
     if (corto_dir_iter(".", NULL, &it)) {
-        corto_seterr("failed to open directory '%s': %s", fullpath, corto_lasterr());
+        corto_throw("failed to open directory '%s'", fullpath);
         goto error;
     }
 
@@ -152,7 +152,7 @@ int16_t bake_crawler_crawl(
     }
 
     if (corto_chdir(prev)) {
-        corto_seterr("failed to restore directory to '%s': %s", prev, corto_lasterr());
+        corto_throw("failed to restore directory to '%s'", prev);
         goto error;
     }
 
@@ -205,7 +205,7 @@ int16_t bake_crawler_search(
     if (corto_file_test(path)) {
         ret = bake_crawler_crawl(_this, ".", path);
     } else {
-        corto_seterr("path '%s' not found", path);
+        corto_throw("path '%s' not found", path);
         goto error;
     }
 
@@ -265,7 +265,7 @@ int16_t bake_crawler_build_project(
     }
 
     if (!action(_this, p, ctx)) {
-        corto_seterr("build interrupted by '%s': %s", p->id, corto_lasterr());
+        corto_throw("build interrupted by '%s'", p->id);
         free(prev);
         goto error;
     }
@@ -341,7 +341,7 @@ int16_t bake_crawler_walk(
 
     /* If there are still unbuilt projects there must be a cycle in the graph */
     if (built != _this->count) {
-        corto_seterr("project dependency graph contains cycles (%d built vs %d total)",
+        corto_throw("project dependency graph contains cycles (%d built vs %d total)",
             built, _this->count);
         goto error;
     }

@@ -221,7 +221,7 @@ int16_t bake_filelist_addPattern(
 {
     corto_assert(fl != NULL, "passed NULL to filelist_addPattern");
     if (!fl) {
-        corto_seterr("no filelist specified");
+        corto_throw("no filelist specified");
         goto error;
     }
 
@@ -240,7 +240,7 @@ int16_t bake_filelist_addList(
 {
     corto_assert(fl != NULL, "passed NULL to filelist_addList");
     if (!src) {
-        corto_seterr("no source filelist specified");
+        corto_throw("no source filelist specified");
         goto error;
     }
 
