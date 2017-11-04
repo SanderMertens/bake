@@ -285,6 +285,7 @@ int16_t bake_assertPathForFile(
 
     if (!corto_file_test(buffer)) {
         if (corto_mkdir(buffer)) {
+            corto_throw(NULL);            
             goto error;
         }
     }
@@ -313,8 +314,13 @@ bake_filelist* bake_node_eval_pattern(
         corto_dirstack ds = NULL;
         while (corto_iter_hasNext(&it)) {
             char *src = corto_iter_next(&it);
-            ds = corto_dirstack_push(ds, src);
+            if (!(ds = corto_dirstack_push(ds, src))) {
+                corto_throw(NULL);
+                goto error;
+            }
+
             if (bake_filelist_addPattern(targets, src, ((bake_pattern*)n)->pattern)) {
+                corto_throw(NULL);
                 goto error;
             }
             corto_dirstack_pop(ds);
@@ -322,6 +328,7 @@ bake_filelist* bake_node_eval_pattern(
     } else if (!stricmp(n->name, "MODEL") && p->model) {
         targets = bake_filelist_new(NULL, NULL); /* Create empty list */
         if (!bake_filelist_add(targets, p->model)) {
+            corto_throw(NULL);
             goto error;
         }
     } else if (((bake_pattern*)n)->pattern) {
@@ -358,6 +365,7 @@ int16_t bake_node_run_rule_map(
             goto error;
         }
         if (!(dst = bake_filelist_add(targets, map))) {
+            corto_throw(NULL);            
             goto error;
         }
 
@@ -369,6 +377,7 @@ int16_t bake_node_run_rule_map(
 
             /* Make sure target directory exists */
             if (bake_assertPathForFile(dst->name)) {
+                corto_throw(NULL);
                 goto error;
             }
 
@@ -472,6 +481,7 @@ int16_t bake_node_run_rule_pattern(
                 corto_throw("rule failed");
             }
             free(source_list_str);
+            corto_throw(NULL);
             goto error;
         } else {
             p->freshly_baked = true;
@@ -514,6 +524,7 @@ int16_t bake_node_eval(
     if (n->deps) {
         bake_filelist *inputs = bake_filelist_new(NULL, NULL);
         if (!inputs) {
+            corto_throw(NULL);
             goto error;
         }
 
@@ -535,9 +546,11 @@ int16_t bake_node_eval(
             if (r->target.kind == BAKE_RULE_TARGET_MAP) {
                 targets = bake_filelist_new(NULL, NULL);
                 if (!targets) {
+                    corto_throw(NULL);                    
                     goto error;
                 }                
                 if (bake_node_run_rule_map(l, p, c, r, inputs, targets)) {
+                    corto_throw(NULL);                                        
                     goto error;
                 }
 
@@ -559,6 +572,7 @@ int16_t bake_node_eval(
                 }
 
                 if (bake_node_run_rule_pattern(l, p, c, r, inputs, targets)) {
+                    corto_throw(NULL);                    
                     goto error;
                 }
             }

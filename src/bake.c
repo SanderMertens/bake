@@ -182,9 +182,6 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    corto_log_push("build");
-    corto_trace("begin");
-
     bake_config config = {
         .symbols = true,
         .debug = true,
@@ -195,7 +192,6 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     /* Step 1: clean package hierarchy */
     if (!skip_uninstall) {
         if (bake_uninstall(p)) {
-            corto_log_pop();
             goto error;
         }
     }
@@ -203,7 +199,6 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     /* Step 2: pre-install files to package hierarchy */
     if (!skip_preinstall) {
         if (bake_pre(p)) {
-            corto_log_pop();
             goto error;
         }
     }
@@ -219,21 +214,16 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         /* Step 4: build sources */
         if (bake_language_build(l, p, &config)) {
             corto_throw("build failed");
-            corto_log_pop();
             goto error;
         }
 
         /* Step 5: install artefact if project was rebuilt */
         if (artefact) {
             if (bake_post(p, artefact)) {
-                corto_log_pop();
                 goto error;
             }
         }
     }
-
-    corto_ok("done");
-    corto_log_pop();
 
     if (artefact) free(artefact);
     return 1; /* continue */

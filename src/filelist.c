@@ -39,6 +39,7 @@ bake_file* bake_filelist_add_intern(
     time_t timestamp)
 {
     if (timestamp < 0) {
+        corto_throw(NULL);
         goto error;
     }
 
@@ -106,6 +107,7 @@ int16_t bake_filelist_populate(
         corto_trace("match pattern '%s' in '%s/%s'", end, corto_cwd(), dir);
         if (corto_file_test(dir)) {
             if (corto_dir_iter(dir, end, &it)) {
+                corto_throw(NULL);
                 goto error;
             }
         } else {
@@ -115,6 +117,7 @@ int16_t bake_filelist_populate(
     } else {
         corto_trace("match pattern '%s' in '%s'", pattern, corto_cwd());
         if (corto_dir_iter(".", pattern, &it)) {
+            corto_throw(NULL);
             goto error;
         }
     }
@@ -127,6 +130,7 @@ int16_t bake_filelist_populate(
             char *path = (dir && dir[0]) ? corto_asprintf("%s/%s", dir, file) : strdup(file);
             if (!bake_filelist_add_intern(fl, path, offset, corto_lastmodified(path))) {
                 free(path);
+                corto_throw(NULL);
                 goto error;
             }
             free(path);
@@ -137,6 +141,7 @@ int16_t bake_filelist_populate(
             char *path = dir ? corto_asprintf("%s/%s", dir, end) : strdup(end);
             if (!bake_filelist_add_intern(fl, path, offset, 0)) {
                 free(path);
+                corto_throw(NULL);
                 goto error;
             }
             free(path);
@@ -191,6 +196,7 @@ bake_filelist* bake_filelist_new(
     /* Extract starting directory from pattern */
     if (pattern) {
         if (bake_filelist_populate(result, NULL, result->pattern)) {
+            corto_throw(NULL);
             goto error;
         }
     }
@@ -226,6 +232,7 @@ int16_t bake_filelist_addPattern(
     }
 
     if (bake_filelist_populate(fl, offset, pattern)) {
+        corto_throw(NULL);
         goto error;
     }
 

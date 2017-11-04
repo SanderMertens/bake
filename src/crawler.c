@@ -41,8 +41,9 @@ bake_project* bake_crawler_addProject(
         return NULL;
     }
 
+    if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp);
+    
     if (p->kind == BAKE_PACKAGE && p->public) {
-        if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp);
         bake_project *found;
         if ((found = corto_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
             if (found->path) {
@@ -72,6 +73,7 @@ bake_project* bake_crawler_addProject(
     corto_iter it = corto_ll_iter(p->use);
     while (corto_iter_hasNext(&it)) {
         char *use = corto_iter_next(&it);
+
         bake_project *dep = corto_rb_find(_this->nodes, use);
         if (!dep) {
             /* Create placeholder */
