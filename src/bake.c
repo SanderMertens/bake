@@ -303,8 +303,7 @@ int main(int argc, char* argv[]) {
     char *path_tokens = NULL;
     paths = corto_ll_new();
 
-    corto_log_fmt("%V %F:%L (%R) %c: %m");
-    corto_log_embedCategories(false);
+    corto_log_fmt("[%A] %V %F:%L (%R) %C: %m");
     
     /* Initialize base library */
     base_init(argv[0]);
