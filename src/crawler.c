@@ -104,6 +104,7 @@ int16_t bake_crawler_crawl(
     char *prev = strdup(corto_cwd());
     char *fullpath = corto_asprintf("%s/%s", wd, path);
     bool isProject = false;
+    bake_project *p = NULL;
 
     corto_path_clean(fullpath, fullpath);
 
@@ -113,7 +114,7 @@ int16_t bake_crawler_crawl(
 
     if (corto_file_test("project.json")) {
         isProject = true;
-        if (!bake_crawler_addProject(_this, fullpath)) {
+        if (!(p = bake_crawler_addProject(_this, fullpath))) {
             goto error;
         }
     }
@@ -143,6 +144,13 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, ".corto"))
                 {
                     continue;
+                }
+
+                if (p->managed && p->language) {
+                    /* Filter out project generated for language-specific api */
+                    if (!strcmp(file, p->language)) {
+                        continue;
+                    }
                 }
             }
 

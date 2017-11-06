@@ -616,6 +616,18 @@ int16_t bake_language_generate(
 
         corto_trace("end");
         corto_log_pop();
+
+        /* If code generation yielded a folder with the name of the
+         * project language, this is a new project that contains the
+         * generated language binding api. */
+        if (corto_file_test(p->language) == 1) {
+            int sig;
+            int8_t ret;
+            if ((sig = corto_proc_cmd(strarg("bake build %s", p->language), &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
+        }
     }
 
     return 0;
@@ -711,6 +723,13 @@ int16_t bake_language_clean(
             goto error;
         }
         free(artefact);
+    }
+    
+    /* If project is managed and contains a folder with the name of the
+     * configured language, this is a project that contains generated
+     * code. */
+    if (p->managed && p->language && corto_file_test(p->language) == 1) {
+        corto_rm(p->language);
     }
 
     corto_trace("done");

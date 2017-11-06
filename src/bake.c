@@ -115,6 +115,17 @@ int16_t bake_check_dependencies(
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
+
+            /* Don't check if this is the generated language binding
+             * package, as it may still have to be generated */
+            if (p->managed && p->language) {
+                if (!strcmp(package, strarg("%s/c", p->id))) {
+                    corto_ok("use '%s'", 
+                        package);
+                    continue;
+                }
+            }
+
             char *lib = corto_locate(package, NULL, CORTO_LOCATION_LIB);
             if (!lib) {
                 corto_info("use '%s' => #[red]missing#[normal]", 
@@ -207,8 +218,10 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     if (p->language) {
 
         /* Step 3: if managed, generate code */
-        if (bake_language_generate(l, p, &config)) {
-            goto error;
+        if (p->managed) {
+            if (bake_language_generate(l, p, &config)) {
+                goto error;
+            }
         }
 
         /* Step 4: build sources */
