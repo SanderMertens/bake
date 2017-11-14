@@ -64,6 +64,7 @@ typedef struct bake_project {
     corto_ll link; /* All objects package needs to link with (contains located dependencies) */
     bool public;
     bool managed;
+    bool use_generated_api;
     char *path;
     corto_ll sources;
     corto_ll includes;
@@ -87,9 +88,13 @@ typedef struct bake_project {
     corto_ll dependents; /* projects that depend on this project */
     bool built;
 
+    /* Files to be cleaned other than objects and artefact (populated by language binding) */
+    corto_ll files_to_clean;
+
     /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);
     char* (*get_attr_string)(const char *name);
+    void (*clean)(const char *file);
 } bake_project;
 
 #ifdef __cplusplus

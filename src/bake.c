@@ -106,12 +106,60 @@ int16_t bake_check_dependencies(
         artefact_modified = corto_lastmodified(artefact);
     }
 
-    if (artefact_modified && artefact_modified < project_modified) {
-        corto_info("cfg 'project.json' #[green](changed)#[normal]");
+    if (artefact_modified < project_modified) {
+        if (artefact_modified) {
+            corto_info("cfg 'project.json' #[green](changed)#[normal]");
+        }
         p->sources_outdated = true;
     }
 
     if (p->use) {
+        /* For each package, if use_generated_api is enabled, also include
+         * the package that contains the generated api for the language of
+         * the package */
+        if (p->use_generated_api) {
+
+            int i = 0, count = corto_ll_size(p->use);
+            corto_iter it = corto_ll_iter(p->use);
+            while (corto_iter_hasNext(&it)) {
+                char *package = corto_iter_next(&it);
+                char *lastElem = strrchr(package, '/');
+                i ++;
+                if (lastElem) {
+                    lastElem ++;
+                    /* Don't try to find a language specific
+                     * package if this is already a language
+                     * specific package */
+                    if (!strcmp(lastElem, p->language)) {
+                        continue;
+                    }
+                }
+
+                /* Insert language-specific package with generated
+                 * API if it exists */
+                char *lib = corto_locate(
+                    strarg("%s/%s", package, p->language),
+                    NULL,
+                    CORTO_LOCATION_LIB);
+                if (lib) {
+                    corto_ll_append(
+                        p->use, 
+                        corto_asprintf(
+                            "%s/%s", package, p->language));
+                }
+
+                /* Reached end of list- don't process packages that
+                 * we just added */
+                if (i == count) {
+                    break;
+                }
+            }
+
+            if (p->managed) {
+                corto_ll_append(p->use, strdup("corto/c"));
+            }
+        }
+
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
@@ -153,6 +201,11 @@ int16_t bake_check_dependencies(
     }
 
     if (p->sources_outdated) {
+        if (!artefact_modified) {
+            corto_trace("old artefact '%s' not found, starting from clean slate",
+                artefact);
+        }
+
         if (bake_language_clean(l, p)) {
             goto error;
         }
@@ -175,6 +228,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
     if (p->language) {
         l = bake_language_get(p->language);
         if (!l) {
+            corto_throw(NULL);
             goto error;
         }
 
@@ -186,7 +240,7 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
 
         if (bake_check_dependencies(l, p, artefact)) {
             goto error;
-        }        
+        }
     } else {
         if (corto_file_test("src")) {
             corto_warning("found 'src' directory but no language configured. add language to 'project.json'");
@@ -207,6 +261,13 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
+    /* Step 3: if managed, generate code */
+    if (p->managed && p->language) {
+        if (bake_language_generate(l, p, &config)) {
+            goto error;
+        }
+    }
+
     /* Step 2: pre-install files to package hierarchy */
     if (!skip_preinstall) {
         if (bake_pre(p)) {
@@ -216,13 +277,6 @@ int bake_action_default(bake_crawler c, bake_project* p, void *ctx) {
 
     /* The next steps are only relevant if a language is configured */
     if (p->language) {
-
-        /* Step 3: if managed, generate code */
-        if (p->managed) {
-            if (bake_language_generate(l, p, &config)) {
-                goto error;
-            }
-        }
 
         /* Step 4: build sources */
         if (bake_language_build(l, p, &config)) {
@@ -252,6 +306,7 @@ int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
         bake_language *l = NULL;
         l = bake_language_get(p->language);
         if (!l) {
+            corto_throw(NULL);
             goto error;
         }
 
@@ -461,7 +516,7 @@ int main(int argc, char* argv[]) {
     if (!action) {
         /* If after parsing arguments no actions were defined, execute the default
          * action. */
-        if (!bake_crawler_walk(c, bake_action_default, NULL)) {
+        if (!bake_crawler_walk(c, "build", bake_action_default, NULL)) {
             goto error;
         }
     } else {
@@ -475,7 +530,7 @@ int main(int argc, char* argv[]) {
             corto_error("unknown action '%s'", action);
             goto error;
         }
-        if (!bake_crawler_walk(c, action_cb, NULL)) {
+        if (!bake_crawler_walk(c, action, action_cb, NULL)) {
             goto error;
         }
     }

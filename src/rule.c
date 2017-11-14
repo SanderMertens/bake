@@ -22,25 +22,27 @@
 #include "bake.h"
 
 bake_pattern* bake_pattern_new(
-    const char *name, 
+    const char *name,
     const char *pattern)
 {
     bake_pattern *result = corto_calloc(sizeof(bake_pattern));
     result->super.kind = BAKE_RULE_PATTERN;
     result->super.name = name;
-    result->pattern = pattern;
+    result->super.cond = NULL;
+    result->pattern = pattern ? corto_strdup(pattern) : NULL;
     return result;
 }
 
 bake_rule* bake_rule_new(
-    const char *name, 
-    const char *source, 
-    bake_rule_target target, 
-    bake_rule_action_cb action) 
+    const char *name,
+    const char *source,
+    bake_rule_target target,
+    bake_rule_action_cb action)
 {
     bake_rule *result = corto_calloc(sizeof(bake_rule));
-    result->super.kind = BAKE_RULE_RULE;    
+    result->super.kind = BAKE_RULE_RULE;
     result->super.name = name;
+    result->super.cond = NULL;
     result->target = target;
     result->source = source;
     result->action = action;
@@ -48,13 +50,14 @@ bake_rule* bake_rule_new(
 }
 
 bake_dependency_rule* bake_dependency_rule_new(
-    const char *name, 
-    const char *deps, 
-    bake_rule_target dep_mapping, 
+    const char *name,
+    const char *deps,
+    bake_rule_target dep_mapping,
     bake_rule_action_cb action)
 {
     bake_dependency_rule *result = corto_calloc(sizeof(bake_dependency_rule));
     result->super.name = name;
+    result->super.cond = NULL;    
     result->target = dep_mapping;
     result->deps = deps;
     result->action = action;
@@ -62,12 +65,11 @@ bake_dependency_rule* bake_dependency_rule_new(
 }
 
 bake_file* bake_file_new(
-    const char *name, 
-    uint64_t timestamp) 
+    const char *name,
+    uint64_t timestamp)
 {
     bake_file *result = corto_calloc(sizeof(bake_file));
     result->name = strdup(name);
     result->timestamp = timestamp;
     return result;
 }
-

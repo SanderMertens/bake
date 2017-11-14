@@ -50,6 +50,8 @@ struct bake_language {
     void (*rule)(const char *name, const char *source, bake_rule_target target, bake_rule_action_cb action);
     void (*dependency_rule)(const char *name, const char *deps, bake_rule_target dep_mapping, bake_rule_action_cb action);
     void (*artefact)(bake_rule_artefact_cb action);
+    void (*condition)(const char *name, bake_rule_condition_cb cond);
+    void (*clean)(bake_rule_clean_cb action);
 
     bake_rule_target (*target_pattern)(const char *pattern);
     bake_rule_target (*target_map)(bake_rule_map_cb mapping);
@@ -57,6 +59,7 @@ struct bake_language {
     void (*exec)(const char *cmd);
 
     bake_rule_artefact_cb artefact_cb;
+    bake_rule_clean_cb clean_cb;
 
     corto_ll nodes;
     int16_t error;
@@ -72,8 +75,8 @@ struct bake_language {
  * @param pattern A pattern in idmatch format.
  */
 void bake_language_pattern(
-    bake_language *l, 
-    const char *name, 
+    bake_language *l,
+    const char *name,
     const char *pattern);
 
 /** Add a rule to a language.
@@ -97,8 +100,8 @@ void bake_language_pattern(
  * @param action The action to generate target from source.
  */
 void bake_language_rule(
-    bake_language *l, 
-    const char *name, 
+    bake_language *l,
+    const char *name,
     const char *source,
     bake_rule_target target,
     bake_rule_action_cb action);
@@ -116,8 +119,8 @@ void bake_language_rule(
  * @param action The action to generate target from source.
  */
 void bake_language_dependency_rule(
-    bake_language *l, 
-    const char *target, 
+    bake_language *l,
+    const char *target,
     const char *deps,
     bake_rule_target dep_mapping,
     bake_rule_action_cb action);

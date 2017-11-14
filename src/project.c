@@ -198,6 +198,15 @@ int16_t bake_project_parseMembers(
                     }
                 }
             } 
+
+            if (!strcmp(name, "use_generated_api")) {
+                if (json_value_get_type(v) == JSONBoolean) {
+                    p->use_generated_api = json_value_get_boolean(v);
+                } else {
+                    corto_throw("expected JSON boolean for 'managed' attribute");
+                    goto error;
+                }
+            }             
         }
     }
 
@@ -342,6 +351,11 @@ bake_project_attr* bake_project_getattr_cb(const char *name) {
     return bake_project_getattr(p, name);
 }
 
+void bake_project_clean_cb(const char *file) {
+    bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
+    corto_ll_append(p->files_to_clean, corto_strdup(file));
+}
+
 static
 char *bake_project_modelFile(
     bake_project *p)
@@ -374,29 +388,31 @@ bake_project* bake_project_new(
     const char *path)    
 {
     bake_project* result = corto_calloc(sizeof (bake_project));
-    result->path = path ? strdup(path) : NULL;
-
+    result->sources = corto_ll_new();
+    result->includes = corto_ll_new();    
+    result->use = corto_ll_new();
+    result->use_build = corto_ll_new();
+    result->link = corto_ll_new();
+    result->files_to_clean = corto_ll_new();
+    
     /* Default values */
+    result->path = path ? strdup(path) : NULL;
     result->public = true;
     result->managed = true;
+    result->use_generated_api = true;
     result->language = corto_strdup("c");
-    result->get_attr = bake_project_getattr_cb;
-    result->get_attr_string = bake_project_getattr_string_cb;
     result->error = false;
     result->freshly_baked = false;
     result->artefact_outdated = false;
     result->sources_outdated = false;
     result->built = false;
-
-    result->sources = corto_ll_new();
+    corto_ll_append(result->includes, "include");
     corto_ll_append(result->sources, "src");
 
-    result->includes = corto_ll_new();
-    corto_ll_append(result->includes, "include");
-
-    result->use = corto_ll_new();
-    result->use_build = corto_ll_new();
-    result->link = corto_ll_new();
+    /* Set interface callbacks */
+    result->get_attr = bake_project_getattr_cb;
+    result->get_attr_string = bake_project_getattr_string_cb;
+    result->clean = bake_project_clean_cb;
 
     /* Parse project.json if available */
     if (bake_project_parseConfig(result)) {
@@ -441,6 +457,7 @@ void bake_project_free(
     if (p->use) corto_ll_free(p->use);
     if (p->sources) corto_ll_free(p->sources);
     if (p->includes) corto_ll_free(p->includes);
+    if (p->files_to_clean) corto_ll_free(p->files_to_clean);
     free(p);
 }
 

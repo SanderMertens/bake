@@ -80,5 +80,6 @@ bake_project* bake_crawler_addProject(
  */
 int16_t bake_crawler_walk(
     bake_crawler _this, 
+    const char *action_name,
     bake_crawler_cb action, 
     void *ctx);

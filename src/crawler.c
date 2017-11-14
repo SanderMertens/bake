@@ -41,7 +41,7 @@ bake_project* bake_crawler_addProject(
         return NULL;
     }
 
-    if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp);
+    if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp, NULL);
     
     if (p->kind == BAKE_PACKAGE && p->public) {
         bake_project *found;
@@ -261,13 +261,14 @@ void bake_crawler_decrease_dependents(
 
 static
 int16_t bake_crawler_build_project(
-    bake_crawler _this, 
+    bake_crawler _this,
+    const char *action_name,
     bake_crawler_cb action,
     bake_project *p,
     void *ctx,
     corto_ll readyForBuild)
 {
-    corto_info("entering %s '%s' in '%s'", bake_project_kind_str(p->kind), p->id, p->path);
+    corto_info("#[bold]%s %s#[normal] '%s' #[bold]in#[normal] '%s'", action_name, bake_project_kind_str(p->kind), p->id, p->path);
     char *prev = strdup(corto_cwd());
     if (corto_chdir(p->path)) {
         free(prev);
@@ -280,13 +281,12 @@ int16_t bake_crawler_build_project(
         goto error;
     }
 
-    corto_info("leaving '%s'", p->id);
+    corto_info("#[bold]finished#[normal] '%s'", p->id);
     if (corto_chdir(prev)) {
         free(prev);
         goto error;
     }
     free(prev);
-    printf("\n");
 
     /* Decrease unresolved_dependencies of dependents */
     bake_crawler_decrease_dependents(p, readyForBuild);
@@ -312,6 +312,7 @@ void bake_crawler_collect_projects(
 
 int16_t bake_crawler_walk(
     bake_crawler _this, 
+    const char *action_name,
     bake_crawler_cb action, 
     void *ctx)
 {
@@ -343,7 +344,7 @@ int16_t bake_crawler_walk(
     /* Walk projects (when dependencies are resolved the list will populate) */
     bake_project *p;
     while ((p = corto_ll_takeFirst(readyForBuild))) {
-        if (bake_crawler_build_project(_this, action, p, ctx, readyForBuild)) {
+        if (bake_crawler_build_project(_this, action_name, action, p, ctx, readyForBuild)) {
             goto error;
         }
         built ++;

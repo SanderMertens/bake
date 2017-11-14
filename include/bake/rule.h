@@ -36,6 +36,8 @@ typedef struct bake_language bake_language;
 typedef void (*bake_rule_action_cb)(bake_language *l, bake_project *p, bake_config *c, char *src, char *target, void *ctx);
 typedef char* (*bake_rule_map_cb)(bake_language *l, bake_project *p, const char *input, void *ctx);
 typedef char* (*bake_rule_artefact_cb)(bake_language *l, bake_project *p);
+typedef void (*bake_rule_clean_cb)(bake_language *l, bake_project *p);
+typedef bool (*bake_rule_condition_cb)(bake_project *p);
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */
@@ -61,6 +63,7 @@ typedef struct bake_node {
     bake_rule_kind kind;
     const char *name;
     corto_ll deps;
+    bake_rule_condition_cb cond;
 } bake_node;
 
 typedef struct bake_pattern {
@@ -83,19 +86,19 @@ typedef struct bake_dependency_rule {
 } bake_dependency_rule;
 
 bake_pattern* bake_pattern_new(
-    const char *name, 
+    const char *name,
     const char *pattern);
 
 bake_rule* bake_rule_new(
-    const char *name, 
-    const char *source, 
-    bake_rule_target target, 
+    const char *name,
+    const char *source,
+    bake_rule_target target,
     bake_rule_action_cb action);
 
 bake_dependency_rule* bake_dependency_rule_new(
-    const char *name, 
-    const char *deps, 
-    bake_rule_target dep_mapping, 
+    const char *name,
+    const char *deps,
+    bake_rule_target dep_mapping,
     bake_rule_action_cb action);
 
 #ifdef __cplusplus
