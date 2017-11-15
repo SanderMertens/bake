@@ -42,7 +42,7 @@ bake_project* bake_crawler_addProject(
     }
 
     if (!_this->nodes) _this->nodes = corto_rb_new(project_cmp, NULL);
-    
+
     if (p->kind == BAKE_PACKAGE && p->public) {
         bake_project *found;
         if ((found = corto_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
@@ -95,7 +95,7 @@ error:
     return NULL;
 }
 
-static 
+static
 int16_t bake_crawler_crawl(
     bake_crawler _this,
     const char *wd,
@@ -116,6 +116,19 @@ int16_t bake_crawler_crawl(
         isProject = true;
         if (!(p = bake_crawler_addProject(_this, fullpath))) {
             goto error;
+        }
+
+        if (corto_file_test("rakefile")) {
+            corto_warning(
+                "path '%s' contains redundant rakefile",
+                fullpath);
+        }
+    } else {
+        if (corto_file_test("rakefile")) {
+            corto_warning(
+                "path '%s' contains rake-based project, skipping",
+                fullpath);
+            goto skip;
         }
     }
 
@@ -161,6 +174,7 @@ int16_t bake_crawler_crawl(
         }
     }
 
+skip:
     if (corto_chdir(prev)) {
         corto_throw("failed to restore directory to '%s'", prev);
         goto error;
@@ -206,7 +220,7 @@ uint32_t bake_crawler_count(
 }
 
 int16_t bake_crawler_search(
-    bake_crawler _this, 
+    bake_crawler _this,
     const char *path)
 {
     int ret = 0;
@@ -222,7 +236,7 @@ int16_t bake_crawler_search(
     if (!ret && bake_crawler_count(_this) == count) {
         corto_warning("no projects found in path '%s'", path);
     }
-    
+
     return ret;
 error:
     return -1;
@@ -268,7 +282,9 @@ int16_t bake_crawler_build_project(
     void *ctx,
     corto_ll readyForBuild)
 {
-    corto_info("#[bold]%s %s#[normal] '%s' #[bold]in#[normal] '%s'", action_name, bake_project_kind_str(p->kind), p->id, p->path);
+    corto_ok(
+        "🍰 begin %s %s '%s' in '%s'",
+        action_name, bake_project_kind_str(p->kind), p->id, p->path);
     char *prev = strdup(corto_cwd());
     if (corto_chdir(p->path)) {
         free(prev);
@@ -281,7 +297,9 @@ int16_t bake_crawler_build_project(
         goto error;
     }
 
-    corto_info("#[bold]finished#[normal] '%s'", p->id);
+    corto_info(
+        " #[green]√#[normal] %s %s '%s' in '%s'",
+        action_name, bake_project_kind_str(p->kind), p->id, p->path);
     if (corto_chdir(prev)) {
         free(prev);
         goto error;
@@ -298,7 +316,7 @@ error:
 
 static
 void bake_crawler_collect_projects(
-    bake_crawler _this, 
+    bake_crawler _this,
     corto_iter *it,
     corto_ll readyForBuild)
 {
@@ -311,9 +329,9 @@ void bake_crawler_collect_projects(
 }
 
 int16_t bake_crawler_walk(
-    bake_crawler _this, 
+    bake_crawler _this,
     const char *action_name,
-    bake_crawler_cb action, 
+    bake_crawler_cb action,
     void *ctx)
 {
     corto_ll readyForBuild = corto_ll_new();
@@ -335,7 +353,7 @@ int16_t bake_crawler_walk(
         corto_iter it = corto_rb_iter(_this->nodes);
         bake_crawler_collect_projects(_this, &it, readyForBuild);
     }
-    
+
     if (_this->leafs) {
         corto_iter it = corto_ll_iter(_this->leafs);
         bake_crawler_collect_projects(_this, &it, readyForBuild);
@@ -363,5 +381,3 @@ int16_t bake_crawler_walk(
 error:
     return 0;
 }
-
-

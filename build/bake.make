@@ -93,6 +93,7 @@ OBJECTS := \
 	$(OBJDIR)/parson.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/rule.o \
+	$(OBJDIR)/setup.o \
 
 RESOURCES := \
 
@@ -361,6 +362,14 @@ else
 endif
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rule.o: ../src/rule.c
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/setup.o: ../src/setup.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

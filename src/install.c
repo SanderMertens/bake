@@ -82,7 +82,7 @@ int16_t bake_install_dir(
                      * match current platform, skip */
                 }
                 continue;
-            } else if (!stricmp(file, "everywhere")) 
+            } else if (!stricmp(file, "everywhere"))
             {
                 /* Always copy all contents in everywhere */
                 if (bake_install_dir(id, dir, file, softlink, uninstallFile)) {
@@ -167,10 +167,16 @@ int16_t bake_uninstall(
             while (corto_iter_hasNext(&it)) {
                 char *line = corto_iter_next(&it);
                 if (!line || !line[0]) continue; /* Skip empty lines in file */
-                if (corto_rm(line)) {
-                    corto_warning("failed to uninstall '%s' for '%s'", 
-                        line, 
-                        project->id);
+                if (line[0] == '/') {
+                    if (corto_rm(line)) {
+                        corto_warning("failed to uninstall '%s' for '%s'",
+                            line,
+                            project->id);
+                    }
+                } else {
+                    corto_warning(
+                        "ignoring '%s' in uninstaller.txt, path should be absolute",
+                        line);
                 }
             }
 
@@ -221,16 +227,30 @@ int16_t bake_pre(
             goto error;
         }
 
+        if (corto_file_test("project.json")) {
+            char *projectDir = corto_envparse(
+                "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+
+            if (corto_cp("project.json", projectDir)) {
+                free(projectDir);
+                goto error;
+            }
+            fprintf(
+                uninstallFile, "%s/%s\n", projectDir, "project.json");
+            free(projectDir);
+        }
+
+
         /* Install files to project-specific locations in package hierarchy */
         if (project->public) {
             corto_iter it = corto_ll_iter(project->includes);
             while (corto_iter_hasNext(&it)) {
                 if (bake_install_dir(
-                    project->id, 
-                    "include", 
-                    corto_iter_next(&it), 
-                    true, 
-                    uninstallFile)) 
+                    project->id,
+                    "include",
+                    corto_iter_next(&it),
+                    true,
+                    uninstallFile))
                 {
                     goto error;
                 }
@@ -238,7 +258,7 @@ int16_t bake_pre(
         }
         if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
             goto error;
-        }    
+        }
         if (project->kind == BAKE_PACKAGE) {
             if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile)) {
                 goto error;
@@ -252,13 +272,13 @@ int16_t bake_pre(
             }
             if (bake_install_dir(NULL, "include", NULL, true, uninstallFile)) {
                 goto error;
-            }      
+            }
             if (bake_install_dir(NULL, "lib", NULL, true, uninstallFile)) {
                 goto error;
             }
             if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
                 goto error;
-            }   
+            }
             if (corto_chdir("..")) {
                 goto error;
             }
@@ -275,7 +295,7 @@ error:
 }
 
 int16_t bake_post(
-    bake_project *project, 
+    bake_project *project,
     char *artefact)
 {
     corto_log_push("post");
@@ -327,7 +347,7 @@ int16_t bake_post(
         }
         free(installedArtefact);
 
-        corto_info("installed '%s/%s'", targetDir, artefact);
+        corto_ok("installed '%s/%s'", targetDir, artefact);
     }
     free(targetBinary);
 

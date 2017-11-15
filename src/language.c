@@ -406,7 +406,7 @@ int16_t bake_node_run_rule_map(
 
         count ++;
         if (src->timestamp > dst->timestamp) {
-            corto_info("#[white][%3d%%] #[bold]%s#[normal]",
+            corto_ok("#[white][%3d%%] #[bold]%s#[normal]",
                 100 * count / bake_filelist_count(inputs),
                 src->name);
 
@@ -512,9 +512,9 @@ int16_t bake_node_run_rule_pattern(
         char *source_list_str = corto_buffer_str(&source_list);
 
         if (dst) {
-            corto_info("#[bold]%s#[normal]", dst);
+            corto_ok("#[bold]%s#[normal]", dst);
         } else {
-            corto_info("from #[bold]%s#[normal]", source_list_str);
+            corto_ok("from #[bold]%s#[normal]", source_list_str);
         }
 
         r->action(l, p, c, source_list_str, dst, NULL);

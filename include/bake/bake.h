@@ -34,6 +34,10 @@
 #include <bake/rule.h>
 #include <bake/language.h>
 
+#define BAKE_GLOBAL_ENV "/usr/local"
+
+int16_t bake_setup(void);
+
 #ifdef __cplusplus
 extern "C" {
 #endif

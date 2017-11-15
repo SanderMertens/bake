@@ -70,7 +70,7 @@ bake_project_attr* bake_project_parseNumber(
 {
     bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
     result->kind = BAKE_ATTR_NUMBER;
-    
+
     result->is.number = v;
 
     return result;
@@ -82,7 +82,7 @@ bake_project_attr* bake_project_parseBoolean(
 {
     bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
     result->kind = BAKE_ATTR_BOOLEAN;
-    
+
     result->is.boolean = v;
 
     return result;
@@ -96,8 +96,8 @@ bake_project_attr* bake_project_parseValue(
 
     JSON_Value_Type t = json_value_get_type(v);
     switch(t) {
-    case JSONArray: 
-        attr = bake_project_parseArray(json_value_get_array(v)); 
+    case JSONArray:
+        attr = bake_project_parseArray(json_value_get_array(v));
         break;
     case JSONString:
         attr = bake_project_parseString(json_value_get_string(v));
@@ -161,7 +161,7 @@ int16_t bake_project_parseMembers(
                     corto_throw("expected JSON string for 'public' attribute");
                     goto error;
                 }
-            } 
+            }
 
             if (!strcmp(name, "sources")) {
                 if (json_value_get_type(v) == JSONArray) {
@@ -185,7 +185,7 @@ int16_t bake_project_parseMembers(
                         bake_project_addInclude(p, src);
                     }
                 }
-            } 
+            }
 
             if (!strcmp(name, "use")) {
                 if (json_value_get_type(v) == JSONArray) {
@@ -197,7 +197,7 @@ int16_t bake_project_parseMembers(
                         bake_project_use(p, use);
                     }
                 }
-            } 
+            }
 
             if (!strcmp(name, "use_generated_api")) {
                 if (json_value_get_type(v) == JSONBoolean) {
@@ -206,7 +206,7 @@ int16_t bake_project_parseMembers(
                     corto_throw("expected JSON boolean for 'managed' attribute");
                     goto error;
                 }
-            }             
+            }
         }
     }
 
@@ -282,8 +282,8 @@ error:
 }
 
 bake_project_attr *bake_project_getattr(
-    bake_project *p, 
-    const char *name) 
+    bake_project *p,
+    const char *name)
 {
     if (p->attributes) {
         corto_iter it = corto_ll_iter(p->attributes);
@@ -385,16 +385,16 @@ error:
 }
 
 bake_project* bake_project_new(
-    const char *path)    
+    const char *path)
 {
     bake_project* result = corto_calloc(sizeof (bake_project));
     result->sources = corto_ll_new();
-    result->includes = corto_ll_new();    
+    result->includes = corto_ll_new();
     result->use = corto_ll_new();
     result->use_build = corto_ll_new();
     result->link = corto_ll_new();
     result->files_to_clean = corto_ll_new();
-    
+
     /* Default values */
     result->path = path ? strdup(path) : NULL;
     result->public = true;
@@ -433,10 +433,15 @@ bake_project* bake_project_new(
             goto error;
         }
 
+        /* Add corto as dependency to managed packages */
+        corto_ll_append(
+            result->use,
+            corto_strdup("corto"));
+
         /* Add generator packages for language binding */
         corto_ll_append(
-            result->use_build, 
-            corto_asprintf("driver/gen/%s", 
+            result->use_build,
+            corto_asprintf("driver/gen/%s",
                 result->language));
 
     }
@@ -480,7 +485,7 @@ char* bake_project_binaryPath(
     }
 
     return corto_envparse(
-        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s", 
+        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s",
         kind,
         subdir,
         p->id);
@@ -490,7 +495,7 @@ char* bake_project_includePath(
     bake_project *p)
 {
     return corto_envparse(
-        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", 
+        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s",
         p->id);
 }
 
@@ -498,7 +503,7 @@ char* bake_project_etcPath(
     bake_project *p)
 {
     return corto_envparse(
-        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", 
+        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s",
         p->id);
 }
 
@@ -531,7 +536,7 @@ void bake_project_addInclude(
         }
     }
 
-    corto_ll_append(p->includes, corto_strdup(include)); 
+    corto_ll_append(p->includes, corto_strdup(include));
 }
 
 void bake_project_use(
@@ -547,7 +552,5 @@ void bake_project_use(
         }
     }
 
-    corto_ll_append(p->use, corto_strdup(use));    
+    corto_ll_append(p->use, corto_strdup(use));
 }
-
-
