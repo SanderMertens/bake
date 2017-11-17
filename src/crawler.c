@@ -297,9 +297,15 @@ int16_t bake_crawler_build_project(
         goto error;
     }
 
-    corto_info(
-        " #[green]√#[normal] %s %s '%s' in '%s'",
-        action_name, bake_project_kind_str(p->kind), p->id, p->path);
+    if (p->changed) {
+        corto_info(
+            " #[green]√#[normal] %s %s '%s' in '%s'",
+            action_name, bake_project_kind_str(p->kind), p->id, p->path);
+    } else {
+        corto_info(
+            "   #[grey]%s up to date#[normal] '%s'",
+            action_name, p->id, p->path);
+    }
     if (corto_chdir(prev)) {
         free(prev);
         goto error;

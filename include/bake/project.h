@@ -78,6 +78,7 @@ typedef struct bake_project {
     /* Runtime status (managed by language binding) */
     bool error;
     bool freshly_baked;
+    bool changed;
 
     /* Should project be rebuilt (managed by bake action) */
     bool artefact_outdated;

@@ -74,6 +74,8 @@ error:
 
 int16_t bake_setup(void) {
     corto_log_verbositySet(CORTO_ERROR);
+    corto_setenv("BAKE_BUILDING", "");
+    
     corto_print("🍰 #[bold]welcome to the bake setup!#[normal]\n");
     corto_print("🍰 checking availability of repositories...\n");
 

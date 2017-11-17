@@ -432,6 +432,7 @@ int16_t bake_node_run_rule_map(
                 goto error;
             } else {
                 p->freshly_baked = true;
+                p->changed = true;
             }
 
             /* Update target with latest timestamp */
@@ -529,6 +530,7 @@ int16_t bake_node_run_rule_pattern(
             goto error;
         } else {
             p->freshly_baked = true;
+            p->changed = true;
         }
 
         free(source_list_str);
@@ -819,6 +821,8 @@ int16_t bake_language_clean(
             corto_rm(file);
         }
     }
+
+    p->changed = true;
 
     corto_trace("done");
     corto_log_pop();
