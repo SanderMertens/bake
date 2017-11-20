@@ -32,6 +32,27 @@ int project_cmp(void *ctx, const void* key1, const void* key2) {
     return strcmp(key1, key2);
 }
 
+static
+void bake_crawler_addDependency(
+    bake_crawler _this,
+    bake_project *p,
+    char *use)
+{
+    bake_project *dep = corto_rb_find(_this->nodes, use);
+    if (!dep) {
+        /* Create placeholder */
+        dep = bake_project_new(NULL);
+        dep->id = corto_strdup(use);
+        corto_rb_set(_this->nodes, dep->id, dep);
+    }
+
+    if (!dep->dependents) {
+        dep->dependents = corto_ll_new();
+    }
+
+    corto_ll_append(dep->dependents, p);
+}
+
 bake_project* bake_crawler_addProject(
     bake_crawler _this,
     const char *path)
@@ -68,27 +89,25 @@ bake_project* bake_crawler_addProject(
 
     /* Add dependency information */
     p->unresolved_dependencies = corto_ll_size(p->use);
+    p->unresolved_dependencies += corto_ll_size(p->use_build);
 
     /* Add project to dependent lists of dependencies */
     corto_iter it = corto_ll_iter(p->use);
     while (corto_iter_hasNext(&it)) {
         char *use = corto_iter_next(&it);
+        bake_crawler_addDependency(_this, p, use);
+    }
 
-        bake_project *dep = corto_rb_find(_this->nodes, use);
-        if (!dep) {
-            /* Create placeholder */
-            dep = bake_project_new(NULL);
-            dep->id = corto_strdup(use);
-            corto_rb_set(_this->nodes, dep->id, dep);
-        }
-
-        if (!dep->dependents) {
-            dep->dependents = corto_ll_new();
-        }
-        corto_ll_append(dep->dependents, p);
+    /* Add project to dependent lists of build dependencies */
+    it = corto_ll_iter(p->use_build);
+    while (corto_iter_hasNext(&it)) {
+        char *use = corto_iter_next(&it);
+        bake_crawler_addDependency(_this, p, use);
     }
 
     _this->count ++;
+
+    corto_trace("found project '%s'", p->id);
 
     return p;
 error:

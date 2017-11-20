@@ -439,11 +439,17 @@ bake_project* bake_project_new(
             corto_strdup("corto"));
 
         /* Add generator packages for language binding */
-        corto_ll_append(
+        /*corto_ll_append(
             result->use_build,
             corto_asprintf("driver/gen/%s",
-                result->language));
+                result->language));*/
 
+    }
+
+    if (result->use_generated_api) {
+        if (result->managed) {
+            corto_ll_append(result->use, strdup("corto/c"));
+        }
     }
 
     return result;

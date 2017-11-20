@@ -128,53 +128,48 @@ int16_t bake_check_dependencies(
         }
     }
 
-    if (p->use) {
-        /* For each package, if use_generated_api is enabled, also include
-         * the package that contains the generated api for the language of
-         * the package */
-        if (p->use_generated_api) {
-
-            int i = 0, count = corto_ll_size(p->use);
-            corto_iter it = corto_ll_iter(p->use);
-            while (corto_iter_hasNext(&it)) {
-                char *package = corto_iter_next(&it);
-                char *lastElem = strrchr(package, '/');
-                i ++;
-                if (lastElem) {
-                    lastElem ++;
-                    /* Don't try to find a language specific
-                     * package if this is already a language
-                     * specific package */
-                    if (!strcmp(lastElem, p->language)) {
-                        continue;
-                    }
-                }
-
-                /* Insert language-specific package with generated
-                 * API if it exists */
-                char *lib = corto_locate(
-                    strarg("%s/%s", package, p->language),
-                    NULL,
-                    CORTO_LOCATION_LIB);
-                if (lib) {
-                    corto_ll_append(
-                        p->use,
-                        corto_asprintf(
-                            "%s/%s", package, p->language));
-                }
-
-                /* Reached end of list- don't process packages that
-                 * we just added */
-                if (i == count) {
-                    break;
+    /* For each package, if use_generated_api is enabled, also include
+     * the package that contains the generated api for the language of
+     * the package */
+    if (p->use_generated_api) {
+        int i = 0, count = corto_ll_size(p->use);
+        corto_iter it = corto_ll_iter(p->use);
+        while (corto_iter_hasNext(&it)) {
+            char *package = corto_iter_next(&it);
+            char *lastElem = strrchr(package, '/');
+            i ++;
+            if (lastElem) {
+                lastElem ++;
+                /* Don't try to find a language specific
+                 * package if this is already a language
+                 * specific package */
+                if (!strcmp(lastElem, p->language)) {
+                    continue;
                 }
             }
 
-            if (p->managed) {
-                corto_ll_append(p->use, strdup("corto/c"));
+            /* Insert language-specific package with generated
+             * API if it exists */
+            char *lib = corto_locate(
+                strarg("%s/%s", package, p->language),
+                NULL,
+                CORTO_LOCATION_LIB);
+            if (lib) {
+                corto_ll_append(
+                    p->use,
+                    corto_asprintf(
+                        "%s/%s", package, p->language));
+            }
+
+            /* Reached end of list- don't process packages that
+             * we just added */
+            if (i == count) {
+                break;
             }
         }
+    }
 
+    if (p->use) {
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
