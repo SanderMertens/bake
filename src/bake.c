@@ -32,6 +32,7 @@ static bool public = true;
 static bool skip_preinstall = false;
 static bool skip_uninstall = false;
 static bool showTime = false;
+static bool mute_foreach = true;
 
 /* Pointer to global builtin configuration */
 static bake_config config;
@@ -72,6 +73,7 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "ok", corto_log_verbositySet(CORTO_OK));
             PARSE_OPTION(0, "warning", corto_log_verbositySet(CORTO_WARNING));
             PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
+            PARSE_OPTION(0, "dont-mute-foreach", mute_foreach = false);
             PARSE_OPTION(0, "show-time", showTime = true);
 
             PARSE_OPTION(0, "no-symbols", config.symbols = false);
@@ -425,8 +427,6 @@ int main(int argc, char* argv[]) {
 
     paths = corto_ll_new();
 
-    corto_log_fmt("%V %F:%L (%R) %C: %m");
-
     /* Initialize base library */
     base_init(argv[0]);
 
@@ -483,7 +483,9 @@ int main(int argc, char* argv[]) {
             return bake_setup();
         } else if (!strcmp(action, "foreach")) {
             /* If action is foreach, mute all non-error tracing from bake */
-            corto_log_verbositySet(CORTO_ERROR);
+            if (mute_foreach) {
+                corto_log_verbositySet(CORTO_ERROR);
+            }
         }
     }
 
@@ -515,11 +517,10 @@ int main(int argc, char* argv[]) {
     }
 
     if ((!action || strcmp(action, "foreach")) && !corto_getenv("BAKE_BUILDING")) {
-        corto_print("🍰 #[bold]baking in#[normal] #[magenta]%s#[normal]\n", path_string);
+        corto_info("🍰 #[bold]baking in#[normal] #[magenta]%s#[normal]", path_string);
         corto_setenv("BAKE_BUILDING", "");
         root_bake = true;
     }
-    free(path_string);
 
     if (!corto_ll_size(paths)) {
         corto_ll_append(paths, ".");
@@ -609,7 +610,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (!bake_crawler_count(c)) {
-        corto_throw("no projects found");
+        corto_throw("no projects found in '%s'", path_string);
         goto error;
     }
 
@@ -645,7 +646,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (root_bake) {
-        corto_print("#[bold]🎂 done!#[normal]\n");
+        corto_info("#[bold]🎂 done!#[normal]");
     }
 
     /* Cleanup resources */
@@ -654,6 +655,7 @@ int main(int argc, char* argv[]) {
 
     if (path_tokens) free(path_tokens);
     if (paths) corto_ll_free(paths);
+    if (path_string) free(path_string);
 
     return 0;
 error:

@@ -161,6 +161,7 @@ int16_t bake_crawler_crawl(
         char *file = corto_iter_next(&it);
 
         if (corto_isdir(file)) {
+            corto_debug("evaluating directory '%s'", file);
 
             /* If this is a corto project, filter out directories that have
              * special meaning. */
@@ -175,12 +176,14 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, "install") ||
                     !strcmp(file, ".corto"))
                 {
+                    corto_debug("ignoring directory '%s'", file);
                     continue;
                 }
 
                 if (p->managed && p->language) {
                     /* Filter out project generated for language-specific api */
                     if (!strcmp(file, p->language)) {
+                        corto_debug("ignoring generated project '%s'", file);
                         continue;
                     }
                 }

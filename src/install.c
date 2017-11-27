@@ -325,7 +325,16 @@ int16_t bake_post(
 
     char *targetBinary = corto_asprintf("%s/%s", targetDir, artefact);
     if (!corto_file_test(targetBinary) || project->freshly_baked) {
-        if (corto_cp(artefact, targetDir)) {
+        char *version = project->version ? project->version : "0.0.0";
+        char *targetVersionedBinary = corto_asprintf("%s.%s", targetBinary, version);
+
+        /* Copy versioned binary */
+        if (corto_cp(artefact, targetVersionedBinary)) {
+            goto error;
+        }
+
+        /* Create link to default binary name */
+        if (corto_symlink(targetVersionedBinary, targetBinary)) {
             goto error;
         }
 
@@ -349,6 +358,7 @@ int16_t bake_post(
 
         corto_ok("installed '%s/%s'", targetDir, artefact);
     }
+    
     free(targetBinary);
 
     corto_ok("done");

@@ -70,6 +70,7 @@ typedef struct bake_project {
     corto_ll includes;
     char *language;
     char *args;
+    char *version;
     corto_ll attributes;
 
     /* Project model file */

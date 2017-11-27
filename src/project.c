@@ -145,6 +145,16 @@ int16_t bake_project_parseMembers(
                 }
             }
 
+            if (!strcmp(name, "version")) {
+                if (json_value_get_type(v) == JSONString) {
+                    if (p->version) free(p->version);
+                    p->version = strdup(json_value_get_string(v));
+                } else {
+                    corto_throw("expected JSON string for 'version' attribute");
+                    goto error;
+                }
+            }
+
             if (!strcmp(name, "managed")) {
                 if (json_value_get_type(v) == JSONBoolean) {
                     p->managed = json_value_get_boolean(v);
@@ -450,6 +460,10 @@ bake_project* bake_project_new(
         if (result->managed) {
             corto_ll_append(result->use, strdup("corto/c"));
         }
+    }
+
+    if (!result->version) {
+        result->version = corto_strdup("0.0.0");
     }
 
     return result;
