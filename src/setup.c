@@ -5,8 +5,7 @@ char *repositories[] = {
     "https://github.com/cortoproject/base",
     "https://github.com/cortoproject/bake",
     "https://github.com/cortoproject/driver-bake-c",
-    "https://github.com/cortoproject/corto",
-    "https://github.com/cortoproject/corto-tool",
+    "https://github.com/cortoproject/corto"
     NULL
 };
 
