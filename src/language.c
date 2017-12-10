@@ -793,6 +793,11 @@ int16_t bake_language_clean(
         goto error;
     }
 
+    /* Clear .corto directory (for legacy projects) */
+    if (corto_rm(".corto")) {
+        goto error;
+    }
+
     /* Retrieve & clean artefact */
     artefact = l->artefact_cb(l, p);
     if (artefact) {

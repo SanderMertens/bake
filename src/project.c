@@ -440,6 +440,7 @@ bake_project* bake_project_new(
                 ext ++;
                 corto_ll_append(result->use_build, corto_asprintf("driver/ext/%s", ext));
             }
+            corto_ll_append(result->use_build, corto_asprintf("driver/tool/pp"));
         } else if (result->error) {
             goto error;
         }
