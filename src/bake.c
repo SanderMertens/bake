@@ -636,7 +636,6 @@ int main(int argc, char* argv[]) {
     corto_load_init(
         corto_getenv("BAKE_TARGET"),
         corto_getenv("BAKE_HOME"),
-        "/usr/local",
         corto_getenv("BAKE_VERSION"),
         NULL);
 

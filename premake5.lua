@@ -3,7 +3,7 @@ workspace "bake"
   configurations { "Debug", "Release" }
 
   configuration { "linux", "gmake" }
-    buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600", "-rdynamic", "-Wl,--export-dynamic" }
+    buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600"}
 
   project "bake"
     kind "ConsoleApp"
@@ -26,6 +26,9 @@ workspace "bake"
     else
       objdir (".corto/obj/" .. os.target() .. "-32")
     end
+
+    configuration "macosx"
+      links { "rt", "dl", "m", "ffi", "pthread" }
 
     configuration "linux"
       links { "rt", "dl", "m", "ffi", "pthread" }

@@ -19,8 +19,8 @@ ifeq ($(config),debug)
   INCLUDES += -Iinclude -I../base/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600 -rdynamic -Wl,--export-dynamic
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600 -rdynamic -Wl,--export-dynamic
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -lrt -ldl -lm -lffi -lpthread
   LDDEPS +=
@@ -50,8 +50,8 @@ ifeq ($(config),release)
   INCLUDES += -Iinclude -I../base/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600 -rdynamic -Wl,--export-dynamic
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600 -rdynamic -Wl,--export-dynamic
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -lrt -ldl -lm -lffi -lpthread
   LDDEPS +=

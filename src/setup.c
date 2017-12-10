@@ -339,7 +339,7 @@ int16_t bake_setup(const char *exec, bool local) {
     /* First try to install global scripts, as this is prone to failing when the
      * setup does not have the right permissions. */
     if (!local) {
-        corto_log("writing scripts to '/usr/local', may prompt for password\n");
+        corto_log("writing scripts to '/usr/local', #[yellow]may prompt for password!\n");
 
         /* Write bake script */
         if (bake_setup_cmd(
