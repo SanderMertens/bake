@@ -189,7 +189,7 @@ int16_t bake_setup_writeConfig(
         fprintf(f, "        \"default\":{\n");
         fprintf(f, "            \"symbols\":true,\n");
         fprintf(f, "            \"debug\":true,\n");
-        fprintf(f, "            \"optimizations\":true,\n");
+        fprintf(f, "            \"optimizations\":false,\n");
         fprintf(f, "            \"coverage\":false,\n");
         fprintf(f, "            \"strict\":false\n");
         fprintf(f, "        }\n");
