@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,6 @@
 #include <bake/language.h>
 
 #define BAKE_GLOBAL_ENV "/usr/local"
-
-int16_t bake_setup(void);
 
 #ifdef __cplusplus
 extern "C" {

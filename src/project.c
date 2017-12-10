@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -304,6 +304,7 @@ bake_project_attr *bake_project_getattr(
             }
         }
     }
+
     return NULL;
 }
 
@@ -350,7 +351,7 @@ char *bake_project_getattr_string_cb(const char *name) {
     if (result) {
         return bake_project_getattr_tostr(result);
     } else {
-        return NULL;
+        return "";
     }
 }
 
@@ -444,9 +445,7 @@ bake_project* bake_project_new(
         }
 
         /* Add corto as dependency to managed packages */
-        corto_ll_append(
-            result->use,
-            corto_strdup("corto"));
+        bake_project_use(result, "corto");
 
         /* Add generator packages for language binding */
         /*corto_ll_append(
@@ -458,7 +457,7 @@ bake_project* bake_project_new(
 
     if (result->use_generated_api) {
         if (result->managed) {
-            corto_ll_append(result->use, strdup("corto/c"));
+            bake_project_use(result, "corto/c");
         }
     }
 
@@ -489,42 +488,27 @@ void bake_project_free(
 char* bake_project_binaryPath(
     bake_project *p)
 {
-    char *kind, *subdir;
-    if (p->kind == BAKE_APPLICATION) {
-        kind = "bin";
-        subdir = "cortobin";
-    } else if (p->kind == BAKE_PACKAGE) {
-        kind = "lib";
-        subdir = "corto";
-    } else if (p->kind == BAKE_TOOL) {
+    if (p->kind != BAKE_TOOL) {
         return corto_envparse(
-            "$CORTO_TARGET/bin");
+            "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", p->id);
     } else {
-        corto_throw("unsupported project kind '%s'", p->kind);
-        return NULL;
+        return corto_envparse(
+            "$BAKE_TARGET/bin");
     }
-
-    return corto_envparse(
-        "$CORTO_TARGET/%s/%s/$CORTO_VERSION/%s",
-        kind,
-        subdir,
-        p->id);
 }
 
 char* bake_project_includePath(
     bake_project *p)
 {
     return corto_envparse(
-        "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s",
-        p->id);
+        "$BAKE_TARGET/include/corto/$BAKE_VERSION/%s", p->id);
 }
 
 char* bake_project_etcPath(
     bake_project *p)
 {
     return corto_envparse(
-        "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s",
-        p->id);
+        "$BAKE_TARGET/etc/corto/$BAKE_VERSION/%s", p->id);
 }
 
 void bake_project_addSource(

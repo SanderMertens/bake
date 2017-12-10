@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-typedef struct bake_language bake_language;
+typedef struct bake_language_s bake_language;
 
 typedef void (*bake_rule_action_cb)(bake_language *l, bake_project *p, bake_config *c, char *src, char *target, void *ctx);
 typedef char* (*bake_rule_map_cb)(bake_language *l, bake_project *p, const char *input, void *ctx);

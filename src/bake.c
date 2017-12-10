@@ -32,7 +32,12 @@ static bool public = true;
 static bool skip_preinstall = false;
 static bool skip_uninstall = false;
 static bool showTime = false;
+static bool showDelta = false;
+static bool showProc = false;
 static bool mute_foreach = true;
+static bool profile = false;
+static bool local = false;
+static char *action = "build";
 
 /* Pointer to global builtin configuration */
 static bake_config config;
@@ -73,8 +78,11 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "ok", corto_log_verbositySet(CORTO_OK));
             PARSE_OPTION(0, "warning", corto_log_verbositySet(CORTO_WARNING));
             PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
+            PARSE_OPTION(0, "profile", corto_log_profile(true));
             PARSE_OPTION(0, "dont-mute-foreach", mute_foreach = false);
             PARSE_OPTION(0, "show-time", showTime = true);
+            PARSE_OPTION(0, "show-delta", showDelta = true);
+            PARSE_OPTION(0, "show-proc", showProc = true);
 
             PARSE_OPTION(0, "no-symbols", config.symbols = false);
             PARSE_OPTION(0, "no-debug", config.debug = false);
@@ -82,8 +90,13 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "coverage", config.coverage = true);
             PARSE_OPTION(0, "strict", config.strict = true);
 
+            /* Setup only */
+            PARSE_OPTION(0, "local", local = true);
+
             if (!parsed) {
-                corto_throw("unknown option '%s' (use bake --help to see available options)\n", argv[i]);
+                corto_throw(
+                    "unknown option '%s' (use bake --help to see available options)",
+                    argv[i]);
                 return -1;
             }
         } else {
@@ -96,7 +109,9 @@ int parseArgs(int argc, char *argv[])
 }
 
 static
-int16_t bake_test_env(const char *env) {
+int16_t bake_test_env(
+    const char *env)
+{
     if (!corto_getenv(env)) {
         corto_throw("environment variable '%s' is not set", env);
         return -1;
@@ -134,7 +149,7 @@ int16_t bake_check_dependencies(
      * the package that contains the generated api for the language of
      * the package */
     if (p->use_generated_api) {
-        int i = 0, count = corto_ll_size(p->use);
+        int i = 0, count = corto_ll_count(p->use);
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
@@ -157,10 +172,7 @@ int16_t bake_check_dependencies(
                 NULL,
                 CORTO_LOCATION_LIB);
             if (lib) {
-                corto_ll_append(
-                    p->use,
-                    corto_asprintf(
-                        "%s/%s", package, p->language));
+                bake_project_use(p, strarg("%s/%s", package, p->language));
             }
 
             /* Reached end of list- don't process packages that
@@ -214,7 +226,8 @@ int16_t bake_check_dependencies(
 
     if (p->sources_outdated) {
         if (!artefact_modified) {
-            corto_trace("old artefact '%s' not found, starting from clean slate",
+            corto_trace(
+                "old artefact '%s' not found, starting from clean slate",
                 artefact);
         }
 
@@ -260,7 +273,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
     }
 
     /* Step 1: clean package hierarchy */
-    if (!skip_uninstall) {
+    if (!skip_uninstall && p->public) {
         if (bake_uninstall(p)) {
             goto error;
         }
@@ -274,7 +287,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
     }
 
     /* Step 2: pre-install files to package hierarchy */
-    if (!skip_preinstall) {
+    if (!skip_preinstall && p->public) {
         if (bake_pre(p)) {
             goto error;
         }
@@ -290,7 +303,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
 
         /* Step 5: install artefact if project was rebuilt */
-        if (artefact) {
+        if (artefact && p->public) {
             if (bake_post(p, artefact)) {
                 goto error;
             }
@@ -340,18 +353,18 @@ error:
 }
 
 static
-int bake_action_copy(bake_crawler c, bake_project* p, void *ctx) {
-    corto_log_push("copy");
+int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
+    corto_log_push("install");
     corto_trace("begin");
 
     /* Copy package to package hierarchy */
-    if (!skip_preinstall) {
+    if (!skip_preinstall && p->public) {
         if (bake_pre(p)) {
             goto error;
         }
     }
 
-    if (artefact != NULL) {
+    if (artefact != NULL && p->public) {
         if (bake_post(p, artefact)) {
             goto error;
         }
@@ -386,47 +399,152 @@ int bake_action_foreach(bake_crawler c, bake_project* p, void *ctx) {
 }
 
 static
-int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
-    corto_log_push("install");
-    corto_trace("begin");
+int bake_action_getenv()
+{
+    const char *env;
+    corto_buffer buff = CORTO_BUFFER_INIT;
 
-    char *oldenv = corto_getenv("CORTO_TARGET");
+    corto_buffer_append(&buff, "BAKE_HOME=%s", corto_getenv("BAKE_HOME"));
+    corto_buffer_append(&buff, " BAKE_TARGET=%s", corto_getenv("BAKE_TARGET"));
+    corto_buffer_append(&buff, " BAKE_VERSION=%s", corto_getenv("BAKE_VERSION"));
 
-    /* Uninstall from current environment */
-    corto_trace("uninstall project from '%s'", oldenv);
-    if (!bake_action_uninstall(c, p, ctx)) {
-        goto error;
+    if ((env = corto_getenv("BAKE_ENVIRONMENT"))) {
+        corto_buffer_append(&buff, " BAKE_ENVIRONMENT=%s", env);
+    }
+    if ((env = corto_getenv("LD_LIBRARY_PATH"))) {
+        corto_buffer_append(&buff, " LD_LIBRARY_PATH=%s", env);
+    }
+    if ((env = corto_getenv("PATH"))) {
+        corto_buffer_append(&buff, " PATH=%s", env);
     }
 
-    /* Clean project */
-    if (!bake_action_clean(c, p, ctx)) {
-        goto error;
-    }
+    printf("%s\n", corto_buffer_str(&buff));
 
-    /* Install to global environment */
-    corto_trace("install project to '" BAKE_GLOBAL_ENV "'");
-    corto_setenv("CORTO_TARGET", BAKE_GLOBAL_ENV);
-    if (!bake_action_build(c, p, ctx)) {
-        goto error;
-    }
-
-    corto_setenv("CORTO_TARGET", oldenv);
-    corto_log_pop();
-    return 1;
-error:
-    corto_setenv("CORTO_TARGET", oldenv);
-    corto_log_pop();
     return 0;
 }
 
-int main(int argc, char* argv[]) {
-    const char *action = "build";
-    char *path_tokens = NULL;
-    int last_parsed = 0;
-    bool root_bake = false;
+static
+int16_t bake_project_fromArguments(
+    bake_crawler c)
+{
+    bake_project *p;
 
-    paths = corto_ll_new();
+    if (corto_ll_count(paths) > 1) {
+        corto_throw(
+            "multiple paths specified for single project '%s'", id);
+        goto error;
+    }
 
+    /* If id is specified, project config is provided on cmd line */
+    if (!(p = bake_crawler_addProject(c, corto_ll_get(paths, 0)))) {
+        goto error;
+    }
+
+    p->id = id;
+    p->language = language;
+    p->managed = managed;
+    p->public = public;
+    p->args = args;
+
+    if (sources) {
+        char *source_tokens = strdup(sources);
+        char *tok = strtok(source_tokens, "");
+        while (tok != NULL) {
+            bake_project_addSource(p, tok);
+            tok = strtok(NULL, ",");
+        }
+        free(source_tokens);
+    }
+
+    if (includes) {
+        char *include_tokens = strdup(includes);
+        char *tok = strtok(include_tokens, "");
+        while (tok != NULL) {
+            bake_project_addInclude(p, tok);
+            tok = strtok(NULL, ",");
+        }
+        free(include_tokens);
+    }
+
+    if (use) {
+        p->use = corto_ll_new();
+        char *ptr = strtok(use, ",");
+        do {
+            corto_ll_append(p->use, corto_strdup(ptr));
+        } while ((ptr = strtok(NULL, ",")));
+    }
+
+    if (!stricmp(kind, "package")) {
+        p->kind = BAKE_PACKAGE;
+    } else if (!stricmp(kind, "application")) {
+        p->kind = BAKE_APPLICATION;
+    } else if (!strcmp(kind, "tool")) {
+        p->kind = BAKE_TOOL;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_install_tool(
+    const char *name)
+{
+    char *filename = corto_asprintf("/usr/local/bin/%s", name);
+    FILE *f = fopen (filename, "w");
+    if (!f) {
+        corto_throw("cannot open '%s': #[red]%s#[normal]\n",
+            filename,
+            strerror(errno));
+        goto error;
+    }
+
+    fprintf(f, "export `bake getenv`\n");
+    fprintf(f, "exec $BAKE_HOME/bin/%s $@\n", name);
+    fclose(f);
+
+    /* Make executable for everyone */
+    if (corto_setperm(filename, 0755)) {
+        corto_throw("failed to set execute permissions for '%s'\n", filename);
+        goto error;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_do_action(
+    bake_crawler c,
+    const char *action)
+{
+    bake_crawler_cb action_cb;
+    if (!strcmp(action, "build")) action_cb = bake_action_build;
+    else if (!strcmp(action, "clean")) action_cb = bake_action_clean;
+    else if (!strcmp(action, "rebuild")) action_cb = bake_action_rebuild;
+    else if (!strcmp(action, "install")) action_cb = bake_action_install;
+    else if (!strcmp(action, "uninstall")) action_cb = bake_action_uninstall;
+    else if (!strcmp(action, "foreach")) {
+        action_cb = bake_action_foreach;
+    }
+    else {
+        corto_error("unknown action '%s'", action);
+        goto error;
+    }
+    if (!bake_crawler_walk(c, action, action_cb, NULL)) {
+        goto error;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_init(int argc, char* argv[])
+{
     /* Initialize base library */
     base_init(argv[0]);
 
@@ -445,18 +563,6 @@ int main(int argc, char* argv[]) {
         goto error;
     }
 
-    /* Verify environment variables */
-    if (bake_test_env("CORTO_HOME")) goto error;
-    if (bake_test_env("CORTO_TARGET")) goto error;
-
-    config = (bake_config){
-        .symbols = true,
-        .debug = true,
-        .optimizations = false,
-        .coverage = false,
-        .strict = false
-    };
-
     if (argc > 1) {
         int offset = 1;
         if (argv[1][0] != '-') {
@@ -464,8 +570,7 @@ int main(int argc, char* argv[]) {
             offset ++;
         }
 
-        last_parsed = parseArgs(argc - offset, &argv[offset]);
-        if (last_parsed == -1) {
+        if (parseArgs(argc - offset, &argv[offset]) == -1) {
             goto error;
         }
     }
@@ -478,13 +583,89 @@ int main(int argc, char* argv[]) {
         );
     }
 
+    if (showDelta) {
+        corto_log_fmt(
+            strarg("%s %s",
+                "%d",
+                corto_log_fmtGet())
+        );
+    }
+
+    if (showProc) {
+        char *fmt = corto_asprintf("%s %s", "%A", corto_log_fmtGet());
+        corto_log_fmt(fmt);
+        free(fmt);
+    }
+
+    if (!strcmp(action, "foreach")) {
+        /* If action is foreach, mute all non-error tracing from bake */
+        if (mute_foreach) {
+            corto_log_verbositySet(CORTO_ERROR);
+        }
+    }
+
+    if (corto_log_verbosityGet()) {
+        corto_log_tailVerbositySet(corto_log_verbosityGet() - 1);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int main(int argc, char* argv[]) {
+    char *path_tokens = NULL;
+    bool root_bake = false;
+
+    bake_crawler c = bake_crawler_new();
+    paths = corto_ll_new();
+
+    if (bake_init(argc, argv)) {
+        goto error;
+    }
+
+    if (bake_config_load(&config)) {
+        goto error;
+    }
+
+    /* Verify environment variables */
+    if (bake_test_env("BAKE_HOME")) goto error;
+    if (bake_test_env("BAKE_TARGET")) goto error;
+
+    /* Initialize loader */
+    corto_load_init(
+        corto_getenv("BAKE_TARGET"),
+        corto_getenv("BAKE_HOME"),
+        "/usr/local",
+        corto_getenv("BAKE_VERSION"),
+        NULL);
+
+    /* Bake commands that do not use the build engine */
     if (action) {
         if (!strcmp(action, "setup")) {
-            return bake_setup();
-        } else if (!strcmp(action, "foreach")) {
-            /* If action is foreach, mute all non-error tracing from bake */
-            if (mute_foreach) {
-                corto_log_verbositySet(CORTO_ERROR);
+            return bake_setup(argv[0], local);
+        } else if (!strcmp(action, "getenv")) {
+            return bake_action_getenv();
+        } else if (!strcmp(action, "install-script")) {
+            return bake_setup_globalScript();
+        } else if (!strcmp(action, "install-tool")) {
+            if (!argv[2]) {
+                corto_throw("missing argument for 'install-tool'");
+                goto error;
+            }
+            return bake_install_tool(argv[2]);
+        } else {
+
+            /* If not a known action to bake, interpret argument as project so
+             * a user can type 'bake corto' */
+            if (strcmp(action, "build") &&
+                strcmp(action, "clean") &&
+                strcmp(action, "rebuild") &&
+                strcmp(action, "install") &&
+                strcmp(action, "foreach"))
+            {
+                corto_ll_append(paths, action);
+                action = "build";
             }
         }
     }
@@ -516,19 +697,13 @@ int main(int argc, char* argv[]) {
         path_string = corto_strdup("<current directory>");
     }
 
-    if ((!action || strcmp(action, "foreach")) && !corto_getenv("BAKE_BUILDING")) {
-        corto_info("🍰 #[bold]baking in#[normal] #[magenta]%s#[normal]", path_string);
-        corto_setenv("BAKE_BUILDING", "");
-        root_bake = true;
-    }
-
-    if (!corto_ll_size(paths)) {
+    if (!corto_ll_count(paths)) {
         corto_ll_append(paths, ".");
     }
 
     corto_log_push("init");
-    corto_trace("$CORTO_HOME = '%s'", corto_getenv("CORTO_HOME"));
-    corto_trace("$CORTO_TARGET = '%s'", corto_getenv("CORTO_TARGET"));
+    corto_trace("$BAKE_HOME = '%s'", corto_getenv("BAKE_HOME"));
+    corto_trace("$BAKE_TARGET = '%s'", corto_getenv("BAKE_TARGET"));
 
     if (corto_log_verbosityGet() <= CORTO_TRACE) {
         corto_iter it = corto_ll_iter(paths);
@@ -539,65 +714,10 @@ int main(int argc, char* argv[]) {
     }
     corto_log_pop();
 
-    /* Create crawler for finding corto projects */
-    bake_crawler c = bake_crawler_new();
-
     if (id) {
-        bake_project *p;
-
-        if (corto_ll_size(paths) > 1) {
-            corto_throw(
-                "multiple paths specified for single project '%s'", id);
+        if (bake_project_fromArguments(c)) {
             goto error;
         }
-
-        /* If id is specified, project config is provided on cmd line */
-        if (!(p = bake_crawler_addProject(c, corto_ll_get(paths, 0)))) {
-            goto error;
-        }
-
-        p->id = id;
-        p->language = language;
-        p->managed = managed;
-        p->public = public;
-        p->args = args;
-
-        if (sources) {
-            char *source_tokens = strdup(sources);
-            char *tok = strtok(source_tokens, "");
-            while (tok != NULL) {
-                bake_project_addSource(p, tok);
-                tok = strtok(NULL, ",");
-            }
-            free(source_tokens);
-        }
-
-        if (includes) {
-            char *include_tokens = strdup(includes);
-            char *tok = strtok(include_tokens, "");
-            while (tok != NULL) {
-                bake_project_addInclude(p, tok);
-                tok = strtok(NULL, ",");
-            }
-            free(include_tokens);
-        }
-
-        if (use) {
-            p->use = corto_ll_new();
-            char *ptr = strtok(use, ",");
-            do {
-                corto_ll_append(p->use, corto_strdup(ptr));
-            } while ((ptr = strtok(NULL, ",")));
-        }
-
-        if (!stricmp(kind, "package")) {
-            p->kind = BAKE_PACKAGE;
-        } else if (!stricmp(kind, "application")) {
-            p->kind = BAKE_APPLICATION;
-        } else if (!strcmp(kind, "tool")) {
-            p->kind = BAKE_TOOL;
-        }
-
     } else {
         /* Crawl specified directories (default is current) */
         corto_iter it = corto_ll_iter(paths);
@@ -610,43 +730,22 @@ int main(int argc, char* argv[]) {
     }
 
     if (!bake_crawler_count(c)) {
-        corto_throw("no projects found in '%s'", path_string);
+        corto_log("no projects found in '%s'\n", path_string);
+        return 0;
+    }
+
+    if ((!action || strcmp(action, "foreach")) && !corto_getenv("BAKE_BUILDING")) {
+        corto_info("baking in #[cyan]%s", path_string);
+        corto_setenv("BAKE_BUILDING", "");
+        root_bake = true;
+    }
+
+    if (bake_do_action(c, action)) {
         goto error;
     }
 
-    if (!action) {
-        /* If after parsing arguments no actions were defined, execute the default
-         * action. */
-        if (!bake_crawler_walk(c, "build", bake_action_build, NULL)) {
-            goto error;
-        }
-    } else {
-        bake_crawler_cb action_cb;
-        if (!strcmp(action, "build")) action_cb = bake_action_build;
-        else if (!strcmp(action, "clean")) action_cb = bake_action_clean;
-        else if (!strcmp(action, "rebuild")) action_cb = bake_action_rebuild;
-        else if (!strcmp(action, "copy")) action_cb = bake_action_copy;
-        else if (!strcmp(action, "install")) {
-            config.symbols = false;
-            config.debug = false;
-            config.optimizations = true;
-            action_cb = bake_action_install;
-        }
-        else if (!strcmp(action, "uninstall")) action_cb = bake_action_uninstall;
-        else if (!strcmp(action, "foreach")) {
-            action_cb = bake_action_foreach;
-        }
-        else {
-            corto_error("unknown action '%s'", action);
-            goto error;
-        }
-        if (!bake_crawler_walk(c, action, action_cb, NULL)) {
-            goto error;
-        }
-    }
-
     if (root_bake) {
-        corto_info("#[bold]🎂 done!#[normal]");
+        corto_info("done!");
     }
 
     /* Cleanup resources */

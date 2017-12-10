@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,13 +49,13 @@ int16_t bake_install_dir(
 
     if (id) {
         /* If an id is specified, copy files to project directory */
-        target = corto_envparse("$CORTO_TARGET/%s/corto/$CORTO_VERSION/%s", dir, id);
+        target = corto_envparse("$BAKE_TARGET/%s/corto/$BAKE_VERSION/%s", dir, id);
         if (!target) {
             goto error;
         }
     } else {
         /* If no id is specified, copy files to environment directly */
-        target = corto_envparse("$CORTO_TARGET/%s", dir);
+        target = corto_envparse("$BAKE_TARGET/%s", dir);
         if (!target) {
             goto error;
         }
@@ -122,7 +122,7 @@ char* bake_uninstaller_filename(
     bake_project *project)
 {
     return corto_envparse(
-        "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s/uninstaller.txt",
+        "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s/uninstaller.txt",
         project->id);
 }
 
@@ -148,7 +148,7 @@ int16_t bake_uninstall(
 
     if (project->kind != BAKE_TOOL) {
         char *projectDir = corto_envparse(
-            "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+            "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
         if (!projectDir) {
             goto error;
         }
@@ -195,13 +195,13 @@ int16_t bake_uninstall(
 
         /* If include directory exists and is empty, clean up */
         char *inc = corto_envparse(
-            "$CORTO_TARGET/include/corto/$CORTO_VERSION/%s", project->id);
+            "$BAKE_TARGET/include/corto/$BAKE_VERSION/%s", project->id);
         if (corto_file_test(inc) && corto_dir_isEmpty(inc)) corto_rm(inc);
         free(inc);
 
         /* If etc directory exists and is empty, clean up */
         char *etc = corto_envparse(
-            "$CORTO_TARGET/etc/corto/$CORTO_VERSION/%s", project->id);
+            "$BAKE_TARGET/etc/corto/$BAKE_VERSION/%s", project->id);
         if (corto_file_test(etc) && corto_dir_isEmpty(etc)) corto_rm(etc);
         free(etc);
     }
@@ -229,7 +229,7 @@ int16_t bake_pre(
 
         if (corto_file_test("project.json")) {
             char *projectDir = corto_envparse(
-                "$CORTO_TARGET/lib/corto/$CORTO_VERSION/%s", project->id);
+                "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
 
             if (corto_cp("project.json", projectDir)) {
                 free(projectDir);
@@ -265,7 +265,7 @@ int16_t bake_pre(
             }
         }
 
-        /* Install files to CORTO_TARGET directly from 'install' folder */
+        /* Install files to BAKE_TARGET directly from 'install' folder */
         if (corto_file_test("install")) {
             if (corto_chdir("install")) {
                 goto error;

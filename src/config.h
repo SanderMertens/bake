@@ -19,6 +19,13 @@
  * THE SOFTWARE.
  */
 
-/* Not thread safe */
-bake_language* bake_language_get(
-    const char *language);
+/** @file
+ * @section config Configuration loader
+ * @brief API that loads configurations from bake configuration files.
+ */
+
+#include <bake/config.h>
+
+/** Looks up bake configuration file and loads it.
+ */
+int16_t bake_config_load(bake_config *cfg_out);

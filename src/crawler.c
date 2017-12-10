@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -88,8 +88,8 @@ bake_project* bake_crawler_addProject(
     }
 
     /* Add dependency information */
-    p->unresolved_dependencies = corto_ll_size(p->use);
-    p->unresolved_dependencies += corto_ll_size(p->use_build);
+    p->unresolved_dependencies = corto_ll_count(p->use);
+    p->unresolved_dependencies += corto_ll_count(p->use_build);
 
     /* Add project to dependent lists of dependencies */
     corto_iter it = corto_ll_iter(p->use);
@@ -161,7 +161,7 @@ int16_t bake_crawler_crawl(
         char *file = corto_iter_next(&it);
 
         if (corto_isdir(file)) {
-            corto_debug("evaluating directory '%s'", file);
+            corto_trace("looking for projects in '%s'", file);
 
             /* If this is a corto project, filter out directories that have
              * special meaning. */
@@ -237,8 +237,8 @@ void bake_crawler_free(bake_crawler _this)
 uint32_t bake_crawler_count(
     bake_crawler _this)
 {
-    return (_this->nodes ? corto_rb_size(_this->nodes) : 0) +
-        (_this->leafs ? corto_ll_size(_this->leafs) : 0);
+    return (_this->nodes ? corto_rb_count(_this->nodes) : 0) +
+        (_this->leafs ? corto_ll_count(_this->leafs) : 0);
 }
 
 int16_t bake_crawler_search(
@@ -256,7 +256,7 @@ int16_t bake_crawler_search(
     }
 
     if (!ret && bake_crawler_count(_this) == count) {
-        corto_warning("no projects found in path '%s'", path);
+        corto_trace("no projects found in path '%s'", path);
     }
 
     return ret;
@@ -305,7 +305,7 @@ int16_t bake_crawler_build_project(
     corto_ll readyForBuild)
 {
     corto_ok(
-        "🍰 begin %s %s '%s' in '%s'",
+        "begin %s %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->kind), p->id, p->path);
     char *prev = strdup(corto_cwd());
     if (corto_chdir(p->path)) {
@@ -321,12 +321,12 @@ int16_t bake_crawler_build_project(
 
     if (p->changed) {
         corto_info(
-            " #[green]√#[normal] %s %s '%s' in '%s'",
+            "#[green]√#[normal] %s %s '%s' in '%s'",
             action_name, bake_project_kind_str(p->kind), p->id, p->path);
     } else {
         corto_info(
-            "   #[grey]%s up to date#[normal] '%s'",
-            action_name, p->id, p->path);
+            "  #[grey]up to date#[normal] '%s'",
+            p->id, p->path);
     }
     if (corto_chdir(prev)) {
         free(prev);

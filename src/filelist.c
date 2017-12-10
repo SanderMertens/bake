@@ -264,6 +264,6 @@ error:
 uint64_t bake_filelist_count(
     bake_filelist *fl)
 {
-    return corto_ll_size(fl->files);
+    return corto_ll_count(fl->files);
 }
 

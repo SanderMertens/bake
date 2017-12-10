@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@
 #ifndef BAKE_LANGUAGE_H_
 #define BAKE_LANGUAGE_H_
 
+#include <bake/rule.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct bake_language bake_language;
 
 typedef int16_t (*bake_language_cb)(
     bake_language _this,
@@ -41,7 +41,7 @@ typedef int16_t (*bake_language_chain_cb)(
     bake_language _this,
     void *ctx);
 
-struct bake_language {
+struct bake_language_s {
     char *name;
     char *package;
     corto_dl dl;
