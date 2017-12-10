@@ -174,7 +174,7 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, "etc") ||
                     !strcmp(file, "lib") ||
                     !strcmp(file, "install") ||
-                    !strcmp(file, ".corto"))
+                    !strcmp(file, ".bake_cache"))
                 {
                     corto_debug("ignoring directory '%s'", file);
                     continue;
