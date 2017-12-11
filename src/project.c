@@ -440,10 +440,12 @@ bake_project* bake_project_new(
                 ext ++;
                 corto_ll_append(result->use_build, corto_asprintf("driver/ext/%s", ext));
             }
-            corto_ll_append(result->use_build, corto_asprintf("driver/tool/pp"));
         } else if (result->error) {
             goto error;
         }
+
+        /* Managed projects need the code generator */
+        corto_ll_append(result->use_build, corto_asprintf("driver/tool/pp"));
 
         /* Add corto as dependency to managed packages */
         bake_project_use(result, "corto");
