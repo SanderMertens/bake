@@ -149,6 +149,11 @@ int16_t bake_check_dependencies(
      * the package that contains the generated api for the language of
      * the package */
     if (p->use_generated_api) {
+        /* First, add own generated language package */
+        if (p->managed && p->model) {
+            bake_project_use(p, strarg("%s/%s", p->id, p->language));
+        }
+
         int i = 0, count = corto_ll_count(p->use);
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
