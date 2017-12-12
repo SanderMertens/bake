@@ -90,8 +90,12 @@ int16_t bake_config_loadEnvironment(
         }
 
         corto_trace("set $%s to '%s'", var, value);
-        if (corto_setenv(var, value)) {
-            goto error;
+
+        /* Shell environment takes precedence */
+        if (!corto_getenv(var)) {
+            if (corto_setenv(var, value)) {
+                goto error;
+            }
         }
     }
     corto_log_pop();

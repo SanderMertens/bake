@@ -150,7 +150,7 @@ int16_t bake_check_dependencies(
      * the package */
     if (p->use_generated_api) {
         /* First, add own generated language package */
-        if (p->managed && p->model) {
+        if (p->managed && p->model && p->public && p->kind == BAKE_PACKAGE) {
             bake_project_use(p, strarg("%s/%s", p->id, p->language));
         }
 
