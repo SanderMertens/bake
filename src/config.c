@@ -20,6 +20,13 @@ char* bake_config_findFile(
             /* Strip file */
             if ((last = strrchr(cwd, '/'))) last[0] = '\0';
             else goto error;
+
+            if (!strcmp(last + 1, "config.json")) {
+                /* Strip .bake directory */
+                if ((last = strrchr(cwd, '/'))) last[0] = '\0';
+                else goto error;
+            }
+
             /* Strip last directory */
             if ((last = strrchr(cwd, '/'))) last[0] = '\0';
             else goto error;
@@ -350,7 +357,7 @@ int16_t bake_config_load(
             goto error;
         } else if (!file) {
             corto_throw(
-                "could not find environment");
+                "could not find environment/configuration");
             goto error;
         }
     }
