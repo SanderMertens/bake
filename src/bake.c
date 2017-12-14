@@ -38,6 +38,8 @@ static bool mute_foreach = true;
 static bool profile = false;
 static bool local = false;
 static char *action = "build";
+static char *env = "default";
+static char *cfg = "default";
 
 /* Pointer to global builtin configuration */
 static bake_config config;
@@ -72,6 +74,8 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "skip-preinstall", skip_preinstall = true);
             PARSE_OPTION(0, "skip-uninstall", skip_uninstall = true);
             PARSE_OPTION(0, "do", foreach_cmd = argv[i + 1]; i++);
+            PARSE_OPTION(0, "env", env = argv[i + 1]; i++);
+            PARSE_OPTION(0, "cfg", cfg = argv[i + 1]; i++);
 
             PARSE_OPTION(0, "debug", corto_log_verbositySet(CORTO_DEBUG));
             PARSE_OPTION(0, "trace", corto_log_verbositySet(CORTO_TRACE));
@@ -375,7 +379,6 @@ int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    corto_ok("done");
     corto_log_pop();
     return 1;
 error:
@@ -629,7 +632,7 @@ int main(int argc, char* argv[]) {
         goto error;
     }
 
-    if (bake_config_load(&config)) {
+    if (bake_config_load(&config, cfg, env)) {
         goto error;
     }
 

@@ -207,7 +207,6 @@ int16_t bake_uninstall(
     }
 
 skip:
-    corto_ok("done");
     corto_log_pop();
     return 0;
 error:
@@ -286,7 +285,6 @@ int16_t bake_pre(
         fclose(uninstallFile);
     }
 
-    corto_ok("done");
     corto_log_pop();
     return 0;
 error:
@@ -353,7 +351,6 @@ int16_t bake_post(
 
     free(targetBinary);
 
-    corto_ok("done");
     corto_log_pop();
     return 0;
 error:

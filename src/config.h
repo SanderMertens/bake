@@ -28,4 +28,7 @@
 
 /** Looks up bake configuration file and loads it.
  */
-int16_t bake_config_load(bake_config *cfg_out);
+int16_t bake_config_load(
+    bake_config *cfg_out,
+    const char *cfg,
+    const char *env);

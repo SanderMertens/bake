@@ -5,7 +5,7 @@ static
 char* bake_config_findFile(
     char *previous_file)
 {
-    char *file = corto_getenv("BAKE_CONFIG");
+    char *file = corto_getenv("BAKE_CONFIG_FILE");
     if (file && previous_file) {
         /* Don't go looking for files if one was explicitly specified */
         goto error;
@@ -89,7 +89,7 @@ int16_t bake_config_loadEnvironment(
             goto error;
         }
 
-        corto_trace("set $%s to '%s'", var, value);
+        corto_ok("set $%s to '%s'", var, value);
 
         /* Shell environment takes precedence */
         if (!corto_getenv(var)) {
@@ -124,7 +124,7 @@ int16_t bake_config_parseBool(
         if (json_value_get_type(v) == JSONBoolean)
         {
             *out = json_value_get_boolean(v);
-            corto_trace("set '%s' to '%s'", name, *out ? "true" : "false");
+            corto_ok("set '%s' to '%s'", name, *out ? "true" : "false");
         } else {
             corto_throw(
                 "invalid JSON: expected value of '%s' to be a boolean",
@@ -239,7 +239,9 @@ int16_t bake_config_setPathVariables(void)
 static
 int16_t bake_config_parse (
     const char *file,
-    bake_config *cfg_out)
+    bake_config *cfg_out,
+    const char *cfg_name,
+    const char *env_name)
 {
     corto_trace("parse configuration from '%s'", file);
 
@@ -260,7 +262,7 @@ int16_t bake_config_parse (
     if (env) {
         JSON_Object *section = NULL;
         if (bake_config_findSection(
-            env, corto_getenv("BAKE_ENVIRONMENT"), &section) == -1)
+            env, env_name, &section) == -1)
         {
             goto error;
         }
@@ -277,7 +279,7 @@ int16_t bake_config_parse (
     if (cfg) {
         JSON_Object *section = NULL;
         if (bake_config_findSection(
-            cfg, corto_getenv("BAKE_CONFIGURATION"), &section) == -1)
+            cfg, cfg_name, &section) == -1)
         {
             goto error;
         }
@@ -304,7 +306,9 @@ error:
 }
 
 int16_t bake_config_load(
-    bake_config *cfg_out)
+    bake_config *cfg_out,
+    const char *cfg,
+    const char *env)
 {
     corto_log_push("config");
 
@@ -337,7 +341,7 @@ int16_t bake_config_load(
         free(bake_home);
     } else {
         int ret = 0;
-        while (file && (ret = bake_config_parse(file, cfg_out)) && (ret == 1)) {
+        while (file && (ret = bake_config_parse(file, cfg_out, cfg, env)) && (ret == 1)) {
             /* Traverse up directories to find other configuration file */
             file = bake_config_findFile(file);
         }
@@ -346,8 +350,7 @@ int16_t bake_config_load(
             goto error;
         } else if (!file) {
             corto_throw(
-                "could not find environment '%s'",
-                 corto_getenv("BAKE_ENVIRONMENT"));
+                "could not find environment");
             goto error;
         }
     }

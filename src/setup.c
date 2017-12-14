@@ -192,6 +192,13 @@ int16_t bake_setup_writeConfig(
         fprintf(f, "            \"optimizations\":false,\n");
         fprintf(f, "            \"coverage\":false,\n");
         fprintf(f, "            \"strict\":false\n");
+        fprintf(f, "        },\n");
+        fprintf(f, "        \"release\":{\n");
+        fprintf(f, "            \"symbols\":false,\n");
+        fprintf(f, "            \"debug\":false,\n");
+        fprintf(f, "            \"optimizations\":true,\n");
+        fprintf(f, "            \"coverage\":false,\n");
+        fprintf(f, "            \"strict\":false\n");
         fprintf(f, "        }\n");
         fprintf(f, "    },\n");
         fprintf(f, "    \"environment\":{\n");

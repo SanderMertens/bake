@@ -769,7 +769,6 @@ int16_t bake_language_build(
     free(artefact);
     free(binaryPath);
 
-    corto_ok("done");
     corto_log_pop();
     return 0;
 error:
