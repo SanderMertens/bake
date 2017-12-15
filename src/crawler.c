@@ -166,7 +166,8 @@ int16_t bake_crawler_crawl(
             /* If this is a corto project, filter out directories that have
              * special meaning. */
             if (isProject) {
-                if (!strcmp(file, "src") ||
+                if (file[0] == '.' ||
+                    !strcmp(file, "src") ||
                     !strcmp(file, "include") ||
                     !strcmp(file, "config") ||
                     !strcmp(file, "data") ||
