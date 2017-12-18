@@ -35,6 +35,7 @@ extern "C" {
 
 typedef struct bake_config {
     const char *environment;
+    const char *id;
     bool symbols;
     bool debug;
     bool optimizations;

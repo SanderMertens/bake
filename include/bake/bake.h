@@ -28,9 +28,9 @@
 #define BAKE_H_
 
 #include <corto/base.h>
+#include <bake/config.h>
 #include <bake/project.h>
 #include <bake/filelist.h>
-#include <bake/config.h>
 #include <bake/rule.h>
 #include <bake/language.h>
 

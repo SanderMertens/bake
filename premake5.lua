@@ -1,9 +1,11 @@
 
 workspace "bake"
-  configurations { "Debug", "Release" }
+  configurations { "debug", "release" }
+  location ("build")
 
   configuration { "linux", "gmake" }
     buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600"}
+
 
   project "bake"
     kind "ConsoleApp"
@@ -14,29 +16,26 @@ workspace "bake"
     includedirs { "include", "../base/include" }
 
     prebuildcommands {
-      "[ -d ../base ] || git clone https://github.com/cortoproject/base ../base"
+      "[ -d ../../base ] || git clone https://github.com/cortoproject/base ../base"
     }
 
     postbuildcommands {
-      "./bake setup"
+      "cd .. && ./bake setup"
     }
 
-    if os.is64bit then
-      objdir (".corto/obj/" .. os.target() .. "-64")
-    else
-      objdir (".corto/obj/" .. os.target() .. "-32")
-    end
+    objdir (".bake_cache")
 
-    configuration "macosx"
-      links { "rt", "dl", "m", "ffi", "pthread" }
-
-    configuration "linux"
-      links { "rt", "dl", "m", "ffi", "pthread" }
-
-    configuration "Debug"
+    configuration "debug"
       defines { "DEBUG" }
       symbols "On"
 
-    configuration "Release"
+    configuration "release"
       defines { "NDEBUG" }
       optimize "On"
+
+    filter { "system:macosx", "action:gmake"}
+      toolset "clang"
+      links { "dl", "m", "ffi", "pthread" }
+
+    filter { "system:linux", "action:gmake"}
+      links { "rt", "dl", "m", "ffi", "pthread" }

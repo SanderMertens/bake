@@ -29,29 +29,29 @@ typedef struct bake_crawler_s* bake_crawler;
 typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project *project, void *ctx);
 
 /** Create a new crawler.
- * 
+ *
  * @return New crawler object.
  */
-bake_crawler bake_crawler_new(void);
+bake_crawler bake_crawler_new(bake_config *cfg);
 
 /** Free crawler.
- * 
+ *
  * @return New crawler object.
  */
 void bake_crawler_free(bake_crawler _this);
 
 /** Search a path for projects.
- * 
+ *
  * @param _this A crawler object.
  * @param path A path to search.
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_crawler_search(
-    bake_crawler _this, 
+    bake_crawler _this,
     const char *path);
 
 /** Count number of projects found by searches.
- * 
+ *
  * @param _this A crawler object.
  * @return Number of projects found.
  */
@@ -59,7 +59,7 @@ uint32_t bake_crawler_count(
     bake_crawler _this);
 
 /** Manually add a project to the crawler.
- * 
+ *
  * @param _this A crawler object.
  * @param id Package id of the project.
  * @param path Location of the project.
@@ -67,11 +67,11 @@ uint32_t bake_crawler_count(
  */
 bake_project* bake_crawler_addProject(
     bake_crawler _this,
-    const char *path); 
+    const char *path);
 
 /** Walk projects.
  * This walks projects found with bake_crawler_search in correct dependency
- * order. 
+ * order.
  *
  * @param _this A crawler object.
  * @param action Callback to invoke when project is found.
@@ -79,7 +79,7 @@ bake_project* bake_crawler_addProject(
  * @return non-zero if success, zero if interrupted.
  */
 int16_t bake_crawler_walk(
-    bake_crawler _this, 
+    bake_crawler _this,
     const char *action_name,
-    bake_crawler_cb action, 
+    bake_crawler_cb action,
     void *ctx);

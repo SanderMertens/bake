@@ -20,7 +20,8 @@
  */
 
 bake_project* bake_project_new(
-    const char *path);
+    const char *path,
+    bake_config *cfg);
 
 void bake_project_free(
     bake_project *p);

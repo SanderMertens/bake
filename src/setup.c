@@ -186,7 +186,7 @@ int16_t bake_setup_writeConfig(
 
         fprintf(f, "{\n");
         fprintf(f, "    \"configuration\":{\n");
-        fprintf(f, "        \"default\":{\n");
+        fprintf(f, "        \"debug\":{\n");
         fprintf(f, "            \"symbols\":true,\n");
         fprintf(f, "            \"debug\":true,\n");
         fprintf(f, "            \"optimizations\":false,\n");
@@ -417,9 +417,15 @@ int16_t bake_setup(const char *exec, bool local) {
 
     if (bake_setup_cmd(
         "build driver/bake/c",
-        "make -C driver-bake-c/build"))
+        strarg("make -C driver-bake-c/build-%s", CORTO_OS_STRING)))
     { goto error; }
 
+    if (!strcmp(CORTO_OS_STRING, "darwin")) {
+        if (bake_setup_cmd(
+            "rename libc.dylib to libc.so",
+            "mv driver-bake-c/libc.dylib driver-bake-c/libc.so"))
+        { goto error; }
+    }
     if (bake_setup_cmd(
         "install driver/bake/c binary to package repository",
         "bake install driver-bake-c --id driver/bake/c --artefact libc.so --skip-preinstall"))

@@ -307,13 +307,23 @@ int16_t bake_post(
         goto error;
     }
 
-    if (!corto_file_test(artefact)) {
-        corto_throw("cannot find artefact '%s'", artefact);
-        goto error;
+    char *artefact_full = corto_asprintf("bin/%s-%s/%s",
+        CORTO_PLATFORM_STRING, project->cfg->id, artefact);
+
+    if (!corto_file_test(artefact_full)) {
+
+        /* If artefact cannot be found, try just the artefact name itself */
+        if (corto_file_test(artefact)) {
+            free(artefact_full);
+            artefact_full = corto_strdup(artefact);
+        } else {
+            corto_throw("cannot find artefact '%s'", artefact_full);
+            goto error;
+        }
     }
 
-    if (corto_isdir(artefact)) {
-        corto_throw("specified artefact '%s' is a directory, expecting regular file", artefact);
+    if (corto_isdir(artefact_full)) {
+        corto_throw("specified artefact '%s' is a directory, expecting regular file", artefact_full);
         goto error;
     }
 
@@ -324,7 +334,7 @@ int16_t bake_post(
     char *targetBinary = corto_asprintf("%s/%s", targetDir, artefact);
     if (!corto_file_test(targetBinary) || project->freshly_baked) {
         /* Copy binary */
-        if (corto_cp(artefact, targetBinary)) {
+        if (corto_cp(artefact_full, targetBinary)) {
             goto error;
         }
 
@@ -350,6 +360,7 @@ int16_t bake_post(
     }
 
     free(targetBinary);
+    free(artefact_full);
 
     corto_log_pop();
     return 0;

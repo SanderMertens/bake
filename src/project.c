@@ -396,7 +396,8 @@ error:
 }
 
 bake_project* bake_project_new(
-    const char *path)
+    const char *path,
+    bake_config *cfg)
 {
     bake_project* result = corto_calloc(sizeof (bake_project));
     result->sources = corto_ll_new();
@@ -405,6 +406,7 @@ bake_project* bake_project_new(
     result->use_build = corto_ll_new();
     result->link = corto_ll_new();
     result->files_to_clean = corto_ll_new();
+    result->cfg = cfg;
 
     /* Default values */
     result->path = path ? strdup(path) : NULL;

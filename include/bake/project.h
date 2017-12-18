@@ -71,6 +71,7 @@ typedef struct bake_project {
     char *language;
     char *args;
     char *version;
+    bake_config *cfg;
     corto_ll attributes;
 
     /* Project model file */

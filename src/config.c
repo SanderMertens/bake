@@ -320,11 +320,30 @@ int16_t bake_config_load(
     corto_log_push("config");
 
     char *file = bake_config_findFile(NULL);
+    if (file) {
+        int ret = 0;
+        while (file && (ret = bake_config_parse(file, cfg_out, cfg, env)) && (ret == 1)) {
+            /* Traverse up directories to find other configuration file */
+            file = bake_config_findFile(file);
+        }
+        if (ret == -1) {
+            corto_throw(NULL);
+            goto error;
+        } else if (!file) {
+
+        } else {
+            cfg_out->id = cfg;
+        }
+    }
+
     if (!file) {
-        corto_trace("no .bake found in path, load default config");
+        corto_log(
+            "config:environment '%s:%s' found in path, load default config",
+            cfg, env);
 
         /* Use default configuration and environment */
         *cfg_out = (bake_config){
+            .id = cfg,
             .symbols = true,
             .debug = true,
             .optimizations = false,
@@ -346,20 +365,6 @@ int16_t bake_config_load(
             goto error;
         }
         free(bake_home);
-    } else {
-        int ret = 0;
-        while (file && (ret = bake_config_parse(file, cfg_out, cfg, env)) && (ret == 1)) {
-            /* Traverse up directories to find other configuration file */
-            file = bake_config_findFile(file);
-        }
-        if (ret == -1) {
-            corto_throw(NULL);
-            goto error;
-        } else if (!file) {
-            corto_throw(
-                "could not find environment/configuration");
-            goto error;
-        }
     }
 
     corto_log_pop();

@@ -25,6 +25,7 @@ struct bake_crawler_s {
     corto_rb nodes; /* tree optimizes looking up dependencies */
     corto_ll leafs; /* projects that cannot act as dependencies */
     uint32_t count;
+    bake_config *cfg;
 };
 
 static
@@ -41,7 +42,7 @@ void bake_crawler_addDependency(
     bake_project *dep = corto_rb_find(_this->nodes, use);
     if (!dep) {
         /* Create placeholder */
-        dep = bake_project_new(NULL);
+        dep = bake_project_new(NULL, NULL);
         dep->id = corto_strdup(use);
         corto_rb_set(_this->nodes, dep->id, dep);
     }
@@ -57,7 +58,7 @@ bake_project* bake_crawler_addProject(
     bake_crawler _this,
     const char *path)
 {
-    bake_project *p = bake_project_new(path);
+    bake_project *p = bake_project_new(path, _this->cfg);
     if (!p) {
         return NULL;
     }
@@ -209,9 +210,12 @@ error:
     return -1;
 }
 
-bake_crawler bake_crawler_new(void)
+bake_crawler bake_crawler_new(
+    bake_config *cfg)
 {
-    return corto_calloc(sizeof(struct bake_crawler_s));
+    bake_crawler result = corto_calloc(sizeof(struct bake_crawler_s));
+    result->cfg = cfg;
+    return result;
 }
 
 void bake_crawler_free(bake_crawler _this)
@@ -392,6 +396,7 @@ int16_t bake_crawler_walk(
     bake_project *p;
     while ((p = corto_ll_takeFirst(readyForBuild))) {
         if (bake_crawler_build_project(_this, action_name, action, p, ctx, readyForBuild)) {
+            corto_throw(NULL);
             goto error;
         }
         built ++;

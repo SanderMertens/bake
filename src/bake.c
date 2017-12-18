@@ -39,7 +39,7 @@ static bool profile = false;
 static bool local = false;
 static char *action = "build";
 static char *env = "default";
-static char *cfg = "default";
+static char *cfg = "debug";
 
 /* Pointer to global builtin configuration */
 static bake_config config;
@@ -87,6 +87,8 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "show-time", showTime = true);
             PARSE_OPTION(0, "show-delta", showDelta = true);
             PARSE_OPTION(0, "show-proc", showProc = true);
+            PARSE_OPTION(0, "exit-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_EXIT));
+            PARSE_OPTION(0, "abort-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_ABORT));
 
             PARSE_OPTION(0, "no-symbols", config.symbols = false);
             PARSE_OPTION(0, "no-debug", config.debug = false);
@@ -136,9 +138,12 @@ int16_t bake_check_dependencies(
         project_modified = corto_lastmodified("project.json");
     }
 
-    if  (corto_file_test(artefact)) {
-        artefact_modified = corto_lastmodified(artefact);
+    char *artefact_full = corto_asprintf("bin/%s-%s/%s",
+        CORTO_PLATFORM_STRING, p->cfg->id, artefact);
+    if  (corto_file_test(artefact_full)) {
+        artefact_modified = corto_lastmodified(artefact_full);
     }
+    free(artefact_full);
 
     if (artefact_modified < project_modified) {
         if (artefact_modified) {
@@ -542,6 +547,7 @@ int16_t bake_do_action(
         goto error;
     }
     if (!bake_crawler_walk(c, action, action_cb, NULL)) {
+        corto_throw(NULL);
         goto error;
     }
 
@@ -625,7 +631,6 @@ int main(int argc, char* argv[]) {
     char *path_tokens = NULL;
     bool root_bake = false;
 
-    bake_crawler c = bake_crawler_new();
     paths = corto_ll_new();
 
     if (bake_init(argc, argv)) {
@@ -635,6 +640,8 @@ int main(int argc, char* argv[]) {
     if (bake_config_load(&config, cfg, env)) {
         goto error;
     }
+
+    bake_crawler c = bake_crawler_new(&config);
 
     /* Verify environment variables */
     if (bake_test_env("BAKE_HOME")) goto error;
@@ -748,6 +755,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (bake_do_action(c, action)) {
+        corto_throw(NULL);
         goto error;
     }
 

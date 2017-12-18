@@ -702,6 +702,7 @@ int16_t bake_language_build(
     bake_config *c)
 {
     char *artefact = NULL;
+    char *artefact_path = NULL;
 
     corto_log_push("build");
     corto_trace("begin");
@@ -751,6 +752,14 @@ int16_t bake_language_build(
         goto error;
     }
 
+    artefact_path = corto_asprintf("bin/%s-%s",
+        CORTO_PLATFORM_STRING, c->id);
+
+    if (corto_mkdir(artefact_path)) {
+        corto_throw(NULL);
+        goto error;
+    }
+
     corto_tls_set(BAKE_PROJECT_KEY, p);
 
     /* Evaluate root node */
@@ -759,13 +768,14 @@ int16_t bake_language_build(
         binaryPath,
         NULL
     );
-    bake_filelist_add(artefact_fl, artefact);
+    bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
     if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
         corto_throw("failed to build 'ARTEFACT'");
         goto error;
     }
     bake_filelist_free(artefact_fl);
 
+    free(artefact_path);
     free(artefact);
     free(binaryPath);
 
@@ -773,6 +783,7 @@ int16_t bake_language_build(
     return 0;
 error:
     if (artefact) free(artefact);
+    if (artefact_path) free(artefact_path);
     corto_log_pop();
     return -1;
 }
@@ -792,18 +803,14 @@ int16_t bake_language_clean(
         goto error;
     }
 
-    /* Clear .corto directory (for legacy projects) */
-    if (corto_rm(".corto")) {
+    /* Clear bin directory which contains the artefact */
+    if (corto_rm("bin")) {
         goto error;
     }
 
-    /* Retrieve & clean artefact */
-    artefact = l->artefact_cb(l, p);
-    if (artefact) {
-        if (corto_rm(artefact)) {
-            goto error;
-        }
-        free(artefact);
+    /* Clear .corto directory (for legacy projects) */
+    if (corto_rm(".corto")) {
+        goto error;
     }
 
     /* If project is managed and contains a folder with the name of the
