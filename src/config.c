@@ -338,7 +338,7 @@ int16_t bake_config_load(
 
     if (!file) {
         corto_log(
-            "config:environment '%s:%s' found in path, load default config",
+            "config:environment '%s:%s' not found in path, load default config",
             cfg, env);
 
         /* Use default configuration and environment */
@@ -366,6 +366,9 @@ int16_t bake_config_load(
         }
         free(bake_home);
     }
+
+    corto_setenv("BAKE_CONFIG", cfg);
+    corto_setenv("BAKE_ENVIRONMENT", env);
 
     corto_log_pop();
     return 0;

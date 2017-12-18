@@ -420,6 +420,7 @@ int bake_action_getenv()
     corto_buffer_append(&buff, "BAKE_HOME=%s", corto_getenv("BAKE_HOME"));
     corto_buffer_append(&buff, " BAKE_TARGET=%s", corto_getenv("BAKE_TARGET"));
     corto_buffer_append(&buff, " BAKE_VERSION=%s", corto_getenv("BAKE_VERSION"));
+    corto_buffer_append(&buff, " BAKE_CONFIG=%s", corto_getenv("BAKE_CONFIG"));
 
     if ((env = corto_getenv("BAKE_ENVIRONMENT"))) {
         corto_buffer_append(&buff, " BAKE_ENVIRONMENT=%s", env);
@@ -575,6 +576,14 @@ int16_t bake_init(int argc, char* argv[])
     /* Initialize thread key for filelist */
     if (corto_tls_new(&BAKE_PROJECT_KEY, NULL)) {
         goto error;
+    }
+
+    if (corto_getenv("BAKE_CONFIG")) {
+        cfg = corto_getenv("BAKE_CONFIG");
+    }
+
+    if (corto_getenv("BAKE_ENVIRONMENT")) {
+        env = corto_getenv("BAKE_ENVIRONMENT");
     }
 
     if (argc > 1) {
