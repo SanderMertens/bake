@@ -331,7 +331,7 @@ int16_t bake_crawler_build_project(
     } else {
         corto_info(
             "  #[grey]up to date#[normal] '%s'",
-            p->id, p->path);
+            p->id);
     }
     if (corto_chdir(prev)) {
         free(prev);

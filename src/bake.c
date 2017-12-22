@@ -627,12 +627,6 @@ int16_t bake_init(int argc, char* argv[])
         }
     }
 
-    if (strcmp(action, "getenv")) {
-        if (corto_log_verbosityGet()) {
-            corto_log_tailVerbositySet(corto_log_verbosityGet() - 1);
-        }
-    }
-
     return 0;
 error:
     return -1;

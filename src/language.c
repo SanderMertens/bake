@@ -406,7 +406,7 @@ int16_t bake_node_run_rule_map(
 
         count ++;
         if (src->timestamp > dst->timestamp) {
-            corto_ok("#[white][%3d%%] #[bold]%s#[normal]",
+            corto_log_overwrite(CORTO_OK, "#[green][#[white]%3d%%#[green]]#[white] %s",
                 100 * count / bake_filelist_count(inputs),
                 src->name);
 

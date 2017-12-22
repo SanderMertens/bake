@@ -1,0 +1,4 @@
+*bake_cache*
+*/bin*
+bin/*
+.DS_Store
