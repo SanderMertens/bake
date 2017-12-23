@@ -27,7 +27,7 @@
 #ifndef BAKE_CONFIG_H_
 #define BAKE_CONFIG_H_
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 #ifdef __cplusplus
 extern "C" {

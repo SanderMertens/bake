@@ -27,7 +27,7 @@
 #ifndef BAKE_H_
 #define BAKE_H_
 
-#include <corto/base.h>
+#include <corto/platform.h>
 #include <bake/config.h>
 #include <bake/project.h>
 #include <bake/filelist.h>

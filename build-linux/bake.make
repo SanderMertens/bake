@@ -73,7 +73,7 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/base.o \
+	$(OBJDIR)/platform.o \
 	$(OBJDIR)/buffer.o \
 	$(OBJDIR)/dl.o \
 	$(OBJDIR)/entityadmin.o \
@@ -155,7 +155,7 @@ endif
 	$(SILENT) $(CC) -x c-header $(ALL_CFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
-$(OBJDIR)/base.o: ../../platform/src/base.c
+$(OBJDIR)/platform.o: ../../platform/src/platform.c
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)
