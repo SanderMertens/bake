@@ -351,7 +351,7 @@ error:
 }
 
 static
-int bake_action_rebuild(bake_crawler c, bake_project* p, void *ctx) {
+int bake_action_rebake(bake_crawler c, bake_project* p, void *ctx) {
 
     if (!bake_action_clean(c, p, ctx)) {
         goto error;
@@ -545,7 +545,8 @@ int16_t bake_do_action(
     bake_crawler_cb action_cb;
     if (!strcmp(action, "build")) action_cb = bake_action_build;
     else if (!strcmp(action, "clean")) action_cb = bake_action_clean;
-    else if (!strcmp(action, "rebuild")) action_cb = bake_action_rebuild;
+    else if (!strcmp(action, "rebake")) action_cb = bake_action_rebake;
+    else if (!strcmp(action, "rebuild")) action_cb = bake_action_rebake;
     else if (!strcmp(action, "install")) action_cb = bake_action_install;
     else if (!strcmp(action, "uninstall")) action_cb = bake_action_uninstall;
     else if (!strcmp(action, "foreach")) {
@@ -687,6 +688,7 @@ int main(int argc, char* argv[]) {
              * a user can type 'bake corto' */
             if (strcmp(action, "build") &&
                 strcmp(action, "clean") &&
+                strcmp(action, "rebake") &&
                 strcmp(action, "rebuild") &&
                 strcmp(action, "install") &&
                 strcmp(action, "foreach"))

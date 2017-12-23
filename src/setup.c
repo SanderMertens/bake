@@ -2,7 +2,7 @@
 #include "parson.h"
 
 char *repositories[] = {
-    "https://github.com/cortoproject/base",
+    "https://github.com/cortoproject/platform",
     "https://github.com/cortoproject/bake",
     "https://github.com/cortoproject/driver-bake-c",
     "https://github.com/cortoproject/corto",
@@ -406,8 +406,8 @@ int16_t bake_setup(const char *exec, bool local) {
         "#[green]√#[normal] #[grey]install bake executable to ~/.bake#[normal]\n");
 
     if (bake_setup_cmd(
-        "install base include files",
-        "bake install base --id corto --includes include/corto"))
+        "install platform include files",
+        "bake install platform --id corto --includes include/corto"))
     { goto error; }
 
     if (bake_setup_cmd(

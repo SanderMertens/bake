@@ -12,11 +12,11 @@ workspace "bake"
     language "C"
     targetdir "."
 
-    files { "include/*.h", "src/*.c", "../base/include/*.h", "../base/src/*.c"}
-    includedirs { "include", "../base/include" }
+    files { "include/*.h", "src/*.c", "../platform/include/*.h", "../platform/src/*.c"}
+    includedirs { "include", "../platform/include" }
 
     prebuildcommands {
-      "[ -d ../../base ] || git clone https://github.com/cortoproject/base ../base"
+      "[ -d ../../platform ] || git clone https://github.com/cortoproject/platform ../platform"
     }
 
     postbuildcommands {
