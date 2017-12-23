@@ -79,6 +79,7 @@ bool bake_config_isVarValid(
 
 static
 int16_t bake_config_loadEnvironment(
+    bake_config *cfg_out,
     JSON_Object *envcfg)
 {
     int i;
@@ -102,6 +103,18 @@ int16_t bake_config_loadEnvironment(
         if (!corto_getenv(var)) {
             if (corto_setenv(var, value)) {
                 goto error;
+            }
+            /* Add variable to list of environment variables, so it can be
+             * exported later */
+            if (strcmp(var, "BAKE_HOME") &&
+                strcmp(var, "BAKE_TARGET") &&
+                strcmp(var, "BAKE_VERSION") &&
+                strcmp(var, "BAKE_CONFIG"))
+            {
+                if (!cfg_out->variables) {
+                    cfg_out->variables = corto_ll_new();
+                }
+                corto_ll_append(cfg_out->variables, corto_strdup(var));
             }
         }
     }
@@ -276,7 +289,7 @@ int16_t bake_config_parse (
         if (!section) {
             goto not_found;
         }
-        if (bake_config_loadEnvironment(section)) {
+        if (bake_config_loadEnvironment(cfg_out, section)) {
             goto error;
         }
     }

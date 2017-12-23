@@ -41,6 +41,7 @@ typedef struct bake_config {
     bool optimizations;
     bool coverage;
     bool strict;
+    corto_ll variables;
 } bake_config;
 
 #ifdef __cplusplus

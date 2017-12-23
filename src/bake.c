@@ -421,10 +421,18 @@ int bake_action_getenv()
     corto_buffer_append(&buff, " BAKE_TARGET=%s", corto_getenv("BAKE_TARGET"));
     corto_buffer_append(&buff, " BAKE_VERSION=%s", corto_getenv("BAKE_VERSION"));
     corto_buffer_append(&buff, " BAKE_CONFIG=%s", corto_getenv("BAKE_CONFIG"));
-
     if ((env = corto_getenv("BAKE_ENVIRONMENT"))) {
         corto_buffer_append(&buff, " BAKE_ENVIRONMENT=%s", env);
     }
+
+    if (config.variables) {
+        corto_iter it = corto_ll_iter(config.variables);
+        while (corto_iter_hasNext(&it)) {
+            char *var = corto_iter_next(&it);
+            corto_buffer_append(&buff, " %s=%s", var, corto_getenv(var));
+        }
+    }
+
     if ((env = corto_getenv("LD_LIBRARY_PATH"))) {
         corto_buffer_append(&buff, " LD_LIBRARY_PATH=%s", env);
     }
