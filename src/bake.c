@@ -783,7 +783,7 @@ int main(int argc, char* argv[]) {
 
     /* Cleanup resources */
     bake_crawler_free(c);
-    base_deinit();
+    platform_deinit();
 
     if (path_tokens) free(path_tokens);
     if (paths) corto_ll_free(paths);
@@ -791,6 +791,6 @@ int main(int argc, char* argv[]) {
 
     return 0;
 error:
-    base_deinit();
+    platform_deinit();
     return -1;
 }
