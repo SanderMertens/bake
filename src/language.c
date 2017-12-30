@@ -115,6 +115,14 @@ bake_rule_target bake_language_target_map_cb(
 }
 
 static
+void bake_language_init_cb(
+    bake_rule_init_cb init)
+{
+    bake_language *l = corto_tls_get(BAKE_LANGUAGE_KEY);
+    l->init_cb = init;
+}
+
+static
 void bake_language_artefact_cb(
     bake_rule_artefact_cb artefact)
 {
@@ -788,6 +796,17 @@ error:
     return -1;
 }
 
+int16_t bake_language_init(
+    bake_language *l,
+    bake_project *p)
+{
+    if (l->init_cb) {
+        corto_tls_set(BAKE_PROJECT_KEY, p);
+        l->init_cb(p);
+    }
+    return 0;
+}
+
 int16_t bake_language_clean(
     bake_language *l,
     bake_project *p)
@@ -883,6 +902,7 @@ bake_language* bake_language_get(
         l->condition = bake_language_condition_cb;
         l->target_pattern = bake_language_target_pattern_cb;
         l->target_map = bake_language_target_map_cb;
+        l->init = bake_language_init_cb;
         l->artefact = bake_language_artefact_cb;
         l->clean = bake_language_clean_cb;
         l->exec = bake_language_exec_cb;

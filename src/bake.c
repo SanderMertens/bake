@@ -154,6 +154,9 @@ int16_t bake_check_dependencies(
         }
     }
 
+    /* Initialize package */
+    bake_language_init(l, p);
+
     /* For each package, if use_generated_api is enabled, also include
      * the package that contains the generated api for the language of
      * the package */
@@ -570,7 +573,7 @@ static
 int16_t bake_init(int argc, char* argv[])
 {
     /* Initialize base library */
-    base_init(argv[0]);
+    platform_init(argv[0]);
 
     /* Initialize thread key for language */
     if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {

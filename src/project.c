@@ -355,6 +355,7 @@ char *bake_project_getattr_string_cb(const char *name) {
     }
 }
 
+static
 bake_project_attr* bake_project_getattr_cb(const char *name) {
     bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
     corto_assert(p != NULL, "project::getattr called without project context");
@@ -362,9 +363,16 @@ bake_project_attr* bake_project_getattr_cb(const char *name) {
     return bake_project_getattr(p, name);
 }
 
+static
 void bake_project_clean_cb(const char *file) {
     bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
     corto_ll_append(p->files_to_clean, corto_strdup(file));
+}
+
+static
+void bake_project_add_build_dependency_cb(const char *package) {
+    bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
+    corto_ll_append(p->use_build, corto_strdup(package));
 }
 
 static
@@ -426,6 +434,7 @@ bake_project* bake_project_new(
     result->get_attr = bake_project_getattr_cb;
     result->get_attr_string = bake_project_getattr_string_cb;
     result->clean = bake_project_clean_cb;
+    result->add_build_dependency = bake_project_add_build_dependency_cb;
 
     /* Parse project.json if available */
     if (bake_project_parseConfig(result)) {
@@ -451,13 +460,6 @@ bake_project* bake_project_new(
 
         /* Add corto as dependency to managed packages */
         bake_project_use(result, "corto");
-
-        /* Add generator packages for language binding */
-        /*corto_ll_append(
-            result->use_build,
-            corto_asprintf("driver/gen/%s",
-                result->language));*/
-
     }
 
     if (result->use_generated_api) {
