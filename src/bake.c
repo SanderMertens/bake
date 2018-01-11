@@ -154,9 +154,6 @@ int16_t bake_check_dependencies(
         }
     }
 
-    /* Initialize package */
-    bake_language_init(l, p);
-
     /* For each package, if use_generated_api is enabled, also include
      * the package that contains the generated api for the language of
      * the package */

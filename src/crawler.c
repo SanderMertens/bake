@@ -88,6 +88,16 @@ bake_project* bake_crawler_addProject(
         corto_ll_append(_this->leafs, p);
     }
 
+    /* Initialize project before building dependency administration */
+    if (p->language) {
+        bake_language *l = bake_language_get(p->language);
+        if (l) { /* During setup language may not yet be installed */
+            bake_language_init(l, p);
+        } else {
+            corto_catch();
+        }
+    }
+
     /* Add dependency information */
     p->unresolved_dependencies = corto_ll_count(p->use);
     p->unresolved_dependencies += corto_ll_count(p->use_build);
