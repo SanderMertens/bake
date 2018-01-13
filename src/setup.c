@@ -15,6 +15,7 @@ int16_t bake_setup_cmd(char *msg, char *cmd) {
     int sig = corto_proc_cmd(cmd, &ret);
     if (sig || ret) {
         corto_log("#[red]x#[normal] %s\n", msg);
+        corto_log("  #[red]%s #[normal](%s %d)\n", cmd, sig?"sig":"result", sig?sig:ret);
         return -1;
     } else {
         corto_log("#[green]√#[normal] #[grey]%s#[normal]\n", msg);
@@ -341,12 +342,12 @@ int16_t bake_setup(const char *exec, bool local) {
     corto_log_verbositySet(CORTO_ERROR);
     corto_setenv("BAKE_BUILDING", "");
 
-    corto_log("setting up bake environment\n");
+    corto_log("* setting up bake environment\n");
 
     /* First try to install global scripts, as this is prone to failing when the
      * setup does not have the right permissions. */
     if (!local) {
-        corto_log("writing scripts to '/usr/local', #[yellow]may prompt for password!\n");
+        corto_log("* writing scripts to '/usr/local', #[yellow]may prompt for password!\n");
 
         /* Write bake script */
         if (bake_setup_cmd(
@@ -373,12 +374,12 @@ int16_t bake_setup(const char *exec, bool local) {
         }
     }
 
-    corto_log("checking availability of repositories...\n");
+    corto_log("* checking availability of repositories...\n");
 
     if (!bake_verify_repos()) {
-        corto_log("all repositories are here, installing bake...\n");
+        corto_log("* all repositories are here, installing bake...\n");
     } else {
-        corto_log("cloning missing repositories...\n");
+        corto_log("* cloning missing repositories...\n");
         if (bake_clone_repos()) {
             goto error;
         }
