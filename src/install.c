@@ -226,6 +226,7 @@ int16_t bake_pre(
             goto error;
         }
 
+        /* Copy project.json and file that points back to source */
         if (corto_file_test("project.json")) {
             char *projectDir = corto_envparse(
                 "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
@@ -234,11 +235,16 @@ int16_t bake_pre(
                 free(projectDir);
                 goto error;
             }
-            fprintf(
-                uninstallFile, "%s/%s\n", projectDir, "project.json");
+
+            FILE *src_location = fopen(strarg("%s/source.txt", projectDir), "w");
+            fprintf(src_location, "%s\n", corto_cwd());
+            fclose(src_location);
+
+            fprintf(uninstallFile, "%s/project.json\n", projectDir);
+            fprintf(uninstallFile, "%s/source.txt\n", projectDir);
+
             free(projectDir);
         }
-
 
         /* Install files to project-specific locations in package hierarchy */
         if (project->public) {
@@ -282,6 +288,7 @@ int16_t bake_pre(
                 goto error;
             }
         }
+
         fclose(uninstallFile);
     }
 

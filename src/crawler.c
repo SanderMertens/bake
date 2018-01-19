@@ -132,11 +132,16 @@ int16_t bake_crawler_crawl(
     const char *path)
 {
     char *prev = strdup(corto_cwd());
-    char *fullpath = corto_asprintf("%s/%s", wd, path);
+    char *fullpath;
+    if (path[0] != '/') {
+        fullpath = corto_asprintf("%s/%s", wd, path);
+        corto_path_clean(fullpath, fullpath);
+    } else {
+        fullpath = corto_strdup(path);
+    }
+
     bool isProject = false;
     bake_project *p = NULL;
-
-    corto_path_clean(fullpath, fullpath);
 
     if (corto_chdir(path)) {
         goto error;
@@ -185,6 +190,7 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, "test") ||
                     !strcmp(file, "etc") ||
                     !strcmp(file, "lib") ||
+                    !strcmp(file, "bin") ||
                     !strcmp(file, "install") ||
                     !strcmp(file, ".bake_cache"))
                 {
@@ -322,6 +328,7 @@ int16_t bake_crawler_build_project(
     corto_ok(
         "begin %s %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->kind), p->id, p->path);
+
     char *prev = strdup(corto_cwd());
     if (corto_chdir(p->path)) {
         free(prev);
@@ -329,7 +336,7 @@ int16_t bake_crawler_build_project(
     }
 
     if (!action(_this, p, ctx)) {
-        corto_throw("build interrupted by '%s'", p->id);
+        corto_throw("build interrupted by '%s' in '%s'", p->id, p->path);
         free(prev);
         goto error;
     }
