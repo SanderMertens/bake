@@ -138,7 +138,11 @@ int16_t bake_project_parseMembers(
             if (!strcmp(name, "language")) {
                 if (json_value_get_type(v) == JSONString) {
                     if (p->language) free(p->language);
-                    p->language = strdup(json_value_get_string(v));
+                    if (!strcmp(json_value_get_string(v), "none")) {
+                        p->language = NULL;
+                    } else {
+                        p->language = strdup(json_value_get_string(v));
+                    }
                 } else {
                     corto_throw("expected JSON string for 'language' attribute");
                     goto error;
@@ -441,8 +445,7 @@ bake_project* bake_project_new(
         goto error;
     }
 
-    /* Add packages required for building */
-    if (result->managed) {
+    if (result->language && result->managed) {
         /* Add extension package for model file */
         result->model = bake_project_modelFile(result);
         if (result->model) {

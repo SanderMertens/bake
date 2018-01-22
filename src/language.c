@@ -143,23 +143,27 @@ void bake_language_exec_cb(
     const char *cmd)
 {
     char *envcmd = corto_envparse("%s", cmd);
-
-    int8_t ret = 0;
-    int sig = 0;
-    if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
-        if (!sig) {
-            corto_throw("command returned %d", ret);
-            corto_throw_detail("%s", envcmd);
-        } else {
-            corto_throw("command exited with signal %d", sig);
-            corto_throw_detail("%s", envcmd);
-        }
-
+    if (!envcmd) {
+        corto_throw("invalid command '%s'", cmd);
         bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
         p->error = true;
-    }
+    } else {
+        int8_t ret = 0;
+        int sig = 0;
+        if ((sig = corto_proc_cmd(envcmd, &ret)) || ret) {
+            if (!sig) {
+                corto_throw("command returned %d", ret);
+                corto_throw_detail("%s", envcmd);
+            } else {
+                corto_throw("command exited with signal %d", sig);
+                corto_throw_detail("%s", envcmd);
+            }
 
-    free(envcmd);
+            bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
+            p->error = true;
+        }
+        free(envcmd);
+    }
 }
 
 static
