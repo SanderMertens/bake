@@ -429,7 +429,7 @@ int16_t bake_setup(const char *exec, bool local) {
     }
     if (bake_setup_cmd(
         "install driver/bake/c binary to package repository",
-        "bake install driver-bake-c --id driver/bake/c --artefact libc.so --skip-preinstall"))
+        "bake install driver-bake-c --id driver/bake/c --artefact libc.so"))
     { goto error; }
 
     corto_log("done!\n");

@@ -231,14 +231,37 @@ int16_t bake_pre(
             char *projectDir = corto_envparse(
                 "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
 
+            /* Copy project file */
             if (corto_cp("project.json", projectDir)) {
                 free(projectDir);
                 goto error;
             }
 
+            /* Write project source location to package repository */
             FILE *src_location = fopen(strarg("%s/source.txt", projectDir), "w");
+            if (!src_location) {
+                corto_throw("failed to write to '%s' for '%s'",
+                    strarg("%s/dependee.json", projectDir),
+                    project->id);
+                goto error;
+            }
             fprintf(src_location, "%s\n", corto_cwd());
             fclose(src_location);
+
+            /* If project contains dependee JSON, write to dependee.json */
+            if (project->dependee_json && strlen(project->dependee_json)) {
+                FILE *dependee_config =
+                    fopen(strarg("%s/dependee.json", projectDir), "w");
+                if (!dependee_config) {
+                    corto_throw("failed to write to '%s' for '%s'",
+                        strarg("%s/dependee.json", projectDir),
+                        project->id);
+                    goto error;
+                }
+                fprintf(dependee_config, "%s\n", project->dependee_json);
+                fclose(dependee_config);
+                fprintf(uninstallFile, "%s/dependee.json\n", projectDir);
+            }
 
             fprintf(uninstallFile, "%s/project.json\n", projectDir);
             fprintf(uninstallFile, "%s/source.txt\n", projectDir);

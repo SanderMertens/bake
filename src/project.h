@@ -49,3 +49,7 @@ void bake_project_use(
 
 char *bake_project_definitionFile(
     bake_project *p);
+
+int16_t bake_project_loadDependeeConfig(
+    bake_project *p,
+    const char *json);

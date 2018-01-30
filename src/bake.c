@@ -181,10 +181,10 @@ int16_t bake_check_dependencies(
 
             /* Insert language-specific package with generated
              * API if it exists */
-            char *lib = corto_locate(
+            const char *lib = corto_locate(
                 strarg("%s/%s", package, p->language),
                 NULL,
-                CORTO_LOCATION_LIB);
+                CORTO_LOCATE_LIB);
             if (lib) {
                 bake_project_use(p, strarg("%s/%s", package, p->language));
             }
@@ -212,7 +212,7 @@ int16_t bake_check_dependencies(
                 }
             }
 
-            char *lib = corto_locate(package, NULL, CORTO_LOCATION_LIB);
+            const char *lib = corto_locate(package, NULL, CORTO_LOCATE_PACKAGE);
             if (!lib) {
                 corto_info("use '%s' => #[red]missing#[normal]",
                     package,
@@ -234,7 +234,6 @@ int16_t bake_check_dependencies(
                     lib);
 
             }
-            free(lib);
         }
     }
 

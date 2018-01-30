@@ -94,6 +94,9 @@ typedef struct bake_project {
     /* Files to be cleaned other than objects and artefact (populated by language binding) */
     corto_ll files_to_clean;
 
+    /* JSON that contains build instructions for dependee projects */
+    char *dependee_json;
+
     /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);
     char* (*get_attr_string)(const char *name);

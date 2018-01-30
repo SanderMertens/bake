@@ -735,21 +735,42 @@ int16_t bake_language_build(
     corto_iter it = corto_ll_iter(p->use);
     while (corto_iter_hasNext(&it)) {
         char *dep = corto_iter_next(&it);
-        char *lib = corto_locate(dep, NULL, CORTO_LOCATION_LIB);
-        if (!lib) {
-            corto_throw("missing dependency '%s'", dep);
+
+        const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
+        if (!libpath) {
+            corto_throw(
+                "failed to locate library path for dependency '%s'", dep);
             goto error;
         }
-        corto_ll_append(p->link, lib);
+
+        const char *lib = corto_locate(dep, NULL, CORTO_LOCATE_LIB);
+        if (lib) {
+            corto_ll_append(p->link, corto_strdup(lib));
+        } else {
+            /* A dependency may not have a library that can be linked, but could
+             * only contain build instructions */
+            corto_catch();
+        }
+
+        /* Check if dependency has a dependee file with build instructions */
+        char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
+        if (corto_file_test(dependee_file)) {
+            if (bake_project_loadDependeeConfig(p, dependee_file)) {
+                corto_throw(NULL);
+                goto error;
+            }
+        }
+
+        free(dependee_file);
     }
 
     /* If project is managed, add corto library to link */
     if (p->managed) {
-        char *cortolib = corto_locate("corto", NULL, CORTO_LOCATION_LIB);
+        const char *cortolib = corto_locate("corto", NULL, CORTO_LOCATE_LIB);
         if (!cortolib) {
             goto error;
         }
-        corto_ll_append(p->link, cortolib);
+        corto_ll_append(p->link, corto_strdup(cortolib));
     }
 
     bake_node *root = bake_node_find(l, "ARTEFACT");
