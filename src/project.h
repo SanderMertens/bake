@@ -52,4 +52,5 @@ char *bake_project_definitionFile(
 
 int16_t bake_project_loadDependeeConfig(
     bake_project *p,
-    const char *json);
+    const char *package_id,
+    const char *file);

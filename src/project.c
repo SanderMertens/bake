@@ -26,10 +26,141 @@ extern corto_tls BAKE_PROJECT_KEY;
 
 static
 bake_project_attr* bake_project_parseValue(
+    bake_project *p,
+    const char *package_id,
     JSON_Value *v);
 
 static
+int16_t bake_project_func_locate(
+    bake_project *p,
+    const char *package_id, /* Different from p when parsing dependee config */
+    corto_buffer *buffer,
+    const char *argument)
+{
+    const char *value = NULL;
+    if (!strcmp(argument, "package")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_PACKAGE);
+    } else if (!strcmp(argument, "include")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_INCLUDE);
+    } else if (!strcmp(argument, "etc")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_ETC);
+    } else if (!strcmp(argument, "env")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_ENV);
+    } else if (!strcmp(argument, "lib")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_LIB);
+    } else if (!strcmp(argument, "app")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_APP);
+    } else if (!strcmp(argument, "bin")) {
+        value = corto_locate(package_id, NULL, CORTO_LOCATE_BIN);
+    }
+    if (value) {
+        corto_buffer_appendstr(buffer, value);
+        return 0;
+    } else {
+        corto_throw("failed to run 'locate' function");
+        return -1;
+    }
+}
+
+static
+int16_t bake_project_func_call(
+    bake_project *p,
+    const char *package_id,
+    corto_buffer *buffer,
+    const char *function,
+    const char *argument)
+{
+    if (!strcmp(function, "locate")) {
+        return bake_project_func_locate(p, package_id, buffer, argument);
+    } else {
+        corto_throw("unknown function '%s'", function);
+        return -1;
+    }
+    return 0;
+}
+
+static
+char* bake_project_replace(
+    bake_project *p,
+    const char *package_id,
+    const char *input)
+{
+    const char *func = input, *next = NULL;
+    corto_buffer output = CORTO_BUFFER_INIT;
+    bool replaced = false;
+
+    while ((next = strchr(func, '$'))) {
+        replaced = true;
+
+        /* Add everything up until next function */
+        corto_buffer_appendstrn(&output, (char*)func, next - func);
+
+        /* Check whether value is a function */
+        if (next[1] == '{') {
+            /* Find end of function identifier */
+            const char *start = &next[2], *end = strchr(next, ' ');
+            const char *func_end = strchr(end ? end : start, '}');
+            if (!end) {
+                end = func_end;
+            }
+            if (!end) {
+                corto_throw("no matching '}' in '%s'", input);
+                free (corto_buffer_str(&output));
+                goto error;
+            }
+
+            /* Obtain identifier & check if it contains invalid characters */
+            corto_id func_id = {0}, arg_id = {0};
+            const char *ptr;
+            for (ptr = start; ptr < end; ptr ++) {
+                if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
+                    corto_throw("invalid function identifier in '%s'", input);
+                    free (corto_buffer_str(&output));
+                    goto error;
+                }
+                func_id[ptr - start] = *ptr;
+            }
+            func_id[ptr - start] = '\0';
+
+            /* Obtain function argument (only one arg supported) */
+            if (*end == ' ') {
+                start = end + 1;
+                end = func_end;
+                for (ptr = start; ptr < end; ptr ++) {
+                    if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
+                        corto_throw("invalid function argument in '%s'", input);
+                        free (corto_buffer_str(&output));
+                        goto error;
+                    }
+                    arg_id[ptr - start] = *ptr;
+                }
+                arg_id[ptr - start] = '\0';
+            }
+
+            if (bake_project_func_call(p, package_id, &output, func_id, arg_id)) {
+                free (corto_buffer_str(&output));
+                goto error;
+            }
+
+            func = func_end + 1;
+        } else {
+            func ++;
+        }
+    }
+
+    if (replaced) {
+        return corto_buffer_str(&output);
+    } else {
+        return corto_strdup(input);
+    }
+error:
+    return NULL;
+}
+
+static
 bake_project_attr* bake_project_parseArray(
+    bake_project *p,
+    const char *package_id,
     JSON_Array *a)
 {
     uint32_t i, count = json_array_get_count(a);
@@ -39,7 +170,7 @@ bake_project_attr* bake_project_parseArray(
 
     for (i = 0; i < count; i ++) {
         JSON_Value *v = json_array_get_value(a, i);
-        bake_project_attr *attr = bake_project_parseValue(v);
+        bake_project_attr *attr = bake_project_parseValue(p, package_id, v);
         if (attr) {
             corto_ll_append(result->is.array, attr);
         }
@@ -50,13 +181,15 @@ bake_project_attr* bake_project_parseArray(
 
 static
 bake_project_attr* bake_project_parseString(
+    bake_project *p,
+    const char *package_id,
     const char *str)
 {
     bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
     result->kind = BAKE_ATTR_STRING;
 
     if (str) {
-        result->is.string = corto_strdup(str);
+        result->is.string = bake_project_replace(p, package_id, str);
     } else {
         result->is.string = NULL;
     }
@@ -90,6 +223,8 @@ bake_project_attr* bake_project_parseBoolean(
 
 static
 bake_project_attr* bake_project_parseValue(
+    bake_project *p,
+    const char *package_id,
     JSON_Value *v)
 {
     bake_project_attr *attr = NULL;
@@ -97,10 +232,10 @@ bake_project_attr* bake_project_parseValue(
     JSON_Value_Type t = json_value_get_type(v);
     switch(t) {
     case JSONArray:
-        attr = bake_project_parseArray(json_value_get_array(v));
+        attr = bake_project_parseArray(p, package_id, json_value_get_array(v));
         break;
     case JSONString:
-        attr = bake_project_parseString(json_value_get_string(v));
+        attr = bake_project_parseString(p, package_id, json_value_get_string(v));
         break;
     case JSONNumber:
         attr = bake_project_parseNumber(json_value_get_number(v));
@@ -119,6 +254,7 @@ bake_project_attr* bake_project_parseValue(
 static
 int16_t bake_project_parseMember(
     bake_project *p,
+    const char *package_id,
     const char *name,
     JSON_Value *v)
 {
@@ -171,8 +307,9 @@ int16_t bake_project_parseMember(
             uint32_t i, count = json_array_get_count(a);
             for (i = 0; i < count; i ++) {
                 JSON_Value *v = json_array_get_value(a, i);
-                const char *src = json_value_get_string(v);
+                char *src = bake_project_replace(p, package_id, json_value_get_string(v));
                 bake_project_addSource(p, src);
+                free(src);
             }
         }
     }
@@ -183,8 +320,9 @@ int16_t bake_project_parseMember(
             uint32_t i, count = json_array_get_count(a);
             for (i = 0; i < count; i ++) {
                 JSON_Value *v = json_array_get_value(a, i);
-                const char *src = json_value_get_string(v);
+                char *src = bake_project_replace(p, package_id, json_value_get_string(v));
                 bake_project_addInclude(p, src);
+                free(src);
             }
         }
     }
@@ -195,8 +333,9 @@ int16_t bake_project_parseMember(
             uint32_t i, count = json_array_get_count(a);
             for (i = 0; i < count; i ++) {
                 JSON_Value *v = json_array_get_value(a, i);
-                const char *use = json_value_get_string(v);
+                char *use = bake_project_replace(p, package_id, json_value_get_string(v));
                 bake_project_use(p, use);
+                free(use);
             }
         }
     }
@@ -218,11 +357,14 @@ error:
 static
 int16_t bake_project_parseMembers(
     bake_project *p,
+    const char *package_id,
     JSON_Object *jo)
 {
     uint32_t i, count = json_object_get_count(jo);
 
-    p->attributes = corto_ll_new();
+    if (!p->attributes) {
+        p->attributes = corto_ll_new();
+    }
 
     for (i = 0; i < count; i ++) {
         bake_project_attr *attr = NULL;
@@ -233,13 +375,13 @@ int16_t bake_project_parseMembers(
             /* Dependee contain build instructions for dependee projects */
             p->dependee_json = corto_strdup(json_serialize_to_string(v));
         } else {
-            if (bake_project_parseMember(p, name, v)) {
+            if (bake_project_parseMember(p, package_id, name, v)) {
                 goto error;
             }
         }
 
         /* Add member to list of project attributes */
-        attr = bake_project_parseValue(v);
+        attr = bake_project_parseValue(p, package_id, v);
         if (attr) {
             attr->name = corto_strdup(name);
             corto_ll_append(p->attributes, attr);
@@ -300,7 +442,7 @@ int16_t bake_project_parseConfig(
                 goto error;
             }
 
-            if (bake_project_parseMembers(p, jvo)) {
+            if (bake_project_parseMembers(p, p->id, jvo)) {
                 goto error;
             }
         } else {
@@ -433,6 +575,7 @@ error:
 
 int16_t bake_project_loadDependeeConfig(
     bake_project *p,
+    const char *package_id,
     const char *file)
 {
     JSON_Value *j = json_parse_file(file);
@@ -447,9 +590,7 @@ int16_t bake_project_loadDependeeConfig(
         goto error;
     }
 
-    corto_info("parsing dependee members: '%s'\n", file);
-
-    if (bake_project_parseMembers(p, jo)) {
+    if (bake_project_parseMembers(p, package_id, jo)) {
         corto_throw(NULL);
         goto error;
     }

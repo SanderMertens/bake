@@ -755,7 +755,7 @@ int16_t bake_language_build(
         /* Check if dependency has a dependee file with build instructions */
         char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
         if (corto_file_test(dependee_file)) {
-            if (bake_project_loadDependeeConfig(p, dependee_file)) {
+            if (bake_project_loadDependeeConfig(p, dep, dependee_file)) {
                 corto_throw(NULL);
                 goto error;
             }
@@ -785,8 +785,7 @@ int16_t bake_language_build(
         goto error;
     }
 
-    artefact_path = corto_asprintf("bin/%s-%s",
-        CORTO_PLATFORM_STRING, c->id);
+    artefact_path = corto_asprintf("bin/%s-%s", CORTO_PLATFORM_STRING, c->id);
 
     if (corto_mkdir(artefact_path)) {
         corto_throw(NULL);
