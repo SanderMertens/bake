@@ -253,6 +253,16 @@ int16_t bake_config_setPathVariables(void)
                 strarg(".:%s/lib:%s", corto_getenv("BAKE_HOME"), ld));
     }
 
+    char *classpath = corto_getenv("CLASSPATH");
+    if (!classpath || !strlen(classpath)) {
+        corto_setenv(
+            "CLASSPATH", strarg(".:%s/java", corto_getenv("BAKE_HOME")));
+    } else {
+        corto_setenv(
+            "CLASSPATH",
+                strarg(".:%s/java:%s", corto_getenv("BAKE_HOME"), classpath));
+    }
+
     return 0;
 }
 

@@ -416,27 +416,30 @@ int bake_action_getenv()
     const char *env;
     corto_buffer buff = CORTO_BUFFER_INIT;
 
-    corto_buffer_append(&buff, "BAKE_HOME=%s", corto_getenv("BAKE_HOME"));
-    corto_buffer_append(&buff, " BAKE_TARGET=%s", corto_getenv("BAKE_TARGET"));
-    corto_buffer_append(&buff, " BAKE_VERSION=%s", corto_getenv("BAKE_VERSION"));
-    corto_buffer_append(&buff, " BAKE_CONFIG=%s", corto_getenv("BAKE_CONFIG"));
+    corto_buffer_append(&buff, "BAKE_HOME=\"%s\"", corto_getenv("BAKE_HOME"));
+    corto_buffer_append(&buff, " BAKE_TARGET=\"%s\"", corto_getenv("BAKE_TARGET"));
+    corto_buffer_append(&buff, " BAKE_VERSION=\"%s\"", corto_getenv("BAKE_VERSION"));
+    corto_buffer_append(&buff, " BAKE_CONFIG=\"%s\"", corto_getenv("BAKE_CONFIG"));
     if ((env = corto_getenv("BAKE_ENVIRONMENT"))) {
-        corto_buffer_append(&buff, " BAKE_ENVIRONMENT=%s", env);
+        corto_buffer_append(&buff, " BAKE_ENVIRONMENT=\"%s\"", env);
     }
 
     if (config.variables) {
         corto_iter it = corto_ll_iter(config.variables);
         while (corto_iter_hasNext(&it)) {
             char *var = corto_iter_next(&it);
-            corto_buffer_append(&buff, " %s=%s", var, corto_getenv(var));
+            corto_buffer_append(&buff, " %s=\"%s\"", var, corto_getenv(var));
         }
     }
 
     if ((env = corto_getenv("LD_LIBRARY_PATH"))) {
-        corto_buffer_append(&buff, " LD_LIBRARY_PATH=%s", env);
+        corto_buffer_append(&buff, " LD_LIBRARY_PATH=\"%s\"", env);
     }
     if ((env = corto_getenv("PATH"))) {
-        corto_buffer_append(&buff, " PATH=%s", env);
+        corto_buffer_append(&buff, " PATH=\"%s\"", env);
+    }
+    if ((env = corto_getenv("CLASSPATH"))) {
+        corto_buffer_append(&buff, " CLASSPATH=\"%s\"", env);
     }
 
     printf("%s\n", corto_buffer_str(&buff));
@@ -521,7 +524,7 @@ int16_t bake_install_tool(
         goto error;
     }
 
-    fprintf(f, "export `bake getenv`\n");
+    fprintf(f, "export `bake env`\n");
     fprintf(f, "exec $BAKE_HOME/bin/%s $@\n", name);
     fclose(f);
 
@@ -671,7 +674,7 @@ int main(int argc, char* argv[]) {
     if (action) {
         if (!strcmp(action, "setup")) {
             return bake_setup(argv[0], local);
-        } else if (!strcmp(action, "getenv")) {
+        } else if (!strcmp(action, "env") || !strcmp(action, "getenv")) {
             return bake_action_getenv();
         } else if (!strcmp(action, "install-script")) {
             return bake_setup_globalScript();

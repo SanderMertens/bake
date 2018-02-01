@@ -307,6 +307,9 @@ int16_t bake_pre(
             if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
                 goto error;
             }
+            if (bake_install_dir(NULL, "java", NULL, true, uninstallFile)) {
+                goto error;
+            }
             if (corto_chdir("..")) {
                 goto error;
             }
