@@ -210,7 +210,6 @@ int16_t bake_setup_writeConfig(
         fprintf(f, "        }\n");
         fprintf(f, "    }\n");
         fprintf(f, "}\n");
-
         fclose(f);
 
         corto_log(
