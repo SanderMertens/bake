@@ -154,7 +154,6 @@ char* bake_project_replace(
                 corto_buffer_appendstr(&output, next);
                 break; /* No functions in remainder */
             }
-            func ++;
         }
     }
 
