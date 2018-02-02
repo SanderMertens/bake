@@ -78,9 +78,29 @@ bool bake_config_isVarValid(
 }
 
 static
+bool bake_config_var_set(
+    corto_ll env_set,
+    const char *var)
+{
+    char *var_set = NULL;
+    corto_iter it = corto_ll_iter(env_set);
+    while (corto_iter_hasNext(&it)) {
+        var_set = corto_iter_next(&it);
+        if (strcmp(var_set, var)) {
+            break;
+        } else {
+            var_set = NULL;
+        }
+    }
+
+    return var_set != NULL;
+}
+
+static
 int16_t bake_config_loadEnvironment(
     bake_config *cfg_out,
-    JSON_Object *envcfg)
+    JSON_Object *envcfg,
+    corto_ll env_set)
 {
     int i;
     corto_log_push("load-env");
@@ -97,7 +117,11 @@ int16_t bake_config_loadEnvironment(
             goto error;
         }
 
-        corto_ok("set $%s to '%s'", var, value);
+        if (env_set) {
+            if (!bake_config_var_set(env_set, var)) {
+                corto_ll_append(env_set, corto_strdup(var));
+            }
+        }
 
         /* Shell environment takes precedence */
         if (!corto_getenv(var)) {
@@ -144,7 +168,6 @@ int16_t bake_config_parseBool(
         if (json_value_get_type(v) == JSONBoolean)
         {
             *out = json_value_get_boolean(v);
-            corto_ok("set '%s' to '%s'", name, *out ? "true" : "false");
         } else {
             corto_throw(
                 "invalid JSON: expected value of '%s' to be a boolean",
@@ -267,13 +290,14 @@ int16_t bake_config_setPathVariables(void)
 }
 
 static
-int16_t bake_config_parse (
+int16_t bake_config_load_file (
     const char *file,
     bake_config *cfg_out,
     const char *cfg_name,
-    const char *env_name)
+    const char *env_name,
+    corto_ll env_set)
 {
-    corto_trace("parse configuration from '%s'", file);
+    corto_trace("load configuration '%s'", file);
 
     JSON_Value *json = json_parse_file(file);
     if (!json) {
@@ -299,7 +323,7 @@ int16_t bake_config_parse (
         if (!section) {
             goto not_found;
         }
-        if (bake_config_loadEnvironment(cfg_out, section)) {
+        if (bake_config_loadEnvironment(cfg_out, section, env_set)) {
             goto error;
         }
     }
@@ -335,38 +359,109 @@ error:
     return -1;
 }
 
-int16_t bake_config_load(
+static
+int16_t bake_config_load_configs(
+    corto_ll config_files,
     bake_config *cfg_out,
-    const char *cfg,
-    const char *env)
+    const char *cfg_id,
+    const char *env_id,
+    corto_ll env_set)
 {
-    corto_log_push("config");
-
-    char *file = bake_config_findFile(NULL);
-    if (file) {
-        int ret = 0;
-        while (file && (ret = bake_config_parse(file, cfg_out, cfg, env)) && (ret == 1)) {
-            /* Traverse up directories to find other configuration file */
-            file = bake_config_findFile(file);
-        }
-        if (ret == -1) {
-            corto_throw(NULL);
+    char *file;
+    while ((file = corto_ll_takeFirst(config_files))) {
+        if (bake_config_load_file(file, cfg_out, cfg_id, env_id, env_set)) {
             goto error;
-        } else if (!file) {
-
-        } else {
-            cfg_out->id = cfg;
         }
+        free(file);
     }
 
-    if (!file) {
+    return 0;
+error:
+    return -1;
+}
+
+static
+corto_ll bake_config_find_configs(
+    char *path)
+{
+    corto_ll config_files = NULL; /* Collect list of all config files */
+    char *cur_path = path;
+
+    if (path[0] == '/') {
+        /* Absolute path */
+        cur_path = strdup(path);
+    } else {
+        /* Relative path */
+        cur_path = corto_asprintf("%s/%s", corto_cwd(), path);
+        corto_path_clean(cur_path, cur_path);
+    }
+
+    /* Check for a .bake in the current path */
+    char *elem = NULL;
+    do {
+        char *file = corto_asprintf("%s/.bake", cur_path);
+        if (corto_file_test(file) == 1) {
+            if (corto_isdir(file)) {
+                char *cfg = corto_asprintf("%s/config.json", file);
+                if (corto_file_test(cfg)) {
+                    if (!config_files) config_files = corto_ll_new();
+                    corto_ll_append(config_files, cfg);
+                } else {
+                    free(cfg);
+                }
+            } else {
+                if (!config_files) config_files = corto_ll_new();
+                corto_ll_append(config_files, file);
+            }
+        } else {
+            free(file);
+        }
+
+        /* Strip last directory from path */
+        elem = strrchr(cur_path, '/');
+        if (elem) {
+            *elem = '\0';
+        }
+    } while (elem);
+
+    return config_files;
+}
+
+int16_t bake_config_load(
+    bake_config *cfg_out,
+    const char *cfg_id,
+    const char *env_id)
+{
+    corto_ll env_set = NULL;
+
+    if (corto_log_verbosityGet() <= CORTO_OK) {
+        env_set = corto_ll_new();
+        corto_ll_append(env_set, corto_strdup("BAKE_HOME"));
+        corto_ll_append(env_set, corto_strdup("BAKE_TARGET"));
+        corto_ll_append(env_set, corto_strdup("BAKE_HOME"));
+        corto_ll_append(env_set, corto_strdup("BAKE_CONFIG"));
+    }
+
+    corto_log_push("config");
+    corto_ll config_files = bake_config_find_configs(".");
+    if (config_files) {
+        if (bake_config_load_configs(
+            config_files,
+            cfg_out,
+            cfg_id,
+            env_id,
+            env_set))
+        {
+            goto error;
+        }
+    } else {
         corto_info(
             "config:environment '%s:%s' not found in path, load default config",
-            cfg, env);
+            cfg_id, env_id);
 
         /* Use default configuration and environment */
         *cfg_out = (bake_config){
-            .id = cfg,
+            .id = cfg_id,
             .symbols = true,
             .debug = true,
             .optimizations = false,
@@ -390,8 +485,28 @@ int16_t bake_config_load(
         free(bake_home);
     }
 
-    corto_setenv("BAKE_CONFIG", cfg);
-    corto_setenv("BAKE_ENVIRONMENT", env);
+    corto_setenv("BAKE_CONFIG", cfg_id);
+    corto_setenv("BAKE_ENVIRONMENT", env_id);
+
+    if (corto_log_verbosityGet() <= CORTO_OK) {
+        corto_log_push("environment");
+        corto_iter it = corto_ll_iter(env_set);
+        while (corto_iter_hasNext(&it)) {
+            char *env = corto_iter_next(&it);
+            corto_ok("set '%s' to '%s'", env, corto_getenv(env));
+        }
+        corto_log_pop();
+
+        corto_log_push("configuration");
+        corto_ok("set '%s' to '%s'", CFG_SYMBOLS, cfg_out->symbols ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_DEBUG, cfg_out->debug ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_OPTIMIZATIONS, cfg_out->optimizations ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_COVERAGE, cfg_out->coverage ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_STRICT, cfg_out->strict ? "true" : "false");
+        corto_log_pop();
+    }
+
+    cfg_out->id = corto_strdup(cfg_id);
 
     corto_log_pop();
     return 0;
