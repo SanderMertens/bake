@@ -157,6 +157,11 @@ char* bake_project_replace(
         }
     }
 
+    /* Append remaining input */
+    if (func) {
+        corto_buffer_appendstr(&output, func);
+    }
+
     if (replaced) {
         char *str = corto_buffer_str(&output);
         return str;
