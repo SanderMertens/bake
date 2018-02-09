@@ -92,7 +92,7 @@ char* bake_project_replace(
     while ((next = strchr(func, '$'))) {
         replaced = true;
 
-        /* Add everything up until next function */
+        /* Add everything up until next $ */
         corto_buffer_appendstrn(&output, (char*)func, next - func);
 
         /* Check whether value is a function */
@@ -143,17 +143,6 @@ char* bake_project_replace(
             }
 
             func = func_end + 1;
-        } else {
-            char *ptr = strchr(func + 1, '$');
-            if (ptr) {
-                corto_buffer_appendstrn(&output, func, ptr - func);
-                /* Next strchr will be really fast because func points to '$' */
-                func = ptr;
-            } else {
-                /* Append remainder of string */
-                corto_buffer_appendstr(&output, next);
-                break; /* No functions in remainder */
-            }
         }
     }
 
@@ -163,8 +152,7 @@ char* bake_project_replace(
     }
 
     if (replaced) {
-        char *str = corto_buffer_str(&output);
-        return str;
+        return corto_buffer_str(&output);
     } else {
         return corto_strdup(input);
     }
