@@ -143,6 +143,10 @@ char* bake_project_replace(
             }
 
             func = func_end + 1;
+        } else {
+            /* Keep $ */
+            corto_buffer_appendstrn(&output, "$", 1);
+            func ++;
         }
     }
 
