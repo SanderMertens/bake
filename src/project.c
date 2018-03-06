@@ -28,6 +28,7 @@ static
 bake_project_attr* bake_project_parseValue(
     bake_project *p,
     const char *package_id,
+    bake_project_attr *existing,
     JSON_Value *v);
 
 static
@@ -164,20 +165,41 @@ error:
     return NULL;
 }
 
+bake_project_attr *bake_project_getattr(
+    bake_project *p,
+    const char *name)
+{
+    if (p->attributes) {
+        corto_iter it = corto_ll_iter(p->attributes);
+        while (corto_iter_hasNext(&it)) {
+            bake_project_attr *attr = corto_iter_next(&it);
+            if (!strcmp(attr->name, name)) {
+                return attr;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 static
 bake_project_attr* bake_project_parseArray(
     bake_project *p,
     const char *package_id,
+    bake_project_attr *existing,
     JSON_Array *a)
 {
     uint32_t i, count = json_array_get_count(a);
-    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
-    result->kind = BAKE_ATTR_ARRAY;
-    result->is.array = corto_ll_new();
+    bake_project_attr *result = existing;
+    if (!result) {
+        result = corto_calloc(sizeof(bake_project_attr));
+        result->kind = BAKE_ATTR_ARRAY;
+        result->is.array = corto_ll_new();
+    }
 
     for (i = 0; i < count; i ++) {
         JSON_Value *v = json_array_get_value(a, i);
-        bake_project_attr *attr = bake_project_parseValue(p, package_id, v);
+        bake_project_attr *attr = bake_project_parseValue(p, package_id, NULL, v);
         if (attr) {
             corto_ll_append(result->is.array, attr);
         }
@@ -232,6 +254,7 @@ static
 bake_project_attr* bake_project_parseValue(
     bake_project *p,
     const char *package_id,
+    bake_project_attr *existing,
     JSON_Value *v)
 {
     bake_project_attr *attr = NULL;
@@ -239,7 +262,7 @@ bake_project_attr* bake_project_parseValue(
     JSON_Value_Type t = json_value_get_type(v);
     switch(t) {
     case JSONArray:
-        attr = bake_project_parseArray(p, package_id, json_value_get_array(v));
+        attr = bake_project_parseArray(p, package_id, existing, json_value_get_array(v));
         break;
     case JSONString:
         attr = bake_project_parseString(p, package_id, json_value_get_string(v));
@@ -387,8 +410,11 @@ int16_t bake_project_parseMembers(
             }
         }
 
+        /* Check if attribute already exists */
+        attr = bake_project_getattr(p, name);
+
         /* Add member to list of project attributes */
-        attr = bake_project_parseValue(p, package_id, v);
+        attr = bake_project_parseValue(p, package_id, attr, v);
         if (attr) {
             attr->name = corto_strdup(name);
             corto_ll_append(p->attributes, attr);
@@ -464,23 +490,6 @@ int16_t bake_project_parseConfig(
     return 0;
 error:
     return -1;
-}
-
-bake_project_attr *bake_project_getattr(
-    bake_project *p,
-    const char *name)
-{
-    if (p->attributes) {
-        corto_iter it = corto_ll_iter(p->attributes);
-        while (corto_iter_hasNext(&it)) {
-            bake_project_attr *attr = corto_iter_next(&it);
-            if (!strcmp(attr->name, name)) {
-                return attr;
-            }
-        }
-    }
-
-    return NULL;
 }
 
 char *bake_project_getattr_tostr(
