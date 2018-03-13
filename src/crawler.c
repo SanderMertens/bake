@@ -199,13 +199,13 @@ int16_t bake_crawler_crawl(
                 }
 
                 if (p->managed && p->language) {
-                    /* Filter out project generated for language-specific api */
-                    if (!strcmp(file, p->language)) {
-                        corto_debug("ignoring generated project '%s'", file);
+                    if (!strcmp(file, "c") || !strcmp(file, "cpp")) {
                         continue;
                     }
                 }
             }
+
+
 
             if (bake_crawler_crawl(_this, fullpath, file)) {
                 corto_iter_release(&it);

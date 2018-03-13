@@ -722,12 +722,20 @@ int16_t bake_language_build(
     /* If code generation yielded a folder with the name of the
      * project language, this is a new project that contains the
      * generated language binding api. */
-    if (p->use_generated_api && corto_file_test(p->language) == 1) {
+    if (p->use_generated_api) {
         int sig;
         int8_t ret;
-        if ((sig = corto_proc_cmd(strarg("bake build %s", p->language), &ret)) || ret) {
-            corto_throw(NULL);
-            goto error;
+        if (corto_file_test("c") == 1) {
+            if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
+        }
+        if (corto_file_test("cpp") == 1) {
+            if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
         }
     }
 
@@ -856,11 +864,16 @@ int16_t bake_language_clean(
         goto error;
     }
 
-    /* If project is managed and contains a folder with the name of the
-     * configured language, this is a project that contains generated
-     * code. */
+    /* If project is managed, remove projects that contain generated
+     * language-specific code. */
     if (p->managed && p->language && corto_file_test(p->language) == 1) {
-        corto_rm(p->language);
+        /* Make sure removed directories are corto projects */
+        if (corto_file_test("c/project.json")) {
+            corto_rm("c");
+        }
+        if (corto_file_test("cpp/project.json")) {
+            corto_rm("cpp");
+        }
     }
 
     /* If language binding registered callback to specify additional files

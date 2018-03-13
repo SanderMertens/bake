@@ -209,6 +209,10 @@ int16_t bake_check_dependencies(
                     corto_ok("use '%s'",
                         package);
                     continue;
+                } else if (!strcmp(package, strarg("%s/cpp", p->id))) {
+                    corto_ok("use '%s'",
+                        package);
+                    continue;
                 }
             }
 
