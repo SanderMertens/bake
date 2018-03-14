@@ -26,6 +26,10 @@
  *        package hierarchy.
  */
 
+/** Copy project file to package hierarchy */
+int16_t bake_install(
+    bake_project *project);
+
 /** Copy static files to package hierarchy (pre build).
  *
  * @param id Project id.
@@ -42,7 +46,7 @@ int16_t bake_pre(
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_post(
-    bake_project *project, 
+    bake_project *project,
     char *artefact);
 
 /** Remove files from package hierarchy for project.

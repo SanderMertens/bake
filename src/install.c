@@ -214,12 +214,9 @@ error:
     return -1;
 }
 
-int16_t bake_pre(
+int16_t bake_install(
     bake_project *project)
 {
-    corto_log_push("pre");
-    corto_trace("begin");
-
     if (project->kind != BAKE_TOOL) {
         FILE *uninstallFile = bake_uninstaller_open(project, "w");
         if (!uninstallFile) {
@@ -265,8 +262,26 @@ int16_t bake_pre(
 
             fprintf(uninstallFile, "%s/project.json\n", projectDir);
             fprintf(uninstallFile, "%s/source.txt\n", projectDir);
-
             free(projectDir);
+        }
+        fclose(uninstallFile);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_pre(
+    bake_project *project)
+{
+    corto_log_push("pre");
+    corto_trace("begin");
+
+    if (project->kind != BAKE_TOOL) {
+        FILE *uninstallFile = bake_uninstaller_open(project, "a");
+        if (!uninstallFile) {
+            goto error;
         }
 
         /* Install files to project-specific locations in package hierarchy */
@@ -284,11 +299,14 @@ int16_t bake_pre(
                 }
             }
         }
+
         if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
             goto error;
         }
+
         if (project->kind == BAKE_PACKAGE) {
-            if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile)) {
+            if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile))
+            {
                 goto error;
             }
         }

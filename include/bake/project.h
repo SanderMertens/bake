@@ -91,11 +91,16 @@ typedef struct bake_project {
     corto_ll dependents; /* projects that depend on this project */
     bool built;
 
-    /* Files to be cleaned other than objects and artefact (populated by language binding) */
+    /* Files to be cleaned other than objects and artefact (populated by
+     * language binding) */
     corto_ll files_to_clean;
 
     /* JSON that contains build instructions for dependee projects */
     char *dependee_json;
+
+    /* Pointer to parsed JSON value and JSON value member from project config */
+    void *json;
+    void *value_json;
 
     /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);

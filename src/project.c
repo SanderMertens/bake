@@ -31,6 +31,49 @@ bake_project_attr* bake_project_parseValue(
     bake_project_attr *existing,
     JSON_Value *v);
 
+/* Utility to assing string from JSON value */
+static
+int16_t bake_assign_json_string(char **ptr, JSON_Value *v) {
+    if (json_value_get_type(v) != JSONString &&
+        json_value_get_type(v) != JSONNull)
+    {
+        return -1;
+    }
+    if (*ptr) {
+        free(*ptr);
+    }
+    const char *str = json_value_get_string(v);
+    if (str) {
+        *ptr = strdup(str);
+    } else {
+        *ptr = NULL;
+    }
+    return 0;
+}
+
+/* Utility to iterate over strings in a JSON array */
+static
+int16_t bake_append_json_array(
+    bake_project *p,
+    JSON_Value *v,
+    void(*action)(bake_project*,const char*))
+{
+    if (json_value_get_type(v) == JSONArray) {
+        JSON_Array *a = json_value_get_array(v);
+        uint32_t i, count = json_array_get_count(a);
+        for (i = 0; i < count; i ++) {
+            JSON_Value *v = json_array_get_value(a, i);
+            const char *str = json_value_get_string(v);
+            if (str) {
+                action(p, str);
+            }
+        }
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
 static
 int16_t bake_project_func_locate(
     bake_project *p,
@@ -58,7 +101,8 @@ int16_t bake_project_func_locate(
         corto_buffer_appendstr(buffer, value);
         return 0;
     } else {
-        corto_throw("failed to run 'locate' function");
+        corto_throw("${locate %s} failed for project '%s'",
+            argument, package_id);
         return -1;
     }
 }
@@ -138,7 +182,13 @@ char* bake_project_replace(
                 arg_id[ptr - start] = '\0';
             }
 
-            if (bake_project_func_call(p, package_id, &output, func_id, arg_id)) {
+            if (bake_project_func_call(
+                p,
+                package_id,
+                &output,
+                func_id,
+                arg_id))
+            {
                 free (corto_buffer_str(&output));
                 goto error;
             }
@@ -182,322 +232,16 @@ bake_project_attr *bake_project_getattr(
     return NULL;
 }
 
-static
-bake_project_attr* bake_project_parseArray(
-    bake_project *p,
-    const char *package_id,
-    bake_project_attr *existing,
-    JSON_Array *a)
-{
-    uint32_t i, count = json_array_get_count(a);
-    bake_project_attr *result = existing;
-    if (!result) {
-        result = corto_calloc(sizeof(bake_project_attr));
-        result->kind = BAKE_ATTR_ARRAY;
-        result->is.array = corto_ll_new();
-    }
-
-    for (i = 0; i < count; i ++) {
-        JSON_Value *v = json_array_get_value(a, i);
-        bake_project_attr *attr = bake_project_parseValue(p, package_id, NULL, v);
-        if (attr) {
-            corto_ll_append(result->is.array, attr);
-        }
-    }
-
-    return result;
-}
-
-static
-bake_project_attr* bake_project_parseString(
-    bake_project *p,
-    const char *package_id,
-    const char *str)
-{
-    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
-    result->kind = BAKE_ATTR_STRING;
-
-    if (str) {
-        result->is.string = bake_project_replace(p, package_id, str);
-    } else {
-        result->is.string = NULL;
-    }
-
-    return result;
-}
-
-static
-bake_project_attr* bake_project_parseNumber(
-    double v)
-{
-    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
-    result->kind = BAKE_ATTR_NUMBER;
-
-    result->is.number = v;
-
-    return result;
-}
-
-static
-bake_project_attr* bake_project_parseBoolean(
-    bool v)
-{
-    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
-    result->kind = BAKE_ATTR_BOOLEAN;
-
-    result->is.boolean = v;
-
-    return result;
-}
-
-static
-bake_project_attr* bake_project_parseValue(
-    bake_project *p,
-    const char *package_id,
-    bake_project_attr *existing,
-    JSON_Value *v)
-{
-    bake_project_attr *attr = NULL;
-
-    JSON_Value_Type t = json_value_get_type(v);
-    switch(t) {
-    case JSONArray:
-        attr = bake_project_parseArray(p, package_id, existing, json_value_get_array(v));
-        break;
-    case JSONString:
-        attr = bake_project_parseString(p, package_id, json_value_get_string(v));
-        break;
-    case JSONNumber:
-        attr = bake_project_parseNumber(json_value_get_number(v));
-        break;
-    case JSONBoolean:
-        attr = bake_project_parseBoolean(json_value_get_boolean(v));
-        break;
-    case JSONObject: break; /* Ignore objects */
-    default:
-        break;
-    }
-
-    return attr;
-}
-
-static
-int16_t bake_project_parseMember(
-    bake_project *p,
-    const char *package_id,
-    const char *name,
-    JSON_Value *v)
-{
-    /* Parse generic project attributes */
-    if (!strcmp(name, "language")) {
-        if (json_value_get_type(v) == JSONString) {
-            if (p->language) free(p->language);
-            if (!strcmp(json_value_get_string(v), "none")) {
-                p->language = NULL;
-            } else {
-                p->language = strdup(json_value_get_string(v));
-            }
-        } else {
-            corto_throw("expected JSON string for 'language' attribute");
-            goto error;
-        }
-    }
-
-    if (!strcmp(name, "version")) {
-        if (json_value_get_type(v) == JSONString) {
-            if (p->version) free(p->version);
-            p->version = strdup(json_value_get_string(v));
-        } else {
-            corto_throw("expected JSON string for 'version' attribute");
-            goto error;
-        }
-    }
-
-    if (!strcmp(name, "managed")) {
-        if (json_value_get_type(v) == JSONBoolean) {
-            p->managed = json_value_get_boolean(v);
-        } else {
-            corto_throw("expected JSON boolean for 'managed' attribute");
-            goto error;
-        }
-    }
-
-    if (!strcmp(name, "public")) {
-        if (json_value_get_type(v) == JSONBoolean) {
-            p->public = json_value_get_boolean(v);
-        } else {
-            corto_throw("expected JSON string for 'public' attribute");
-            goto error;
-        }
-    }
-
-    if (!strcmp(name, "sources")) {
-        if (json_value_get_type(v) == JSONArray) {
-            JSON_Array *a = json_value_get_array(v);
-            uint32_t i, count = json_array_get_count(a);
-            for (i = 0; i < count; i ++) {
-                JSON_Value *v = json_array_get_value(a, i);
-                char *src = bake_project_replace(p, package_id, json_value_get_string(v));
-                bake_project_addSource(p, src);
-                free(src);
-            }
-        }
-    }
-
-    if (!strcmp(name, "includes")) {
-        if (json_value_get_type(v) == JSONArray) {
-            JSON_Array *a = json_value_get_array(v);
-            uint32_t i, count = json_array_get_count(a);
-            for (i = 0; i < count; i ++) {
-                JSON_Value *v = json_array_get_value(a, i);
-                char *src = bake_project_replace(p, package_id, json_value_get_string(v));
-                bake_project_addInclude(p, src);
-                free(src);
-            }
-        }
-    }
-
-    if (!strcmp(name, "use")) {
-        if (json_value_get_type(v) == JSONArray) {
-            JSON_Array *a = json_value_get_array(v);
-            uint32_t i, count = json_array_get_count(a);
-            for (i = 0; i < count; i ++) {
-                JSON_Value *v = json_array_get_value(a, i);
-                char *use = bake_project_replace(p, package_id, json_value_get_string(v));
-                bake_project_use(p, use);
-                free(use);
-            }
-        }
-    }
-
-    if (!strcmp(name, "use_generated_api")) {
-        if (json_value_get_type(v) == JSONBoolean) {
-            p->use_generated_api = json_value_get_boolean(v);
-        } else {
-            corto_throw("expected JSON boolean for 'managed' attribute");
-            goto error;
-        }
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
-static
-int16_t bake_project_parseMembers(
-    bake_project *p,
-    const char *package_id,
-    JSON_Object *jo)
-{
-    uint32_t i, count = json_object_get_count(jo);
-
-    if (!p->attributes) {
-        p->attributes = corto_ll_new();
-    }
-
-    for (i = 0; i < count; i ++) {
-        bake_project_attr *attr = NULL;
-        JSON_Value *v = json_object_get_value_at(jo, i);
-        const char *name = json_object_get_name(jo, i);
-
-        if (!strcmp(name, "dependee")) {
-            /* Dependee contain build instructions for dependee projects */
-            p->dependee_json = corto_strdup(json_serialize_to_string(v));
-        } else {
-            if (bake_project_parseMember(p, package_id, name, v)) {
-                goto error;
-            }
-        }
-
-        /* Check if attribute already exists */
-        attr = bake_project_getattr(p, name);
-
-        /* Add member to list of project attributes */
-        attr = bake_project_parseValue(p, package_id, attr, v);
-        if (attr) {
-            attr->name = corto_strdup(name);
-            corto_ll_append(p->attributes, attr);
-        }
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
-static
-int16_t bake_project_parseConfig(
-    bake_project *p)
-{
-    const char *file = "project.json";
-
-    if (corto_file_test("project.json")) {
-        JSON_Value *j = json_parse_file(file);
-        if (!j) {
-            corto_throw("failed to parse '%s'", file);
-            goto error;
-        }
-
-        JSON_Object *jo = json_value_get_object(j);
-        if (!jo) {
-            corto_throw("failed to parse '%s' (expected object)", file);
-            goto error;
-        }
-
-        const char *j_id_member = json_object_get_string(jo, "id");
-        if (!j_id_member) {
-            corto_throw("failed to parse '%s': missing 'id' member", file);
-            goto error;
-        }
-
-        p->id = strdup(j_id_member);
-
-        const char *j_type_member = json_object_get_string(jo, "type");
-        if (!j_type_member) {
-            corto_throw("failed to parse '%s': missing 'type' member", file);
-            goto error;
-        }
-
-        if (!strcmp(j_type_member, "application")) {
-            p->kind = BAKE_APPLICATION;
-        } else if (!strcmp(j_type_member, "package")) {
-            p->kind = BAKE_PACKAGE;
-        } else if (!strcmp(j_type_member, "tool")) {
-            p->kind = BAKE_TOOL;
-        }
-
-        JSON_Value *j_value_member = json_object_get_value(jo, "value");
-        if (j_value_member) {
-            JSON_Object *jvo = json_value_get_object(j_value_member);
-            if (!jvo) {
-                corto_throw("failed to parse '%s': value member must be an object", file);
-                goto error;
-            }
-
-            if (bake_project_parseMembers(p, p->id, jvo)) {
-                goto error;
-            }
-        } else {
-            /* Project has no attributes, using default values */
-        }
-    } else {
-        /* If there is no project.json, bake can likely not detect if the
-         * project was rebuilt or not, so assuming yes. */
-        p->freshly_baked = true;
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
 char *bake_project_getattr_tostr(
     bake_project_attr *result)
 {
     switch(result->kind) {
     case BAKE_ATTR_STRING:
-        return corto_strdup(result->is.string);
+        if (result->is.string) {
+            return corto_strdup(result->is.string);
+        } else {
+            return NULL;
+        }
     case BAKE_ATTR_BOOLEAN:
         if (result->is.boolean) {
             return corto_strdup("true");
@@ -547,6 +291,329 @@ bake_project_attr* bake_project_getattr_cb(const char *name) {
     corto_assert(p != NULL, "project::getattr called without project context");
 
     return bake_project_getattr(p, name);
+}
+
+static
+bake_project_attr* bake_project_parseArray(
+    bake_project *p,
+    const char *package_id,
+    bake_project_attr *existing,
+    JSON_Array *a)
+{
+    uint32_t i, count = json_array_get_count(a);
+    bake_project_attr *result = existing;
+    if (!result) {
+        result = corto_calloc(sizeof(bake_project_attr));
+        result->kind = BAKE_ATTR_ARRAY;
+        result->is.array = corto_ll_new();
+    }
+
+    for (i = 0; i < count; i ++) {
+        JSON_Value *v = json_array_get_value(a, i);
+        bake_project_attr *attr = bake_project_parseValue(p, package_id, NULL, v);
+        if (attr) {
+            corto_ll_append(result->is.array, attr);
+        } else {
+            goto error;
+        }
+    }
+
+    return result;
+error:
+    /* TODO: cleanup memory */
+    return NULL;
+}
+
+static
+bake_project_attr* bake_project_parseString(
+    bake_project *p,
+    const char *package_id,
+    const char *str)
+{
+    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
+    result->kind = BAKE_ATTR_STRING;
+
+    if (str) {
+        result->is.string = bake_project_replace(p, package_id, str);
+        if (!result->is.string) {
+            free(result);
+            return NULL;
+        }
+    } else {
+        result->is.string = NULL;
+    }
+
+    return result;
+}
+
+static
+bake_project_attr* bake_project_parseNumber(
+    double v)
+{
+    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
+    result->kind = BAKE_ATTR_NUMBER;
+
+    result->is.number = v;
+
+    return result;
+}
+
+static
+bake_project_attr* bake_project_parseBoolean(
+    bool v)
+{
+    bake_project_attr *result = corto_calloc(sizeof(bake_project_attr));
+    result->kind = BAKE_ATTR_BOOLEAN;
+
+    result->is.boolean = v;
+
+    return result;
+}
+
+static
+bake_project_attr* bake_project_parseValue(
+    bake_project *p,
+    const char *package_id,
+    bake_project_attr *existing,
+    JSON_Value *v)
+{
+    bake_project_attr *attr = NULL;
+
+    JSON_Value_Type t = json_value_get_type(v);
+    switch(t) {
+    case JSONArray:
+        attr = bake_project_parseArray(p, package_id, existing, json_value_get_array(v));
+        break;
+    case JSONNull:
+    case JSONString:
+        attr = bake_project_parseString(p, package_id, json_value_get_string(v));
+        break;
+    case JSONNumber:
+        attr = bake_project_parseNumber(json_value_get_number(v));
+        break;
+    case JSONBoolean:
+        attr = bake_project_parseBoolean(json_value_get_boolean(v));
+        break;
+    case JSONObject:
+        /* Ignore objects- placeholder */
+        attr = corto_calloc(sizeof(bake_project_attr));
+        attr->kind = BAKE_ATTR_BOOLEAN;
+        break;
+    default:
+        break;
+    }
+
+    return attr;
+}
+
+static
+int16_t bake_project_parseMembers(
+    bake_project *p,
+    const char *package_id,
+    JSON_Object *jo)
+{
+    uint32_t i, count = json_object_get_count(jo);
+
+    if (!p->attributes) {
+        p->attributes = corto_ll_new();
+    }
+
+    for (i = 0; i < count; i ++) {
+        bake_project_attr *attr = NULL;
+        JSON_Value *v = json_object_get_value_at(jo, i);
+        const char *name = json_object_get_name(jo, i);
+
+        /* Check if attribute already exists */
+        attr = bake_project_getattr(p, name);
+
+        /* Add member to list of project attributes */
+        attr = bake_project_parseValue(p, package_id, attr, v);
+        if (attr) {
+            attr->name = corto_strdup(name);
+            corto_ll_append(p->attributes, attr);
+        } else {
+            corto_throw("failed to parse member '%s'", name);
+            goto error;
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_parse_attributes(
+    bake_project *p)
+{
+    if (p->value_json) {
+        if (bake_project_parseMembers(p, p->id, p->value_json)) {
+            goto error;
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_project_parse_config_value(
+    bake_project *p,
+    JSON_Object *jo)
+{
+    uint32_t i, count = json_object_get_count(jo);
+
+    for (i = 0; i < count; i ++) {
+        bake_project_attr *attr = NULL;
+        JSON_Value *v = json_object_get_value_at(jo, i);
+        const char *name = json_object_get_name(jo, i);
+
+        /* Parse generic project attributes */
+        if (!strcmp(name, "language")) {
+            if (bake_assign_json_string(&p->language, v)) {
+                corto_throw("expected string for 'language' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "version")) {
+            if (bake_assign_json_string(&p->version, v)) {
+                corto_throw("expected string for 'version' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "managed")) {
+            if (json_value_get_type(v) == JSONBoolean) {
+                p->managed = json_value_get_boolean(v);
+            } else {
+                corto_throw("expected boolean for 'managed' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "public")) {
+            if (json_value_get_type(v) == JSONBoolean) {
+                p->public = json_value_get_boolean(v);
+            } else {
+                corto_throw("expected string for 'public' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "dependee")) {
+            /* Dependee contain build instructions for dependee projects */
+            p->dependee_json = corto_strdup(json_serialize_to_string(v));
+        }
+
+        if (!strcmp(name, "use_generated_api")) {
+            if (json_value_get_type(v) == JSONBoolean) {
+                p->use_generated_api = json_value_get_boolean(v);
+            } else {
+                corto_throw("expected boolean for 'managed' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "use")) {
+            if (bake_append_json_array(p, v, bake_project_use)) {
+                corto_throw("expected array for 'use' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "sources")) {
+            if (bake_append_json_array(p, v, bake_project_addSource)) {
+                corto_throw("expected array for 'use' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "includes")) {
+            if (bake_append_json_array(p, v, bake_project_addInclude)) {
+                corto_throw("expected array for 'use' attribute");
+                goto error;
+            }
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse project.json if available */
+static
+int16_t bake_project_parse_config(
+    bake_project *p)
+{
+    const char *file = "project.json";
+
+    if (corto_file_test("project.json")) {
+        JSON_Value *j = json_parse_file(file);
+        if (!j) {
+            corto_throw("failed to parse '%s'", file);
+            goto error;
+        }
+
+        p->json = j;
+
+        JSON_Object *jo = json_value_get_object(j);
+        if (!jo) {
+            corto_throw("failed to parse '%s' (expected object)", file);
+            goto error;
+        }
+
+        const char *j_id_member = json_object_get_string(jo, "id");
+        if (!j_id_member) {
+            corto_throw("failed to parse '%s': missing 'id' member", file);
+            goto error;
+        }
+
+        p->id = strdup(j_id_member);
+
+        const char *j_type_member = json_object_get_string(jo, "type");
+        if (!j_type_member) {
+            corto_throw("failed to parse '%s': missing 'type' member", file);
+            goto error;
+        }
+
+        if (!strcmp(j_type_member, "application")) {
+            p->kind = BAKE_APPLICATION;
+        } else if (!strcmp(j_type_member, "package")) {
+            p->kind = BAKE_PACKAGE;
+        } else if (!strcmp(j_type_member, "tool")) {
+            p->kind = BAKE_TOOL;
+        }
+
+        JSON_Value *j_value_member = json_object_get_value(jo, "value");
+        if (j_value_member) {
+            JSON_Object *jvo = json_value_get_object(j_value_member);
+            if (!jvo) {
+                corto_throw(
+                    "failed to parse '%s': value member must be an object",
+                    file);
+                goto error;
+            }
+
+            p->value_json = jvo;
+
+            /* Parse configuration required to start building project */
+            if (bake_project_parse_config_value(p, jvo)) {
+                goto error;
+            }
+        } else {
+            /* Project has no attributes, using default values */
+        }
+    } else {
+        /* If there is no project.json, bake can likely not detect if the
+         * project was rebuilt or not, so assuming yes. */
+        p->freshly_baked = true;
+    }
+
+    return 0;
+error:
+    return -1;
 }
 
 static
@@ -650,7 +717,8 @@ bake_project* bake_project_new(
     result->add_build_dependency = bake_project_add_build_dependency_cb;
 
     /* Parse project.json if available */
-    if (bake_project_parseConfig(result)) {
+    if (bake_project_parse_config(result)) {
+        corto_throw("failed to parse '%s/project.json'", path);
         goto error;
     }
 

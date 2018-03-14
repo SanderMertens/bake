@@ -177,7 +177,7 @@ int16_t bake_crawler_crawl(
         char *file = corto_iter_next(&it);
 
         if (corto_isdir(file)) {
-            corto_trace("looking for projects in '%s'", file);
+
 
             /* If this is a corto project, filter out directories that have
              * special meaning. */
@@ -198,14 +198,16 @@ int16_t bake_crawler_crawl(
                     continue;
                 }
 
+                corto_trace("looking for projects in '%s'", file);
+
                 if (p->managed && p->language) {
                     if (!strcmp(file, "c") || !strcmp(file, "cpp")) {
                         continue;
                     }
                 }
+            } else {
+                corto_trace("looking for projects in '%s'", file);
             }
-
-
 
             if (bake_crawler_crawl(_this, fullpath, file)) {
                 corto_iter_release(&it);

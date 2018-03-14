@@ -292,20 +292,39 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
     /* Step 1: clean package hierarchy */
     if (!skip_uninstall && p->public) {
         if (bake_uninstall(p)) {
+            corto_throw(NULL);
             goto error;
         }
     }
 
-    /* Step 3: if managed, generate code */
+    /* Step 2: Copy project file to package hierarchy. After this the project
+     * can be located using corto_locate. */
+    if (!skip_preinstall && p->public) {
+        if (bake_install(p)) {
+            corto_throw(NULL);
+            goto error;
+        }
+    }
+
+    /* Step 3: parse attribues in project configuration. May use corto_locate to
+     * resolve paths. */
+    if (bake_project_parse_attributes(p)) {
+        corto_throw(NULL);
+        goto error;
+    }
+
+    /* Step 4: if a managed project, call code generator */
     if (p->managed && p->language) {
         if (bake_language_generate(l, p, &config)) {
+            corto_throw(NULL);
             goto error;
         }
     }
 
-    /* Step 2: pre-install files to package hierarchy */
+    /* Step 5: install custom and generated files to package hierarchy */
     if (!skip_preinstall && p->public) {
         if (bake_pre(p)) {
+            corto_throw(NULL);
             goto error;
         }
     }
@@ -313,15 +332,16 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
     /* The next steps are only relevant if a language is configured */
     if (p->language) {
 
-        /* Step 4: build sources */
+        /* Step 6: build sources */
         if (bake_language_build(l, p, &config)) {
             corto_throw("build failed");
             goto error;
         }
 
-        /* Step 5: install artefact if project was rebuilt */
+        /* Step 7: install artefact if project was rebuilt */
         if (artefact && p->public) {
             if (bake_post(p, artefact)) {
+                corto_throw(NULL);
                 goto error;
             }
         }
@@ -376,6 +396,10 @@ int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Copy package to package hierarchy */
     if (!skip_preinstall && p->public) {
+        if (bake_install(p)) {
+            goto error;
+        }
+
         if (bake_pre(p)) {
             goto error;
         }
