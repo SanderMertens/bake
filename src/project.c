@@ -435,6 +435,14 @@ int16_t bake_project_parseMembers(
             corto_throw("failed to parse member '%s'", name);
             goto error;
         }
+
+        /* When parsing dependee config, allow dynamically adding packages */
+        if (!strcmp(name, "use")) {
+            if (bake_append_json_array(p, v, bake_project_use)) {
+                corto_throw("expected array for 'use' attribute");
+                goto error;
+            }
+        }
     }
 
     return 0;
