@@ -297,7 +297,7 @@ int16_t bake_config_load_file (
     const char *env_name,
     corto_ll env_set)
 {
-    corto_trace("load configuration '%s'", file);
+    corto_ok("load configuration '%s'", file);
 
     JSON_Value *json = json_parse_file(file);
     if (!json) {
