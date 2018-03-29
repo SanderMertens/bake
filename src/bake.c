@@ -600,7 +600,7 @@ static
 int16_t bake_init(int argc, char* argv[])
 {
     /* Initialize base library */
-    platform_init(argv[0]);
+    corto_platform_init(argv[0]);
 
     /* Initialize thread key for language */
     if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {
