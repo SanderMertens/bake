@@ -197,7 +197,7 @@ char* bake_project_replace(
         } else {
             /* Keep $ */
             corto_buffer_appendstrn(&output, "$", 1);
-            func ++;
+            func = next + 1;
         }
     }
 
@@ -207,7 +207,8 @@ char* bake_project_replace(
     }
 
     if (replaced) {
-        return corto_buffer_str(&output);
+        char *str = corto_buffer_str(&output);
+        return str;
     } else {
         return corto_strdup(input);
     }
