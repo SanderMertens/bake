@@ -6,7 +6,7 @@ Bake is an opinionated buildtool that dramatically reduces the complexity of a b
 ## Overview
 The motivation behind bake was to create a buildtool that is optimized for codebases that consist of many projects with complex interdependencies. A secondary goal was to create a zero-dependency buildtool that can be easily ported to other platforms.
 
-To simplify working with many projects, bake automatically discovers projects in the current folder and its subfolders. It then parses the dependencies for all discovered projects, and build the projects in the correct dependency order.
+To simplify working with many projects, bake automatically discovers projects in the current folder and its subfolders. It then parses the dependencies for all discovered projects, and builds the projects in the correct dependency order.
 
 Besides building code, bake also can:
 
@@ -74,7 +74,7 @@ The following flags control configuration and environment:
 Flag | Description
 -----|--------------
 --env | Specify environment to load (default = 'default')
---cfg | Specify configuration to load (default = 'default')
+--cfg | Specify configuration to load (default = 'debug')
 --no-symbols | Disable symbols
 --no-debug | Disable debug build
 --optimize | Enable optimizations
