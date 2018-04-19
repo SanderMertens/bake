@@ -1,14 +1,22 @@
 # bake
 Bake is an opinionated buildtool that dramatically reduces the complexity of a build configuration by imposing a well-defined structure upon projects. This is great for two reasons:
+
 1. Bake projects look the same which makes it easy to share and read code.
 2. Bake configuration can be reduced to a simple declarative JSON file.
 
-## Overview
-The motivation behind bake was to create a buildtool that is optimized for codebases that consist of many projects with complex interdependencies. A secondary goal was to create a zero-dependency buildtool that can be easily ported to other platforms.
+## Goal
+The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own buildsystem, with proprietary mechanisms for specifying dependencies, build configurations etc.
 
-To simplify working with many projects, bake automatically discovers projects in the current folder and its subfolders. It then parses the dependencies for all discovered projects, and builds the projects in the correct dependency order.
+This makes it difficult to share code between different people and organizations, and is arguably one of the reasons why ecosystems like `npm` are fast-growing, while ecosystems for native code are very fragmented.
 
-Besides building code, bake also can:
+Bake is not just a buildtool like `make` that can automatically generate compiler commands. It is also a buildsystem that clearly specifies how projects are organized and configured. When a project relies on bake, a user does, for example, not need to worry about how to link with it, where to find its include files or whether binaries have been built with incompatible compiler flags.
+
+A secondary goal is to create a zero-dependency buildtool that can be easily ported to other platforms. Whereas other buildtools exist, like `make, ``premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations.
+
+## Feature Overview
+Bake doesn't just build your code. It also makes a number of nuisances commonly encountered when building code easier to manage, like setting `LD_LIBRARY_PATH` or installing resource (non-code) files.
+
+Here is a (non-exhaustive) overview of bake features:
 
 - Install project binaries to a common location so they can be located by their logical name
 - Install miscellaneous files to a common location (like configuration, HTML/CSS/JS) that can be accessed regardless from where the code is ran
@@ -46,7 +54,7 @@ Flag | Description
 -k,--kind | Specify project kind
 -i,--includes | Specify include paths, separated by comma
 -s,--sources | Specify source paths, separated by comma
--l,--lang | Specify programming language
+-l,--lang | Specify programming language (default = 'c')
 -a,--artefact | Specify artefact name
 -u,--use | Specify dependencies
 --managed | If `true`, project is managed. Managed projects integrate with corto code generation.
@@ -129,28 +137,6 @@ sources | list(string) | List of paths that contain source files. Default is `sr
 includes | list(string) | List of paths that contain include files.
 use_generated_api | bool | For managed projects only. For each project in `use`, add a project with id `$project/$language`, if it exists.
 
-## Plugins and rules
-Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
-
-The bake build engine has a design that is similar to other build engines in that it uses rules that depend on other rules. Rules have rule-actions, which get executed when a rule is outdated. Whether a rule is outdated or not is determined by comparing timestamps of the rule dependencies with the timestamps of the rule output.
-
-Rules are written in their respective language plugins in C. A simple set of rules that builds a binary from a set of source files would look like this:
-
-```c
-l->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-l->rule("objects", "$SOURCES", l->target_map(src_to_obj), compile_src);
-l->rule("ARTEFACT", "$objects", l->target_pattern(NULL), link_binary);
-```
-
-Patterns create a label for a pattern (using the corto `idmatch` syntax). Rules are patterns that have dependencies and actions. The syntax for a rule is:
-
-```c
-l->rule(<id>, <dependencies>, <function to map target to output>, <action>);
-```
-
-Each plugin must have a `bakemain` entrypoint. This function is called when the
-plugin is loaded, and must specify the rules and patterns.
-
 ## Environment variables
 Bake uses the following environment variables:
 
@@ -214,6 +200,28 @@ This is an example configuration file:
 ```
 
 With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
+
+## Plugins and rules
+Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
+
+The bake build engine has a design that is similar to other build engines in that it uses rules that depend on other rules. Rules have rule-actions, which get executed when a rule is outdated. Whether a rule is outdated or not is determined by comparing timestamps of the rule dependencies with the timestamps of the rule output.
+
+Rules are written in their respective language plugins in C. A simple set of rules that builds a binary from a set of source files would look like this:
+
+```c
+l->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
+l->rule("objects", "$SOURCES", l->target_map(src_to_obj), compile_src);
+l->rule("ARTEFACT", "$objects", l->target_pattern(NULL), link_binary);
+```
+
+Patterns create a label for a pattern (using the corto `idmatch` syntax). Rules are patterns that have dependencies and actions. The syntax for a rule is:
+
+```c
+l->rule(<id>, <dependencies>, <function to map target to output>, <action>);
+```
+
+Each plugin must have a `bakemain` entrypoint. This function is called when the
+plugin is loaded, and must specify the rules and patterns.
 
 ## Authors
 - Sander Mertens - Initial work
