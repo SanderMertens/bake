@@ -1,8 +1,8 @@
 # bake
-Bake is an opinionated buildtool that dramatically reduces the complexity of a build configuration by imposing a well-defined structure upon projects. This is great for two reasons:
+Bake is a buildtool (like `make`) and buildsystem in one that dramatically reduces the complexity of building code, in exchange for enforcing a rigid structure upon projects. This is great for two reasons:
 
-1. Bake projects look the same which makes it easy to share and read code.
-2. Bake configuration can be reduced to a simple declarative JSON file.
+1. All bake projects look the same which makes it easy to share and read code.
+2. Bake just needs a simple, declarative JSON file to build a project
 
 ## Installation
 Install bake using the following command:
