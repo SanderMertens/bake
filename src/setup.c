@@ -407,7 +407,7 @@ int16_t bake_setup(const char *exec, bool local) {
 
     if (bake_setup_cmd(
         "install platform include files",
-        "bake install platform --id corto --includes include/corto"))
+        "bake install platform --id corto --kind package --includes include/corto"))
     { goto error; }
 
     if (bake_setup_cmd(
@@ -428,7 +428,7 @@ int16_t bake_setup(const char *exec, bool local) {
     }
     if (bake_setup_cmd(
         "install driver/bake/c binary to package repository",
-        "bake install driver-bake-c --id driver/bake/c --artefact libc.so"))
+        "bake install driver-bake-c --id driver/bake/c --kind package --artefact libc.so"))
     { goto error; }
 
     corto_log("done!\n");

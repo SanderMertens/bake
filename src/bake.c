@@ -22,7 +22,7 @@ static char *path = NULL;
 static char *sources = NULL; /* 'src' is added by default */
 static char *includes = "include";
 static char *language = "c";
-static char *kind = "package";
+static char *kind = "executable";
 static char *artefact = NULL;
 static char *use = NULL;
 static char *args = NULL;
@@ -478,6 +478,11 @@ int bake_action_getenv()
 static
 int16_t bake_action_setup_project(void)
 {
+    if (corto_file_test("project.json")) {
+        corto_throw("a project already exists in this directory");
+        goto error;
+    }
+
     bake_language *l = bake_language_get(language);
     if (!l) {
         corto_throw("language '%s' not found", language);
@@ -519,6 +524,8 @@ int16_t bake_action_setup_project(void)
     if (bake_language_setup_project(l, id, project_kind)) {
         goto error;
     }
+
+    corto_info("%s project '%s' initialized, run bake to build", kind, id);
 
     return 0;
 error:
