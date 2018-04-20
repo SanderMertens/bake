@@ -7,23 +7,21 @@ Bake is an opinionated buildtool that dramatically reduces the complexity of a b
 ## Goal
 The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own buildsystem, with proprietary mechanisms for specifying dependencies, build configurations etc.
 
-This makes it difficult to share code between different people and organizations, and is arguably one of the reasons why ecosystems like `npm` are fast-growing, while ecosystems for native code are very fragmented.
+This makes it difficult to share code between different people and organizations, and is arguably one of the reasons why ecosystems like `npm` are thriving, while ecosystems for native code are very fragmented.
 
-Bake is not just a buildtool like `make` that can automatically generate compiler commands. It is also a buildsystem that clearly specifies how projects are organized and configured. When a project relies on bake, a user does, for example, not need to worry about how to link with it, where to find its include files or whether binaries have been built with incompatible compiler flags.
+Bake is therefore not just a buildtool like `make` that can automatically generate compiler commands. It is also a buildsystem that clearly specifies how projects are organized and configured. When a project relies on bake, a user does, for example, not need to worry about how to link with it, where to find its include files or whether binaries have been built with incompatible compiler flags.
 
 A secondary goal is to create a zero-dependency buildtool that can be easily ported to other platforms. Whereas other buildtools exist, like `make, ``premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations.
 
 ## Feature Overview
-Bake doesn't just build your code. It also makes a number of nuisances commonly encountered when building code easier to manage, like setting `LD_LIBRARY_PATH` or installing resource (non-code) files.
+Bake also addresses a number of issues commonly found during building. Here is a (non-exhaustive) overview of bake features:
 
-Here is a (non-exhaustive) overview of bake features:
-
-- Install project binaries to a common location so they can be located by their logical name
-- Install miscellaneous files to a common location (like configuration, HTML/CSS/JS) that can be accessed regardless from where the code is ran
 - Automatically discover projects in a directory tree
 - Build discovered projects in correct dependency order
-- Specify configurations on a global, project-specific or any level in between
-- Automatically set environment variables specified in a configuration file
+- Manage custom build configurations (`debug`, `release`, ...) on a global or project-specific level
+- Manage environment variables
+- Install project binaries to a common location so they can be located by their logical name
+- Install miscellaneous files to a common location (like configuration, HTML/CSS/JS) that can be accessed regardless from where the code is ran
 
 ## Usage
 The following examples show how to use the bake command:
@@ -46,7 +44,8 @@ env     | Return bake environment
 foreach | Run command for every discovered project
 install | Install project files to $BAKE_TARGET
 
-The following flags can be used to specify parameters for a project on the command line, when no `project.json` is available:
+The following flags can be used to specify parameters for a project on the
+command line, when no `project.json` is available:
 
 Flag | Description
 -----|--------------
