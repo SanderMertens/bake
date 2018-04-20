@@ -476,6 +476,56 @@ int bake_action_getenv()
 }
 
 static
+int16_t bake_action_setup_project(void)
+{
+    bake_language *l = bake_language_get(language);
+    if (!l) {
+        corto_throw("language '%s' not found", language);
+        goto error;
+    }
+
+    char *project_id = id;
+    if (!id) {
+        char *cwd = strdup(corto_cwd());
+        id = strrchr(cwd, '/');
+        if (id) {
+            id ++;
+        } else {
+            id = cwd;
+        }
+    }
+
+    bake_project_kind project_kind;
+
+    if (!strcmp(kind, "package")) {
+        project_kind = BAKE_PACKAGE;
+    } else if (!strcmp(kind, "application")) {
+        project_kind = BAKE_APPLICATION;
+    } else if (!strcmp(kind, "tool")) {
+        project_kind = BAKE_TOOL;
+    } else if (!strcmp(kind, "library")) {
+        project_kind = BAKE_PACKAGE;
+        public = false;
+        managed = false;
+    } else if (!strcmp(kind, "executable")) {
+        project_kind = BAKE_APPLICATION;
+        public = false;
+        managed = false;
+    } else {
+        corto_throw("unknown project kind '%s'", kind);
+        goto error;
+    }
+
+    if (bake_language_setup_project(l, id, project_kind)) {
+        goto error;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
 int16_t bake_project_fromArguments(
     bake_crawler c)
 {
@@ -712,6 +762,12 @@ int main(int argc, char* argv[]) {
                 goto error;
             }
             return bake_install_tool(argv[2]);
+        } else if (!strcmp(action, "init")) {
+            if (bake_action_setup_project()) {
+                corto_throw(NULL);
+                goto error;
+            }
+            return 0;
         } else {
 
             /* If not a known action to bake, interpret argument as project so

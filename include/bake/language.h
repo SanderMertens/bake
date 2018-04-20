@@ -51,6 +51,7 @@ struct bake_language_s {
     void (*dependency_rule)(const char *name, const char *deps, bake_rule_target dep_mapping, bake_rule_action_cb action);
     void (*artefact)(bake_rule_artefact_cb action);
     void (*condition)(const char *name, bake_rule_condition_cb cond);
+    void (*setup_project)(bake_rule_setup_project_cb action);
     void (*init)(bake_rule_init_cb action);
     void (*clean)(bake_rule_clean_cb action);
 
@@ -62,6 +63,7 @@ struct bake_language_s {
     bake_rule_init_cb init_cb;
     bake_rule_artefact_cb artefact_cb;
     bake_rule_clean_cb clean_cb;
+    bake_rule_setup_project_cb setup_project_cb;
 
     corto_ll nodes;
     int16_t error;
@@ -136,6 +138,17 @@ void bake_language_dependency_rule(
 int16_t bake_language_init(
     bake_language *l,
     bake_project *p);
+
+/** Setup a directory as a bake project.
+ *
+ * @param l The language object.
+ * @param p The project to initialize.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t bake_language_setup_project(
+    bake_language *l,
+    const char *id,
+    bake_project_kind kind);
 
 /** Generate code for a project.
  *

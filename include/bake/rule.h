@@ -33,12 +33,45 @@ extern "C" {
 
 typedef struct bake_language_s bake_language;
 
-typedef void (*bake_rule_action_cb)(bake_language *l, bake_project *p, bake_config *c, char *src, char *target, void *ctx);
-typedef char* (*bake_rule_map_cb)(bake_language *l, bake_project *p, const char *input, void *ctx);
-typedef char* (*bake_rule_artefact_cb)(bake_language *l, bake_project *p);
-typedef void (*bake_rule_init_cb)(bake_project *p);
-typedef void (*bake_rule_clean_cb)(bake_language *l, bake_project *p);
-typedef bool (*bake_rule_condition_cb)(bake_project *p);
+typedef
+void (*bake_rule_action_cb)(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c,
+    char *src,
+    char *target,
+    void *ctx);
+
+typedef
+char* (*bake_rule_map_cb)(
+    bake_language *l,
+    bake_project *p,
+    const char *input,
+    void *ctx);
+
+typedef
+char* (*bake_rule_artefact_cb)(
+    bake_language *l,
+    bake_project *p);
+
+typedef
+void (*bake_rule_init_cb)(
+    bake_project *p);
+
+typedef
+void (*bake_rule_clean_cb)(
+    bake_language *l,
+    bake_project *p);
+
+typedef
+bool (*bake_rule_condition_cb)(
+    bake_project *p);
+
+typedef
+int16_t (*bake_rule_setup_project_cb)(
+    bake_language *l,
+    const char *id,
+    bake_project_kind kind);
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */
