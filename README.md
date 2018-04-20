@@ -4,6 +4,15 @@ Bake is an opinionated buildtool that dramatically reduces the complexity of a b
 1. Bake projects look the same which makes it easy to share and read code.
 2. Bake configuration can be reduced to a simple declarative JSON file.
 
+## Installation
+Install bake using the following command:
+
+```
+curl https://corto.io/install-bake | sh
+```
+
+This installs the bake executable to your home directory. Additionally the installer creates a script in `/usr/local/bin` that lets you run bake from anywhere. To be able to write to `/usr/local/bin`, **the installer may ask for your password**.
+
 ## Goal
 The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own buildsystem, with proprietary mechanisms for specifying dependencies, build configurations etc.
 
@@ -22,6 +31,7 @@ Bake also addresses a number of issues commonly found during building. Here is a
 - Manage environment variables
 - Install project binaries to a common location so they can be located by their logical name
 - Install miscellaneous files to a common location (like configuration, HTML/CSS/JS) that can be accessed regardless from where the code is ran
+- Integration with corto package management tools
 
 ## Usage
 The following examples show how to use the bake command:
@@ -37,6 +47,7 @@ The following commands are valid for bake:
 
 Command | Description
 --------|------------
+init    | Initialize a new bake project in the current directory
 build   | Build the project (default)
 rebuild | Rebuild the project
 clean   | Clean the project
@@ -199,6 +210,25 @@ This is an example configuration file:
 ```
 
 With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
+
+## Corto integration
+Bake installs a minimal set of corto packages (https://corto.io) that allow you to easily locate and list projects. The following commands are installed with bake:
+
+List all public projects:
+```
+corto list
+```
+
+Get the location on disk for a project:
+```
+corto locate <project id>
+```
+
+Bake is included in all corto installations. The following command installs a development build of the corto framework which (amongst others) includes the corto documentation framework and corto test framework:
+
+```
+curl https://corto.io/install-dev-src | sh
+```
 
 ## Plugins and rules
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
