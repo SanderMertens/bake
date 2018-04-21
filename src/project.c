@@ -531,6 +531,13 @@ int16_t bake_project_parse_config_value(
             }
         }
 
+        if (!strcmp(name, "use_private")) {
+            if (bake_append_json_array(p, v, bake_project_use_private)) {
+                corto_throw("expected array for 'use' attribute");
+                goto error;
+            }
+        }
+
         if (!strcmp(name, "sources")) {
             if (bake_append_json_array(p, v, bake_project_addSource)) {
                 corto_throw("expected array for 'use' attribute");
@@ -708,6 +715,7 @@ bake_project* bake_project_new(
     result->sources = corto_ll_new();
     result->includes = corto_ll_new();
     result->use = corto_ll_new();
+    result->use_private = corto_ll_new();
     result->use_build = corto_ll_new();
     result->link = corto_ll_new();
     result->files_to_clean = corto_ll_new();
@@ -783,6 +791,7 @@ void bake_project_free(
 {
     if (p->path) free(p->path);
     if (p->use) corto_ll_free(p->use);
+    if (p->use_private) corto_ll_free(p->use_private);
     if (p->sources) corto_ll_free(p->sources);
     if (p->includes) corto_ll_free(p->includes);
     if (p->files_to_clean) corto_ll_free(p->files_to_clean);
@@ -861,4 +870,20 @@ void bake_project_use(
     }
 
     corto_ll_append(p->use, corto_strdup(use));
+}
+
+void bake_project_use_private(
+    bake_project *p,
+    const char *use)
+{
+    corto_iter it = corto_ll_iter(p->use_private);
+    while (corto_iter_hasNext(&it)) {
+        char *project_use = corto_iter_next(&it);
+        if (!strcmp(project_use, use)) {
+            /* Duplicate */
+            return;
+        }
+    }
+
+    corto_ll_append(p->use_private, corto_strdup(use));
 }

@@ -716,6 +716,43 @@ error:
     return -1;
 }
 
+static
+int16_t bake_language_add_dependency(
+    bake_project *p,
+    const char *dep)
+{
+    const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
+    if (!libpath) {
+        corto_throw(
+            "failed to locate library path for dependency '%s'", dep);
+        goto error;
+    }
+
+    const char *lib = corto_locate(dep, NULL, CORTO_LOCATE_LIB);
+    if (lib) {
+        corto_ll_append(p->link, corto_strdup(lib));
+    } else {
+        /* A dependency may not have a library that can be linked, but could
+         * only contain build instructions */
+        corto_catch();
+    }
+
+    /* Check if dependency has a dependee file with build instructions */
+    char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
+    if (corto_file_test(dependee_file)) {
+        if (bake_project_loadDependeeConfig(p, dep, dependee_file)) {
+            corto_throw(NULL);
+            goto error;
+        }
+    }
+
+    free(dependee_file);
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_language_build(
     bake_language *l,
     bake_project *p,
@@ -748,36 +785,25 @@ int16_t bake_language_build(
     }
 
     /* Add dependencies to link list */
-    corto_iter it = corto_ll_iter(p->use);
-    while (corto_iter_hasNext(&it)) {
-        char *dep = corto_iter_next(&it);
-
-        const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
-        if (!libpath) {
-            corto_throw(
-                "failed to locate library path for dependency '%s'", dep);
-            goto error;
-        }
-
-        const char *lib = corto_locate(dep, NULL, CORTO_LOCATE_LIB);
-        if (lib) {
-            corto_ll_append(p->link, corto_strdup(lib));
-        } else {
-            /* A dependency may not have a library that can be linked, but could
-             * only contain build instructions */
-            corto_catch();
-        }
-
-        /* Check if dependency has a dependee file with build instructions */
-        char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
-        if (corto_file_test(dependee_file)) {
-            if (bake_project_loadDependeeConfig(p, dep, dependee_file)) {
-                corto_throw(NULL);
+    if (p->use) {
+        corto_iter it = corto_ll_iter(p->use);
+        while (corto_iter_hasNext(&it)) {
+            char *dep = corto_iter_next(&it);
+            if (bake_language_add_dependency(p, dep)) {
                 goto error;
             }
         }
+    }
 
-        free(dependee_file);
+    /* Add private dependencies to link list */
+    if (p->use_private) {
+        corto_iter it = corto_ll_iter(p->use_private);
+        while (corto_iter_hasNext(&it)) {
+            char *dep = corto_iter_next(&it);
+            if (bake_language_add_dependency(p, dep)) {
+                goto error;
+            }
+        }
     }
 
     /* If project is managed, add corto library to link */

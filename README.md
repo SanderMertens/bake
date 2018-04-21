@@ -13,6 +13,8 @@ curl https://corto.io/install-bake | sh
 
 This installs the bake executable to your home directory. Additionally the installer creates a script in `/usr/local/bin` that lets you run bake from anywhere. To be able to write to `/usr/local/bin`, **the installer may ask for your password**.
 
+The C language plugin is installed by default. For C-specific configuration parameters, see the README file in the plugin repository: https://github.com/cortoproject/driver-bake-c.
+
 ## Goal
 The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own buildsystem, with proprietary mechanisms for specifying dependencies, build configurations etc.
 
@@ -108,8 +110,10 @@ Flag | Description
 --skip-postintall | Skip copying binary to $BAKE_TARGET
 --do | Specify action when using `bake foreach`
 
-## Project files
-Bake project files are located in the root of a project, and are called `project.json`. This is a minimal example of a bake project file that builds an shared object. With this configuration, the project will be built with all values set to their defaults.
+## Project configuration
+A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
+
+This is a minimal example of a bake project file that builds an shared object. With this configuration, the project will be built with all values set to their defaults.
 
 ```json
 {
@@ -136,12 +140,13 @@ In this example, if `my_library` is a project that is discovered by bake, it wil
 The following list of properties can be used for all bake-based projects. Plugins may support additional properties. See the plugin documentation for more details.
 
 Property | Type | Description
----------|------|-------
+---------|------|------------
 language | string | Language of the project. Is used to select a bake plugin.
 version | string | Version of the project (use semantic versioning)
 managed | bool | Is project managed or unmanaged
 public | bool | If `true`, project is installed to `$BAKE_TARGET`
 use | list(string) | List of dependencies using logical project ids. Dependencies must be located in either `$BAKE_HOME` or `$BAKE_TARGET`.
+use_private | list(string) | Same as "use", but dependencies are private, which means that header files will not be exposed to dependees of this project.
 dependee | object | Properties inside the `dependee` object will be passed on to dependees of this project. This allows a project to specify, for example, include paths that its dependee should use.
 sources | list(string) | List of paths that contain source files. Default is `src`. The `$SOURCES` rule is substituted with this value.
 includes | list(string) | List of paths that contain include files.

@@ -47,6 +47,10 @@ void bake_project_use(
     bake_project *p,
     const char *use);
 
+void bake_project_use_private(
+    bake_project *p,
+    const char *use);
+
 char *bake_project_definitionFile(
     bake_project *p);
 

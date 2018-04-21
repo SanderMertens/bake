@@ -126,6 +126,56 @@ int16_t bake_test_env(
 }
 
 static
+int16_t bake_check_dependency(
+    bake_project *p,
+    const char *dependency,
+    uint32_t artefact_modified,
+    bool private)
+{
+    /* Don't check if this is the generated language binding
+     * package, as it may still have to be generated */
+    if (p->managed && p->language) {
+        const char *fmt = private ? "use '%s' #[yellow](private)" : "use '%s'";
+        if (!strcmp(dependency, strarg("%s/c", p->id))) {
+            corto_ok(fmt, dependency);
+            goto proceed;
+        } else if (!strcmp(dependency, strarg("%s/cpp", p->id))) {
+            corto_ok(fmt, dependency);
+            goto proceed;
+        }
+    }
+
+    const char *lib = corto_locate(dependency, NULL, CORTO_LOCATE_PACKAGE);
+    if (!lib) {
+        corto_info("use '%s' => #[red]missing#[normal]", dependency, lib);
+        corto_throw("missing dependency '%s'", dependency);
+        goto error;
+    }
+
+    time_t dep_modified = corto_lastmodified(lib);
+
+    if (!artefact_modified || dep_modified <= artefact_modified) {
+        const char *fmt = private
+            ? "use '%s' => '%s' #[yellow](private)"
+            : "use '%s' => '%s'"
+            ;
+        corto_ok(fmt, dependency, lib);
+    } else {
+        p->artefact_outdated = true;
+        const char *fmt = private
+            ? "use '%s' => '%s' #[green](changed) #[yellow](private)"
+            : "use '%s' => '%s' #[green](changed)"
+            ;
+        corto_ok(fmt, dependency, lib);
+    }
+
+proceed:
+    return 0;
+error:
+    return -1;
+}
+
+static
 int16_t bake_check_dependencies(
     bake_language *l,
     bake_project *p,
@@ -201,42 +251,17 @@ int16_t bake_check_dependencies(
         corto_iter it = corto_ll_iter(p->use);
         while (corto_iter_hasNext(&it)) {
             char *package = corto_iter_next(&it);
-
-            /* Don't check if this is the generated language binding
-             * package, as it may still have to be generated */
-            if (p->managed && p->language) {
-                if (!strcmp(package, strarg("%s/c", p->id))) {
-                    corto_ok("use '%s'",
-                        package);
-                    continue;
-                } else if (!strcmp(package, strarg("%s/cpp", p->id))) {
-                    corto_ok("use '%s'",
-                        package);
-                    continue;
-                }
-            }
-
-            const char *lib = corto_locate(package, NULL, CORTO_LOCATE_PACKAGE);
-            if (!lib) {
-                corto_info("use '%s' => #[red]missing#[normal]",
-                    package,
-                    lib);
-                corto_throw("missing dependency '%s'", package);
+            if (bake_check_dependency(p, package, artefact_modified, false)) {
                 goto error;
             }
-
-            time_t dep_modified = corto_lastmodified(lib);
-
-            if (!artefact_modified || dep_modified <= artefact_modified) {
-                corto_ok("use '%s' => '%s'",
-                    package,
-                    lib);
-            } else {
-                p->artefact_outdated = true;
-                corto_ok("use '%s' => '%s' #[green](changed)#[normal]",
-                    package,
-                    lib);
-
+        }
+    }
+    if (p->use_private) {
+        corto_iter it = corto_ll_iter(p->use_private);
+        while (corto_iter_hasNext(&it)) {
+            char *package = corto_iter_next(&it);
+            if (bake_check_dependency(p, package, artefact_modified, true)) {
+                goto error;
             }
         }
     }
