@@ -154,6 +154,8 @@ error:
 #define CFG_OPTIMIZATIONS "optimizations"
 #define CFG_COVERAGE "coverage"
 #define CFG_STRICT "strict"
+#define CFG_STANDALONE "standalone"
+#define CFG_STANDALONE_PATH "standalone_path"
 
 static
 int16_t bake_config_parseBool(
@@ -171,6 +173,32 @@ int16_t bake_config_parseBool(
         } else {
             corto_throw(
                 "invalid JSON: expected value of '%s' to be a boolean",
+                name);
+            goto error;
+        }
+    }
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_config_parseString(
+    JSON_Object *obj,
+    const char *name,
+    uint32_t i,
+    char **out)
+{
+    const char *item = json_object_get_name(obj, i);
+    if (!strcmp(item, name)) {
+        JSON_Value *v = json_object_get_value_at(obj, i);
+        if (json_value_get_type(v) == JSONString)
+        {
+            const char *json_string = json_value_get_string(v);
+            *out = json_string ? corto_strdup(json_string) : NULL;
+        } else {
+            corto_throw(
+                "invalid JSON: expected value of '%s' to be a string",
                 name);
             goto error;
         }
@@ -203,6 +231,12 @@ int16_t bake_config_loadConfiguration(
             goto error;
         }
         if (bake_config_parseBool(cfg, CFG_STRICT, i, &cfg_out->strict)) {
+            goto error;
+        }
+        if (bake_config_parseBool(cfg, CFG_STANDALONE, i, &cfg_out->standalone)) {
+            goto error;
+        }
+        if (bake_config_parseString(cfg, CFG_STANDALONE_PATH, i, &cfg_out->standalone_path)) {
             goto error;
         }
     }
@@ -442,6 +476,18 @@ int16_t bake_config_load(
         corto_ll_append(env_set, corto_strdup("BAKE_CONFIG"));
     }
 
+    /* Use default configuration and environment */
+    *cfg_out = (bake_config){
+        .id = cfg_id,
+        .symbols = true,
+        .debug = true,
+        .optimizations = false,
+        .coverage = false,
+        .strict = false,
+        .standalone = false,
+        .standalone_path = "~/.corto/standalone"
+    };
+
     corto_log_push("config");
     corto_ll config_files = bake_config_find_configs(".");
     if (config_files) {
@@ -459,15 +505,6 @@ int16_t bake_config_load(
             "config:environment '%s:%s' not found in path, load default config",
             cfg_id, env_id);
 
-        /* Use default configuration and environment */
-        *cfg_out = (bake_config){
-            .id = cfg_id,
-            .symbols = true,
-            .debug = true,
-            .optimizations = false,
-            .coverage = false,
-            .strict = false
-        };
         char *bake_home = corto_envparse("~/.corto");
         if (!bake_home) {
             corto_throw(NULL);
@@ -503,6 +540,8 @@ int16_t bake_config_load(
         corto_ok("set '%s' to '%s'", CFG_OPTIMIZATIONS, cfg_out->optimizations ? "true" : "false");
         corto_ok("set '%s' to '%s'", CFG_COVERAGE, cfg_out->coverage ? "true" : "false");
         corto_ok("set '%s' to '%s'", CFG_STRICT, cfg_out->strict ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_STANDALONE, cfg_out->standalone ? "true" : "false");
+        corto_ok("set '%s' to '%s'", CFG_STANDALONE_PATH, cfg_out->standalone_path);
         corto_log_pop();
     }
 

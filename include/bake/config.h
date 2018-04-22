@@ -41,6 +41,8 @@ typedef struct bake_config {
     bool optimizations;
     bool coverage;
     bool strict;
+    bool standalone;
+    char *standalone_path;
     corto_ll variables;
 } bake_config;
 

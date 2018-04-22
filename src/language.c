@@ -139,6 +139,14 @@ void bake_language_artefact_cb(
 }
 
 static
+void bake_language_standalone_artefact_cb(
+    bake_rule_artefact_cb artefact)
+{
+    bake_language *l = corto_tls_get(BAKE_LANGUAGE_KEY);
+    l->standalone_artefact_cb = artefact;
+}
+
+static
 void bake_language_clean_cb(
     bake_rule_clean_cb clean)
 {
@@ -753,14 +761,52 @@ error:
     return -1;
 }
 
+static
+int16_t bake_language_build_artefact(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c,
+    const char *artefact,
+    const char *artefact_path,
+    const char *rule_name)
+{
+    bake_node *root = bake_node_find(l, rule_name);
+    if (!root) {
+        corto_critical("root ARTEFACT node not found in language object");
+    }
+
+    if (corto_mkdir(artefact_path)) {
+        corto_throw(NULL);
+        goto error;
+    }
+
+    corto_tls_set(BAKE_PROJECT_KEY, p);
+
+    /* Evaluate root node */
+    char *binaryPath = bake_project_binaryPath(p);
+    bake_filelist *artefact_fl = bake_filelist_new(
+        binaryPath,
+        NULL
+    );
+    bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
+    if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
+        corto_throw("failed to build 'ARTEFACT'");
+        goto error;
+    }
+    bake_filelist_free(artefact_fl);
+
+    free(binaryPath);
+    return 0;
+error:
+    if (binaryPath) free(binaryPath);
+    return -1;
+}
+
 int16_t bake_language_build(
     bake_language *l,
     bake_project *p,
     bake_config *c)
 {
-    char *artefact = NULL;
-    char *artefact_path = NULL;
-
     corto_log_push("build");
     corto_trace("begin");
 
@@ -782,6 +828,24 @@ int16_t bake_language_build(
                 goto error;
             }
         }
+    }
+
+    /* If standalone builds are enabled, build STANDALONE_ARTEFACT rule */
+    if (c->standalone) {
+        /* Obtain artefact */
+        char *artefact = l->standalone_artefact_cb(l, p);
+        if (!artefact) {
+            corto_throw("no artefacts specified for project '%s' by language", p->id);
+            goto error;
+        }
+
+        if (bake_language_build_artefact(
+            l, p, c, artefact, c->standalone_path, "STANDALONE_ARTEFACT"))
+        {
+            goto error;
+        }
+
+        free(artefact);
     }
 
     /* Add dependencies to link list */
@@ -806,58 +870,28 @@ int16_t bake_language_build(
         }
     }
 
-    /* If project is managed, add corto library to link */
-    if (p->managed) {
-        const char *cortolib = corto_locate("corto", NULL, CORTO_LOCATE_LIB);
-        if (!cortolib) {
-            goto error;
-        }
-        corto_ll_append(p->link, corto_strdup(cortolib));
-    }
-
-    bake_node *root = bake_node_find(l, "ARTEFACT");
-    if (!root) {
-        corto_critical("root ARTEFACT node not found in language object");
-    }
-
-    /* Obtain artefact */
-    artefact = l->artefact_cb(l, p);
+    /* Build artefact */
+    char *artefact = l->artefact_cb(l, p);
     if (!artefact) {
         corto_throw("no artefacts specified for project '%s' by language", p->id);
         goto error;
     }
 
-    artefact_path = corto_asprintf("bin/%s-%s", CORTO_PLATFORM_STRING, c->id);
+    char *artefact_path = corto_asprintf(
+        "bin/%s-%s", CORTO_PLATFORM_STRING, c->id);
 
-    if (corto_mkdir(artefact_path)) {
-        corto_throw(NULL);
+    if (bake_language_build_artefact(
+        l, p, c, artefact, artefact_path, "ARTEFACT"))
+    {
         goto error;
     }
-
-    corto_tls_set(BAKE_PROJECT_KEY, p);
-
-    /* Evaluate root node */
-    char *binaryPath = bake_project_binaryPath(p);
-    bake_filelist *artefact_fl = bake_filelist_new(
-        binaryPath,
-        NULL
-    );
-    bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
-    if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
-        corto_throw("failed to build 'ARTEFACT'");
-        goto error;
-    }
-    bake_filelist_free(artefact_fl);
 
     free(artefact_path);
     free(artefact);
-    free(binaryPath);
 
     corto_log_pop();
     return 0;
 error:
-    if (artefact) free(artefact);
-    if (artefact_path) free(artefact_path);
     corto_log_pop();
     return -1;
 }
@@ -954,6 +988,15 @@ char* bake_language_artefact(
     return l->artefact_cb(l, p);
 }
 
+char* bake_language_standalone_artefact(
+    bake_language *l,
+    bake_project*p)
+{
+    corto_assert(l != NULL, "no language specified for bake_language_artefact");
+    corto_assert(p != NULL, "no project specified for bake_language_artefact");
+    return l->standalone_artefact_cb(l, p);
+}
+
 bake_language* bake_language_get(
     const char *language)
 {
@@ -987,6 +1030,7 @@ bake_language* bake_language_get(
         l->init = bake_language_init_cb;
         l->setup_project = bake_language_setup_project_cb;
         l->artefact = bake_language_artefact_cb;
+        l->standalone_artefact = bake_language_standalone_artefact_cb;
         l->clean = bake_language_clean_cb;
         l->exec = bake_language_exec_cb;
 
