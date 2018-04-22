@@ -767,18 +767,20 @@ int16_t bake_language_build(
     /* If code generation yielded a folder with the name of the
      * project language, this is a new project that contains the
      * generated language binding api. */
-    int sig;
-    int8_t ret;
-    if (corto_file_test("c") == 1) {
-        if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
-            corto_throw(NULL);
-            goto error;
+    if (p->use_generated_api) {
+        int sig;
+        int8_t ret;
+        if (corto_file_test("c") == 1) {
+            if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
         }
-    }
-    if (corto_file_test("cpp") == 1) {
-        if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
-            corto_throw(NULL);
-            goto error;
+        if (corto_file_test("cpp") == 1) {
+            if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
         }
     }
 

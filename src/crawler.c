@@ -101,9 +101,17 @@ bake_project* bake_crawler_addProject(
     /* Add dependency information */
     p->unresolved_dependencies = corto_ll_count(p->use);
     p->unresolved_dependencies += corto_ll_count(p->use_build);
+    p->unresolved_dependencies += corto_ll_count(p->use_private);
 
     /* Add project to dependent lists of dependencies */
     corto_iter it = corto_ll_iter(p->use);
+    while (corto_iter_hasNext(&it)) {
+        char *use = corto_iter_next(&it);
+        bake_crawler_addDependency(_this, p, use);
+    }
+
+    /* Add project to dependent lists of private dependencies */
+    it = corto_ll_iter(p->use_private);
     while (corto_iter_hasNext(&it)) {
         char *use = corto_iter_next(&it);
         bake_crawler_addDependency(_this, p, use);
