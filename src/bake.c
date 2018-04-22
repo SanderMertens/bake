@@ -266,17 +266,7 @@ int16_t bake_check_dependencies(
         }
     }
 
-    if (p->sources_outdated) {
-        if (!artefact_modified) {
-            corto_trace(
-                "old artefact '%s' not found, starting from clean slate",
-                artefact);
-        }
-
-        if (bake_language_clean(l, p)) {
-            goto error;
-        }
-    } else if (p->artefact_outdated) {
+    if (p->artefact_outdated) {
         if (corto_rm(artefact)) {
             goto error;
         }
