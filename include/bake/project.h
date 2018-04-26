@@ -65,6 +65,7 @@ typedef struct bake_project {
     corto_ll link; /* All objects package needs to link with (contains located dependencies) */
     bool public;
     bool managed;
+    bool c4cpp;
     bool use_generated_api;
     char *path;
     corto_ll sources;
@@ -102,6 +103,9 @@ typedef struct bake_project {
     /* Pointer to parsed JSON value and JSON value member from project config */
     void *json;
     void *value_json;
+
+    /* Target path for standalone binary (only set if standalone is enabled) */
+    char *standalone_path;
 
     /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);

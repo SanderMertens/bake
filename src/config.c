@@ -195,7 +195,11 @@ int16_t bake_config_parseString(
         if (json_value_get_type(v) == JSONString)
         {
             const char *json_string = json_value_get_string(v);
-            *out = json_string ? corto_strdup(json_string) : NULL;
+            if (json_string) {
+                *out = corto_envparse("%s", json_string);
+            } else {
+                *out = NULL;
+            }
         } else {
             corto_throw(
                 "invalid JSON: expected value of '%s' to be a string",
@@ -485,7 +489,7 @@ int16_t bake_config_load(
         .coverage = false,
         .strict = false,
         .standalone = false,
-        .standalone_path = "~/.corto/standalone"
+        .standalone_path = corto_envparse("%s", "~/.corto/standalone")
     };
 
     corto_log_push("config");
@@ -525,6 +529,24 @@ int16_t bake_config_load(
     corto_setenv("BAKE_CONFIG", cfg_id);
     corto_setenv("BAKE_ENVIRONMENT", env_id);
 
+    cfg_out->id = corto_strdup(cfg_id);
+
+    if (cfg_out->standalone_path) {
+        cfg_out->standalone_libpath = corto_asprintf(
+            "%s/%s/%s-%s/lib",
+            cfg_out->standalone_path,
+            corto_getenv("BAKE_VERSION"),
+            CORTO_PLATFORM_STRING,
+            cfg_out->id);
+
+        cfg_out->standalone_binpath = corto_asprintf(
+            "%s/%s/%s-%s/bin",
+            cfg_out->standalone_path,
+            corto_getenv("BAKE_VERSION"),
+            CORTO_PLATFORM_STRING,
+            cfg_out->id);
+    }
+
     if (corto_log_verbosityGet() <= CORTO_OK) {
         corto_log_push("environment");
         corto_iter it = corto_ll_iter(env_set);
@@ -545,7 +567,6 @@ int16_t bake_config_load(
         corto_log_pop();
     }
 
-    cfg_out->id = corto_strdup(cfg_id);
 
     corto_log_pop();
     return 0;

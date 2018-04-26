@@ -207,10 +207,14 @@ int16_t bake_check_dependencies(
     /* For each package, if use_generated_api is enabled, also include
      * the package that contains the generated api for the language of
      * the package */
-    if (p->use_generated_api) {
+    if (p->use_generated_api && p->managed) {
         /* First, add own generated language package */
-        if (p->managed && p->model && p->public && p->kind == BAKE_PACKAGE) {
+        if (p->model && p->public && p->kind == BAKE_PACKAGE) {
             bake_project_use(p, strarg("%s/%s", p->id, p->language));
+
+            if (p->c4cpp) {
+                bake_project_use(p, strarg("%s/cpp", p->id));
+            }
         }
 
         int i = 0, count = corto_ll_count(p->use);

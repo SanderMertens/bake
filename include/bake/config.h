@@ -44,6 +44,10 @@ typedef struct bake_config {
     bool standalone;
     char *standalone_path;
     corto_ll variables;
+
+    /* Set by configuration loader */
+    char *standalone_binpath;
+    char *standalone_libpath;
 } bake_config;
 
 #ifdef __cplusplus

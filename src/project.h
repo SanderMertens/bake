@@ -51,6 +51,10 @@ void bake_project_use_private(
     bake_project *p,
     const char *use);
 
+void bake_project_link(
+    bake_project *p,
+    const char *use);
+
 char *bake_project_definitionFile(
     bake_project *p);
 
@@ -61,3 +65,6 @@ int16_t bake_project_loadDependeeConfig(
     bake_project *p,
     const char *package_id,
     const char *file);
+
+int16_t bake_project_resolveLinks(
+    bake_project *p);

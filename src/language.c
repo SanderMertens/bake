@@ -745,6 +745,23 @@ int16_t bake_language_add_dependency(
         corto_catch();
     }
 
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_language_add_dependee_config(
+    bake_project *p,
+    const char *dep)
+{
+    const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
+    if (!libpath) {
+        corto_throw(
+            "failed to locate library path for dependency '%s'", dep);
+        goto error;
+    }
+
     /* Check if dependency has a dependee file with build instructions */
     char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
     if (corto_file_test(dependee_file)) {
@@ -772,7 +789,8 @@ int16_t bake_language_build_artefact(
 {
     bake_node *root = bake_node_find(l, rule_name);
     if (!root) {
-        corto_critical("root ARTEFACT node not found in language object");
+        corto_throw("rule '%s' not found in language object", rule_name);
+        goto error;
     }
 
     if (corto_mkdir(artefact_path)) {
@@ -790,7 +808,7 @@ int16_t bake_language_build_artefact(
     );
     bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
     if (bake_node_eval(l, root, p, c, artefact_fl, NULL)) {
-        corto_throw("failed to build 'ARTEFACT'");
+        corto_throw("failed to build rule '%s'", rule_name);
         goto error;
     }
     bake_filelist_free(artefact_fl);
@@ -802,52 +820,41 @@ error:
     return -1;
 }
 
-int16_t bake_language_build(
-    bake_language *l,
-    bake_project *p,
-    bake_config *c)
+static
+int16_t bake_language_add_dependee_configs(
+    bake_project *p)
 {
-    corto_log_push("build");
-    corto_trace("begin");
-
-    /* If code generation yielded a folder with the name of the
-     * project language, this is a new project that contains the
-     * generated language binding api. */
-    if (p->use_generated_api) {
-        int sig;
-        int8_t ret;
-        if (corto_file_test("c") == 1) {
-            if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
-                corto_throw(NULL);
-                goto error;
-            }
-        }
-        if (corto_file_test("cpp") == 1) {
-            if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
-                corto_throw(NULL);
+    /* Add dependencies to link list */
+    if (p->use) {
+        corto_iter it = corto_ll_iter(p->use);
+        while (corto_iter_hasNext(&it)) {
+            char *dep = corto_iter_next(&it);
+            if (bake_language_add_dependee_config(p, dep)) {
                 goto error;
             }
         }
     }
 
-    /* If standalone builds are enabled, build STANDALONE_ARTEFACT rule */
-    if (c->standalone) {
-        /* Obtain artefact */
-        char *artefact = l->standalone_artefact_cb(l, p);
-        if (!artefact) {
-            corto_throw("no artefacts specified for project '%s' by language", p->id);
-            goto error;
+    /* Add private dependencies to link list */
+    if (p->use_private) {
+        corto_iter it = corto_ll_iter(p->use_private);
+        while (corto_iter_hasNext(&it)) {
+            char *dep = corto_iter_next(&it);
+            if (bake_language_add_dependee_config(p, dep)) {
+                goto error;
+            }
         }
-
-        if (bake_language_build_artefact(
-            l, p, c, artefact, c->standalone_path, "STANDALONE_ARTEFACT"))
-        {
-            goto error;
-        }
-
-        free(artefact);
     }
 
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_language_add_dependencies(
+    bake_project *p)
+{
     /* Add dependencies to link list */
     if (p->use) {
         corto_iter it = corto_ll_iter(p->use);
@@ -870,6 +877,180 @@ int16_t bake_language_build(
         }
     }
 
+    return 0;
+error:
+    return -1;
+}
+
+static
+void bake_language_standalone_link_cleanup(corto_ll link)
+{
+    corto_iter it = corto_ll_iter(link);
+    while (corto_iter_hasNext(&it)) {
+        char *link = corto_iter_next(&it);
+        free(link);
+    }
+    corto_ll_free(link);
+}
+
+static
+corto_ll bake_language_standalone_link(
+    bake_project *p,
+    const char *standalone_path)
+{
+    corto_ll link_list = corto_ll_new();
+
+    corto_iter it = corto_ll_iter(p->link);
+    while (corto_iter_hasNext(&it)) {
+        char *link = corto_iter_next(&it);
+
+        char *link_lib = strrchr(link, '/');
+        if (!link_lib) {
+            link_lib = link;
+        } else {
+            link_lib ++;
+        }
+
+        if (!strncmp(link_lib, "lib", 3)) {
+            link_lib += 3;
+        }
+
+        char *target_link = corto_asprintf("%s/lib%s_%s",
+            standalone_path, p->id, link_lib);
+        char *ptr = target_link + strlen(standalone_path) + 1, ch;
+        for (; (ch = *ptr); ptr ++) {
+            if (ch == '/') {
+                *ptr = '_';
+            }
+        }
+
+        /* Copy to standalone path */
+        if (corto_cp(link, target_link)) {
+            goto error;
+        }
+
+        free(target_link);
+
+        /* Create library name for linking */
+        char *standalone_link = corto_asprintf("%s_%s", p->id, link_lib);
+        for (ptr = standalone_link; (ch = *ptr); ptr ++) {
+            if (ch == '/') {
+                *ptr = '_';
+            }
+        }
+
+        /* Strip extension */
+        char *ext = strrchr(standalone_link, '.');
+        if (ext) {
+            ext[0] = '\0';
+        }
+
+        corto_ll_append(link_list, standalone_link);
+    }
+
+    return link_list;
+error:
+    bake_language_standalone_link_cleanup(link_list);
+    return NULL;
+}
+
+int16_t bake_language_build(
+    bake_language *l,
+    bake_project *p,
+    bake_config *c)
+{
+    corto_log_push("build");
+    corto_trace("begin");
+
+    /* If code generation yielded a folder with the name of the
+     * project language, this is a new project that contains the
+     * generated language binding api. */
+    if (p->use_generated_api && p->managed) {
+        int sig;
+        int8_t ret;
+        if (corto_file_test("c") == 1) {
+            if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
+        }
+        if (corto_file_test("cpp") == 1) {
+            if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
+                corto_throw(NULL);
+                goto error;
+            }
+        }
+    }
+
+    /* Resolve libraries in project link attriubte */
+    if (bake_project_resolveLinks(p)) {
+        goto error;
+    }
+
+    /* Add dependee configuration for project */
+    if (bake_language_add_dependee_configs(p)) {
+        goto error;
+    }
+
+    /* If standalone builds are enabled, build ONE_ARTEFACT rule */
+    if (c->standalone) {
+        /* Obtain artefact */
+        char *artefact = l->standalone_artefact_cb(l, p);
+        if (!artefact) {
+            corto_throw(
+                "no artefacts specified for project '%s' by language", p->id);
+            goto error;
+        }
+
+        char *old_ld_library_path = corto_getenv("LD_LIBRARY_PATH");
+
+        /* Add the standalone path to LD_LIBRARY_PATH to ensure that 2nd degree
+         * dependencies are also resolved */
+        corto_setenv(
+            "LD_LIBRARY_PATH",
+            strarg("%s:%s", old_ld_library_path, c->standalone_libpath));
+
+        /* Create temporary link-list that converts library locations to
+         * standalone path */
+        corto_ll old_link = p->link;
+        p->link = bake_language_standalone_link(
+            p, c->standalone_libpath);
+
+        /* Run the top-level STANDALONE_ARTEFACT rule */
+        if (bake_language_build_artefact(
+            l,
+            p,
+            c,
+            artefact,
+            p->kind == BAKE_PACKAGE
+                ? c->standalone_libpath
+                : c->standalone_binpath
+                ,
+            "STANDALONE_ARTEFACT"))
+        {
+            free(artefact);
+            bake_language_standalone_link_cleanup(p->link);
+            p->link = old_link;
+            goto error;
+        }
+
+        /* Cleanup temporary list */
+        bake_language_standalone_link_cleanup(p->link);
+
+        /* Restore old list */
+        p->link = old_link;
+
+        /* Restore LD_LIBRARY_PATH */
+        corto_setenv("LD_LIBRARY_PATH", old_ld_library_path);
+
+        free(artefact);
+    }
+
+    /* Resolve dependencies and add to 'link' list */
+    if (bake_language_add_dependencies(p)) {
+        goto error;
+    }
+
     /* Build artefact */
     char *artefact = l->artefact_cb(l, p);
     if (!artefact) {
@@ -880,9 +1061,12 @@ int16_t bake_language_build(
     char *artefact_path = corto_asprintf(
         "bin/%s-%s", CORTO_PLATFORM_STRING, c->id);
 
+    /* Run the top-level ARTEFACT rule */
     if (bake_language_build_artefact(
         l, p, c, artefact, artefact_path, "ARTEFACT"))
     {
+        free(artefact_path);
+        free(artefact);
         goto error;
     }
 

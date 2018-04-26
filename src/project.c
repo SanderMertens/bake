@@ -51,29 +51,6 @@ int16_t bake_assign_json_string(char **ptr, JSON_Value *v) {
     return 0;
 }
 
-/* Utility to iterate over strings in a JSON array */
-static
-int16_t bake_append_json_array(
-    bake_project *p,
-    JSON_Value *v,
-    void(*action)(bake_project*,const char*))
-{
-    if (json_value_get_type(v) == JSONArray) {
-        JSON_Array *a = json_value_get_array(v);
-        uint32_t i, count = json_array_get_count(a);
-        for (i = 0; i < count; i ++) {
-            JSON_Value *v = json_array_get_value(a, i);
-            const char *str = json_value_get_string(v);
-            if (str) {
-                action(p, str);
-            }
-        }
-    } else {
-        return -1;
-    }
-    return 0;
-}
-
 static
 int16_t bake_project_func_locate(
     bake_project *p,
@@ -82,6 +59,9 @@ int16_t bake_project_func_locate(
     const char *argument)
 {
     const char *value = NULL;
+    if (!package_id) {
+        package_id = p->id;
+    }
     if (!strcmp(argument, "package")) {
         value = corto_locate(package_id, NULL, CORTO_LOCATE_PACKAGE);
     } else if (!strcmp(argument, "include")) {
@@ -215,6 +195,45 @@ char* bake_project_replace(
 error:
     return NULL;
 }
+
+static
+void bake_clean_string_array(
+    corto_ll list)
+{
+    corto_iter it = corto_ll_iter(list);
+    while (corto_iter_hasNext(&it)) {
+        char *str = corto_iter_next(&it);
+        free(str);
+    }
+    corto_ll_free(list);
+}
+
+/* Utility to iterate over strings in a JSON array */
+static
+int16_t bake_append_json_array(
+    bake_project *p,
+    const char *project_id,
+    JSON_Value *v,
+    void(*action)(bake_project*,const char*))
+{
+    if (json_value_get_type(v) == JSONArray) {
+        JSON_Array *a = json_value_get_array(v);
+        uint32_t i, count = json_array_get_count(a);
+        for (i = 0; i < count; i ++) {
+            JSON_Value *v = json_array_get_value(a, i);
+            const char *str = json_value_get_string(v);
+            if (str) {
+                action(p, str);
+            }
+        }
+    } else {
+        goto error;
+    }
+    return 0;
+error:
+    return -1;
+}
+
 
 bake_project_attr *bake_project_getattr(
     bake_project *p,
@@ -439,7 +458,7 @@ int16_t bake_project_parseMembers(
 
         /* When parsing dependee config, allow dynamically adding packages */
         if (!strcmp(name, "use")) {
-            if (bake_append_json_array(p, v, bake_project_use)) {
+            if (bake_append_json_array(p, package_id, v, bake_project_use)) {
                 corto_throw("expected array for 'use' attribute");
                 goto error;
             }
@@ -485,6 +504,15 @@ int16_t bake_project_parse_config_value(
             }
         }
 
+        if (!strcmp(name, "c4cpp")) {
+            if (json_value_get_type(v) == JSONBoolean) {
+                p->c4cpp = json_value_get_boolean(v);
+            } else {
+                corto_throw("expected boolean for 'c4cpp' attribute");
+                goto error;
+            }
+        }
+
         if (!strcmp(name, "version")) {
             if (bake_assign_json_string(&p->version, v)) {
                 corto_throw("expected string for 'version' attribute");
@@ -519,35 +547,42 @@ int16_t bake_project_parse_config_value(
             if (json_value_get_type(v) == JSONBoolean) {
                 p->use_generated_api = json_value_get_boolean(v);
             } else {
-                corto_throw("expected boolean for 'managed' attribute");
+                corto_throw("expected boolean for 'use_generated_api' attribute");
+                goto error;
+            }
+        }
+
+        if (!strcmp(name, "link")) {
+            if (bake_append_json_array(p, NULL, v, bake_project_link)) {
+                corto_throw("expected array for 'link' attribute");
                 goto error;
             }
         }
 
         if (!strcmp(name, "use")) {
-            if (bake_append_json_array(p, v, bake_project_use)) {
+            if (bake_append_json_array(p, NULL, v, bake_project_use)) {
                 corto_throw("expected array for 'use' attribute");
                 goto error;
             }
         }
 
         if (!strcmp(name, "use_private")) {
-            if (bake_append_json_array(p, v, bake_project_use_private)) {
-                corto_throw("expected array for 'use' attribute");
+            if (bake_append_json_array(p, NULL, v, bake_project_use_private)) {
+                corto_throw("expected array for 'use_private' attribute");
                 goto error;
             }
         }
 
         if (!strcmp(name, "sources")) {
-            if (bake_append_json_array(p, v, bake_project_addSource)) {
-                corto_throw("expected array for 'use' attribute");
+            if (bake_append_json_array(p, NULL, v, bake_project_addSource)) {
+                corto_throw("expected array for 'sources' attribute");
                 goto error;
             }
         }
 
         if (!strcmp(name, "includes")) {
-            if (bake_append_json_array(p, v, bake_project_addInclude)) {
-                corto_throw("expected array for 'use' attribute");
+            if (bake_append_json_array(p, NULL, v, bake_project_addInclude)) {
+                corto_throw("expected array for 'includes' attribute");
                 goto error;
             }
         }
@@ -767,10 +802,8 @@ bake_project* bake_project_new(
         bake_project_use(result, "corto");
     }
 
-    if (result->use_generated_api) {
-        if (result->managed) {
-            bake_project_use(result, "corto/c");
-        }
+    if (result->use_generated_api && result->managed) {
+        bake_project_use(result, "corto/c");
     }
 
     if (!result->version) {
@@ -795,6 +828,7 @@ void bake_project_free(
     if (p->sources) corto_ll_free(p->sources);
     if (p->includes) corto_ll_free(p->includes);
     if (p->files_to_clean) corto_ll_free(p->files_to_clean);
+    free(p->standalone_path);
     free(p);
 }
 
@@ -886,4 +920,114 @@ void bake_project_use_private(
     }
 
     corto_ll_append(p->use_private, corto_strdup(use));
+}
+
+static
+char *bake_project_find_link_library(
+    const char *name)
+{
+    char *result = NULL;
+
+    /* If link points to hardcoded filename, return as is */
+    if (corto_file_test(name)) {
+        return corto_strdup(name);
+    }
+
+    /* If not found, check if provided name has an extension */
+    char *ext = strrchr(name, '.');
+    if (ext && !strchr(name, '/')) {
+        /* Hardcoded filename was provided but not found */
+        return NULL;
+    }
+
+    /* Try finding a library called lib*.so or lib*.dylib (OSX only) */
+    char *full_path = strdup(name);
+    char *lib_name = strrchr(full_path, '/');
+    if (lib_name) {
+        lib_name[0] = '\0';
+        lib_name ++;
+    } else {
+        lib_name = full_path;
+        full_path = NULL;
+    }
+
+    /* Try .so */
+    if (full_path) {
+        char *so = corto_asprintf("%s/lib%s.so", full_path, lib_name);
+        if (corto_file_test(so)) {
+            result = so;
+        }
+    } else {
+        char *so = corto_asprintf("lib%s.so", lib_name);
+        if (corto_file_test(so)) {
+            result = so;
+        }
+    }
+
+    /* Try .dylib */
+    if (!result && !strcmp(CORTO_OS_STRING, "darwin")) {
+        if (full_path) {
+            char *dylib = corto_asprintf("%s/lib%s.dylib", full_path, lib_name);
+            if (corto_file_test(dylib)) {
+                result = dylib;
+            }
+        } else {
+            char *dylib = corto_asprintf("lib%s.dylib", lib_name);
+            if (corto_file_test(dylib)) {
+                result = dylib;
+            }
+        }
+    }
+
+    if (full_path) {
+        free(full_path);
+    } else if (lib_name) {
+        free(lib_name);
+    }
+
+    return result;
+}
+
+void bake_project_link(
+    bake_project *p,
+    const char *use)
+{
+    corto_iter it = corto_ll_iter(p->link);
+    while (corto_iter_hasNext(&it)) {
+        char *project_use = corto_iter_next(&it);
+        if (!strcmp(project_use, use)) {
+            /* Duplicate */
+            return;
+        }
+    }
+
+    corto_ll_append(p->link, corto_strdup(use));
+}
+
+int16_t bake_project_resolveLinks(
+    bake_project *p)
+{
+    corto_ll resolved = corto_ll_new();
+    corto_iter it = corto_ll_iter(p->link);
+    while (corto_iter_hasNext(&it)) {
+        char *project_use = corto_iter_next(&it);
+        char *parsed = bake_project_replace(p, NULL, project_use);
+        if (!parsed) {
+            goto error;
+        }
+        char *lib = bake_project_find_link_library(parsed);
+        if (!lib) {
+            corto_throw("cannot find library '%s' in 'link' attribute", parsed);
+            goto error;
+        }
+        corto_ll_append(resolved, lib);
+    }
+
+    bake_clean_string_array(p->link);
+    p->link = resolved;
+
+    return 0;
+error:
+    bake_clean_string_array(resolved);
+    return -1;
 }
