@@ -46,6 +46,7 @@ typedef struct bake_config {
     corto_ll variables;
 
     /* Set by configuration loader */
+    char *standalone_rootpath;
     char *standalone_binpath;
     char *standalone_libpath;
 } bake_config;

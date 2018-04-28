@@ -319,7 +319,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
     /* Step 2: Copy project file to package hierarchy. After this the project
      * can be located using corto_locate. */
     if (!skip_preinstall && p->public) {
-        if (bake_install(p)) {
+        if (bake_install(&config, p)) {
             corto_throw(NULL);
             goto error;
         }
@@ -342,7 +342,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Step 5: install custom and generated files to package hierarchy */
     if (!skip_preinstall && p->public) {
-        if (bake_pre(p)) {
+        if (bake_pre(&config, p)) {
             corto_throw(NULL);
             goto error;
         }
@@ -415,11 +415,11 @@ int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Copy package to package hierarchy */
     if (!skip_preinstall && p->public) {
-        if (bake_install(p)) {
+        if (bake_install(&config, p)) {
             goto error;
         }
 
-        if (bake_pre(p)) {
+        if (bake_pre(&config, p)) {
             goto error;
         }
     }
@@ -772,7 +772,8 @@ int main(int argc, char* argv[]) {
         corto_getenv("BAKE_TARGET"),
         corto_getenv("BAKE_HOME"),
         corto_getenv("BAKE_VERSION"),
-        NULL);
+        NULL,
+        false);
 
     /* Bake commands that do not use the build engine */
     if (action) {

@@ -28,6 +28,7 @@
 
 /** Copy project file to package hierarchy */
 int16_t bake_install(
+    bake_config *config,
     bake_project *project);
 
 /** Copy static files to package hierarchy (pre build).
@@ -37,6 +38,7 @@ int16_t bake_install(
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_pre(
+    bake_config *config,
     bake_project *project);
 
 /** Copy artefact to package hierarchy (post build).

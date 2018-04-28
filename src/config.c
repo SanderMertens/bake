@@ -532,19 +532,18 @@ int16_t bake_config_load(
     cfg_out->id = corto_strdup(cfg_id);
 
     if (cfg_out->standalone_path) {
-        cfg_out->standalone_libpath = corto_asprintf(
-            "%s/%s/%s-%s/lib",
+        cfg_out->standalone_rootpath = corto_asprintf(
+            "%s/%s/%s-%s",
             cfg_out->standalone_path,
             corto_getenv("BAKE_VERSION"),
             CORTO_PLATFORM_STRING,
             cfg_out->id);
 
+        cfg_out->standalone_libpath = corto_asprintf(
+            "%s/lib", cfg_out->standalone_rootpath);
+
         cfg_out->standalone_binpath = corto_asprintf(
-            "%s/%s/%s-%s/bin",
-            cfg_out->standalone_path,
-            corto_getenv("BAKE_VERSION"),
-            CORTO_PLATFORM_STRING,
-            cfg_out->id);
+            "%s/bin", cfg_out->standalone_rootpath);
     }
 
     if (corto_log_verbosityGet() <= CORTO_OK) {

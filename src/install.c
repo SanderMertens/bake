@@ -22,10 +22,11 @@
 #include "bake.h"
 
 static
-int16_t bake_install_dir(
+int16_t bake_install_dir_for_target(
     char *id,
     char *dir,
     char *subdir,
+    char *target,
     bool softlink,
     FILE *uninstallFile)
 {
@@ -45,22 +46,6 @@ int16_t bake_install_dir(
         return 0;
     }
 
-    char *target = NULL;
-
-    if (id) {
-        /* If an id is specified, copy files to project directory */
-        target = corto_envparse("$BAKE_TARGET/%s/corto/$BAKE_VERSION/%s", dir, id);
-        if (!target) {
-            goto error;
-        }
-    } else {
-        /* If no id is specified, copy files to environment directly */
-        target = corto_envparse("$BAKE_TARGET/%s", dir);
-        if (!target) {
-            goto error;
-        }
-    }
-
     if (!(stack = corto_dirstack_push(stack, source))) goto error;
 
     if (corto_dir_iter(".", NULL, &it)) goto error;
@@ -74,7 +59,7 @@ int16_t bake_install_dir(
                 !strnicmp(file, strlen("windows-"), "windows-"))
             {
                 if (corto_os_match(file)) {
-                    if (bake_install_dir(id, dir, file, softlink, uninstallFile)) {
+                    if (bake_install_dir_for_target(id, dir, file, target, softlink, uninstallFile)) {
                         goto error;
                     }
                 } else {
@@ -85,7 +70,7 @@ int16_t bake_install_dir(
             } else if (!stricmp(file, "everywhere"))
             {
                 /* Always copy all contents in everywhere */
-                if (bake_install_dir(id, dir, file, softlink, uninstallFile)) {
+                if (bake_install_dir_for_target(id, dir, file, target, softlink, uninstallFile)) {
                     goto error;
                 }
                 continue;
@@ -109,8 +94,76 @@ int16_t bake_install_dir(
 
     if (corto_dirstack_pop(stack)) goto error;
 
-    free(target);
     free(source);
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_install_dir(
+    bake_config *config,
+    char *id,
+    char *dir,
+    char *subdir,
+    bool softlink,
+    FILE *uninstallFile)
+{
+    char *target = NULL;
+
+    if (id) {
+        /* If an id is specified, copy files to project directory */
+        target = corto_envparse("$BAKE_TARGET/%s/corto/$BAKE_VERSION/%s", dir, id);
+        if (!target) {
+            goto error;
+        }
+    } else {
+        /* If no id is specified, copy files to environment directly */
+        target = corto_envparse("$BAKE_TARGET/%s", dir);
+        if (!target) {
+            goto error;
+        }
+    }
+
+    if (bake_install_dir_for_target(
+        id,
+        dir,
+        subdir,
+        target,
+        softlink,
+        uninstallFile))
+    {
+        goto error;
+    }
+
+    if (config->standalone) {
+        if (id) {
+            target = corto_envparse("%s/$BAKE_VERSION/%s-%s/%s/%s",
+                config->standalone_path,
+                CORTO_PLATFORM_STRING,
+                config->id,
+                dir,
+                id);
+        } else {
+            target = corto_envparse("%s/$BAKE_VERSION/%s-%s/%s",
+                config->standalone_path,
+                CORTO_PLATFORM_STRING,
+                config->id,
+                dir);
+        }
+
+        if (bake_install_dir_for_target(
+            id,
+            dir,
+            subdir,
+            target,
+            false,
+            uninstallFile))
+        {
+            goto error;
+        }
+    }
 
     return 0;
 error:
@@ -215,6 +268,7 @@ error:
 }
 
 int16_t bake_install(
+    bake_config *config,
     bake_project *project)
 {
     if (project->kind != BAKE_TOOL) {
@@ -232,6 +286,33 @@ int16_t bake_install(
             if (corto_cp("project.json", projectDir)) {
                 free(projectDir);
                 goto error;
+            }
+
+            /* If standalone mode is enabled, copy project.json to standalone
+             * directory as well */
+            if (config->standalone) {
+                char *path = corto_asprintf("%s/meta/%s/project.json",
+                    config->standalone_rootpath, project->id);
+                if (corto_cp("project.json", path)) {
+                    corto_throw("failed to copy 'project.json' to '%s'",
+                        path);
+                    free (path);
+                    goto error;
+                }
+                free(path);
+
+                /* Copy license file, if available */
+                if (corto_file_test("LICENSE")) {
+                    char *path = corto_asprintf("%s/meta/%s/LICENSE",
+                        config->standalone_rootpath, project->id);
+                    if (corto_cp("LICENSE", path)) {
+                        corto_throw("failed to copy 'LICENSE' to '%s'",
+                            path);
+                        free (path);
+                        goto error;
+                    }
+                    free(path);
+                }
             }
 
             /* Write project source location to package repository */
@@ -273,6 +354,7 @@ error:
 }
 
 int16_t bake_pre(
+    bake_config *config,
     bake_project *project)
 {
     corto_log_push("pre");
@@ -289,6 +371,7 @@ int16_t bake_pre(
             corto_iter it = corto_ll_iter(project->includes);
             while (corto_iter_hasNext(&it)) {
                 if (bake_install_dir(
+                    config,
                     project->id,
                     "include",
                     corto_iter_next(&it),
@@ -300,12 +383,25 @@ int16_t bake_pre(
             }
         }
 
-        if (bake_install_dir(project->id, "etc", NULL, true, uninstallFile)) {
+        if (bake_install_dir(
+            config,
+            project->id,
+            "etc",
+            NULL,
+            true,
+            uninstallFile))
+        {
             goto error;
         }
 
         if (project->kind == BAKE_PACKAGE) {
-            if (bake_install_dir(project->id, "lib", NULL, true, uninstallFile))
+            if (bake_install_dir(
+                config,
+                project->id,
+                "lib",
+                NULL,
+                true,
+                uninstallFile))
             {
                 goto error;
             }
@@ -316,16 +412,44 @@ int16_t bake_pre(
             if (corto_chdir("install")) {
                 goto error;
             }
-            if (bake_install_dir(NULL, "include", NULL, true, uninstallFile)) {
+            if (bake_install_dir(
+                config,
+                NULL,
+                "include",
+                NULL,
+                true,
+                uninstallFile))
+            {
                 goto error;
             }
-            if (bake_install_dir(NULL, "lib", NULL, true, uninstallFile)) {
+            if (bake_install_dir(
+                config,
+                NULL,
+                "lib",
+                NULL,
+                true,
+                uninstallFile))
+            {
                 goto error;
             }
-            if (bake_install_dir(NULL, "etc", NULL, true, uninstallFile)) {
+            if (bake_install_dir(
+                config,
+                NULL,
+                "etc",
+                NULL,
+                true,
+                uninstallFile))
+            {
                 goto error;
             }
-            if (bake_install_dir(NULL, "java", NULL, true, uninstallFile)) {
+            if (bake_install_dir(
+                config,
+                NULL,
+                "java",
+                NULL,
+                true,
+                uninstallFile))
+            {
                 goto error;
             }
             if (corto_chdir("..")) {
