@@ -95,6 +95,8 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "optimize", config.optimizations = true);
             PARSE_OPTION(0, "coverage", config.coverage = true);
             PARSE_OPTION(0, "strict", config.strict = true);
+            PARSE_OPTION(0, "standalone", config.standalone = true);
+            PARSE_OPTION(0, "standalone-path", config.standalone_path = argv[i + 1]; i++);
 
             /* Setup only */
             PARSE_OPTION(0, "local", local = true);
@@ -701,6 +703,10 @@ int16_t bake_init(int argc, char* argv[])
         env = corto_getenv("BAKE_ENVIRONMENT");
     }
 
+    if (bake_config_load(&config, cfg, env)) {
+        goto error;
+    }
+
     if (argc > 1) {
         int offset = 1;
         if (argv[1][0] != '-') {
@@ -754,10 +760,6 @@ int main(int argc, char* argv[]) {
     paths = corto_ll_new();
 
     if (bake_init(argc, argv)) {
-        goto error;
-    }
-
-    if (bake_config_load(&config, cfg, env)) {
         goto error;
     }
 
