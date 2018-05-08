@@ -145,7 +145,10 @@ install | Contains files that are installed to environment
 bin | Contains binary build artefacts (created by bake)
 .bake_cache | Contains temporary build artefacts, such as object files and generated code
 
-Bake will by default build any source file that is in the `src` directory. Files in the `include` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, instead of to the project-specific locations. For example, the following files:
+Bake will by default build any source file that is in the `src` directory.
+
+### Installing Miscellaneous Files
+Files in the `include` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, instead of to the project-specific locations. For example, the following files:
 
 ```
 my_app
@@ -174,6 +177,10 @@ Bake allows projects to differentiate between different platforms when installin
 my_app
  |
  +-- etc
+      |-- Linux/linux_manual.html
+      |
+      |-- Darwin/darwin_manual.html
+      |
       |-- Linux-i686/libmy_binary.so
       |
       |-- Linux-x86_64/libmy_binary.so
@@ -183,7 +190,11 @@ my_app
       +-- Darwin-x86_64/libmy_binary.so
 ```
 
-Here, only the `libmy_binary.so` that is in the directory that matches the platform string will be installed. To determine the platform string for the current machine, type `bake --platform`.
+Here, only the `libmy_binary.so` that is in the directory that matches the platform string will be installed.
+
+The platform string is case independent. It allows for a number of different notations. For example, both `x86-linux` and `linux-x86` are allowed. In addition, projects can also just specify the operating system name, in which case the file will be installed to all architectures, as long as the operating system matches the directory name.
+
+To see the exact matching of the platform string, see the implementation of `corto_os_match` in the `https://cortoproject/platform` repository.
 
 ### Project configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
