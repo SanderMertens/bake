@@ -194,7 +194,7 @@ Here, only the `libmy_binary.so` that is in the directory that matches the platf
 
 The platform string is case independent. It allows for a number of different notations. For example, both `x86-linux` and `linux-x86` are allowed. In addition, projects can also just specify the operating system name, in which case the file will be installed to all architectures, as long as the operating system matches the directory name.
 
-To see the exact matching of the platform string, see the implementation of `corto_os_match` in the `https://cortoproject/platform` repository.
+To see the exact matching of the platform string, see the implementation of `corto_os_match` in the `https://github.com/cortoproject/platform` repository.
 
 ### Project configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
