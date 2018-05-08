@@ -132,6 +132,59 @@ application  | Managed executable binary | Yes by default | Yes by default
 package      | Managed shared object | Yes by default | Yes by default
 tool         | Executable binary installed to OS `bin` path | No | Yes
 
+### Project Layout
+Each bake project uses the same layout. This makes it very easy to build bake projects, as bake always knows where to find project configuration, include files, source files and so on. Bake will look for the following directories and files in a project:
+
+Directory / File | Description
+-----------------|------------
+project.json | Contains build configuration for the project
+src | Contains the project source files
+include | Contains the project header files
+etc | Contains miscellaneous files
+install | Contains files that are installed to environment
+bin | Contains binary build artefacts (created by bake)
+.bake_cache | Contains temporary build artefacts, such as object files and generated code
+
+Bake will by default build any source file that is in the `src` directory. Files in the `include` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, instead of to the project-specific locations. For example, the following files:
+
+```
+my_app
+ |
+ |-- etc
+ |    | index.html
+ |    + style.css
+ |
+ +-- install/etc
+      | image.jpg
+      + manual.pdf
+```
+
+would be installed to the following locations:
+
+```
+$BAKE_TARGET/etc/corto/2.0/my_app/index.html
+$BAKE_TARGET/etc/corto/2.0/my_app/style.html
+$BAKE_TARGET/etc/image.jpg
+$BAKE_TARGET/etc/manual.pdf
+```
+
+Bake allows projects to differentiate between different platforms when installing files from the `etc` and `install` directories. This can be useful when for example distributing binaries for different architectures and operating systems. By default, all files from these directories installed. However, bake will look for subdirectories that match the platform string. Files in those directories will only be installed to that platform. For example, consider the following tree:
+
+```
+my_app
+ |
+ +-- etc
+      |-- Linux-i686/libmy_binary.so
+      |
+      |-- Linux-x86_64/libmy_binary.so
+      |
+      |-- Linux-armv7l/libmy_binary.so
+      |
+      +-- Darwin-x86_64/libmy_binary.so
+```
+
+Here, only the `libmy_binary.so` that is in the directory that matches the platform string will be installed. To determine the platform string for the current machine, type `bake --platform`.
+
 ### Project configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
 
