@@ -221,7 +221,7 @@ Each bake project uses the same layout. This makes it very easy to build bake pr
 Directory / File | Description
 -----------------|------------
 project.json | Contains build configuration for the project
-model.(json|xml|cx) | Contains a model for managed projects (optional)
+model.* | Contains a model for managed projects (optional)
 src | Contains the project source files
 include | Contains the project header files
 etc | Contains miscellaneous files (optional)
@@ -859,7 +859,7 @@ Example output:
 -------- done!
 ```
 
-From the above output we can see that compiling the file `my_app.c` took approximately 0.038 seconds, while the whole compilation took around 9.07 seconds.
+From the above output we can see that compiling the file `my_app.c` took approximately 0.038 seconds, while the whole compilation took around 0.070 seconds.
 
 ### Corto integration
 Bake by default installs a minimal set of corto packages (https://corto.io) that allow you to easily locate and list projects. The following commands are installed with bake:
@@ -880,6 +880,17 @@ Bake is included in all corto installations. The following command installs a de
 
 ```demo
 curl https://corto.io/install-dev-src | sh
+```
+
+The corto runtime mounts the bake environment in the corto object store, which gives applications API access to installed packages and their meta information. The following code is an example that lists all packages in the bake environment:
+
+```c
+corto_iter it;
+corto_select("//").type("package").iter(&it);
+while (corto_iter_hasNext(&it)) {
+    corto_result *r = corto_iter_next(&it);
+    printf("package '%s/%s' found\n", r->parent, r->id);
+}
 ```
 
 ## Authors
