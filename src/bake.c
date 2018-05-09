@@ -37,6 +37,7 @@ static bool showProc = false;
 static bool mute_foreach = true;
 static bool profile = false;
 static bool local = false;
+static bool mono = false;
 static char *action = "build";
 static char *env = "default";
 static char *cfg = "debug";
@@ -87,6 +88,8 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "show-time", showTime = true);
             PARSE_OPTION(0, "show-delta", showDelta = true);
             PARSE_OPTION(0, "show-proc", showProc = true);
+            PARSE_OPTION(0, "mono", mono = true);
+
             PARSE_OPTION(0, "exit-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_EXIT));
             PARSE_OPTION(0, "abort-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_ABORT));
 
@@ -739,6 +742,10 @@ int16_t bake_init(int argc, char* argv[])
         char *fmt = corto_asprintf("%s %s", "%A", corto_log_fmtGet());
         corto_log_fmt(fmt);
         free(fmt);
+    }
+
+    if (mono) {
+        corto_log_useColors(false);
     }
 
     if (!strcmp(action, "foreach")) {
