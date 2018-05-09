@@ -5,6 +5,8 @@ Bake is a buildtool (like `make`) and buildsystem in one that dramatically reduc
 2. Bake just needs a simple, declarative JSON file to build a project
 
 ## Installation
+[instructions on how to install bake]
+
 Install bake using the following command:
 
 ```demo
@@ -16,6 +18,8 @@ This installs the bake executable to your home directory. Additionally the insta
 The C language plugin is installed by default. For C-specific configuration parameters, see the README file in the plugin repository: https://github.com/cortoproject/driver-bake-c.
 
 ## Platform support
+[platforms on which bake is supported]
+
 Bake has been verified on the following platforms:
 
 ### Ubuntu
@@ -28,6 +32,7 @@ Bake has been verified on the following platforms:
 - 10.12
 
 ## Getting started
+[useful tips for new bake users]
 
 ### Bake Hello World
 To create a new bake project called `my_app`, run the following commands:
@@ -134,7 +139,8 @@ Or if that is not enough, try this one:
 bake --debug
 ```
 
-## Bake Manual
+## Manual
+[everything there is to know about bake]
 
 ### Introduction
 The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own buildsystem, with proprietary mechanisms for specifying dependencies, build configurations etc.
@@ -877,7 +883,11 @@ curl https://corto.io/install-dev-src | sh
 ```
 
 ## Authors
+[who built bake]
+
 - Sander Mertens - Initial work
 
 ## Legal stuff
+[bake licensing]
+
 Bake is licensed under the GPL3.0 license.
