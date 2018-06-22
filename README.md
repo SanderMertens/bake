@@ -119,13 +119,6 @@ bake --cfg release
 You can add/modify/remove bake configurations in the bake configuration file.
 ```
 
-#### Do a standalone build
-By default, bake generates binaries that cannot be shared between machines, because they use hard-coded paths and are stored in your home directory. To generate binary distributions that can be shared across machines, use this command:
-
-```demo
-bake --standalone --standalone-path my_distro
-```
-
 #### Debug bake
 Can't figure out why bake is doing something (or not doing something)? By enabling tracing, you can get much more information out of bake. Try this command:
 
@@ -149,7 +142,7 @@ This makes it difficult to share code between different people and organizations
 
 Bake is therefore not just a buildtool like `make` that can automatically generate compiler commands. It is also a buildsystem that clearly specifies how projects are organized and configured. When a project relies on bake, a user does, for example, not need to worry about how to link with it, where to find its include files or whether binaries have been built with incompatible compiler flags.
 
-A secondary goal is to create a zero-dependency buildtool that can be easily ported to other platforms. Whereas other buildtools exist, like `make`, `premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations.
+A secondary goal is to create a zero-dependency buildtool that can be easily ported to other platforms. Whereas other buildtools exist, like `make`, `premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations. Bake's only dependencies are a C standard library, and the corto platform abstraction API (https://github.com/cortoproject/platform).
 
 ### Feature Overview
 Bake also addresses a number of issues commonly found during building. Here is a (non-exhaustive) overview of bake features:
@@ -229,7 +222,7 @@ install | Contains files that are installed to environment (optional)
 bin | Contains binary build artefacts (created by bake)
 .bake_cache | Contains temporary build artefacts, such as object files and generated code
 
-Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment. By creating softlink, you can update files in these folders in your project directory without having to re-run bake to make the changes public. The only exception is when a project is built in **standalone** mode, in which case files are always copied instead of linked.
+Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment. By creating softlink, you can update files in these folders in your project directory without having to re-run bake to make the changes public.
 
 ### Project Configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
@@ -331,10 +324,10 @@ my_app
 would be installed to the following locations:
 
 ```
-$BAKE_TARGET/etc/corto/2.0/my_app/index.html
-$BAKE_TARGET/etc/corto/2.0/my_app/style.html
-$BAKE_TARGET/etc/image.jpg
-$BAKE_TARGET/etc/manual.pdf
+$BAKE_TARGET/2.0/platform-config/etc/my_app/index.html
+$BAKE_TARGET/2.0/platform-config/etc/my_app/style.html
+$BAKE_TARGET/2.0/platform-config/etc/image.jpg
+$BAKE_TARGET/2.0/platform-config/etc/manual.pdf
 ```
 
 Bake allows projects to differentiate between different platforms when installing files from the `etc` and `install` directories. This can be useful when for example distributing binaries for different architectures and operating systems. By default, all files from these directories installed. However, bake will look for subdirectories that match the platform string. Files in those directories will only be installed to that platform. For example, consider the following tree:
@@ -582,86 +575,29 @@ Public projects can be automatically discovered, looked up, loaded and linked wi
 
 Note that neither project configuration specifies where they are built to, or where to find the `my_lib` project. This is automatically managed by the bake environment.
 
-**Bake uses hard-coded paths to link to libraries when building to an environment**. This ensures that at runtime, the right libraries can be found without having to set `LD_LIBRARY_PATH`. This does however have one big limitation: unless binaries are built to a location with the same name, they cannot be shared between machines! To get around this limitation, there are two options:
-- Install binaries to the same location on different machines (`/usr/local` or `/opt`)
-- Use **standalone builds** (see below)
-
-```note
-Using hard-coded paths enhances security, as it makes it harder (if not impossible) to spoof a dynamic library, as long as dynamic libraries are stored in a write-protected location on a disk drive.
-```
-
 The `$BAKE_TARGET` environment variable specifies the location where new projects are built to. The `$BAKE_HOME` environment variable specifies where the bake environment is located. Typically these variables are set to the same location. Dependencies are looked up in both `$BAKE_TARGET` as well as `$BAKE_HOME`.
 
-By default, both `$BAKE_TARGET` and `$BAKE_HOME` are set to `~/.corto`, as bake tightly integrates (but does not depend on) corto package management. Inside this directory, a number of directories are commonly found. The following table describes their function:
+By default, both `$BAKE_TARGET` and `$BAKE_HOME` are set to `~/corto`, as bake tightly integrates with (but does not depend on) corto package management. Inside this directory, a number of directories are commonly found. The following table describes their function:
 
 Directory | Description
 ----------|-------------
 bin | Contains executable binaries
-lib | Contains shared libraries and project metadata
+lib | Contains shared libraries
 include | Contains include files of projects
 java | Contains Java JARs
 etc | Contains miscellaneous files used by projects at runtime
+meta | Contains project metadata
 src | Contains downloaded sources (when using web installer)
 
 The contents of these folders are split up by project, to prevent name-clashes between projects. For the two aforementioned example projects, miscellaneous files would be stored in the following directories:
 
 ```
-$BAKE_TARGET/etc/corto/2.0/my_app
-$BAKE_TARGET/etc/corto/2.0/my_lib
+$BAKE_TARGET/2.0/platform-config/etc/my_app
+$BAKE_TARGET/2.0/platform-config/etc/my_lib
 ```
+Platform and config here are replaced respectively with the platform that bake is running on, and the current configuration (for example `debug` or `release`).
 
-The `corto` prefix is there to ensure that the bake environment does not clash with files outside a bake environment, when `$BAKE_TARGET` is set to `/usr` or `/usr/local`. The `2.0` prefix is the "framework version" and allows multiple environments based on different corto versions to coexist.
-
-The structure of the bake environment mimics that of a the `/usr` or `/usr/local` directory on Linux systems. This makes it easy to install a bake environment to a globally available location while following default system conventions. By default, the environment is located in the users home directory.
-
-When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/.corto`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
-
-### Standalone Distributions
-By default, binaries built to bake environments cannot be shared between machines unless they are built to the same harddrive location, because bake uses **hard-coded paths to link with libraries**. This requires that libraries are installed to locations like `/usr/local` or `/opt` which may require administrator privileges, which can be inconvenient.
-
-Standalone mode builds binaries that link with libraries in the traditional way, by only specifying the library name during linking (example: `-lfoo`). This allows binaries to be shared across machines.
-
-To enable standalone mode, specify the `--standalone` flag to bake, or add `"standalone": true` to the bake configuration file. In addition, a path can be specified where bake stores the standalone libraries, using `--standalone-path /some/path`, or by adding `"standalone_path": "/some/path"` to the bake configuration file. If left unspecified, the standalone path will be set to `$BAKE_TARGET/standalone`.
-
-The following command shows how to enable standalone builds from the command line:
-
-```demo
-bake --standalone --standalone-path ~/my_distro
-```
-
-This is an example bake configuration that enables standalone builds:
-
-```json
-{
-    "configuration":{
-        "standalone-dbg":{
-            "symbols": true,
-            "debug": true,
-            "optimizations": false,
-            "standalone": true,
-            "standalone_path": "~/my_distro"
-        }
-    }
-}
-```
-
-After a standalone build, the standalone path contains all the binaries, include files, miscellaneous files and metadata for all the projects that were part of the build. The directory will contain the following subdirectories:
-
-Directory | Description
-----------|-------------
-bin       | Executable binaries
-lib       | Shared objects
-include   | Include files
-etc       | Miscellaneous files
-meta      | Project metadata (project.json files and LICENSE files)
-
-The whole standalone directory must be distributed to ensure that standalone applications can run just like they would when installed to a bake environment.
-
-Applications do not need to modify their code to run in standalone mode. Code that uses package management APIs can still refer to packages using their logical names, and files stored in the `etc` folder will still be accessed as before. The include file structure is also the same as in a bake environment, which means include statements do not have to be modified.
-
-The package manager runtime detects it is running in standalone when `$BAKE_HOME` has not been set. Attempting to run an application in standalone mode with `$BAKE_HOME` set to a value will fail.
-
-To make sure that standalone applications can correctly locate their libraries, `LD_LIBRARY_PATH` has to be set to the `<standalone_path>/lib` directory. To ensure that standalone applications can correctly locate their miscellaneous files, their working directory has to be the standalone directory root.
+When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/corto`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
 
 ### Environment Variables
 Bake uses the following environment variables:
@@ -798,8 +734,6 @@ Flag | Description
 --no-debug | Disable debug build
 --optimize | Enable optimizations
 --coverage | Enable code coverage
---standalone | Enable standalone build
---standalone-path | Specify output path for standalone build
 --strict | Enable strict mode (strictest compiler flags)
 
 Miscellaneous flags:

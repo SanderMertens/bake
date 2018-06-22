@@ -95,6 +95,7 @@ bake_project* bake_crawler_addProject(
             bake_language_init(l, p);
         } else {
             corto_catch();
+            corto_debug("ignore missing language for now, in case this is setup");
         }
     }
 
@@ -346,18 +347,18 @@ int16_t bake_crawler_build_project(
     }
 
     if (!action(_this, p, ctx)) {
-        corto_throw("build interrupted by '%s' in '%s'", p->id, p->path);
+        corto_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
         free(prev);
         goto error;
     }
 
     if (p->changed) {
         corto_info(
-            "#[green]√#[normal] %s %s '%s' in '%s'",
+            "%s %s '%s' in '%s'",
             action_name, bake_project_kind_str(p->kind), p->id, p->path);
     } else {
         corto_info(
-            "  #[grey]up to date#[normal] '%s'",
+            "#[grey]up to date#[normal] '%s'",
             p->id);
     }
     if (corto_chdir(prev)) {

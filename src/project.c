@@ -767,8 +767,6 @@ bake_project* bake_project_new(
     result->artefact_outdated = false;
     result->sources_outdated = false;
     result->built = false;
-    corto_ll_append(result->includes, "include");
-    corto_ll_append(result->sources, "src");
 
     /* Set interface callbacks */
     result->get_attr = bake_project_getattr_cb;
@@ -780,6 +778,15 @@ bake_project* bake_project_new(
     if (bake_project_parse_config(result)) {
         corto_throw("failed to parse '%s/project.json'", path);
         goto error;
+    }
+
+    /* If 'src' and 'includes' weren't set, use defaults */
+    if (!corto_ll_count(result->sources)) {
+        corto_ll_append(result->sources, "src");
+    }
+
+    if (!corto_ll_count(result->includes)) {
+        corto_ll_append(result->includes, "include");
     }
 
     if (result->language && result->managed) {
@@ -828,34 +835,29 @@ void bake_project_free(
     if (p->sources) corto_ll_free(p->sources);
     if (p->includes) corto_ll_free(p->includes);
     if (p->files_to_clean) corto_ll_free(p->files_to_clean);
-    free(p->standalone_path);
     free(p);
 }
 
 char* bake_project_binaryPath(
     bake_project *p)
 {
-    if (p->kind != BAKE_TOOL) {
-        return corto_envparse(
-            "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", p->id);
+    if (p->kind == BAKE_TOOL || p->kind == BAKE_APPLICATION) {
+        return corto_strdup(p->cfg->binpath);
     } else {
-        return corto_envparse(
-            "$BAKE_TARGET/bin");
+        return corto_strdup(p->cfg->libpath);
     }
 }
 
 char* bake_project_includePath(
     bake_project *p)
 {
-    return corto_envparse(
-        "$BAKE_TARGET/include/corto/$BAKE_VERSION/%s", p->id);
+    return corto_asprintf("%s/include", p->cfg->rootpath);
 }
 
 char* bake_project_etcPath(
     bake_project *p)
 {
-    return corto_envparse(
-        "$BAKE_TARGET/etc/corto/$BAKE_VERSION/%s", p->id);
+    return corto_asprintf("%s/etc", p->cfg->rootpath);
 }
 
 void bake_project_addSource(

@@ -57,4 +57,5 @@ int16_t bake_post(
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_uninstall(
+    bake_config *config,
     bake_project *project);

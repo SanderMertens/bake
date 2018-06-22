@@ -52,14 +52,15 @@ int16_t bake_install_dir_for_target(
 
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
-
         if (corto_isdir(file)) {
             if (!strnicmp(file, strlen("linux-"), "linux-") ||
                 !strnicmp(file, strlen("darwin-"), "darwin-") ||
                 !strnicmp(file, strlen("windows-"), "windows-"))
             {
                 if (corto_os_match(file)) {
-                    if (bake_install_dir_for_target(id, dir, file, target, softlink, uninstallFile)) {
+                    if (bake_install_dir_for_target(
+                        id, dir, file, target, softlink, uninstallFile))
+                    {
                         goto error;
                     }
                 } else {
@@ -70,7 +71,9 @@ int16_t bake_install_dir_for_target(
             } else if (!stricmp(file, "everywhere"))
             {
                 /* Always copy all contents in everywhere */
-                if (bake_install_dir_for_target(id, dir, file, target, softlink, uninstallFile)) {
+                if (bake_install_dir_for_target(
+                    id, dir, file, target, softlink, uninstallFile))
+                {
                     goto error;
                 }
                 continue;
@@ -110,20 +113,16 @@ int16_t bake_install_dir(
     bool softlink,
     FILE *uninstallFile)
 {
-    char *target = NULL;
-
+    char *target;
     if (id) {
-        /* If an id is specified, copy files to project directory */
-        target = corto_envparse("$BAKE_TARGET/%s/corto/$BAKE_VERSION/%s", dir, id);
-        if (!target) {
-            goto error;
-        }
+        target = corto_envparse("%s/%s/%s",
+            config->rootpath,
+            dir,
+            id);
     } else {
-        /* If no id is specified, copy files to environment directly */
-        target = corto_envparse("$BAKE_TARGET/%s", dir);
-        if (!target) {
-            goto error;
-        }
+        target = corto_envparse("%s/%s",
+            config->rootpath,
+            dir);
     }
 
     if (bake_install_dir_for_target(
@@ -137,34 +136,6 @@ int16_t bake_install_dir(
         goto error;
     }
 
-    if (config->standalone) {
-        if (id) {
-            target = corto_envparse("%s/$BAKE_VERSION/%s-%s/%s/%s",
-                config->standalone_path,
-                CORTO_PLATFORM_STRING,
-                config->id,
-                dir,
-                id);
-        } else {
-            target = corto_envparse("%s/$BAKE_VERSION/%s-%s/%s",
-                config->standalone_path,
-                CORTO_PLATFORM_STRING,
-                config->id,
-                dir);
-        }
-
-        if (bake_install_dir_for_target(
-            id,
-            dir,
-            subdir,
-            target,
-            false,
-            uninstallFile))
-        {
-            goto error;
-        }
-    }
-
     return 0;
 error:
     return -1;
@@ -172,19 +143,21 @@ error:
 
 static
 char* bake_uninstaller_filename(
+    bake_config *config,
     bake_project *project)
 {
     return corto_envparse(
-        "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s/uninstaller.txt",
-        project->id);
+        "%s/meta/%s/uninstaller.txt",
+        config->rootpath, project->id);
 }
 
 static
 FILE* bake_uninstaller_open(
+    bake_config *config,
     bake_project *project,
     const char *mode)
 {
-    char *filename = bake_uninstaller_filename(project);
+    char *filename = bake_uninstaller_filename(config, project);
     FILE *result = corto_file_open(filename, mode);
     free(filename);
 
@@ -192,6 +165,7 @@ FILE* bake_uninstaller_open(
 }
 
 int16_t bake_uninstall(
+    bake_config *config,
     bake_project *project)
 {
     corto_iter it;
@@ -200,16 +174,13 @@ int16_t bake_uninstall(
     corto_trace("begin");
 
     if (project->kind != BAKE_TOOL) {
-        char *projectDir = corto_envparse(
-            "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
-        if (!projectDir) {
-            goto error;
-        }
+        char *projectDir = corto_asprintf(
+            "%s/meta/%s", config->rootpath, project->id);
 
         /* Uninstall files are stored in the project directory, try uninstalling
          * first by removing all files in uninstaller file. */
         if (corto_file_test(projectDir)) {
-            char *filename = bake_uninstaller_filename(project);
+            char *filename = bake_uninstaller_filename(config, project);
             if (corto_file_iter(filename, &it)) {
                 corto_catch(); /* Catch last error */
                 corto_warning("missing uninstaller for project '%s'", project->id);
@@ -247,14 +218,14 @@ int16_t bake_uninstall(
          * may be left behind. Check for lingering directories, and clean up. */
 
         /* If include directory exists and is empty, clean up */
-        char *inc = corto_envparse(
-            "$BAKE_TARGET/include/corto/$BAKE_VERSION/%s", project->id);
+        char *inc = corto_asprintf(
+            "%s/include/%s", config->rootpath, project->id);
         if (corto_file_test(inc) && corto_dir_isEmpty(inc)) corto_rm(inc);
         free(inc);
 
         /* If etc directory exists and is empty, clean up */
         char *etc = corto_envparse(
-            "$BAKE_TARGET/etc/corto/$BAKE_VERSION/%s", project->id);
+            "%s/etc/%s", config->rootpath, project->id);
         if (corto_file_test(etc) && corto_dir_isEmpty(etc)) corto_rm(etc);
         free(etc);
     }
@@ -272,7 +243,7 @@ int16_t bake_install(
     bake_project *project)
 {
     if (project->kind != BAKE_TOOL) {
-        FILE *uninstallFile = bake_uninstaller_open(project, "w");
+        FILE *uninstallFile = bake_uninstaller_open(config, project, "w");
         if (!uninstallFile) {
             goto error;
         }
@@ -280,7 +251,9 @@ int16_t bake_install(
         /* Copy project.json and file that points back to source */
         if (corto_file_test("project.json")) {
             char *projectDir = corto_envparse(
-                "$BAKE_TARGET/lib/corto/$BAKE_VERSION/%s", project->id);
+                "%s/meta/%s", config->rootpath, project->id);
+
+            corto_try (corto_mkdir(projectDir), NULL);
 
             /* Copy project file */
             if (corto_cp("project.json", projectDir)) {
@@ -288,30 +261,12 @@ int16_t bake_install(
                 goto error;
             }
 
-            /* If standalone mode is enabled, copy project.json to standalone
-             * directory as well */
-            if (config->standalone) {
-                char *path = corto_asprintf("%s/meta/%s/project.json",
-                    config->standalone_rootpath, project->id);
-                if (corto_cp("project.json", path)) {
-                    corto_throw("failed to copy 'project.json' to '%s'",
-                        path);
-                    free (path);
+            /* Copy license file */
+            if (corto_file_test("LICENSE")) {
+                if (corto_cp("LICENSE", projectDir)) {
+                    corto_throw("failed to copy 'LICENSE' to '%s'",
+                        projectDir);
                     goto error;
-                }
-                free(path);
-
-                /* Copy license file, if available */
-                if (corto_file_test("LICENSE")) {
-                    char *path = corto_asprintf("%s/meta/%s/LICENSE",
-                        config->standalone_rootpath, project->id);
-                    if (corto_cp("LICENSE", path)) {
-                        corto_throw("failed to copy 'LICENSE' to '%s'",
-                            path);
-                        free (path);
-                        goto error;
-                    }
-                    free(path);
                 }
             }
 
@@ -319,7 +274,7 @@ int16_t bake_install(
             FILE *src_location = fopen(strarg("%s/source.txt", projectDir), "w");
             if (!src_location) {
                 corto_throw("failed to write to '%s' for '%s'",
-                    strarg("%s/dependee.json", projectDir),
+                    strarg("%s/source.txt", projectDir),
                     project->id);
                 goto error;
             }
@@ -361,7 +316,7 @@ int16_t bake_pre(
     corto_trace("begin");
 
     if (project->kind != BAKE_TOOL) {
-        FILE *uninstallFile = bake_uninstaller_open(project, "a");
+        FILE *uninstallFile = bake_uninstaller_open(config, project, "a");
         if (!uninstallFile) {
             goto error;
         }

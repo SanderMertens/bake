@@ -41,14 +41,13 @@ typedef struct bake_config {
     bool optimizations;
     bool coverage;
     bool strict;
-    bool standalone;
-    char *standalone_path;
     corto_ll variables;
 
     /* Set by configuration loader */
-    char *standalone_rootpath;
-    char *standalone_binpath;
-    char *standalone_libpath;
+    char *homepath;
+    char *rootpath;
+    char *binpath;
+    char *libpath;
 } bake_config;
 
 #ifdef __cplusplus

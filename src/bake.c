@@ -98,8 +98,6 @@ int parseArgs(int argc, char *argv[])
             PARSE_OPTION(0, "optimize", config.optimizations = true);
             PARSE_OPTION(0, "coverage", config.coverage = true);
             PARSE_OPTION(0, "strict", config.strict = true);
-            PARSE_OPTION(0, "standalone", config.standalone = true);
-            PARSE_OPTION(0, "standalone-path", config.standalone_path = argv[i + 1]; i++);
 
             /* Setup only */
             PARSE_OPTION(0, "local", local = true);
@@ -315,7 +313,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Step 1: clean package hierarchy */
     if (!skip_uninstall && p->public) {
-        if (bake_uninstall(p)) {
+        if (bake_uninstall(&config, p)) {
             corto_throw(NULL);
             goto error;
         }
@@ -445,7 +443,7 @@ error:
 static
 int bake_action_uninstall(bake_crawler c, bake_project* p, void *ctx) {
     /* Uninstall package from package hierarchy */
-    return !bake_uninstall(p);
+    return !bake_uninstall(&config, p);
 }
 
 static
@@ -472,6 +470,8 @@ int bake_action_getenv()
     corto_buffer_append(&buff, " BAKE_TARGET=%s", corto_getenv("BAKE_TARGET"));
     corto_buffer_append(&buff, " BAKE_VERSION=%s", corto_getenv("BAKE_VERSION"));
     corto_buffer_append(&buff, " BAKE_CONFIG=%s", corto_getenv("BAKE_CONFIG"));
+    corto_buffer_append(&buff, " BAKE_PLATFORM=%s", corto_getenv("BAKE_PLATFORM"));
+
     if ((env = corto_getenv("BAKE_ENVIRONMENT"))) {
         corto_buffer_append(&buff, " BAKE_ENVIRONMENT=%s", env);
     }
@@ -486,6 +486,9 @@ int bake_action_getenv()
 
     if ((env = corto_getenv("LD_LIBRARY_PATH"))) {
         corto_buffer_append(&buff, " LD_LIBRARY_PATH=%s", env);
+    }
+    if ((env = corto_getenv("DYLD_LIBRARY_PATH"))) {
+        corto_buffer_append(&buff, " DYLD_LIBRARY_PATH=%s", env);
     }
     if ((env = corto_getenv("PATH"))) {
         corto_buffer_append(&buff, " PATH=%s", env);
@@ -582,6 +585,7 @@ int16_t bake_project_fromArguments(
     if (sources) {
         char *source_tokens = strdup(sources);
         char *tok = strtok(source_tokens, "");
+        corto_ll_clear(p->sources);
         while (tok != NULL) {
             bake_project_addSource(p, tok);
             tok = strtok(NULL, ",");
@@ -592,6 +596,7 @@ int16_t bake_project_fromArguments(
     if (includes) {
         char *include_tokens = strdup(includes);
         char *tok = strtok(include_tokens, "");
+        corto_ll_clear(p->includes);
         while (tok != NULL) {
             bake_project_addInclude(p, tok);
             tok = strtok(NULL, ",");
@@ -634,7 +639,7 @@ int16_t bake_install_tool(
     }
 
     fprintf(f, "export `bake env`\n");
-    fprintf(f, "exec $BAKE_HOME/bin/%s $@\n", name);
+    fprintf(f, "exec $BAKE_HOME/$BAKE_VERSION/$BAKE_PLATFORM-$BAKE_CONFIG/bin/%s $@\n", name);
     fclose(f);
 
     /* Make executable for everyone */
@@ -784,6 +789,8 @@ int main(int argc, char* argv[]) {
         NULL,
         false);
 
+    corto_log_fmt("%C %v %m");
+
     /* Bake commands that do not use the build engine */
     if (action) {
         if (!strcmp(action, "setup")) {
@@ -886,7 +893,6 @@ int main(int argc, char* argv[]) {
     }
 
     if ((!action || strcmp(action, "foreach")) && !corto_getenv("BAKE_BUILDING")) {
-        corto_info("baking in #[cyan]%s", path_string);
         corto_setenv("BAKE_BUILDING", "");
         root_bake = true;
     }
@@ -894,10 +900,6 @@ int main(int argc, char* argv[]) {
     if (bake_do_action(c, action)) {
         corto_throw(NULL);
         goto error;
-    }
-
-    if (root_bake) {
-        corto_info("done!");
     }
 
     /* Cleanup resources */

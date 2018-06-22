@@ -10,12 +10,17 @@ char *repositories[] = {
 };
 
 static
-int16_t bake_setup_cmd(char *msg, char *cmd) {
+int16_t bake_setup_cmd(
+    char *msg,
+    char *cmd)
+{
     int8_t ret;
     int sig = corto_proc_cmd(cmd, &ret);
     if (sig || ret) {
         corto_log("#[red]x#[normal] %s\n", msg);
-        corto_log("  #[red]%s #[normal](%s %d)\n", cmd, sig?"sig":"result", sig?sig:ret);
+        corto_log(
+          "  #[red]%s #[normal](%s %d)\n",
+          cmd, sig?"sig":"result", sig?sig:ret);
         return -1;
     } else {
         corto_log("#[green]√#[normal] #[grey]%s#[normal]\n", msg);
@@ -204,8 +209,8 @@ int16_t bake_setup_writeConfig(
         fprintf(f, "    },\n");
         fprintf(f, "    \"environment\":{\n");
         fprintf(f, "        \"default\":{\n");
-        fprintf(f, "            \"BAKE_HOME\":\"~/.corto\",\n");
-        fprintf(f, "            \"BAKE_TARGET\":\"~/.corto\",\n");
+        fprintf(f, "            \"BAKE_HOME\":\"~/corto\",\n");
+        fprintf(f, "            \"BAKE_TARGET\":\"~/corto\",\n");
         fprintf(f, "            \"BAKE_VERSION\":\"%s\"\n", majorMinor);
         fprintf(f, "        }\n");
         fprintf(f, "    }\n");
@@ -300,6 +305,16 @@ int16_t bake_setup_configure()
         goto error;
     }
 
+    if (corto_setenv("BAKE_PLATFORM", CORTO_PLATFORM_STRING)) {
+        corto_throw("failed to set $BAKE_PLATFORM");
+        goto error;
+    }
+
+    if (corto_setenv("BAKE_CONFIG", "debug")) {
+        corto_throw("failed to set $BAKE_CONFIG");
+        goto error;
+    }
+
     /* Write default configuration */
     if (bake_setup_writeConfig(majorMinor)) {
         goto error;
@@ -317,7 +332,9 @@ int16_t bake_setup_globalScript(void)
 {
     FILE *f = fopen ("/usr/local/bin/bake", "w");
     if (!f) {
-        corto_log("#[red]x#[normal] cannot open '/usr/local/bin/bake': #[red]%s#[normal]\n", strerror(errno));
+        corto_log(
+      "#[red]x#[normal] cannot open '/usr/local/bin/bake': #[red]%s#[normal]\n",
+          strerror(errno));
         corto_log(
             "     try running as 'sudo bake setup', or 'bake setup --local'\n");
         goto error;
@@ -329,7 +346,8 @@ int16_t bake_setup_globalScript(void)
     /* Make executable for everyone */
     if (corto_setperm("/usr/local/bin/bake", 0755)) {
         corto_raise();
-        corto_log("#[red]x#[normal] failed to set permissions of '/usr/local/bin/bake'\n");
+        corto_log(
+      "#[red]x#[normal] failed to set permissions of '/usr/local/bin/bake'\n");
     }
 
     return 0;
@@ -346,7 +364,8 @@ int16_t bake_setup(const char *exec, bool local) {
     /* First try to install global scripts, as this is prone to failing when the
      * setup does not have the right permissions. */
     if (!local) {
-        corto_log("* writing scripts to '/usr/local', #[yellow]may prompt for password!\n");
+        corto_log(
+      "* writing scripts to '/usr/local', #[yellow]may prompt for password!\n");
 
         /* Write bake script */
         if (bake_setup_cmd(
@@ -422,13 +441,13 @@ int16_t bake_setup(const char *exec, bool local) {
 
     if (!strcmp(CORTO_OS_STRING, "darwin")) {
         if (bake_setup_cmd(
-            "rename libc.dylib to libc.so",
-            "mv driver-bake-c/libc.dylib driver-bake-c/libc.so"))
+            "rename libdriver_bake_c.dylib to libdriver_bake_c.so",
+            "mv driver-bake-c/libdriver_bake_c.dylib driver-bake-c/libdriver_bake_c.so"))
         { goto error; }
     }
     if (bake_setup_cmd(
         "install driver/bake/c binary to package repository",
-        "bake install driver-bake-c --id driver/bake/c --kind package --artefact libc.so"))
+        "bake install driver-bake-c --id driver/bake/c --kind package --artefact libdriver_bake_c.so"))
     { goto error; }
 
     corto_log("done!\n");

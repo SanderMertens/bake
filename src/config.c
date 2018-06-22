@@ -154,8 +154,6 @@ error:
 #define CFG_OPTIMIZATIONS "optimizations"
 #define CFG_COVERAGE "coverage"
 #define CFG_STRICT "strict"
-#define CFG_STANDALONE "standalone"
-#define CFG_STANDALONE_PATH "standalone_path"
 
 static
 int16_t bake_config_parseBool(
@@ -237,12 +235,6 @@ int16_t bake_config_loadConfiguration(
         if (bake_config_parseBool(cfg, CFG_STRICT, i, &cfg_out->strict)) {
             goto error;
         }
-        if (bake_config_parseBool(cfg, CFG_STANDALONE, i, &cfg_out->standalone)) {
-            goto error;
-        }
-        if (bake_config_parseString(cfg, CFG_STANDALONE_PATH, i, &cfg_out->standalone_path)) {
-            goto error;
-        }
     }
     corto_log_pop();
     return 0;
@@ -293,35 +285,46 @@ error:
 }
 
 static
-int16_t bake_config_setPathVariables(void)
+int16_t bake_config_setPathVariables(
+    bake_config *cfg)
 {
     char *path = corto_getenv("PATH");
     if (!path || !strlen(path)) {
-        corto_setenv("PATH", strarg("~/.bake:%s/bin", corto_getenv("BAKE_HOME")));
+        corto_setenv("PATH", strarg("~/.bake:%s", cfg->binpath));
     } else {
         corto_setenv(
-            "PATH", strarg("~/.bake:%s/bin:%s",
-                    corto_getenv("BAKE_HOME"), path));
+            "PATH", strarg("~/.bake:%s:%s",
+            cfg->binpath, path));
     }
 
     char *ld = corto_getenv("LD_LIBRARY_PATH");
     if (!ld || !strlen(ld)) {
         corto_setenv(
-            "LD_LIBRARY_PATH", strarg(".:%s/lib", corto_getenv("BAKE_HOME")));
+            "LD_LIBRARY_PATH", strarg(".:%s", cfg->libpath));
     } else {
         corto_setenv(
             "LD_LIBRARY_PATH",
-                strarg(".:%s/lib:%s", corto_getenv("BAKE_HOME"), ld));
+                strarg(".:%s:%s", cfg->libpath, ld));
+    }
+
+    char *dyld = corto_getenv("DYLD_LIBRARY_PATH");
+    if (!dyld || !strlen(dyld)) {
+        corto_setenv(
+            "DYLD_LIBRARY_PATH", strarg(".:%s", cfg->libpath));
+    } else {
+        corto_setenv(
+            "DYLD_LIBRARY_PATH",
+                strarg(".:%s:%s", cfg->libpath, dyld));
     }
 
     char *classpath = corto_getenv("CLASSPATH");
     if (!classpath || !strlen(classpath)) {
         corto_setenv(
-            "CLASSPATH", strarg(".:%s/java", corto_getenv("BAKE_HOME")));
+            "CLASSPATH", strarg(".:%s/java", cfg->rootpath));
     } else {
         corto_setenv(
             "CLASSPATH",
-                strarg(".:%s/java:%s", corto_getenv("BAKE_HOME"), classpath));
+                strarg(".:%s/java:%s", cfg->rootpath, classpath));
     }
 
     return 0;
@@ -384,11 +387,6 @@ int16_t bake_config_load_file (
     }
 
     json_value_free(json);
-
-    /* Set environment variables for searching binaries and libs */
-    if (bake_config_setPathVariables()) {
-        goto error;
-    }
 
     return 0;
 not_found:
@@ -473,6 +471,8 @@ int16_t bake_config_load(
     corto_ll env_set = NULL;
 
     if (corto_log_verbosityGet() <= CORTO_OK) {
+        /* If verbosity level is OK or less, log environment variables set in
+         * the configuration to console. */
         env_set = corto_ll_new();
         corto_ll_append(env_set, corto_strdup("BAKE_HOME"));
         corto_ll_append(env_set, corto_strdup("BAKE_TARGET"));
@@ -487,14 +487,15 @@ int16_t bake_config_load(
         .debug = true,
         .optimizations = false,
         .coverage = false,
-        .strict = false,
-        .standalone = false,
-        .standalone_path = corto_envparse("%s", "~/.corto/standalone")
+        .strict = false
     };
 
     corto_log_push("config");
+
+    /* Collect configuration files for current path */
     corto_ll config_files = bake_config_find_configs(".");
     if (config_files) {
+        /* Load configurations */
         if (bake_config_load_configs(
             config_files,
             cfg_out,
@@ -509,50 +510,58 @@ int16_t bake_config_load(
             "config:environment '%s:%s' not found in path, load default config",
             cfg_id, env_id);
 
-        char *bake_home = corto_envparse("~/.corto");
+        char *bake_home = corto_envparse("~/corto");
         if (!bake_home) {
             corto_throw(NULL);
             goto error;
         }
 
-        if (corto_setenv("BAKE_HOME", "%s", bake_home)) {
-            corto_throw(NULL);
-            goto error;
-        }
-        if (corto_setenv("BAKE_TARGET", "%s", bake_home)) {
-            corto_throw(NULL);
-            goto error;
-        }
+        corto_try (corto_setenv("BAKE_HOME", "%s", bake_home), NULL);
+        corto_try (corto_setenv("BAKE_TARGET", "%s", bake_home), NULL);
+
         free(bake_home);
     }
 
     corto_setenv("BAKE_CONFIG", cfg_id);
     corto_setenv("BAKE_ENVIRONMENT", env_id);
+    corto_setenv("BAKE_PLATFORM", CORTO_PLATFORM_STRING);
 
     cfg_out->id = corto_strdup(cfg_id);
 
-    if (cfg_out->standalone_path) {
-        cfg_out->standalone_rootpath = corto_asprintf(
-            "%s/%s/%s-%s",
-            cfg_out->standalone_path,
-            corto_getenv("BAKE_VERSION"),
-            CORTO_PLATFORM_STRING,
-            cfg_out->id);
+    cfg_out->rootpath = corto_asprintf(
+        "%s/%s/%s-%s",
+        corto_getenv("BAKE_TARGET"),
+        corto_getenv("BAKE_VERSION"),
+        corto_getenv("BAKE_PLATFORM"),
+        cfg_out->id);
 
-        cfg_out->standalone_libpath = corto_asprintf(
-            "%s/lib", cfg_out->standalone_rootpath);
+    cfg_out->homepath = corto_asprintf(
+        "%s/%s/%s-%s",
+        corto_getenv("BAKE_HOME"),
+        corto_getenv("BAKE_VERSION"),
+        corto_getenv("BAKE_PLATFORM"),
+        cfg_out->id);
 
-        cfg_out->standalone_binpath = corto_asprintf(
-            "%s/bin", cfg_out->standalone_rootpath);
+    cfg_out->libpath = corto_asprintf(
+        "%s/lib", cfg_out->rootpath);
+
+    cfg_out->binpath = corto_asprintf(
+        "%s/bin", cfg_out->rootpath);
+
+    /* Set environment variables for searching binaries and libs */
+    if (bake_config_setPathVariables(cfg_out)) {
+        goto error;
     }
 
     if (corto_log_verbosityGet() <= CORTO_OK) {
         corto_log_push("environment");
+
         corto_iter it = corto_ll_iter(env_set);
         while (corto_iter_hasNext(&it)) {
             char *env = corto_iter_next(&it);
             corto_ok("set '%s' to '%s'", env, corto_getenv(env));
         }
+
         corto_log_pop();
 
         corto_log_push("configuration");
@@ -561,8 +570,6 @@ int16_t bake_config_load(
         corto_ok("set '%s' to '%s'", CFG_OPTIMIZATIONS, cfg_out->optimizations ? "true" : "false");
         corto_ok("set '%s' to '%s'", CFG_COVERAGE, cfg_out->coverage ? "true" : "false");
         corto_ok("set '%s' to '%s'", CFG_STRICT, cfg_out->strict ? "true" : "false");
-        corto_ok("set '%s' to '%s'", CFG_STANDALONE, cfg_out->standalone ? "true" : "false");
-        corto_ok("set '%s' to '%s'", CFG_STANDALONE_PATH, cfg_out->standalone_path);
         corto_log_pop();
     }
 
