@@ -185,11 +185,6 @@ int16_t bake_check_dependencies(
     char *artefact)
 {
     time_t artefact_modified = 0;
-    time_t project_modified = 0;
-
-    if (corto_file_test("project.json")) {
-        project_modified = corto_lastmodified("project.json");
-    }
 
     char *artefact_full = corto_asprintf("bin/%s-%s/%s",
         CORTO_PLATFORM_STRING, p->cfg->id, artefact);
@@ -197,15 +192,6 @@ int16_t bake_check_dependencies(
         artefact_modified = corto_lastmodified(artefact_full);
     }
     free(artefact_full);
-
-    if (artefact_modified < project_modified) {
-        if (artefact_modified) {
-            corto_ok("cfg 'project.json' #[green](changed)#[normal]");
-        }
-        if (p->managed || artefact_modified) {
-            p->sources_outdated = true;
-        }
-    }
 
     /* For each package, if use_generated_api is enabled, also include
      * the package that contains the generated api for the language of
@@ -263,6 +249,7 @@ int16_t bake_check_dependencies(
             }
         }
     }
+
     if (p->use_private) {
         corto_iter it = corto_ll_iter(p->use_private);
         while (corto_iter_hasNext(&it)) {
