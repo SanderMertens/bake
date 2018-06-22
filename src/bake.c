@@ -789,7 +789,7 @@ int main(int argc, char* argv[]) {
         NULL,
         false);
 
-    corto_log_fmt("%C %v %m");
+    corto_log_fmt("%C %V %m");
 
     /* Bake commands that do not use the build engine */
     if (action) {
