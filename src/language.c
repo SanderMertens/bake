@@ -730,7 +730,15 @@ int16_t bake_language_add_dependency(
 
     const char *lib = corto_locate(dep, NULL, CORTO_LOCATE_LIB);
     if (lib) {
-        corto_ll_append(p->link, corto_strdup(lib));
+        char *dep_lib = corto_strdup(dep);
+        char *ptr, ch;
+        for (ptr = dep_lib; (ch = *ptr); ptr ++) {
+            if (ch == '/' || ch == '.') {
+                ptr[0] = '_';
+            }
+        }
+
+        corto_ll_append(p->link, dep_lib);
     } else {
         /* A dependency may not have a library that can be linked, but could
          * only contain build instructions */
@@ -917,6 +925,7 @@ corto_ll bake_language_link(
 
         /* Copy to path */
         if (corto_cp(link, target_link)) {
+            corto_throw("failed to library in link '%s'", link);
             goto error;
         }
 
@@ -983,11 +992,6 @@ int16_t bake_language_build(
         goto error;
     }
 
-    /* Add dependencies to the link attribute */
-    if (bake_language_add_dependencies(p)) {
-        goto error;
-    }
-
     /* Obtain artefact */
     char *artefact = l->artefact_cb(l, p);
     if (!artefact) {
@@ -1008,6 +1012,15 @@ int16_t bake_language_build(
     corto_ll old_link = p->link;
     p->link = bake_language_link(
         p, c->libpath);
+    if (!p->link) {
+        corto_throw(NULL);
+        goto error;
+    }
+
+    /* Add dependencies to the link attribute */
+    if (bake_language_add_dependencies(p)) {
+        goto error;
+    }
 
     char *artefact_path = corto_asprintf(
         "bin/%s-%s", CORTO_PLATFORM_STRING, c->id);
