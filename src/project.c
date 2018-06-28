@@ -622,6 +622,10 @@ int16_t bake_project_parse_config(
         }
 
         p->id = strdup(j_id_member);
+        char *ptr, ch;
+        for (ptr = p->id; (ch = *ptr); ptr ++) {
+            if (ch == '.') *ptr = '/';
+        }
 
         const char *j_type_member = json_object_get_string(jo, "type");
         if (!j_type_member) {
