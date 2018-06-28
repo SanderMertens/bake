@@ -749,8 +749,7 @@ int16_t bake_language_add_dependee_config(
 {
     const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
     if (!libpath) {
-        corto_throw(
-            "failed to locate library path for dependency '%s'", dep);
+        corto_throw("failed to locate project path for dependency '%s'", dep);
         goto error;
     }
 
@@ -981,6 +980,11 @@ int16_t bake_language_build(
 
     /* Add dependee configuration for project */
     if (bake_language_add_dependee_configs(p)) {
+        goto error;
+    }
+
+    /* Add dependencies to the link attribute */
+    if (bake_language_add_dependencies(p)) {
         goto error;
     }
 
