@@ -292,10 +292,6 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         if (bake_check_dependencies(l, p, artefact)) {
             goto error;
         }
-    } else {
-        if (corto_file_test("src")) {
-            corto_warning("found 'src' directory but no language configured. add language to 'project.json'");
-        }
     }
 
     /* Step 1: clean package hierarchy */
