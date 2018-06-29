@@ -53,20 +53,14 @@ int16_t bake_install_dir_for_target(
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
         if (corto_isdir(file)) {
-            if (!strnicmp(file, strlen("linux-"), "linux-") ||
-                !strnicmp(file, strlen("darwin-"), "darwin-") ||
-                !strnicmp(file, strlen("windows-"), "windows-"))
-            {
-                if (corto_os_match(file)) {
-                    if (bake_install_dir_for_target(
-                        id, dir, file, target, softlink, uninstallFile))
-                    {
-                        goto error;
-                    }
-                } else {
-                    /* If directory contains platform-specific content but does not
-                     * match current platform, skip */
+            if (corto_os_match(file)) {
+                corto_trace("install files for current OS in '%s'", file);
+                if (bake_install_dir_for_target(
+                    id, dir, file, target, softlink, uninstallFile))
+                {
+                    goto error;
                 }
+
                 continue;
             } else if (!stricmp(file, "everywhere"))
             {
