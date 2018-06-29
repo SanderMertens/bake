@@ -1092,11 +1092,6 @@ int16_t bake_language_clean(
 
     corto_tls_set(BAKE_PROJECT_KEY, p);
 
-    /* Clear .bake_cache directory which contains object files / generated files */
-    if (corto_rm(".bake_cache")) {
-        goto error;
-    }
-
     /* Clear bin directory which contains the artefact */
     if (corto_rm("bin")) {
         goto error;

@@ -346,13 +346,13 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
             corto_throw("build failed");
             goto error;
         }
+    }
 
-        /* Step 7: install artefact if project was rebuilt */
-        if (artefact && p->public) {
-            if (bake_post(p, artefact)) {
-                corto_throw(NULL);
-                goto error;
-            }
+    /* Step 7: install artefact if project was rebuilt */
+    if (p->public) {
+        if (bake_post(p, artefact)) {
+            corto_throw(NULL);
+            goto error;
         }
     }
 
@@ -375,6 +375,11 @@ int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
         }
 
         bake_language_clean(l, p);
+    }
+
+    /* Always clean .bake_cache directory */
+    if (corto_rm(".bake_cache")) {
+        goto error;
     }
 
     return 1; /* continue */
@@ -414,7 +419,7 @@ int bake_action_install(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    if (artefact != NULL && p->public) {
+    if (p->public) {
         if (bake_post(p, artefact)) {
             goto error;
         }

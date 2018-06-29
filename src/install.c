@@ -416,6 +416,33 @@ error:
     return -1;
 }
 
+static
+int16_t bake_post_install_bin(
+    bake_project *project,
+    const char *targetDir)
+{
+    char *bin_path = corto_asprintf("bin/%s-%s",
+        CORTO_PLATFORM_STRING, project->cfg->id);
+
+    if (corto_file_test(bin_path) == 1) {
+        corto_iter it;
+        corto_try( corto_dir_iter(bin_path, NULL, &it), NULL);
+
+        while (corto_iter_hasNext(&it)) {
+            char *file = corto_iter_next(&it);
+            char *file_path = corto_asprintf("%s/%s", bin_path, file);
+            corto_try( corto_cp(file_path, targetDir), NULL);
+            free(file_path);
+        }
+    }
+
+    free (bin_path);
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_post(
     bake_project *project,
     char *artefact)
@@ -429,6 +456,19 @@ int16_t bake_post(
     targetDir = bake_project_binaryPath(project);
     if (!targetDir) {
         goto error;
+    }
+
+    if (!artefact) {
+        /* If no artefact is provided, but there is a bin directory, install the
+         * files in the bin directory. This makes it easy to install prebuilt
+         * binaries. */
+        if (bake_post_install_bin(project, targetDir)) {
+            goto error;
+        }
+
+        free(targetDir);
+
+        return 0;
     }
 
     char *artefact_full = corto_asprintf("bin/%s-%s/%s",
@@ -447,7 +487,9 @@ int16_t bake_post(
     }
 
     if (corto_isdir(artefact_full)) {
-        corto_throw("specified artefact '%s' is a directory, expecting regular file", artefact_full);
+        corto_throw(
+            "specified artefact '%s' is a directory, expecting regular file",
+            artefact_full);
         goto error;
     }
 
