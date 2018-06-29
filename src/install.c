@@ -468,6 +468,7 @@ int16_t bake_post(
 
         free(targetDir);
 
+        corto_log_pop();
         return 0;
     }
 
