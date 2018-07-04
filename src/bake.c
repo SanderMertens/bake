@@ -336,11 +336,48 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
 
     /* The next steps are only relevant if a language is configured */
     if (p->language) {
+        bool use_existing_binary = false;
+
+        /* If project keep_binary is true, and a binary exists in the binary
+         * folder, skip build. Only an explicit 'bake rebuild' triggers a build */
+        if (p->keep_binary) {
+            char *artefact_full = corto_asprintf("bin/%s-%s/%s",
+                CORTO_PLATFORM_STRING, p->cfg->id, artefact);
+            if (corto_file_test(artefact_full)) {
+                use_existing_binary = true;
+                corto_ok(
+                  "not building '%s' because keep_binary is true and '%s' exists",
+                    p->id, artefact_full);
+            }
+            free(artefact_full);
+        }
+
+        /* If code generation yielded a folder with the name of the
+         * project language, this is a new project that contains the
+         * generated language binding api. */
+        if (p->use_generated_api && p->managed) {
+            int sig;
+            int8_t ret;
+            if (corto_file_test("c") == 1) {
+                if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
+                    corto_throw(NULL);
+                    goto error;
+                }
+            }
+            if (corto_file_test("cpp") == 1) {
+                if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
+                    corto_throw(NULL);
+                    goto error;
+                }
+            }
+        }
 
         /* Step 6: build sources */
-        if (bake_language_build(l, p, &config)) {
-            corto_throw("build failed");
-            goto error;
+        if (!use_existing_binary) {
+            if (bake_language_build(l, p, &config)) {
+                corto_throw("build failed");
+                goto error;
+            }
         }
     }
 
@@ -362,6 +399,7 @@ error:
 static
 int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
 
+    /* Run language-specific clean routines */
     if (p->language) {
         bake_language *l = NULL;
         l = bake_language_get(p->language);
@@ -371,6 +409,13 @@ int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
         }
 
         bake_language_clean(l, p);
+    }
+
+    /* Clear bin directory which contains the artefact */
+    if (!p->keep_binary) {
+        if (corto_rm("bin")) {
+            goto error;
+        }
     }
 
     /* Always clean .bake_cache directory */
@@ -388,6 +433,15 @@ int bake_action_rebake(bake_crawler c, bake_project* p, void *ctx) {
 
     if (!bake_action_clean(c, p, ctx)) {
         goto error;
+    }
+
+    /* Only if bake is explicitly rebuilding, remove bin directory when project
+     * sets keep_binary to true */
+    if (p->keep_binary) {
+        /* Make sure to only clean the bin directory for the current env */
+        if (corto_rm(strarg("bin/%s-%s", CORTO_PLATFORM_STRING, config.id))) {
+            goto error;
+        }
     }
 
     if (!bake_action_build(c, p, ctx)) {

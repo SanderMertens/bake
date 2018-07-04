@@ -962,26 +962,6 @@ int16_t bake_language_build(
     corto_log_push("build");
     corto_trace("begin");
 
-    /* If code generation yielded a folder with the name of the
-     * project language, this is a new project that contains the
-     * generated language binding api. */
-    if (p->use_generated_api && p->managed) {
-        int sig;
-        int8_t ret;
-        if (corto_file_test("c") == 1) {
-            if ((sig = corto_proc_cmd("bake build c", &ret)) || ret) {
-                corto_throw(NULL);
-                goto error;
-            }
-        }
-        if (corto_file_test("cpp") == 1) {
-            if ((sig = corto_proc_cmd("bake build cpp", &ret)) || ret) {
-                corto_throw(NULL);
-                goto error;
-            }
-        }
-    }
-
     /* Resolve libraries in project link attriubte */
     if (bake_project_resolveLinks(p)) {
         goto error;
@@ -1091,16 +1071,6 @@ int16_t bake_language_clean(
     corto_trace("begin");
 
     corto_tls_set(BAKE_PROJECT_KEY, p);
-
-    /* Clear bin directory which contains the artefact */
-    if (corto_rm("bin")) {
-        goto error;
-    }
-
-    /* Clear .corto directory (for legacy projects) */
-    if (corto_rm(".corto")) {
-        goto error;
-    }
 
     /* If project is managed, remove projects that contain generated
      * language-specific code. */

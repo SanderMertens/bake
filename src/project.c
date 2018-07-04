@@ -586,6 +586,15 @@ int16_t bake_project_parse_config_value(
                 goto error;
             }
         }
+
+        if (!strcmp(name, "keep_binary")) {
+            if (json_value_get_type(v) == JSONBoolean) {
+                p->keep_binary = json_value_get_boolean(v);
+            } else {
+                corto_throw("expected boolean for 'keep_binary' attribute");
+                goto error;
+            }
+        }
     }
 
     return 0;
