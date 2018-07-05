@@ -399,18 +399,6 @@ error:
 static
 int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
 
-    /* Run language-specific clean routines */
-    if (p->language) {
-        bake_language *l = NULL;
-        l = bake_language_get(p->language);
-        if (!l) {
-            corto_throw(NULL);
-            goto error;
-        }
-
-        bake_language_clean(l, p);
-    }
-
     /* Clear bin directory which contains the artefact */
     if (!p->keep_binary) {
         if (corto_rm("bin")) {
@@ -431,7 +419,21 @@ error:
 static
 int bake_action_rebake(bake_crawler c, bake_project* p, void *ctx) {
 
-    if (!bake_action_clean(c, p, ctx)) {
+    /* Run language-specific clean routines */
+    if (p->language) {
+        bake_language *l = NULL;
+        l = bake_language_get(p->language);
+        if (!l) {
+            corto_throw(NULL);
+            goto error;
+        }
+
+        bake_language_clean(l, p);
+    }
+
+    /* Clean .bake_cache directory for current environment */
+    if (corto_rm(strarg(".bake_cache/%s-%s", CORTO_PLATFORM_STRING, config.id)))
+    {
         goto error;
     }
 
