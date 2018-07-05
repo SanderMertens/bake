@@ -432,7 +432,12 @@ int bake_action_rebake(bake_crawler c, bake_project* p, void *ctx) {
     }
 
     /* Clean .bake_cache directory for current environment */
-    if (corto_rm(strarg(".bake_cache/%s-%s", CORTO_PLATFORM_STRING, config.id)))
+    if (corto_rm(strarg(".bake_cache/obj/%s-%s", CORTO_PLATFORM_STRING, config.id)))
+    {
+        goto error;
+    }
+
+    if (corto_rm(strarg(".bake_cache/gen", CORTO_PLATFORM_STRING, config.id)))
     {
         goto error;
     }
