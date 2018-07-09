@@ -399,6 +399,18 @@ error:
 static
 int bake_action_clean(bake_crawler c, bake_project* p, void *ctx) {
 
+    /* Run language-specific clean routines */
+    if (p->language) {
+        bake_language *l = NULL;
+        l = bake_language_get(p->language);
+        if (!l) {
+            corto_throw(NULL);
+            goto error;
+        }
+
+        bake_language_clean(l, p);
+    }
+
     /* Clear bin directory which contains the artefact */
     if (!p->keep_binary) {
         if (corto_rm("bin")) {

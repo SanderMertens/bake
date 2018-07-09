@@ -94,7 +94,7 @@ int16_t bake_project_func_os(
     corto_buffer *buffer,
     const char *argument)
 {
-    if (!strcmp(argument, CORTO_OS_STRING)) {
+    if (corto_os_match(argument)) {
         corto_buffer_appendstr(buffer, "1");
     } else {
         corto_buffer_appendstr(buffer, "0");
@@ -112,7 +112,7 @@ int16_t bake_project_func_call(
 {
     if (!strcmp(function, "locate")) {
         return bake_project_func_locate(p, package_id, buffer, argument);
-    } else if (!strcmp(function, "os")) {
+    } else if (!strcmp(function, "os") || !strcmp(function, "target")) {
         return bake_project_func_os(p, package_id, buffer, argument);
     } else {
         corto_throw("unknown function '%s'", function);
