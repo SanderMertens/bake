@@ -387,6 +387,8 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
             corto_throw(NULL);
             goto error;
         }
+    } else {
+        corto_debug("skipping install, project is not public");
     }
 
     if (artefact) free(artefact);

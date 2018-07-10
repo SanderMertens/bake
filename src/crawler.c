@@ -39,11 +39,21 @@ void bake_crawler_addDependency(
     bake_project *p,
     char *use)
 {
-    bake_project *dep = corto_rb_find(_this->nodes, use);
+  /* Replace '.' with '/' */
+    corto_id use_buffer;
+    char *ptr, ch;
+    strcpy(use_buffer, use);
+    for (ptr = use_buffer; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
+            *ptr = '/';
+        }
+    }
+
+    bake_project *dep = corto_rb_find(_this->nodes, use_buffer);
     if (!dep) {
         /* Create placeholder */
         dep = bake_project_new(NULL, NULL);
-        dep->id = corto_strdup(use);
+        dep->id = corto_strdup(use_buffer);
         corto_rb_set(_this->nodes, dep->id, dep);
     }
 
