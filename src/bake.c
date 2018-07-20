@@ -282,16 +282,6 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
             corto_throw(NULL);
             goto error;
         }
-
-        artefact = bake_language_artefact(l, p);
-        if (!artefact) {
-            corto_throw("could not obtain artefact for project '%s'", p->id);
-            goto error;
-        }
-
-        if (bake_check_dependencies(l, p, artefact)) {
-            goto error;
-        }
     }
 
     /* Step 1: clean package hierarchy */
@@ -323,7 +313,19 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         goto error;
     }
 
-    /* Step 4: if a managed project, call code generator */
+    /* Step 4: check dependencies of project. Obtaining the artefact name
+     * requires the project configuration to be parsed. */
+    artefact = bake_language_artefact(l, p);
+    if (!artefact) {
+        corto_throw("could not obtain artefact for project '%s'", p->id);
+        goto error;
+    }
+
+    if (bake_check_dependencies(l, p, artefact)) {
+        goto error;
+    }
+
+    /* Step 5: if a managed project, call code generator */
     if (p->managed && p->language) {
         if (bake_language_generate(l, p, &config)) {
             corto_throw(NULL);
@@ -331,7 +333,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 5: install custom and generated files to package hierarchy */
+    /* Step 6: install custom and generated files to package hierarchy */
     if (!skip_preinstall && p->public) {
         if (bake_pre(&config, p)) {
             corto_throw(NULL);
@@ -377,7 +379,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
             }
         }
 
-        /* Step 6: build sources */
+        /* Step 7: build sources */
         if (!use_existing_binary) {
             if (bake_language_build(l, p, &config)) {
                 corto_throw("build failed");
@@ -386,7 +388,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 7: install artefact if project was rebuilt */
+    /* Step 8: install artefact if project was rebuilt */
     if (p->public) {
         if (bake_post(p, artefact)) {
             corto_throw(NULL);
