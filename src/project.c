@@ -260,6 +260,7 @@ bake_project_attr *bake_project_getattr(
         corto_iter it = corto_ll_iter(p->attributes);
         while (corto_iter_hasNext(&it)) {
             bake_project_attr *attr = corto_iter_next(&it);
+
             if (!strcmp(attr->name, name)) {
                 return attr;
             }
@@ -499,8 +500,6 @@ int16_t bake_project_parseMembers(
             /* If name contains function, parse it */
             name = bake_project_replace(p, NULL, json_name);
         }
-
-        printf("name = %s\n", name);
 
         if (!strcmp(name, "1") || !stricmp(name, "true")) {
             JSON_Value *value = json_object_get_value_at(jo, i);

@@ -1051,6 +1051,7 @@ char* bake_language_artefact(
 {
     corto_assert(l != NULL, "no language specified for bake_language_artefact");
     corto_assert(p != NULL, "no project specified for bake_language_artefact");
+    corto_tls_set(BAKE_PROJECT_KEY, p);
     return l->artefact_cb(l, p);
 }
 

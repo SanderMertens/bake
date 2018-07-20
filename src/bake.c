@@ -315,14 +315,16 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Step 4: check dependencies of project. Obtaining the artefact name
      * requires the project configuration to be parsed. */
-    artefact = bake_language_artefact(l, p);
-    if (!artefact) {
-        corto_throw("could not obtain artefact for project '%s'", p->id);
-        goto error;
-    }
+    if (l) {
+        artefact = bake_language_artefact(l, p);
+        if (!artefact) {
+            corto_throw("could not obtain artefact for project '%s'", p->id);
+            goto error;
+        }
 
-    if (bake_check_dependencies(l, p, artefact)) {
-        goto error;
+        if (bake_check_dependencies(l, p, artefact)) {
+            goto error;
+        }
     }
 
     /* Step 5: if a managed project, call code generator */
