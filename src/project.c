@@ -309,6 +309,27 @@ char *bake_project_getattr_tostr(
     return NULL;
 }
 
+bool bake_project_getattr_tobool(
+    bake_project_attr *result)
+{
+    switch(result->kind) {
+    case BAKE_ATTR_STRING:
+        if (result->is.string) {
+            return strcmp(result->is.string, "false");
+        } else {
+            return false;
+        }
+    case BAKE_ATTR_BOOLEAN:
+        return result->is.boolean;
+    case BAKE_ATTR_NUMBER:
+        return result->is.number != 0;
+    case BAKE_ATTR_ARRAY:
+        return false;
+    }
+
+    return false;
+}
+
 char *bake_project_getattr_string_cb(const char *name) {
     bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
     corto_assert(p != NULL, "project::getattr called without project context");
@@ -319,6 +340,19 @@ char *bake_project_getattr_string_cb(const char *name) {
         return bake_project_getattr_tostr(result);
     } else {
         return "";
+    }
+}
+
+bool bake_project_getattr_bool_cb(const char *name) {
+    bake_project *p = corto_tls_get(BAKE_PROJECT_KEY);
+    corto_assert(p != NULL, "project::getattr called without project context");
+
+    bake_project_attr *result = bake_project_getattr(p, name);
+
+    if (result) {
+        return bake_project_getattr_tobool(result);
+    } else {
+        return false;
     }
 }
 
@@ -465,6 +499,8 @@ int16_t bake_project_parseMembers(
             /* If name contains function, parse it */
             name = bake_project_replace(p, NULL, json_name);
         }
+
+        printf("name = %s\n", name);
 
         if (!strcmp(name, "1") || !stricmp(name, "true")) {
             JSON_Value *value = json_object_get_value_at(jo, i);
@@ -902,6 +938,7 @@ bake_project* bake_project_new(
     /* Set interface callbacks */
     result->get_attr = bake_project_getattr_cb;
     result->get_attr_string = bake_project_getattr_string_cb;
+    result->get_attr_bool = bake_project_getattr_bool_cb;
     result->clean = bake_project_clean_cb;
     result->add_build_dependency = bake_project_add_build_dependency_cb;
 
