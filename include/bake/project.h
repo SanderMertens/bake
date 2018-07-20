@@ -111,6 +111,7 @@ typedef struct bake_project {
     /* Interface for bake plugin */
     bake_project_attr* (*get_attr)(const char *name);
     char* (*get_attr_string)(const char *name);
+    bool (*get_attr_bool)(const char *name);
     void (*add_build_dependency)(const char *file);
     void (*clean)(const char *file);
 } bake_project;
