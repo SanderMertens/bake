@@ -822,7 +822,7 @@ The corto runtime mounts the bake environment in the corto object store, which g
 corto_iter it;
 corto_select("//").type("package").iter(&it);
 while (corto_iter_hasNext(&it)) {
-    corto_result *r = corto_iter_next(&it);
+    corto_record *r = corto_iter_next(&it);
     printf("package '%s/%s' found\n", r->parent, r->id);
 }
 ```

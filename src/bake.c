@@ -311,10 +311,15 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 3: parse attribues in project configuration. May use corto_locate to
+    /* Step 3: parse attributes in project configuration. May use corto_locate to
      * resolve paths. */
     if (bake_project_parse_attributes(p)) {
         corto_throw(NULL);
+        goto error;
+    }
+
+    /* Step 3.5: parse attributes from dependee configurations */
+    if (bake_project_parse_dependee_attributes(p)) {
         goto error;
     }
 

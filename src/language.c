@@ -751,33 +751,6 @@ error:
 }
 
 static
-int16_t bake_language_add_dependee_config(
-    bake_project *p,
-    const char *dep)
-{
-    const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
-    if (!libpath) {
-        corto_throw("failed to locate project path for dependency '%s'", dep);
-        goto error;
-    }
-
-    /* Check if dependency has a dependee file with build instructions */
-    char *dependee_file = corto_asprintf("%s/dependee.json", libpath);
-    if (corto_file_test(dependee_file)) {
-        if (bake_project_loadDependeeConfig(p, dep, dependee_file)) {
-            corto_throw(NULL);
-            goto error;
-        }
-    }
-
-    free(dependee_file);
-
-    return 0;
-error:
-    return -1;
-}
-
-static
 int16_t bake_language_build_artefact(
     bake_language *l,
     bake_project *p,
@@ -816,37 +789,6 @@ int16_t bake_language_build_artefact(
     return 0;
 error:
     if (binaryPath) free(binaryPath);
-    return -1;
-}
-
-static
-int16_t bake_language_add_dependee_configs(
-    bake_project *p)
-{
-    /* Add dependencies to link list */
-    if (p->use) {
-        corto_iter it = corto_ll_iter(p->use);
-        while (corto_iter_hasNext(&it)) {
-            char *dep = corto_iter_next(&it);
-            if (bake_language_add_dependee_config(p, dep)) {
-                goto error;
-            }
-        }
-    }
-
-    /* Add private dependencies to link list */
-    if (p->use_private) {
-        corto_iter it = corto_ll_iter(p->use_private);
-        while (corto_iter_hasNext(&it)) {
-            char *dep = corto_iter_next(&it);
-            if (bake_language_add_dependee_config(p, dep)) {
-                goto error;
-            }
-        }
-    }
-
-    return 0;
-error:
     return -1;
 }
 
@@ -962,13 +904,8 @@ int16_t bake_language_build(
     corto_log_push("build");
     corto_trace("begin");
 
-    /* Resolve libraries in project link attriubte */
+    /* Resolve libraries in project link attribute */
     if (bake_project_resolveLinks(p)) {
-        goto error;
-    }
-
-    /* Add dependee configuration for project */
-    if (bake_language_add_dependee_configs(p)) {
         goto error;
     }
 

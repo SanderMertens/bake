@@ -61,6 +61,9 @@ char *bake_project_definitionFile(
 int16_t bake_project_parse_attributes(
     bake_project *p);
 
+int16_t bake_project_parse_dependee_attributes(
+    bake_project *p);
+
 int16_t bake_project_loadDependeeConfig(
     bake_project *p,
     const char *package_id,
