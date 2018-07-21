@@ -137,15 +137,10 @@ int16_t bake_check_dependency(
 {
     /* Don't check if this is the generated language binding
      * package, as it may still have to be generated */
-    if (p->managed && p->language) {
+    if (bake_project_is_generated_package(p, dependency)) {
         const char *fmt = private ? "use '%s' #[yellow](private)" : "use '%s'";
-        if (!strcmp(dependency, strarg("%s/c", p->id))) {
-            corto_ok(fmt, dependency);
-            goto proceed;
-        } else if (!strcmp(dependency, strarg("%s/cpp", p->id))) {
-            corto_ok(fmt, dependency);
-            goto proceed;
-        }
+        corto_ok(fmt, dependency);
+        goto proceed;
     }
 
     const char *lib = corto_locate(dependency, NULL, CORTO_LOCATE_PACKAGE);
@@ -192,53 +187,6 @@ int16_t bake_check_dependencies(
         artefact_modified = corto_lastmodified(artefact_full);
     }
     free(artefact_full);
-
-    /* For each package, if use_generated_api is enabled, also include
-     * the package that contains the generated api for the language of
-     * the package */
-    if (p->use_generated_api && p->managed) {
-        /* First, add own generated language package */
-        if (p->model && p->public && p->kind == BAKE_PACKAGE) {
-            bake_project_use(p, strarg("%s/%s", p->id, p->language));
-
-            if (p->c4cpp) {
-                bake_project_use(p, strarg("%s/cpp", p->id));
-            }
-        }
-
-        int i = 0, count = corto_ll_count(p->use);
-        corto_iter it = corto_ll_iter(p->use);
-        while (corto_iter_hasNext(&it)) {
-            char *package = corto_iter_next(&it);
-            char *lastElem = strrchr(package, '/');
-            i ++;
-            if (lastElem) {
-                lastElem ++;
-                /* Don't try to find a language specific
-                 * package if this is already a language
-                 * specific package */
-                if (!strcmp(lastElem, p->language)) {
-                    continue;
-                }
-            }
-
-            /* Insert language-specific package with generated
-             * API if it exists */
-            const char *lib = corto_locate(
-                strarg("%s/%s", package, p->language),
-                NULL,
-                CORTO_LOCATE_LIB);
-            if (lib) {
-                bake_project_use(p, strarg("%s/%s", package, p->language));
-            }
-
-            /* Reached end of list- don't process packages that
-             * we just added */
-            if (i == count) {
-                break;
-            }
-        }
-    }
 
     if (p->use) {
         corto_iter it = corto_ll_iter(p->use);
@@ -303,15 +251,20 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
 
     /* Step 3: parse attributes in project configuration. May use corto_locate to
      * resolve paths. */
+    corto_log_push("parse_config");
     if (bake_project_parse_attributes(p)) {
         corto_throw(NULL);
+        corto_log_pop();
         goto error;
     }
 
     /* Step 3.5: parse attributes from dependee configurations */
     if (bake_project_parse_dependee_attributes(p)) {
+        corto_throw(NULL);
+        corto_log_pop();
         goto error;
     }
+    corto_log_pop();
 
     /* Step 4: check dependencies of project. Obtaining the artefact name
      * requires the project configuration to be parsed. */
@@ -327,7 +280,12 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 5: if a managed project, call code generator */
+    /* Step 5: Add generated packages as dependencies to project */
+    if (bake_project_add_generated_dependencies(p)) {
+        goto error;
+    }
+
+    /* Step 6: if a managed project, call code generator */
     if (p->managed && p->language) {
         if (bake_language_generate(l, p, &config)) {
             corto_throw(NULL);
@@ -335,7 +293,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 6: install custom and generated files to package hierarchy */
+    /* Step 7: install custom and generated files to package hierarchy */
     if (!skip_preinstall && p->public) {
         if (bake_pre(&config, p)) {
             corto_throw(NULL);
@@ -381,7 +339,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
             }
         }
 
-        /* Step 7: build sources */
+        /* Step 8: build sources */
         if (!use_existing_binary) {
             if (bake_language_build(l, p, &config)) {
                 corto_throw("build failed");
@@ -390,7 +348,7 @@ int bake_action_build(bake_crawler c, bake_project* p, void *ctx) {
         }
     }
 
-    /* Step 8: install artefact if project was rebuilt */
+    /* Step 9: install artefact if project was rebuilt */
     if (p->public) {
         if (bake_post(p, artefact)) {
             corto_throw(NULL);

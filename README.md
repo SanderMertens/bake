@@ -265,6 +265,7 @@ dependee | object | Properties inside the `dependee` object will be passed on to
 sources | list(string) | List of paths that contain source files. Default is `src`. The `$SOURCES` rule is substituted with this value.
 includes | list(string) | List of paths that contain include files.
 use_generated_api | bool | For managed projects only. For each project in `use`, add a project with id `$project/$language`, if it exists.
+keep_binary | bool | Do not clean binary files when doing bake clean. When a binary for the target platform is present, bake will skip the project. To force a rebuild, a user has to explicitly use the `bake rebuild` command.
 
 ### Template Functions
 Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Template functions take the following form:
@@ -287,9 +288,10 @@ They are used like this:
 
 The following functions are currently supported:
 
-Function | Description
+Function | Type | Description
 ---------|------------
-locate | Locate various project paths in the bake environment
+locate | string | Locate various project paths in the bake environment
+target | bool | Match a target platform
 
 The next sections are detailed description of the supported functions:
 
@@ -305,6 +307,43 @@ lib | The package library (empty if an executable)
 app | The package executable (empty if a library)
 bin | The package binary
 env | The package environment
+
+#### target
+The target function can be used to build configurations that use different settings for different platforms. The following example demonstrates how it can be used:
+
+```json
+{
+    "${target linux}": {
+        "include": ["includes/linux"]
+    }
+}
+```
+
+The function can match both operating system and architecture. The following expressions are all valid:
+
+- x86-linux
+- darwin
+- x86_64
+- x86_64-darwin
+- i386
+
+For a full description of the expressions that are supported, see the documentation of `corto_os_match`.
+
+The target function may be nested:
+
+```json
+{
+    "${target linux}": {
+        "include": ["includes/linux"],
+        "${target x86_64}": {
+            "lib": ["mylib64"]
+        },
+        "${target x86}": {
+            "lib": ["mylib32"]
+        }
+    }
+}
+```
 
 ### Installing Miscellaneous Files
 Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:

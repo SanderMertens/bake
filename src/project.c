@@ -856,6 +856,11 @@ int16_t bake_project_add_dependee_config(
     bake_project *p,
     const char *dep)
 {
+    /* Skip generated packages */
+    if (bake_project_is_generated_package(p, dep)) {
+        return 0;
+    }
+
     const char *libpath = corto_locate(dep, NULL, CORTO_LOCATE_PACKAGE);
     if (!libpath) {
         corto_throw("failed to locate project path for dependency '%s'", dep);
@@ -906,6 +911,79 @@ int16_t bake_project_parse_dependee_attributes(
     return 0;
 error:
     return -1;
+}
+
+int16_t bake_project_add_generated_dependencies(
+    bake_project *p)
+{
+    if (!p->language) {
+        /* If this package does not have a language, no dependencies to add */
+        return 0;
+    }
+
+    /* For each package, if use_generated_api is enabled, also include
+     * the package that contains the generated api for the language of
+     * the package */
+    if (p->use_generated_api && p->managed) {
+        /* First, add own generated language package */
+        if (p->model && p->public && p->kind == BAKE_PACKAGE) {
+            bake_project_use(p, strarg("%s/%s", p->id, p->language));
+
+            if (p->c4cpp) {
+                bake_project_use(p, strarg("%s/cpp", p->id));
+            }
+        }
+
+        int i = 0, count = corto_ll_count(p->use);
+        corto_iter it = corto_ll_iter(p->use);
+        while (corto_iter_hasNext(&it)) {
+            char *package = corto_iter_next(&it);
+            char *lastElem = strrchr(package, '/');
+            i ++;
+            if (lastElem) {
+                lastElem ++;
+                /* Don't try to find a language specific
+                 * package if this is already a language
+                 * specific package */
+                if (!strcmp(lastElem, p->language)) {
+                    continue;
+                }
+            }
+
+            /* Insert language-specific package with generated
+             * API if it exists */
+            const char *lib = corto_locate(
+                strarg("%s/%s", package, p->language),
+                NULL,
+                CORTO_LOCATE_LIB);
+            if (lib) {
+                bake_project_use(p, strarg("%s/%s", package, p->language));
+            }
+
+            /* Reached end of list- don't process packages that
+             * we just added */
+            if (i == count) {
+                break;
+            }
+        }
+    }
+
+    return 0;
+}
+
+bool bake_project_is_generated_package(
+    bake_project *p,
+    const char *dependency)
+{
+    if (p->managed && p->language) {
+        if (!strcmp(dependency, strarg("%s/c", p->id))) {
+            return true;
+        } else if (!strcmp(dependency, strarg("%s/cpp", p->id))) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bake_project* bake_project_new(
@@ -1144,6 +1222,21 @@ char *bake_project_find_link_library(
             char *dylib = corto_asprintf("lib%s.dylib", lib_name);
             if (corto_file_test(dylib)) {
                 result = dylib;
+            }
+        }
+    }
+
+    /* Try .a */
+    if (!result) {
+        if (full_path) {
+            char *a = corto_asprintf("%s/lib%s.a", full_path, lib_name);
+            if (corto_file_test(a)) {
+                result = a;
+            }
+        } else {
+            char *a = corto_asprintf("lib%s.a", lib_name);
+            if (corto_file_test(a)) {
+                result = a;
             }
         }
     }

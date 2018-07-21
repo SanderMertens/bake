@@ -69,5 +69,12 @@ int16_t bake_project_loadDependeeConfig(
     const char *package_id,
     const char *file);
 
+int16_t bake_project_add_generated_dependencies(
+    bake_project *p);
+
+bool bake_project_is_generated_package(
+    bake_project *p,
+    const char *dependency);
+
 int16_t bake_project_resolveLinks(
     bake_project *p);
