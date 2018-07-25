@@ -476,7 +476,7 @@ int16_t bake_config_load(
         env_set = corto_ll_new();
         corto_ll_append(env_set, corto_strdup("BAKE_HOME"));
         corto_ll_append(env_set, corto_strdup("BAKE_TARGET"));
-        corto_ll_append(env_set, corto_strdup("BAKE_HOME"));
+        corto_ll_append(env_set, corto_strdup("BAKE_VERSION"));
         corto_ll_append(env_set, corto_strdup("BAKE_CONFIG"));
     }
 
