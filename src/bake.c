@@ -31,6 +31,7 @@ static bool managed = false;
 static bool public = true;
 static bool skip_preinstall = false;
 static bool skip_uninstall = false;
+static bool showLines = true;
 static bool showTime = false;
 static bool showDelta = false;
 static bool showProc = false;
@@ -41,6 +42,7 @@ static bool mono = false;
 static char *action = "build";
 static char *env = "default";
 static char *cfg = "debug";
+static bool dont_build = false;
 
 /* Pointer to global builtin configuration */
 static bake_config config;
@@ -53,6 +55,73 @@ corto_tls BAKE_FILELIST_KEY;
 corto_tls BAKE_PROJECT_KEY;
 
 static
+void printUsage(void) {
+    printf("Usage: bake [options] <command> [arguments]\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  -h,--help                  Display this usage information\n");
+    printf("\n");
+    printf("  project:\n");
+    printf("  -p,--path                  Specify project path\n");
+    printf("  -i,--includes              Specify include paths (default: 'include')\n");
+    printf("  -s,--sources               Specify source paths (default: 'src')\n");
+    printf("  -l,--lang                  Specify language\n");
+    printf("  -k,--kind                  Specify project kind (default: 'executable')\n");
+    printf("  -a,--artefact              Specify artefact name\n");
+    printf("  -u,--use                   Specify project dependencies\n");
+    printf("\n");
+    printf("  config:\n");
+    printf("  --no-symbols               Disable symbols (default: enabled)\n");
+    printf("  --no-debug                 Disable debugging (default: enabled)\n");
+    printf("  --optimize                 Enable optimization (default: disabled)\n");
+    printf("  --coverage                 Enable code coverage (default: disabled)\n");
+    printf("  --strict                   Enable strict mode (default: disabled)\n");
+    printf("\n");
+    printf("  tracing:\n");
+    printf("  --debug                    Set verbosity to DEBUG\n");
+    printf("  --trace                    Set verbosity to TRACE\n");
+    printf("  --verbosity                Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
+    printf("  --log-depth                Set verbosity depth\n");
+    printf("  --exit-on-exception        Exit program on exception\n");
+    printf("  --abort-on-exception       Abort program on exception\n");
+    printf("  --profile                  Enable profiling\n");
+    printf("  --mono                     Disable colors\n");
+    printf("  --show-lines               Show linenumbers of log messages\n");
+    printf("  --show-time                Show time of log messages\n");
+    printf("  --show-delta               Show time delta between log messages\n");
+    printf("  --show-proc                Show process id\n");
+    printf("  --mute                     Mute errors from loaded packages\n");
+    printf("  --backtrace                Enable backtraces for tracing\n");
+}
+
+static
+void set_verbosity(
+    const char *verbosity)
+{
+    if (!verbosity) {
+        return;
+    }
+
+    if (!stricmp(verbosity, "DEBUG")) {
+        corto_log_verbositySet(CORTO_DEBUG);
+    } else if (!stricmp(verbosity, "TRACE")) {
+        corto_log_verbositySet(CORTO_TRACE);
+    } else if (!stricmp(verbosity, "OK")) {
+        corto_log_verbositySet(CORTO_OK);
+    } else if (!stricmp(verbosity, "INFO")) {
+        corto_log_verbositySet(CORTO_INFO);
+    } else if (!stricmp(verbosity, "WARNING")) {
+        corto_log_verbositySet(CORTO_WARNING);
+    } else if (!stricmp(verbosity, "ERROR")) {
+        corto_log_verbositySet(CORTO_ERROR);
+    } else if (!stricmp(verbosity, "CRITICAL")) {
+        corto_log_verbositySet(CORTO_CRITICAL);
+    } else {
+        printf("not a valid verbosity level '%s'\n", verbosity);
+    }
+}
+
+static
 int parseArgs(int argc, char *argv[])
 {
     int i;
@@ -61,6 +130,8 @@ int parseArgs(int argc, char *argv[])
     for(i = 0; i < argc; i++) {
         parsed = false;
         if (argv[i][0] == '-') {
+            PARSE_OPTION('h', "help", printUsage(); dont_build = true);
+
             PARSE_OPTION(0, "id", id = argv[i + 1]; i ++);
             PARSE_OPTION('p', "path", path = argv[i + 1]; i ++);
             PARSE_OPTION('i', "includes", includes = argv[i + 1]; i ++);
@@ -80,16 +151,15 @@ int parseArgs(int argc, char *argv[])
 
             PARSE_OPTION(0, "debug", corto_log_verbositySet(CORTO_DEBUG));
             PARSE_OPTION(0, "trace", corto_log_verbositySet(CORTO_TRACE));
-            PARSE_OPTION(0, "ok", corto_log_verbositySet(CORTO_OK));
-            PARSE_OPTION(0, "warning", corto_log_verbositySet(CORTO_WARNING));
-            PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
+            PARSE_OPTION('v', "verbosity", set_verbosity(argv[i + 1]); i ++);
+            PARSE_OPTION(0, "log-depth", corto_log_verbositySetDepth(atoi(argv[i + 1])); i ++);
             PARSE_OPTION(0, "profile", corto_log_profile(true));
             PARSE_OPTION(0, "dont-mute-foreach", mute_foreach = false);
+            PARSE_OPTION(0, "mono", mono = true);
+            PARSE_OPTION(0, "show-lines", showLines = true);
             PARSE_OPTION(0, "show-time", showTime = true);
             PARSE_OPTION(0, "show-delta", showDelta = true);
             PARSE_OPTION(0, "show-proc", showProc = true);
-            PARSE_OPTION(0, "mono", mono = true);
-
             PARSE_OPTION(0, "exit-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_EXIT));
             PARSE_OPTION(0, "abort-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_ABORT));
 
@@ -104,7 +174,7 @@ int parseArgs(int argc, char *argv[])
 
             if (!parsed) {
                 corto_throw(
-                    "unknown option '%s' (use bake --help to see available options)",
+                    "unknown option '%s'",
                     argv[i]);
                 return -1;
             }
@@ -115,6 +185,36 @@ int parseArgs(int argc, char *argv[])
     }
 
     return i + 1;
+}
+
+static
+int parseArgs_logging(int argc, char *argv[])
+{
+    int i;
+    bool parsed;
+
+    for(i = 0; i < argc; i++) {
+        parsed = false;
+        if (argv[i][0] == '-') {
+            PARSE_OPTION(0, "debug", corto_log_verbositySet(CORTO_DEBUG));
+            PARSE_OPTION(0, "trace", corto_log_verbositySet(CORTO_TRACE));
+            PARSE_OPTION(0, "ok", corto_log_verbositySet(CORTO_OK));
+            PARSE_OPTION(0, "warning", corto_log_verbositySet(CORTO_WARNING));
+            PARSE_OPTION(0, "error", corto_log_verbositySet(CORTO_ERROR));
+            PARSE_OPTION(0, "profile", corto_log_profile(true));
+            PARSE_OPTION(0, "dont-mute-foreach", mute_foreach = false);
+            PARSE_OPTION(0, "show-lines", showLines = true);
+            PARSE_OPTION(0, "show-time", showTime = true);
+            PARSE_OPTION(0, "show-delta", showDelta = true);
+            PARSE_OPTION(0, "show-proc", showProc = true);
+            PARSE_OPTION(0, "mono", mono = true);
+
+            PARSE_OPTION(0, "exit-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_EXIT));
+            PARSE_OPTION(0, "abort-on-exception", corto_log_setExceptionAction(CORTO_LOG_ON_EXCEPTION_ABORT));
+        }
+    }
+
+    return 0;
 }
 
 static
@@ -741,20 +841,43 @@ int16_t bake_init(int argc, char* argv[])
         env = corto_getenv("BAKE_ENVIRONMENT");
     }
 
-    if (bake_config_load(&config, cfg, env)) {
-        goto error;
-    }
+    int offset = 1;
 
     if (argc > 1) {
-        int offset = 1;
         if (argv[1][0] != '-') {
             action = argv[1];
             offset ++;
         }
 
-        if (parseArgs(argc - offset, &argv[offset]) == -1) {
+        /* Parse logging arguments before loading config */
+        if (parseArgs_logging(argc - offset, &argv[offset]) == -1) {
+            corto_raise();
+            printUsage();
             goto error;
         }
+    }
+
+    if (bake_config_load(&config, cfg, env)) {
+        goto error;
+    }
+
+    if (argc > 1) {
+        if (parseArgs(argc - offset, &argv[offset]) == -1) {
+            corto_raise();
+            printUsage();
+            goto error;
+        }
+    }
+
+    /* If dont_build is set, exit here */
+    if (dont_build) {
+        exit(0);
+    }
+
+    if (showLines) {
+        char *fmt = corto_asprintf("%s %s", "%f:%l", corto_log_fmtGet());
+        corto_log_fmt(fmt);
+        free(fmt);
     }
 
     if (showTime) {

@@ -86,7 +86,7 @@ bool bake_config_var_set(
     corto_iter it = corto_ll_iter(env_set);
     while (corto_iter_hasNext(&it)) {
         var_set = corto_iter_next(&it);
-        if (strcmp(var_set, var)) {
+        if (!strcmp(var_set, var)) {
             break;
         } else {
             var_set = NULL;
@@ -442,13 +442,23 @@ corto_ll bake_config_find_configs(
                 if (corto_file_test(cfg)) {
                     if (!config_files) config_files = corto_ll_new();
                     corto_ll_append(config_files, cfg);
+                    corto_trace("using configuration file '%s'", cfg);
                 } else {
                     free(cfg);
                 }
             } else {
                 if (!config_files) config_files = corto_ll_new();
                 corto_ll_append(config_files, file);
+                corto_trace("using configuration file '%s'", file);
             }
+        } else {
+            free(file);
+        }
+
+        file = corto_asprintf("%s/bake.json", cur_path);
+        if (corto_file_test(file) == 1) {
+            corto_ll_append(config_files, file);
+            corto_trace("using configuration file '%s'", file);
         } else {
             free(file);
         }
@@ -478,6 +488,11 @@ int16_t bake_config_load(
         corto_ll_append(env_set, corto_strdup("BAKE_TARGET"));
         corto_ll_append(env_set, corto_strdup("BAKE_VERSION"));
         corto_ll_append(env_set, corto_strdup("BAKE_CONFIG"));
+        corto_ll_append(env_set, corto_strdup("PATH"));
+        corto_ll_append(env_set, corto_strdup("LD_LIBRARY_PATH"));
+        if (corto_os_match("darwin")) {
+            corto_ll_append(env_set, corto_strdup("DYLD_LIBRARY_PATH"));
+        }
     }
 
     /* Use default configuration and environment */
