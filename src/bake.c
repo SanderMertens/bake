@@ -61,7 +61,11 @@ void printUsage(void) {
     printf("Options:\n");
     printf("  -h,--help                  Display this usage information\n");
     printf("\n");
+    printf("  --cfg                      Specify configuration id\n");
+    printf("  --env                      Specify environment id\n");
+    printf("\n");
     printf("  project:\n");
+    printf("  --id                       Specify project id\n");
     printf("  -p,--path                  Specify project path\n");
     printf("  -i,--includes              Specify include paths (default: 'include')\n");
     printf("  -s,--sources               Specify source paths (default: 'src')\n");
@@ -69,6 +73,8 @@ void printUsage(void) {
     printf("  -k,--kind                  Specify project kind (default: 'executable')\n");
     printf("  -a,--artefact              Specify artefact name\n");
     printf("  -u,--use                   Specify project dependencies\n");
+    printf("  --managed                  Build managed project\n");
+    printf("  --local                    Build local project\n");
     printf("\n");
     printf("  config:\n");
     printf("  --no-symbols               Disable symbols (default: enabled)\n");
@@ -802,6 +808,7 @@ int16_t bake_do_action(
         corto_error("unknown action '%s'", action);
         goto error;
     }
+
     if (!bake_crawler_walk(c, action, action_cb, NULL)) {
         corto_throw(NULL);
         goto error;
@@ -813,11 +820,7 @@ error:
 }
 
 static
-int16_t bake_init(int argc, char* argv[])
-{
-    /* Initialize base library */
-    corto_platform_init(argv[0]);
-
+int16_t init_tls(void) {
     /* Initialize thread key for language */
     if (corto_tls_new(&BAKE_LANGUAGE_KEY, NULL)) {
         goto error;
@@ -833,47 +836,27 @@ int16_t bake_init(int argc, char* argv[])
         goto error;
     }
 
+    return 0;
+error:
+    return -1;
+}
+
+static
+void init_from_env(void) {
+    /* Read configuration */
     if (corto_getenv("BAKE_CONFIG")) {
-        cfg = corto_getenv("BAKE_CONFIG");
+         cfg = corto_getenv("BAKE_CONFIG");
     }
 
+    /* Read environment */
     if (corto_getenv("BAKE_ENVIRONMENT")) {
         env = corto_getenv("BAKE_ENVIRONMENT");
     }
+}
 
-    int offset = 1;
-
-    if (argc > 1) {
-        if (argv[1][0] != '-') {
-            action = argv[1];
-            offset ++;
-        }
-
-        /* Parse logging arguments before loading config */
-        if (parseArgs_logging(argc - offset, &argv[offset]) == -1) {
-            corto_raise();
-            printUsage();
-            goto error;
-        }
-    }
-
-    if (bake_config_load(&config, cfg, env)) {
-        goto error;
-    }
-
-    if (argc > 1) {
-        if (parseArgs(argc - offset, &argv[offset]) == -1) {
-            corto_raise();
-            printUsage();
-            goto error;
-        }
-    }
-
-    /* If dont_build is set, exit here */
-    if (dont_build) {
-        exit(0);
-    }
-
+static
+void init_logging(void)
+{
     if (showLines) {
         char *fmt = corto_asprintf("%s %s", "%f:%l", corto_log_fmtGet());
         corto_log_fmt(fmt);
@@ -912,23 +895,60 @@ int16_t bake_init(int argc, char* argv[])
             corto_log_verbositySet(CORTO_ERROR);
         }
     }
-
-    return 0;
-error:
-    return -1;
 }
 
-int main(int argc, char* argv[]) {
-    char *path_tokens = NULL;
-    bool root_bake = false;
+static
+int16_t bake_init(int argc, char* argv[])
+{
+    /* Initialize base library */
+    corto_platform_init(argv[0]);
 
-    paths = corto_ll_new();
-
-    if (bake_init(argc, argv)) {
+    /* Init thread local storage keys */
+    if (init_tls()) {
         goto error;
     }
 
-    bake_crawler c = bake_crawler_new(&config);
+    /* Read configuration from environment variables */
+    init_from_env();
+
+    int offset = 1;
+    if (argc > 1) {
+        /* If the first of n args where n > 1 isn't an option, it's an action */
+        if (argv[1][0] != '-') {
+            action = argv[1];
+            offset ++;
+        }
+
+        /* Parse logging arguments before loading config */
+        if (parseArgs_logging(argc - offset, &argv[offset]) == -1) {
+            corto_raise();
+            printUsage();
+            goto error;
+        }
+    }
+
+    /* Load bake configuration */
+    if (bake_config_load(&config, cfg, env)) {
+        goto error;
+    }
+
+    /* Parse all arguments */
+    if (argc > 1) {
+        if (parseArgs(argc - offset, &argv[offset]) == -1) {
+            corto_raise();
+            printUsage();
+            goto error;
+        }
+    }
+
+    /* If dont_build is set, exit here. This is used for example for commands
+     * like 'bake --help' */
+    if (dont_build) {
+        exit(0);
+    }
+
+    /* Apply logging settings to logging framework */
+    init_logging();
 
     /* Verify environment variables */
     if (bake_test_env("BAKE_HOME")) goto error;
@@ -943,6 +963,22 @@ int main(int argc, char* argv[]) {
         false);
 
     corto_log_fmt("%C %V %m");
+
+    return 0;
+error:
+    return -1;
+}
+
+int main(int argc, char* argv[]) {
+    char *path_tokens = NULL;
+    bool root_bake = false;
+
+    paths = corto_ll_new();
+
+    /* Initialize bake */
+    if (bake_init(argc, argv)) {
+        goto error;
+    }
 
     /* Bake commands that do not use the build engine */
     if (action) {
@@ -1025,6 +1061,7 @@ int main(int argc, char* argv[]) {
     }
     corto_log_pop();
 
+    bake_crawler c = bake_crawler_new(&config);
     if (id) {
         if (bake_project_fromArguments(c)) {
             goto error;
