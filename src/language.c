@@ -426,7 +426,7 @@ int16_t bake_node_run_rule_map(
 
         count ++;
         if (src->timestamp > dst->timestamp) {
-            corto_log_overwrite(CORTO_OK, "#[green][#[white]%3d%%#[green]]#[white] %s",
+            corto_log_overwrite(CORTO_OK, "#[green][#[white]%lld%%#[green]]#[white] %s",
                 100 * count / bake_filelist_count(inputs),
                 src->name);
 
@@ -458,7 +458,7 @@ int16_t bake_node_run_rule_map(
             /* Update target with latest timestamp */
             dst->timestamp = corto_lastmodified(dst->name);
         } else {
-            corto_trace("#[grey][%3d%%] %s",
+            corto_trace("#[grey][%3lld%%] %s",
                 100 * count / bake_filelist_count(inputs),
                 src->name);
         }
