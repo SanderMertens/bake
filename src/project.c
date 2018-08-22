@@ -103,6 +103,63 @@ int16_t bake_project_func_os(
 }
 
 static
+bool bake_language_is_cpp(
+    const char *str)
+{
+    if (!stricmp(str, "cpp") || !stricmp(str, "c++")) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static
+bool bake_project_language_match(
+    const char *l1,
+    const char *l2)
+{
+    if (!l1 && !l2) {
+        return true;
+    }
+    if (!l1 || !l2) {
+        return false;
+    }
+
+    bool l1_is_cpp = bake_language_is_cpp(l1);
+    bool l2_is_cpp = bake_language_is_cpp(l2);
+
+    if (l1_is_cpp && l2_is_cpp) {
+        return true;
+    }
+
+    if (!stricmp(l1, l2)) {
+        return true;
+    }
+
+    return false;
+}
+
+static
+int16_t bake_project_func_language(
+  bake_project *p,
+  const char *package_id,
+  corto_buffer *buffer,
+  const char *argument)
+{
+    const char *language = p->language;
+    if (p->c4cpp) {
+        language = "cpp";
+    }
+
+    if (bake_project_language_match(language, argument)) {
+        corto_buffer_appendstr(buffer, "1");
+    } else {
+        corto_buffer_appendstr(buffer, "0");
+    }
+    return 0;
+}
+
+static
 int16_t bake_project_func_call(
     bake_project *p,
     const char *package_id,
@@ -114,6 +171,8 @@ int16_t bake_project_func_call(
         return bake_project_func_locate(p, package_id, buffer, argument);
     } else if (!strcmp(function, "os") || !strcmp(function, "target")) {
         return bake_project_func_os(p, package_id, buffer, argument);
+    } else if (!strcmp(function, "language") || !strcmp(function, "lang")) {
+        return bake_project_func_language(p, package_id, buffer, argument);
     } else {
         corto_throw("unknown function '%s'", function);
         return -1;
@@ -499,6 +558,9 @@ int16_t bake_project_parseMembers(
         if (name[0] == '$') {
             /* If name contains function, parse it */
             name = bake_project_replace(p, NULL, json_name);
+            if (!name) {
+                goto error;
+            }
         }
 
         if (!strcmp(name, "1") || !stricmp(name, "true")) {
@@ -573,6 +635,9 @@ int16_t bake_project_parse_config_value(
         if (name[0] == '$') {
             /* If name contains function, parse it */
             name = bake_project_replace(p, NULL, json_name);
+            if (!name) {
+                goto error;
+            }
         }
 
         if (!strcmp(name, "1") || !stricmp(name, "true")) {

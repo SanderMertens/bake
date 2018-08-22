@@ -753,7 +753,7 @@ Flag | Description
 --trace | TRACE level tracing
 --ok | OK level tracing
 --warning | WARNING level tracing
---error | ERROR level tracing
+--verbosity error | ERROR level tracing
 --profile | Show all corto_log_push and corto_log_pop transitions. Combine with `--show-delta` to profile a build.
 --dont-mute-foreach | Don't mute output when using the foreach command.
 --show-time | Show time for each trace
