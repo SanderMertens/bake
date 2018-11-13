@@ -71,6 +71,9 @@ int16_t bake_install_dir_for_target(
                     goto error;
                 }
                 continue;
+            } else if (!stricmp(file, "private")) {
+                /* Never copy files in private */
+                continue;
             }
         }
 

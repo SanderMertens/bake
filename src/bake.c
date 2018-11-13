@@ -652,7 +652,6 @@ int16_t bake_action_setup_project(void)
         goto error;
     }
 
-    char *project_id = id;
     if (!id) {
         char *cwd = strdup(corto_cwd());
         id = strrchr(cwd, '/');
@@ -660,6 +659,13 @@ int16_t bake_action_setup_project(void)
             id ++;
         } else {
             id = cwd;
+        }
+
+        char *ptr, ch;
+        for (ptr = id; (ch = *ptr); ptr ++) {
+            if (ch == '_' || ch == '-' || ch == '/' || ch == '\\') {
+                ptr[0] = '.';
+            }
         }
     }
 
@@ -900,6 +906,11 @@ void init_logging(void)
 static
 int16_t bake_init(int argc, char* argv[])
 {
+    char *cfg_at_startup = corto_getenv("BAKE_CONFIG");
+    if (!cfg_at_startup) {
+        cfg_at_startup = "debug";
+    }
+
     /* Initialize base library */
     corto_platform_init(argv[0]);
 
@@ -927,11 +938,6 @@ int16_t bake_init(int argc, char* argv[])
         }
     }
 
-    /* Load bake configuration */
-    if (bake_config_load(&config, cfg, env)) {
-        goto error;
-    }
-
     /* Parse all arguments */
     if (argc > 1) {
         if (parseArgs(argc - offset, &argv[offset]) == -1) {
@@ -939,6 +945,11 @@ int16_t bake_init(int argc, char* argv[])
             printUsage();
             goto error;
         }
+    }
+
+    /* Load bake configuration */
+    if (bake_config_load(&config, cfg, env)) {
+        goto error;
     }
 
     /* If dont_build is set, exit here. This is used for example for commands
@@ -959,6 +970,8 @@ int16_t bake_init(int argc, char* argv[])
         corto_getenv("BAKE_TARGET"),
         corto_getenv("BAKE_HOME"),
         corto_getenv("BAKE_VERSION"),
+        NULL,
+        cfg_at_startup,
         NULL,
         false);
 

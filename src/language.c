@@ -985,6 +985,7 @@ int16_t bake_language_setup_project(
     if (l->setup_project_cb) {
         l->setup_project_cb(l, id, kind);
     }
+    
     return 0;
 }
 
