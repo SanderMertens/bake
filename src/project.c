@@ -811,11 +811,9 @@ int16_t bake_project_parse_config(
             p->kind = BAKE_TOOL;
         } else if (!strcmp(j_type_member, "library")) {
             p->kind = BAKE_PACKAGE;
-            p->public = false;
             p->managed = false;
         } else if (!strcmp(j_type_member, "executable")) {
             p->kind = BAKE_APPLICATION;
-            p->public = false;
             p->managed = false;
         }
 
