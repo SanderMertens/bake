@@ -679,11 +679,9 @@ int16_t bake_action_setup_project(void)
         project_kind = BAKE_TOOL;
     } else if (!strcmp(kind, "library")) {
         project_kind = BAKE_PACKAGE;
-        public = false;
         managed = false;
     } else if (!strcmp(kind, "executable")) {
         project_kind = BAKE_APPLICATION;
-        public = false;
         managed = false;
     } else {
         corto_throw("unknown project kind '%s'", kind);

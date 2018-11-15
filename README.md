@@ -160,8 +160,8 @@ Bake supports different project kinds which are configured in the `type` propert
 
 Project Kind | Description | Public | Managed
 -------------|----------|------------|---------
-executable   | Executable binary | No by default | No by default
-library      | Shared object | No by default | No by default
+executable   | Executable binary | Yes by default | No by default
+library      | Shared object | Yes by default | No by default
 application  | Managed executable binary | Yes by default | Yes by default
 package      | Managed shared object | Yes by default | Yes by default
 tool         | Executable binary installed to OS `bin` path | No | Yes
