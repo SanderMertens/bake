@@ -19,17 +19,17 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+int16_t bake_json_set_boolean(
+    bool *ptr,
+    const char *member,
+    JSON_Value *v);
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+int16_t bake_json_set_string(
+    char **ptr,
+    const char *member,
+    JSON_Value *v);
 
-
-/*
-#include "install.h"
-#include "language.h"
-*/
+int16_t bake_json_set_array(
+    ut_ll *ptr,
+    const char *member,
+    JSON_Value *v);

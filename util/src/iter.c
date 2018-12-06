@@ -19,17 +19,33 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#include "../include/util.h"
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+int ut_iter_hasNext(ut_iter* iter) {
+    if (iter->hasNext) {
+        if (!iter->hasNext(iter)) {
+            ut_iter_release(iter);
+            iter->hasNext = NULL;
+            return 0;
+        } else {
+            return 1;
+        }
+    } else {
+        return 0;
+    }
+}
 
+void* ut_iter_next(ut_iter* iter) {
+    return iter->next(iter);
+}
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+void* ut_iter_nextPtr(ut_iter* iter) {
+    return iter->nextPtr(iter);
+}
+
+void ut_iter_release(ut_iter* iter) {
+    if (iter->release) {
+        iter->release(iter);
+        iter->release = NULL;
+    }
+}

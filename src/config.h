@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 the corto developers
+/* Copyright (c) 2010-2018 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
  * @brief API that loads configurations from bake configuration files.
  */
 
-#include <bake/config.h>
+#include "include/config.h"
 
 /** Looks up bake configuration file and loads it.
  */

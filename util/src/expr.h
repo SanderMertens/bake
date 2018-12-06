@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,17 +19,42 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#ifndef UT__MATCHER_H_
+#define UT__MATCHER_H_
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+#include "../include/util.h"
 
+typedef enum ut_exprToken {
+    UT_EXPR_TOKEN_NONE,
+    UT_EXPR_TOKEN_THIS,
+    UT_EXPR_TOKEN_PARENT,
+    UT_EXPR_TOKEN_IDENTIFIER,
+    UT_EXPR_TOKEN_FILTER,
+    UT_EXPR_TOKEN_AND,
+    UT_EXPR_TOKEN_OR,
+    UT_EXPR_TOKEN_NOT,
+    UT_EXPR_TOKEN_SCOPE,
+    UT_EXPR_TOKEN_TREE,
+    UT_EXPR_TOKEN_SEPARATOR
+} ut_exprToken;
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+typedef struct ut_exprOp {
+    ut_exprToken token;
+    char *start;
+    bool containsWildcard;
+} ut_exprOp;
+
+struct ut_expr_program_s {
+    int kind; /* 0 = default, 1 = identifier, 2 = this, 3 = /, 4 = // */
+    ut_exprOp ops[UT_EXPR_MAX_OP];
+    uint8_t size;
+    char *tokens;
+};
+
+int16_t ut_exprParseIntern(
+    ut_expr_program data,
+    const char *expr,
+    bool allowScopes,
+    bool allowSeparators);
+
+#endif

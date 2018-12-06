@@ -19,17 +19,23 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#ifndef UT_ITER_H_
+#define UT_ITER_H_
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+#define UT_ITER_STACK_LIMIT (64)
+#define UT_ITER_EMPTY (ut_iter){NULL}
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+UT_EXPORT int ut_iter_hasNext(ut_iter* iter);
+UT_EXPORT void* ut_iter_next(ut_iter* iter);
+UT_EXPORT void* ut_iter_nextPtr(ut_iter* iter);
+UT_EXPORT void ut_iter_release(ut_iter* iter);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

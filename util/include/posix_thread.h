@@ -19,17 +19,41 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
-
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+#ifndef UT_THREAD_POSIX_H_
+#define UT_THREAD_POSIX_H_
 
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef pthread_key_t ut_tls;
+
+typedef struct ut_mutex_s {
+    pthread_mutex_t mutex;
+} ut_mutex_s;
+
+typedef struct ut_rwmutex_s {
+    pthread_rwlock_t mutex;
+} ut_rwmutex_s;
+
+typedef struct ut_cond_s {
+    pthread_cond_t cond;
+} ut_cond_s;
+
+typedef struct ut_sem_s {
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int value;
+} ut_sem_s;
+
+#define UT_MUTEX_INIT {PTHREAD_MUTEX_INITIALIZER}
+#define UT_RWMUTEX_INIT {PTHREAD_RWLOCK_INITIALIZER}
+#define UT_COND_INIT {PTHREAD_COND_INITIALIZER}
+#define UT_SEM_INIT {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UT_THREAD_POSIX_H_ */

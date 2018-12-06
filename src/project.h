@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 the corto developers
+/* Copyright (c) 2010-2018 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,11 +19,17 @@
  * THE SOFTWARE.
  */
 
+/** Create new project */
 bake_project* bake_project_new(
     const char *path,
     bake_config *cfg);
 
+/** Cleanup project */
 void bake_project_free(
+    bake_project *p);
+
+/** Invoke project initialization from all applicable drivers */
+int16_t bake_project_init(
     bake_project *p);
 
 char* bake_project_binaryPath(

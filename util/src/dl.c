@@ -19,17 +19,34 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#include "../include/util.h"
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+typedef void*(*dlproc)(void);
 
+/* Link dynamic library */
+ut_dl ut_dl_open(const char* file) {
+    ut_dl dl;
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+    dl = (ut_dl)dlopen(file, RTLD_NOW | RTLD_LOCAL);
+
+    return dl;
+}
+
+/* Close dynamic library */
+void ut_dl_close(ut_dl dl) {
+    dlclose(dl);
+}
+
+/* Lookup symbol in dynamic library */
+void* ut_dl_sym(ut_dl dl, const char* sym) {
+    return dlsym(dl, sym);
+}
+
+/* Lookup procedure in dynamic library */
+void*(*ut_dl_proc(ut_dl dl, const char* proc))(void) {
+    return (dlproc)(intptr_t)dlsym(dl, proc);
+}
+
+const char* ut_dl_error(void) {
+    return dlerror();
+}

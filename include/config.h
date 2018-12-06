@@ -19,17 +19,36 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#ifndef BAKE_CONFIG_H_
+#define BAKE_CONFIG_H_
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+#include "../util/include/util.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+typedef struct bake_config {
+    const char *environment;
+    const char *id;
+    bool symbols;
+    bool debug;
+    bool optimizations;
+    bool coverage;
+    bool strict;
+    ut_ll variables;
+
+    /* Set by configuration loader */
+    char *home;
+    char *target;
+    char *home_bin;
+    char *home_lib;
+    char *target_bin;
+    char *target_lib;
+} bake_config;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

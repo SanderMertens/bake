@@ -6,22 +6,13 @@ workspace "bake"
   configuration { "linux", "gmake" }
     buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600"}
 
-
   project "bake"
     kind "ConsoleApp"
     language "C"
     targetdir "."
 
-    files { "include/*.h", "src/*.c", "../platform/include/*.h", "../platform/src/*.c"}
-    includedirs { "include", "../platform/include" }
-
-    prebuildcommands {
-      "[ -d ../../platform ] || git clone https://github.com/cortoproject/platform ../platform"
-    }
-
-    postbuildcommands {
-      "cd .. && ./bake setup"
-    }
+    files { "include/*.h", "src/*.c", "util/include/*.h", "util/src/*.c"}
+    includedirs { ".", "util" }
 
     objdir (".bake_cache")
 

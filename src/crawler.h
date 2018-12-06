@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 the corto developers
+/* Copyright (c) 2010-2018 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,26 +19,26 @@
  * THE SOFTWARE.
  */
 
-/** @file
- * @section crawler Crawler API
- * @brief API that searches a directory structure for corto projects.
- */
+typedef struct bake_crawler bake_crawler;
 
-typedef struct bake_crawler_s* bake_crawler;
-
-typedef int (*bake_crawler_cb)(bake_crawler _this, bake_project *project, void *ctx);
+typedef int (*bake_crawler_cb)(
+    bake_crawler *_this,
+    bake_project *project,
+    void *ctx);
 
 /** Create a new crawler.
  *
  * @return New crawler object.
  */
-bake_crawler bake_crawler_new(bake_config *cfg);
+bake_crawler* bake_crawler_new(
+    bake_config *cfg);
 
 /** Free crawler.
  *
  * @return New crawler object.
  */
-void bake_crawler_free(bake_crawler _this);
+void bake_crawler_free(
+    bake_crawler *_this);
 
 /** Search a path for projects.
  *
@@ -47,7 +47,7 @@ void bake_crawler_free(bake_crawler _this);
  * @return 0 if success, non-zero if failed.
  */
 int16_t bake_crawler_search(
-    bake_crawler _this,
+    bake_crawler *_this,
     const char *path);
 
 /** Count number of projects found by searches.
@@ -56,7 +56,7 @@ int16_t bake_crawler_search(
  * @return Number of projects found.
  */
 uint32_t bake_crawler_count(
-    bake_crawler _this);
+    bake_crawler *_this);
 
 /** Manually add a project to the crawler.
  *
@@ -66,7 +66,7 @@ uint32_t bake_crawler_count(
  * @return 0 if success, non-zero if failed.
  */
 bake_project* bake_crawler_addProject(
-    bake_crawler _this,
+    bake_crawler *_this,
     const char *path);
 
 /** Walk projects.
@@ -79,7 +79,7 @@ bake_project* bake_crawler_addProject(
  * @return non-zero if success, zero if interrupted.
  */
 int16_t bake_crawler_walk(
-    bake_crawler _this,
+    bake_crawler *_this,
     const char *action_name,
     bake_crawler_cb action,
     void *ctx);

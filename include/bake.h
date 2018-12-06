@@ -19,17 +19,18 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#ifndef BAKE_H
+#define BAKE_H
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
+#include "util/include/util.h"
+
 #include "project.h"
 #include "config.h"
 
-
 /*
-#include "install.h"
+#include "filelist.h"
+#include "rule.h"
 #include "language.h"
 */
+
+#endif

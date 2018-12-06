@@ -19,17 +19,46 @@
  * THE SOFTWARE.
  */
 
-/* Public includes */
-#include "include/bake.h"
+#ifndef UT_VERSION_H_
+#define UT_VERSION_H_
 
-/* Private includes */
-#include "json_utils.h"
-#include "crawler.h"
-#include "project.h"
-#include "config.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+typedef struct ut_version {
+    int32_t major;
+    int32_t minor;
+    int32_t patch;
+} ut_version;
 
-/*
-#include "install.h"
-#include "language.h"
-*/
+typedef enum ut_versionKind {
+    UT_VERSION_MAJOR = 1,
+    UT_VERSION_MINOR = 2,
+    UT_VERSION_PATCH = 3
+} ut_versionKind;
+
+UT_EXPORT
+int16_t ut_version_parse(
+    const char *version_string,
+    ut_version *version_out);
+
+UT_EXPORT
+char *ut_version_str(
+    ut_version *version);
+
+UT_EXPORT
+int ut_version_cmp(
+    ut_version *v1,
+    ut_version *v2);
+
+UT_EXPORT
+int ut_version_strcmp(
+    const char *v1,
+    const char *v2);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
