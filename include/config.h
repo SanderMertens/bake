@@ -28,15 +28,16 @@
 extern "C" {
 #endif
 
-typedef struct bake_config {
+struct bake_config {
     const char *environment;
-    const char *id;
+    const char *configuration;
     bool symbols;
     bool debug;
     bool optimizations;
     bool coverage;
     bool strict;
-    ut_ll variables;
+    ut_ll env_variables;
+    ut_ll env_values;
 
     /* Set by configuration loader */
     char *home;
@@ -45,7 +46,7 @@ typedef struct bake_config {
     char *home_lib;
     char *target_bin;
     char *target_lib;
-} bake_config;
+};
 
 #ifdef __cplusplus
 }

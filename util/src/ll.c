@@ -130,15 +130,24 @@ void* ut_ll_append(ut_ll list, void* data) {
     return insert(iter, data);
 }
 
+void ut_ll_set(ut_ll list, int index, void *value) {
+    ut_ll_node node = list->first;
+    int i = 0;
+
+    while(node && (i < index)) {
+        node = node->next;
+        i++;
+    }
+    if (node) {
+        node->data = value;
+    }
+}
+
 /* Random access read */
 void* ut_ll_get(ut_ll list, int index) {
-    ut_ll_node node;
-    void* result;
-    int i;
-
-    result = NULL;
-    i = 0;
-    node = list->first;
+    ut_ll_node node = list->first;
+    void* result = NULL;
+    int i = 0;
 
     while(node && (i < index)) {
         node = node->next;

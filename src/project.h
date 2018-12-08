@@ -28,59 +28,36 @@ bake_project* bake_project_new(
 void bake_project_free(
     bake_project *p);
 
-/** Invoke project initialization from all applicable drivers */
-int16_t bake_project_init(
+/* Load drivers for project */
+int bake_project_load_drivers(
     bake_project *p);
 
-char* bake_project_binaryPath(
-    bake_project *p);
+/* Parse configuration of drivers */
+int bake_project_parse_driver_config(
+    bake_config *config,
+    bake_project *project);
 
-char* bake_project_includePath(
-    bake_project *p);
+/* Parse configuration from dependees */
+int16_t bake_project_parse_dependee_config(
+    bake_config *config,
+    bake_project *project);
 
-char* bake_project_etcPath(
-    bake_project *p);
+/* Check if project dependencies are newer */
+int16_t bake_project_check_dependencies(
+    bake_config *config,
+    bake_project *project);
 
-void bake_project_addSource(
-    bake_project *p,
-    const char *source);
+/* Generate code */
+int16_t bake_project_generate(
+    bake_config *config,
+    bake_project *project);
 
-void bake_project_addInclude(
-    bake_project *p,
-    const char *include);
+/* Build generated projects (if any) */
+int16_t bake_project_build_generated(
+    bake_config *config,
+    bake_project *project);
 
-void bake_project_use(
-    bake_project *p,
-    const char *use);
-
-void bake_project_use_private(
-    bake_project *p,
-    const char *use);
-
-void bake_project_link(
-    bake_project *p,
-    const char *use);
-
-char *bake_project_definitionFile(
-    bake_project *p);
-
-int16_t bake_project_parse_attributes(
-    bake_project *p);
-
-int16_t bake_project_parse_dependee_attributes(
-    bake_project *p);
-
-int16_t bake_project_loadDependeeConfig(
-    bake_project *p,
-    const char *package_id,
-    const char *file);
-
-int16_t bake_project_add_generated_dependencies(
-    bake_project *p);
-
-bool bake_project_is_generated_package(
-    bake_project *p,
-    const char *dependency);
-
-int16_t bake_project_resolveLinks(
-    bake_project *p);
+/* Build project */
+int16_t bake_project_build(
+    bake_config *config,
+    bake_project *project);

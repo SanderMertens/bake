@@ -22,9 +22,9 @@
 typedef struct bake_crawler bake_crawler;
 
 typedef int (*bake_crawler_cb)(
+    bake_config *config,
     bake_crawler *_this,
-    bake_project *project,
-    void *ctx);
+    bake_project *project);
 
 /** Create a new crawler.
  *
@@ -46,7 +46,7 @@ void bake_crawler_free(
  * @param path A path to search.
  * @return 0 if success, non-zero if failed.
  */
-int16_t bake_crawler_search(
+uint32_t bake_crawler_search(
     bake_crawler *_this,
     const char *path);
 
@@ -79,7 +79,7 @@ bake_project* bake_crawler_addProject(
  * @return non-zero if success, zero if interrupted.
  */
 int16_t bake_crawler_walk(
+    bake_config *config,
     bake_crawler *_this,
     const char *action_name,
-    bake_crawler_cb action,
-    void *ctx);
+    bake_crawler_cb action);

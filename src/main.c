@@ -21,6 +21,10 @@
 
 #include "bake.h"
 
+ut_tls BAKE_DRIVER_KEY;
+ut_tls BAKE_FILELIST_KEY;
+ut_tls BAKE_PROJECT_KEY;
+
 const char *cfg = "debug";
 const char *env = "default";
 const char *action = "build";
@@ -48,6 +52,7 @@ void bake_usage(void)
     printf("\n");
     printf("Options:\n");
     printf("  -h,--help                  Display this usage information\n");
+    printf("  -v,--version               Display version information\n");
     printf("\n");
     printf("  --cfg <configuration>      Specify configuration id\n");
     printf("  --env <environment>        Specify environment id\n");
@@ -59,8 +64,20 @@ void bake_usage(void)
     printf("  build                      Build a project\n");
     printf("  rebuild                    Clean and build a project\n");
     printf("  clean                      Clean a project\n");
+    printf("  export                     Copy project files to bake environment\n");
+    printf("  uninstall                  Remove project files from bake environment\n");
     printf("  env                        Echo bake environment\n");
     printf("\n");
+
+    build = false;
+}
+
+void bake_version(void)
+{
+    printf("bake version 2.0 (%s %s %s)\n",
+        UT_PLATFORM_STRING,
+        __DATE__,
+        __TIME__);
 
     build = false;
 }
@@ -97,7 +114,9 @@ bool bake_is_action(
 {
     if (!strcmp(arg, "build") ||
         !strcmp(arg, "rebuild") ||
-        !strcmp(arg, "clean"))
+        !strcmp(arg, "clean") ||
+        !strcmp(arg, "export") ||
+        !strcmp(arg, "uninstall"))
     {
         return true;
     }
@@ -135,6 +154,7 @@ int bake_parse_args(
             ARG('v', "verbosity", bake_set_verbosity(argv[i + 1]); i ++);
 
             ARG('h', "help", bake_usage(); i ++);
+            ARG('v', "version", bake_version(); i ++);
 
             if (!parsed) {
                 ut_throw(
@@ -160,16 +180,47 @@ int bake_parse_args(
     return 0;
 }
 
-int bake_build(
+bake_crawler* bake_discovery(
     bake_config *config)
 {
     bake_crawler *crawler = bake_crawler_new(config);
+    uint32_t project_count = 0;
 
-    bake_crawler_search(crawler, path);
+    /* Discover projects */
+    project_count = bake_crawler_search(crawler, path);
+    if (!project_count) {
+        ut_log("no projects found in '%s'\n", path);
+        bake_crawler_free(crawler);
+        crawler = NULL;
+    }
 
-    bake_crawler_free(crawler);
+    return crawler;
+}
+
+int bake_build(
+    bake_config *config,
+    bake_crawler *crawler,
+    const char *action)
+{
+    bake_crawler_cb cb;
+
+    if (!strcmp(action, "build")) cb = bake_do_build;
+    else if (!strcmp(action, "clean")) cb = bake_do_clean;
+    else if (!strcmp(action, "rebuild")) cb = bake_do_rebuild;
+    else if (!strcmp(action, "export")) cb = bake_do_export;
+    else if (!strcmp(action, "uninstall")) cb = bake_do_uninstall;
+    else if (!strcmp(action, "foreach")) cb = bake_do_foreach;
+    else {
+        ut_error("unknown action '%s'", action);
+        goto error;
+    }
+
+    /* Walk projects in correct dependency order */
+    ut_try( bake_crawler_walk(config, crawler, action, cb), NULL);
 
     return 0;
+error:
+    return -1;
 }
 
 int bake_env(
@@ -179,8 +230,8 @@ int bake_env(
     ut_strbuf buff = UT_STRBUF_INIT;
     int32_t count = 0;
 
-    if (config->variables) {
-        ut_iter it = ut_ll_iter(config->variables);
+    if (config->env_variables) {
+        ut_iter it = ut_ll_iter(config->env_variables);
         while (ut_iter_hasNext(&it)) {
             char *var = ut_iter_next(&it);
             if (count) {
@@ -205,30 +256,47 @@ int main(int argc, const char *argv[]) {
 
     ut_init("bake");
 
-    ut_try (bake_parse_args(argc, argv), NULL);
+    /* Init thread keys, which are used to pass arguments in driver API */
+    ut_try (ut_tls_new(&BAKE_DRIVER_KEY, NULL), NULL);
+    ut_try (ut_tls_new(&BAKE_FILELIST_KEY, NULL), NULL);
+    ut_try (ut_tls_new(&BAKE_PROJECT_KEY, NULL), NULL);
 
     ut_log_push("init");
+    ut_try (bake_parse_args(argc, argv), NULL);
     ut_trace("configuration: %s", cfg);
     ut_trace("environment: %s", env);
     ut_trace("path: %s", path);
     ut_trace("action: %s", action);
     ut_log_pop();
 
+    ut_log_push("config");
     ut_try (bake_config_load(&config, cfg, env), NULL);
+    ut_log_pop();
 
     if (build) {
-        ut_try( bake_build(&config), NULL);
+        /* If build is true, first discover projects in provided path */
+        ut_log_push("discovery");
+        bake_crawler *crawler = bake_discovery(&config);
+        ut_log_pop();
+
+        /* If projects have been discovered, build them */
+        if (crawler) {
+            ut_log_push("build");
+            bake_build(&config, crawler, action);
+            ut_log_pop();
+
+            bake_crawler_free(crawler);
+        }
     } else {
+        /* Actions that don't need project discovery */
         if (!strcmp(action, "env")) {
             ut_try( bake_env(&config), NULL);
         }
     }
 
     ut_deinit();
-
     return 0;
 error:
     ut_deinit();
-
     return -1;
 }

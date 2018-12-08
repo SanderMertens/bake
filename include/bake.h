@@ -24,8 +24,15 @@
 
 #include "util/include/util.h"
 
+typedef struct bake_project bake_project;
+typedef struct bake_driver bake_driver;
+typedef struct bake_config bake_config;
+
+#include "attribute.h"
 #include "project.h"
 #include "config.h"
+#include "rule.h"
+#include "driver.h"
 
 /*
 #include "filelist.h"

@@ -103,7 +103,7 @@ bake_project* bake_crawler_addProject(
     }
 
     /* Initialize project drivers before building dependency administration */
-    if (bake_project_init(p)) {
+    if (bake_project_load_drivers(p)) {
         goto error;
     }
 
@@ -269,7 +269,7 @@ uint32_t bake_crawler_count(
         (_this->leafs ? ut_ll_count(_this->leafs) : 0);
 }
 
-int16_t bake_crawler_search(
+uint32_t bake_crawler_search(
     bake_crawler *_this,
     const char *path)
 {
@@ -283,11 +283,8 @@ int16_t bake_crawler_search(
         goto error;
     }
 
-    if (!ret && bake_crawler_count(_this) == count) {
-        ut_trace("no projects found in path '%s'", path);
-    }
-
-    return ret;
+    /* Only report how many new projects were found in path */
+    return bake_crawler_count(_this) - count;
 error:
     return -1;
 }
@@ -326,10 +323,10 @@ void bake_crawler_decrease_dependents(
 static
 int16_t bake_crawler_build_project(
     bake_crawler *_this,
+    bake_config *config,
     const char *action_name,
     bake_crawler_cb action,
     bake_project *p,
-    void *ctx,
     ut_ll readyForBuild)
 {
     ut_ok(
@@ -342,7 +339,7 @@ int16_t bake_crawler_build_project(
         goto error;
     }
 
-    if (!action(_this, p, ctx)) {
+    if (!action(config, _this, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
         free(prev);
         goto error;
@@ -386,10 +383,10 @@ void bake_crawler_collect_projects(
 }
 
 int16_t bake_crawler_walk(
+    bake_config *config,
     bake_crawler *_this,
     const char *action_name,
-    bake_crawler_cb action,
-    void *ctx)
+    bake_crawler_cb action)
 {
     ut_ll readyForBuild = ut_ll_new();
     uint32_t built = 0;
@@ -419,10 +416,9 @@ int16_t bake_crawler_walk(
     /* Walk projects (when dependencies are resolved the list will populate) */
     bake_project *p;
     while ((p = ut_ll_takeFirst(readyForBuild))) {
-        if (bake_crawler_build_project(_this, action_name, action, p, ctx, readyForBuild)) {
-            ut_throw(NULL);
-            goto error;
-        }
+        ut_try (
+            bake_crawler_build_project(
+                _this, config, action_name, action, p, readyForBuild), NULL);
         built ++;
     }
 

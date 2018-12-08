@@ -19,16 +19,31 @@
  * THE SOFTWARE.
  */
 
-/** @file
- * @section config Configuration loader
- * @brief API that loads configurations from bake configuration files.
- */
+#ifndef BAKE_ATTRIBUTE_H_
+#define BAKE_ATTRIBUTE_H_
 
-#include "include/config.h"
+#include "../util/include/util.h"
 
-/** Looks up bake configuration file and loads it.
- */
-int16_t bake_config_load(
-    bake_config *cfg_out,
-    const char *cfg,
-    const char *env);
+typedef enum bake_attribute_kind {
+    BAKE_BOOLEAN,
+    BAKE_STRING,
+    BAKE_NUMBER,
+    BAKE_ARRAY
+} bake_attribute_kind;
+
+typedef struct bake_attribute {
+    char *name;
+    bake_attribute_kind kind;
+    union {
+        bool boolean;
+        char *string;
+        double number;
+        ut_ll array;
+    } is;
+} bake_attribute;
+
+bake_attribute *bake_attribute_get(
+    ut_ll attributes,
+    const char *name);
+
+#endif

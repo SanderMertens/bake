@@ -49,6 +49,7 @@ char* ut_getenv(const char *varname) {
 static
 int16_t ut_append_var(
     ut_strbuf *output,
+    bool separator,
     const char *var)
 {
     char *val = ut_getenv(var);
@@ -57,7 +58,12 @@ int16_t ut_append_var(
         goto error;
     }
 
-    ut_strbuf_appendstr(output, val);
+    if (strlen(val)) {
+        if (separator) {
+            ut_strbuf_appendstr(output, ":");
+        }
+        ut_strbuf_appendstr(output, val);
+    }
 
     return 0;
 error:
@@ -146,22 +152,27 @@ char* ut_venvparse(
 
     ptr = str;
 
+    bool separator = false;
+    bool env_has_separator = false;
     do {
         ch = *ptr;
+
         if (!isalpha(ch) && ch != '_') {
             char *token_str = ut_strbuf_get(&token);
 
             if (token_str) {
                 if (token_str[0] == '$') {
-                    if (ut_append_var(&path, &token_str[1])) {
+                    if (ut_append_var(&path, env_has_separator, &token_str[1])){
                         free(token_str);
                         goto error;
                     }
+                    env_has_separator = false;
                 } else if (!strcmp(token_str, "~")) {
-                    if (ut_append_var(&path, "HOME")) {
+                    if (ut_append_var(&path, env_has_separator, "HOME")) {
                         free(token_str);
                         goto error;
                     }
+                    env_has_separator = false;
                 } else {
                     ut_strbuf_appendstr(&path, token_str);
                 }
@@ -169,27 +180,38 @@ char* ut_venvparse(
             }
         }
 
-        if (!valid_file_char(ch)) {
-            if (isspace(ch) || !ch) {
-                char *path_str = ut_strbuf_get(&path);
-                if (path_str) {
-                    if (ut_expand_path(&output, path_str)) {
+        if (ch == ':' && (ptr[1] == '$' || ptr[1] == '~')) {
+            separator = true;
+            env_has_separator = true;
+        } else {
+            separator = false;
+        }
+
+        if (!separator) {
+            if (!valid_file_char(ch)) {
+                if (isspace(ch) || !ch) {
+                    char *path_str = ut_strbuf_get(&path);
+                    if (path_str) {
+                        if (ut_expand_path(&output, path_str)) {
+                            free(path_str);
+                            goto error;
+                        }
                         free(path_str);
-                        goto error;
                     }
-                    free(path_str);
+
+                    ut_strbuf_appendstrn(&output, &ch, 1);
+                } else {
+                    ut_strbuf_appendstrn(&path, &ch, 1);
                 }
 
-                ut_strbuf_appendstrn(&output, &ch, 1);
+                ptr++;
             } else {
-                ut_strbuf_appendstrn(&path, &ch, 1);
+                char ch_out;
+                ptr = chrparse(ptr, &ch_out);
+                ut_strbuf_appendstrn(&token, &ch_out, 1);
             }
-
-            ptr++;
         } else {
-            char ch_out;
-            ptr = chrparse(ptr, &ch_out);
-            ut_strbuf_appendstrn(&token, &ch_out, 1);
+            ptr ++;
         }
     } while (ch);
 

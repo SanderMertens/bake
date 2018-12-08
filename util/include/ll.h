@@ -79,6 +79,9 @@ UT_EXPORT void* ut_ll_takeLast(ut_ll);
 /* Random access read */
 UT_EXPORT void* ut_ll_get(ut_ll list, int index);
 
+/* Random access write */
+void ut_ll_set(ut_ll list, int index, void *value);
+
 /* Get element ptr */
 UT_EXPORT void* ut_ll_getPtr(ut_ll list, int index);
 
