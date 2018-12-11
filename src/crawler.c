@@ -350,7 +350,7 @@ int16_t bake_crawler_build_project(
         ut_info(
             "%s %s '%s' in '%s'",
             action_name, bake_project_kind_str(p->type), p->id, p->path);
-    } else {
+    } else if (p->language) {
         ut_info(
             "#[grey]up to date#[normal] '%s'",
             p->id);
