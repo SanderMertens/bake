@@ -2,3 +2,4 @@
 */bin*
 bin/*
 .DS_Store
+*.so

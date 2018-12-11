@@ -380,6 +380,10 @@ ut_ll bake_attribute_parse_object(
     JSON_Object *jo,
     ut_ll existing)
 {
+    if (!jo) {
+        return NULL;
+    }
+    
     uint32_t i, count = json_object_get_count(jo);
     ut_ll result = existing ? existing : ut_ll_new();
 

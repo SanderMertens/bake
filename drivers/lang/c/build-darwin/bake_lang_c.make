@@ -24,15 +24,15 @@ ifeq ($(config),debug)
   TARGET = $(TARGETDIR)/libbake_lang_c.dylib
   OBJDIR = ../.bake_cache/debug
   DEFINES += -DDEBUG
-  INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
+  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS +=
+  LIBS += -lbake_util
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
+  ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -59,15 +59,15 @@ ifeq ($(config),release)
   TARGET = $(TARGETDIR)/libbake_lang_c.dylib
   OBJDIR = ../.bake_cache/release
   DEFINES += -DNDEBUG
-  INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
+  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS +=
+  LIBS += -lbake_util
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
+  ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef

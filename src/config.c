@@ -481,14 +481,17 @@ int16_t bake_config_load(
     } else {
         cfg_out->target = ut_strdup(ut_getenv("BAKE_HOME"));
     }
+    
     cfg_out->home = ut_strdup(ut_getenv("BAKE_HOME"));
+    cfg_out->home_lib = ut_asprintf("%s/lib", cfg_out->home);
+    cfg_out->home_bin = ut_asprintf("%s/bin", cfg_out->home);
     cfg_out->target_lib = ut_asprintf("%s/lib", cfg_out->target);
     cfg_out->target_bin = ut_asprintf("%s/bin", cfg_out->target);
 
     /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
-    bake_config_appendEnv("PATH", strarg("~/bake:%s", cfg_out->target_bin));
-    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s", cfg_out->target_lib));
-    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s", cfg_out->target_lib));
+    bake_config_appendEnv("PATH", strarg("~/bake:%s:%s", cfg_out->target_bin, cfg_out->home_bin));
+    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
+    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
     bake_config_appendEnv("CLASSPATH", strarg(".:%s/java", cfg_out->target));
 
     if (ut_log_verbosityGet() <= UT_OK) {

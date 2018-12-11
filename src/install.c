@@ -170,7 +170,8 @@ FILE* bake_uninstaller_open(
 
 int16_t bake_install_clear(
     bake_config *config,
-    bake_project *project)
+    bake_project *project,
+    bool uninstall)
 {
     ut_iter it;
 
@@ -187,7 +188,10 @@ int16_t bake_install_clear(
             char *filename = bake_uninstaller_filename(config, project);
             if (ut_file_iter(filename, &it)) {
                 ut_catch(); /* Catch last error */
-                ut_warning("missing uninstaller for project '%s'", project->id);
+                if (uninstall) {
+                    ut_warning(
+                        "missing uninstaller for project '%s'", project->id);
+                }
                 free(filename);
                 goto skip;
             }
@@ -231,7 +235,7 @@ int16_t bake_install_uninstall(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_install_clear(config, project), NULL);
+    ut_try( bake_install_clear(config, project, true), NULL);
 
     char *projectDir = ut_envparse(
         "%s/meta/%s", config->target, project->id);
@@ -326,9 +330,6 @@ int16_t bake_install_prebuild(
     bake_config *config,
     bake_project *project)
 {
-    ut_log_push("pre");
-    ut_trace("begin");
-
     if (project->type != BAKE_TOOL) {
         FILE *uninstallFile = bake_uninstaller_open(config, project, "a");
         if (!uninstallFile) {
@@ -429,10 +430,8 @@ int16_t bake_install_prebuild(
         fclose(uninstallFile);
     }
 
-    ut_log_pop();
     return 0;
 error:
-    ut_log_pop();
     return -1;
 }
 
@@ -468,9 +467,6 @@ int16_t bake_install_postbuild(
     bake_config *config,
     bake_project *project)
 {
-    ut_log_push("post");
-    ut_trace("begin");
-
     char *kind, *subdir, *targetDir = NULL, *artefact = project->artefact;
     bool copy = false;
 
@@ -489,8 +485,6 @@ int16_t bake_install_postbuild(
         }
 
         free(targetDir);
-
-        ut_log_pop();
         return 0;
     }
 
@@ -552,10 +546,8 @@ int16_t bake_install_postbuild(
     free(targetBinary);
     free(artefact_full);
 
-    ut_log_pop();
     return 0;
 error:
     if (targetDir) free(targetDir);
-    ut_log_pop();
     return -1;
 }

@@ -27,34 +27,54 @@ int bake_do_build(
     bake_project *p)
 {
     /* Step 2: export metadata to environment to make project discoverable */
+    ut_log_push("install_metadata");
     ut_try (bake_install_metadata(config, p), NULL);
+    ut_log_pop();
 
     /* Step 3: parse driver configuration in project JSON */
+    ut_log_push("load_drivers");
     ut_try (bake_project_parse_driver_config(config, p), NULL);
+    ut_log_pop();
 
     /* Step 4: parse dependee configuration */
+    ut_log_push("load_dependees");
     ut_try (bake_project_parse_dependee_config(config, p), NULL);
+    ut_log_pop();
 
     /* Step 5: now that project config is fully loaded, check dependencies */
+    ut_log_push("validate_dependencies");
     ut_try (bake_project_check_dependencies(config, p), NULL);
+    ut_log_pop();
 
     /* Step 6: invoke code generators, if any */
+    ut_log_push("generate_code");
     ut_try (bake_project_generate(config, p), NULL);
+    ut_log_pop();
 
     /* Step 7: clear environment of old project files */
-    ut_try (bake_install_clear(config, p), NULL);
+    ut_log_push("clear");
+    ut_try (bake_install_clear(config, p, false), NULL);
+    ut_log_pop();
 
     /* Step 8: export project files to environment */
+    ut_log_push("install_prebuild");
     ut_try (bake_install_prebuild(config, p), NULL);
+    ut_log_pop();
 
     /* Step 9: build generated projects, in case code generation created any */
+    ut_log_push("build_generated");
     ut_try (bake_project_build_generated(config, p), NULL);
+    ut_log_pop();
 
     /* Step 10: build project */
+    ut_log_push("build");
     ut_try (bake_project_build(config, p), NULL);
+    ut_log_pop();
 
     /* Step 11: install binary to environment */
+    ut_log_push("install_postbuild");
     ut_try (bake_install_postbuild(config, p), NULL);
+    ut_log_pop();
 
     return 0;
 error:

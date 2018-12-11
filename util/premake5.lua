@@ -1,12 +1,12 @@
 
-workspace "bake_lang_c"
+workspace "bake_util"
   configurations { "debug", "release" }
   location "build"
 
   configuration { "linux", "gmake" }
     buildoptions { "-std=c99", "-D_XOPEN_SOURCE=600" }
 
-  project "bake_lang_c"
+  project "bake_util"
     kind "SharedLib"
     language "C"
     location "build"
@@ -17,13 +17,10 @@ workspace "bake_lang_c"
     files { "include/*.h", "src/*.c" }
     includedirs { ".", "$(BAKE_HOME)/include" }
 
-    links { "bake_util" }
-    libdirs { "$(BAKE_HOME)/lib" }
-
     configuration "debug"
-      defines { "DEBUG" }
+      defines { "UT_IMPL", "DEBUG" }
       symbols "On"
 
     configuration "release"
-      defines { "NDEBUG" }
+      defines { "UT_IMPL", "NDEBUG" }
       optimize "On"

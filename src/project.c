@@ -190,16 +190,25 @@ int bake_project_load_driver(
     const char *driver_id,
     JSON_Object *config)
 {
-    bake_driver *driver = bake_driver_get(driver_id);
-    if (!driver) {
-        goto error;
+
+    bake_project_driver *project_driver =
+        bake_project_get_driver(project, driver_id);
+
+    if (!project_driver) {
+        bake_driver *driver = bake_driver_get(driver_id);
+        if (!driver) {
+            goto error;
+        }
+
+        project_driver = malloc(sizeof(bake_project_driver));
+        project_driver->driver = driver;
+        project_driver->json = NULL;
+        ut_ll_append(project->drivers, project_driver);
     }
 
-    bake_project_driver *project_driver = malloc(sizeof(bake_project_driver));
-    project_driver->driver = driver;
-    project_driver->json = config;
-
-    ut_ll_append(project->drivers, project_driver);
+    if (config) {
+        project_driver->json = config;
+    }
 
     return 0;
 error:
@@ -323,6 +332,19 @@ bake_project* bake_project_new(
 
         if (!result->language) {
             result->language = ut_strdup("c");
+        }
+
+        if (!strcmp(result->language, "none")) {
+            free(result->language);
+            result->language = NULL;
+        }
+
+        if (result->language) {
+            ut_try( bake_project_load_driver(
+                result,
+                strarg("lang.%s", result->language),
+                NULL),
+                  "failed to load driver for language '%s'", result->language);
         }
     }
 

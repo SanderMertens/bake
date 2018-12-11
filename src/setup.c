@@ -108,6 +108,8 @@ int16_t bake_setup(
 {
     ut_try( ut_mkdir("~/bake"), NULL);
 
+    ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
+
     if (!local) {
         ut_try(bake_create_script(), "failed to create global bake script");
     }
@@ -124,7 +126,21 @@ int16_t bake_setup(
         "failed to install bake util include files");
     ut_log("#[green]OK#[reset] bake utility include files installed to $BAKE_HOME\n");
 
-    ut_try(cmd(strarg("make -C drivers/lang/c/build-%s", UT_OS_STRING)),
+    ut_try(cmd(strarg("make -C util/build-%s clean all", UT_OS_STRING)),
+        "failed to build utility library");
+    ut_log("#[green]OK#[reset] bake utility library built\n");
+
+    if (!strcmp(UT_OS_STRING, "darwin")) {
+        ut_try (ut_rename("util/libbake_util.dylib", "util/libbake_util.so"),
+            "failed to rename bake util library");
+    }
+
+    ut_try(cmd(
+      "bake install util --id bake.util --artefact libbake_util.so --build-to-home"),
+        "failed to install bake utility library");
+    ut_log("#[green]OK#[reset] bake utility library installed to $BAKE_HOME\n");
+
+    ut_try(cmd(strarg("make -C drivers/lang/c/build-%s clean all", UT_OS_STRING)),
         "failed to build C driver");
     ut_log("#[green]OK#[reset] bake C driver built\n");
 

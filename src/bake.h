@@ -87,7 +87,8 @@ int16_t bake_install_postbuild(
 /** Remove files from target environment for project except metadata */
 int16_t bake_install_clear(
     bake_config *config,
-    bake_project *project);
+    bake_project *project,
+    bool uninstall);
 
 /** Remove files from target environment for project */
 int16_t bake_install_uninstall(

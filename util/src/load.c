@@ -26,12 +26,9 @@ static ut_ll loadedAdmin = NULL;
 static ut_ll libraries = NULL;
 
 /* Static variables set during initialization that contain paths to packages */
-static const char *UT_LOAD_TARGET, *UT_LOAD_HOME;
 static char *UT_LOAD_TARGET_PATH, *UT_LOAD_HOME_PATH;
 static char *UT_LOAD_TARGET_META_PATH, *UT_LOAD_HOME_META_PATH;
-static const char *UT_LOAD_BUILD;
 static bool UT_LOAD_TARGET_OTHER_THAN_HOME = false;
-static bool UT_LOAD_STANDALONE;
 
 /* Lock protecting the package administration */
 extern ut_mutex_s UT_LOAD_LOCK;
@@ -908,33 +905,18 @@ error:
 }
 
 /* Initialize paths necessary for loader */
-void ut_load_init(
+int16_t ut_load_init(
     const char *target,
     const char *home,
-    const char *target_config,
-    const char *home_config,
-    const char *build,
-    bool standalone)
+    const char *config)
 {
-    UT_LOAD_TARGET = target;
-    UT_LOAD_HOME = home;
-    UT_LOAD_BUILD = build;
-    UT_LOAD_STANDALONE = true;
-
     char *cwd = ut_strdup(ut_cwd());
-
-    if (!target_config) {
-        target_config = ut_getenv("BAKE_CONFIG");
-    }
-    if (!home_config) {
-        home_config = ut_getenv("BAKE_CONFIG");
-    }
 
     if (!target) {
         UT_LOAD_TARGET_PATH = ut_strdup(cwd);
     } else {
         UT_LOAD_TARGET_PATH = ut_asprintf("%s/%s-%s",
-          target, UT_PLATFORM_STRING, target_config);
+          target, UT_PLATFORM_STRING, config);
 
         UT_LOAD_TARGET_META_PATH =
             ut_asprintf("%s/meta", UT_LOAD_TARGET_PATH);

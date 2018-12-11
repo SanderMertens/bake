@@ -76,6 +76,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --trace                    Set verbosity to TRACE\n");
     printf("  -v,--verbosity <kind>      Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
+    printf("\n");
     printf("Commands:\n");
     printf("  build                      Build a project\n");
     printf("  rebuild                    Clean and build a project\n");
@@ -225,8 +226,6 @@ bake_crawler* bake_discovery(
         project_count = bake_crawler_search(crawler, path);
         if (!project_count) {
             ut_log("no projects found in '%s'\n", path);
-            bake_crawler_free(crawler);
-            crawler = NULL;
         }
     } else {
         /* Add manually configured project */
@@ -236,6 +235,7 @@ bake_crawler* bake_discovery(
         project->artefact = ut_strdup(artefact);
         project->path = ut_strdup(path);
         project->public = true;
+        project->freshly_baked = true;
         if (includes) {
             project->includes = ut_ll_new();
             ut_ll_append(project->includes, ut_strdup(includes));
@@ -327,6 +327,12 @@ int main(int argc, const char *argv[]) {
     ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
     ut_log_pop();
 
+    /* Initialize package loader */
+    ut_load_init(
+        ut_getenv("BAKE_TARGET"),
+        ut_getenv("BAKE_HOME"),
+        ut_getenv("BAKE_CONFIG"));
+
     if (build) {
         /* If build is true, first discover projects in provided path */
         ut_log_push("discovery");
@@ -340,6 +346,9 @@ int main(int argc, const char *argv[]) {
             ut_log_pop();
 
             bake_crawler_free(crawler);
+        } else {
+            ut_throw("discovery failed");
+            goto error;
         }
     } else {
         /* Actions that don't need project discovery */

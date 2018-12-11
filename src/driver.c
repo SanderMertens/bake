@@ -359,7 +359,7 @@ bake_driver_api bake_driver_api_impl = {
 bake_driver* bake_driver_get(
     const char *id)
 {
-    char *package_id = ut_asprintf("driver.bake.%s", id);
+    char *package_id = ut_asprintf("bake.%s", id);
     bake_driver *driver = NULL;
 
     if (!drivers) {
@@ -381,7 +381,7 @@ bake_driver* bake_driver_get(
         /* Load package library and bakemain symbol */
         buildmain_cb cb = ut_load_sym(package_id, &dl, "bakemain");
         if (!dl) {
-            ut_throw("driver '%s' not found", package_id);
+            ut_throw("could not load driver '%s'", package_id);
             goto error;
         }
         if (!cb) {
@@ -390,16 +390,19 @@ bake_driver* bake_driver_get(
         }
 
         /* Create a new driver */
-        bake_driver *driver = malloc(sizeof(bake_driver));
+        driver = malloc(sizeof(bake_driver));
         driver->dl = dl;
         driver->id = ut_strdup(id);
         driver->package_id = package_id;
+        driver->nodes = ut_ll_new();
 
         /* Set driver object in tls so callbacks can retrieve the driver
          * object without having to explicitly specify it. */
         ut_tls_set(BAKE_DRIVER_KEY, driver);
 
         cb(&bake_driver_api_impl);
+
+        ut_trace("driver '%s' loaded (package id = '%s')", id, package_id);
     }
 
     return driver;

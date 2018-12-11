@@ -198,13 +198,10 @@ int ut_load_register(
 
 /* Internal function for initializing paths in loader */
 UT_EXPORT
-void ut_load_init(
+int16_t ut_load_init(
     const char *target,
     const char *home,
-    const char *target_config,
-    const char *home_config,
-    const char *build,
-    bool standalone);
+    const char *config);
 
 UT_EXPORT
 void ut_load_deinit(void);
