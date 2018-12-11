@@ -754,7 +754,7 @@ int16_t bake_project_build_artefact(
         binaryPath,
         NULL
     );
-    
+
     bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
     if (bake_node_eval(driver, root, project, config, artefact_fl, NULL)) {
         ut_throw("failed to build rule '%s'", rule_name);
@@ -819,8 +819,6 @@ int16_t bake_project_build(
 
     /* Restore old list */
     project->link = old_link;
-
-    free(artefact);
 
     return 0;
 error:

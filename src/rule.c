@@ -131,13 +131,11 @@ bake_filelist* bake_node_eval_pattern(
         ut_dirstack ds = NULL;
         while (ut_iter_hasNext(&it)) {
             char *src = ut_iter_next(&it);
-            ut_try (!(ds = ut_dirstack_push(ds, src)), NULL);
 
             ut_try (
                 bake_filelist_addPattern(
                     targets, src, ((bake_pattern*)n)->pattern), NULL);
 
-            ut_dirstack_pop(ds);
         }
     } else if (((bake_pattern*)n)->pattern) {
         /* If this is a regular pattern, match against project directory */

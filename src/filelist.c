@@ -63,8 +63,17 @@ bake_file* bake_filelist_add_intern(
         goto error;
     }
 
+    const char *relative_file = filename;
+    if (offset) {
+        relative_file += strlen(offset);
+    }
+
+    if (relative_file[0] == '/') {
+        relative_file ++;
+    }
+
     bake_file *bfile = malloc(sizeof(bake_file));
-    bfile->name = ut_strdup(filename);
+    bfile->name = ut_strdup(relative_file);
     bfile->offset = offset ? ut_strdup(offset) : NULL;
     bfile->timestamp = timestamp;
 
@@ -124,19 +133,23 @@ int16_t bake_filelist_populate(
             }
         }
 
-        ut_trace("match pattern '%s' in '%s/%s'", end, ut_cwd(), dir);
-        if (ut_file_test(dir)) {
-            if (ut_dir_iter(dir, end, &it)) {
+        char *cur = ut_asprintf("%s/%s", offset, dir);
+
+        ut_trace("match pattern '%s' in '%s'", end, cur);
+        if (ut_file_test(cur)) {
+            if (ut_dir_iter(cur, end, &it)) {
                 ut_throw(NULL);
                 goto error;
             }
         } else {
-            ut_trace("directory '%s' does not exist, skipping pattern", dir);
+            ut_trace("directory '%s' does not exist, skipping pattern", cur);
             skip = true;
         }
+
+        free(cur);
     } else {
-        ut_trace("match pattern '%s' in '%s'", pattern, ut_cwd());
-        if (ut_dir_iter(".", pattern, &it)) {
+        ut_trace("match pattern '%s' in '%s'", pattern, offset);
+        if (ut_dir_iter(offset, pattern, &it)) {
             ut_throw(NULL);
             goto error;
         }
