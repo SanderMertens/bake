@@ -21,30 +21,12 @@
 
 #include "bake.h"
 
-typedef int (*buildmain_cb)(bake_driver *driver);
+typedef int (*buildmain_cb)(bake_driver_api *driver);
 
 static ut_ll drivers;
 extern ut_tls BAKE_DRIVER_KEY;
 extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
-
-bake_node* bake_node_find(
-    bake_driver *driver,
-    const char *name)
-{
-    ut_iter it = ut_ll_iter(driver->nodes);
-    bake_node *result = NULL;
-
-    while (ut_iter_hasNext(&it)) {
-        bake_node *e = ut_iter_next(&it);
-        if (!strcmp(e->name, name)) {
-            result = e;
-            break;
-        }
-    }
-
-    return result;
-}
 
 static
 void* bake_node_add(
@@ -237,7 +219,7 @@ void bake_driver_dependency_rule_cb(
 static
 void bake_driver_condition_cb(
     const char *name,
-    bake_rule_condition_cb cond)
+    bake_condition_cb cond)
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     bake_node *n = bake_node_find(driver, name);
@@ -279,7 +261,7 @@ void bake_driver_init_cb(
 
 static
 void bake_driver_setup_cb(
-    bake_driver_cb setup)
+    bake_setup_cb setup)
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     driver->impl.setup = setup;
@@ -287,7 +269,7 @@ void bake_driver_setup_cb(
 
 static
 void bake_driver_artefact_cb(
-    bake_driver_cb artefact)
+    bake_artefact_cb artefact)
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     driver->impl.artefact = artefact;
@@ -299,6 +281,34 @@ void bake_driver_clean_cb(
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     driver->impl.clean = clean;
+}
+
+static
+bake_attribute* bake_driver_get_attr_cb(
+    const char *name)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    return bake_project_get_attr(project, driver->id, name);
+}
+
+static
+bool bake_driver_get_bool_attr_cb(
+    const char *name)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    bake_attribute *attr = bake_project_get_attr(project, driver->id, name);
+    if (!attr) {
+        return false;
+    }
+
+    if (attr->kind == BAKE_BOOLEAN) {
+        return attr->is.boolean;
+    } else {
+        project->error = true;
+        ut_throw("attribute '%s' is not of type boolean", name);
+    }
 }
 
 static
@@ -328,6 +338,23 @@ void bake_driver_exec_cb(
         free(envcmd);
     }
 }
+
+/* Initialize driver API */
+bake_driver_api bake_driver_api_impl = {
+    .pattern = bake_driver_pattern_cb,
+    .rule = bake_driver_rule_cb,
+    .dependency_rule = bake_driver_dependency_rule_cb,
+    .condition = bake_driver_condition_cb,
+    .target_pattern = bake_driver_target_pattern_cb,
+    .target_map = bake_driver_target_map_cb,
+    .init = bake_driver_init_cb,
+    .setup = bake_driver_setup_cb,
+    .artefact = bake_driver_artefact_cb,
+    .clean = bake_driver_clean_cb,
+    .exec = bake_driver_exec_cb,
+    .get_attr = bake_driver_get_attr_cb,
+    .get_attr_bool = bake_driver_get_bool_attr_cb
+};
 
 bake_driver* bake_driver_get(
     const char *id)
@@ -368,24 +395,11 @@ bake_driver* bake_driver_get(
         driver->id = ut_strdup(id);
         driver->package_id = package_id;
 
-        /* Set driver API */
-        driver->api.pattern = bake_driver_pattern_cb;
-        driver->api.rule = bake_driver_rule_cb;
-        driver->api.dependency_rule = bake_driver_dependency_rule_cb;
-        driver->api.condition = bake_driver_condition_cb;
-        driver->api.target_pattern = bake_driver_target_pattern_cb;
-        driver->api.target_map = bake_driver_target_map_cb;
-        driver->api.init = bake_driver_init_cb;
-        driver->api.setup = bake_driver_setup_cb;
-        driver->api.artefact = bake_driver_artefact_cb;
-        driver->api.clean = bake_driver_clean_cb;
-        driver->api.exec = bake_driver_exec_cb;
-
         /* Set driver object in tls so callbacks can retrieve the driver
          * object without having to explicitly specify it. */
         ut_tls_set(BAKE_DRIVER_KEY, driver);
 
-        cb(driver);
+        cb(&bake_driver_api_impl);
     }
 
     return driver;

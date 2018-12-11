@@ -1,5 +1,5 @@
 {
-    "id": "driver.bake.c",
+    "id": "bake.lang.c",
     "type": "package",
     "value": {
         "author": "Sander Mertens",

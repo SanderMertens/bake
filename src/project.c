@@ -245,7 +245,7 @@ int16_t bake_project_load_dependee_config(
             ut_try( bake_project_load_driver(project, member, obj), NULL);
         } else {
             if (!bake_attributes_parse(
-                config, project, project->id, driver->json, driver->config))
+                config, project, project->id, driver->json, driver->attributes))
             {
                 ut_throw("failed to load dependee config for driver %s",member);
                 goto error;
@@ -337,6 +337,19 @@ void bake_project_free(
 
 }
 
+bake_attribute* bake_project_get_attr(
+    bake_project *project,
+    const char *driver_id,
+    const char *attr)
+{
+    bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+    if (driver && driver->attributes) {
+        return bake_attribute_get(driver->attributes, attr);
+    } else {
+        return NULL;
+    }
+}
+
 int bake_project_load_drivers(
     bake_project *project)
 {
@@ -368,7 +381,7 @@ int bake_project_parse_driver_config(
 
     while (ut_iter_hasNext(&it)) {
         bake_project_driver *driver = ut_iter_next(&it);
-        driver->config = bake_attributes_parse(
+        driver->attributes = bake_attributes_parse(
             config, project, project->id, driver->json, NULL);
     }
 

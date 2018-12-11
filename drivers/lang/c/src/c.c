@@ -25,11 +25,10 @@ char* get_short_name(
 /* -- Mappings */
 static
 char* src_to_obj(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    const char *in,
-    void *ctx)
+    const char *in)
 {
     const char *cfg = config->configuration;
     char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
@@ -40,22 +39,20 @@ char* src_to_obj(
 }
 
 char* src_to_dep(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    const char *in,
-    void *ctx)
+    const char *in)
 {
     printf("src to dep (%s)\n", in);
     return NULL;
 }
 
 char* obj_to_dep(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    const char *in,
-    void *ctx)
+    const char *in)
 {
     printf("obj to dep (%s)\n", in);
     return NULL;
@@ -66,12 +63,11 @@ char* obj_to_dep(
 
 static
 void generate_deps(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
 
 }
@@ -117,12 +113,11 @@ const char *cc(
 
 static
 void compile_src(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
     ut_strbuf cmd = UT_STRBUF_INIT;
     char *ext = strrchr(source, '.');
@@ -185,57 +180,56 @@ void compile_src(
 
     if (!cpp) {
         /* CFLAGS for c projects */
-        bake_project_attr *flags_attr = project->get_attr("cflags");
+        bake_attribute *flags_attr = driver->get_attr("cflags");
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                bake_project_attr *flag = ut_iter_next(&it);
+                bake_attribute *flag = ut_iter_next(&it);
                 ut_strbuf_append(&cmd, " %s", flag->is.string);
             }
         }
     } else {
         /* CXXFLAGS for c4cpp projects */
-        bake_project_attr *flags_attr = project->get_attr("cxxflags");
+        bake_attribute *flags_attr = driver->get_attr("cxxflags");
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                bake_project_attr *flag = ut_iter_next(&it);
+                bake_attribute *flag = ut_iter_next(&it);
                 ut_strbuf_append(&cmd, " %s", flag->is.string);
             }
         }
     }
 
-    bake_project_attr *include_attr = project->get_attr("include");
+    bake_attribute *include_attr = driver->get_attr("include");
     if (include_attr) {
         ut_iter it = ut_ll_iter(include_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *include = ut_iter_next(&it);
+            bake_attribute *include = ut_iter_next(&it);
             char* file = include->is.string;
             ut_strbuf_append(&cmd, " -I%s", file);
         }
     }
 
-    ut_strbuf_append(&cmd, " -I %s/include", c->rootpath);
+    ut_strbuf_append(&cmd, " -I %s/include", config->target);
 
     if (strcmp(ut_getenv("BAKE_TARGET"), ut_getenv("BAKE_HOME"))) {
-        ut_strbuf_append(&cmd, " -I %s/include", c->homepath);
+        ut_strbuf_append(&cmd, " -I %s/include", config->home);
     }
 
     ut_strbuf_append(&cmd, " -I. -c %s -o %s", source, target);
 
-    char *cmdstr = ut_strbuf_str(&cmd);
+    char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
     free(cmdstr);
 }
 
 static
 void obj_deps(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
 
 }
@@ -256,6 +250,7 @@ const char* lib_map(
 
 static
 char* find_static_lib(
+    bake_driver_api *driver,
     bake_project *project,
     bake_config *config,
     const char *lib)
@@ -263,7 +258,7 @@ char* find_static_lib(
     int ret;
 
     /* Find static library in configuration libpath */
-    char *file = ut_asprintf("%s/lib%s.a", c->libpath, lib);
+    char *file = ut_asprintf("%s/lib%s.a", config->target_lib, lib);
     if ((ret = ut_file_test(file)) == 1) {
         return file;
     } else if (ret != 0) {
@@ -275,11 +270,11 @@ char* find_static_lib(
     free(file);
 
     /* If static library is not found in configuration, try libpath */
-    bake_project_attr *libpath_attr = project->get_attr("libpath");
+    bake_attribute *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *lib_attr = ut_iter_next(&it);
+            bake_attribute *lib_attr = ut_iter_next(&it);
             file = ut_asprintf("%s/lib%s.a", lib_attr->is.string, lib);
 
             if ((ret = ut_file_test(file)) == 1) {
@@ -299,11 +294,12 @@ char* find_static_lib(
 
 static
 bool is_dylib(
+    bake_driver_api *driver,
     bake_project *project)
 {
     if (is_darwin()) {
         bool dylib = false;
-        bake_project_attr *dylib_attr = project->get_attr("dylib");
+        bake_attribute *dylib_attr = driver->get_attr("dylib");
         if (dylib_attr) {
             dylib = dylib_attr->is.boolean;
         }
@@ -331,19 +327,20 @@ char *project_name(
 
 static
 char* artefact_name(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
 {
     char *result;
     char *id = project_name(project->id);
-    if (project->kind == BAKE_PACKAGE) {
-        bool link_static = project->get_attr_bool("static_artefact");
+
+    if (project->type == BAKE_PACKAGE) {
+        bool link_static = driver->get_attr_bool("static_artefact");
 
         if (link_static) {
             result = ut_asprintf("lib%s.a", id);
         } else {
-            if (is_dylib(project)) {
+            if (is_dylib(driver, project)) {
                 result = ut_asprintf("lib%s.dylib", id);
             } else {
                 result = ut_asprintf("lib%s.so", id);
@@ -352,27 +349,31 @@ char* artefact_name(
     } else {
         result = ut_strdup(id);
     }
+
     free(id);
+
     return result;
 }
 
 static
 void link_dynamic_binary(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool hide_symbols = false;
     ut_ll static_object_paths = NULL;
 
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(project));
+    bool cpp = is_cpp(project);
+    bool export_symbols = driver->get_attr_bool("export_symbols");
 
-    if (project->kind == BAKE_PACKAGE) {
-        if (project->managed && !is_darwin()) {
+    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
+
+    if (project->type == BAKE_PACKAGE) {
+        if (!export_symbols && !is_darwin()) {
             ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
             hide_symbols = true;
         }
@@ -382,38 +383,38 @@ void link_dynamic_binary(
         }
     }
 
-    if (c->optimizations) {
+    if (config->optimizations) {
         ut_strbuf_appendstr(&cmd, " -O3");
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }
 
-    if (c->strict) {
+    if (config->strict) {
         ut_strbuf_appendstr(&cmd, " -Werror -pedantic");
     }
 
-    if (is_dylib(project)) {
+    if (is_dylib(driver, project)) {
         ut_strbuf_appendstr(&cmd, " -dynamiclib");
     }
 
     /* LDFLAGS */
-    bake_project_attr *flags_attr = project->get_attr("ldflags");
+    bake_attribute *flags_attr = driver->get_attr("ldflags");
     if (flags_attr) {
         ut_iter it = ut_ll_iter(flags_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *flag = ut_iter_next(&it);
+            bake_attribute *flag = ut_iter_next(&it);
             ut_strbuf_append(&cmd, " %s", flag->is.string);
         }
     }
 
     ut_strbuf_append(&cmd, " %s", source);
 
-    if (ut_file_test(c->libpath)) {
-        ut_strbuf_append(&cmd, " -L%s", c->libpath);
+    if (ut_file_test(config->target_lib)) {
+        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
     }
 
     if (strcmp(ut_getenv("BAKE_TARGET"), ut_getenv("BAKE_HOME"))) {
-        ut_strbuf_append(&cmd, " -L%s/lib", c->homepath);
+        ut_strbuf_append(&cmd, " -L%s/lib", config->home);
     }
 
     ut_iter it = ut_ll_iter(project->link);
@@ -422,24 +423,25 @@ void link_dynamic_binary(
         ut_strbuf_append(&cmd, " -l%s", dep);
     }
 
-    bake_project_attr *static_lib_attr = project->get_attr("static_lib");
+    bake_attribute *static_lib_attr = driver->get_attr("static_lib");
     if (static_lib_attr) {
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *lib = ut_iter_next(&it);
+            bake_attribute *lib = ut_iter_next(&it);
             if (hide_symbols) {
                 /* If hiding symbols and linking with static library, unpack
                  * library objects to temp directory. If the library would be
                  * linked as-is, symbols would be exported, even though
                  * fvisibility is set to hidden */
-                char *static_lib = find_static_lib(project, c, lib->is.string);
+                char *static_lib = find_static_lib(
+                    driver, project, config, lib->is.string);
                 if (!static_lib) {
                     continue;
                 }
 
                 char *cwd = strdup(ut_cwd());
                 char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, UT_PLATFORM_STRING, c->id);
+                    lib->is.string, UT_PLATFORM_STRING, config->configuration);
                 char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
 
                 /* The ar command doesn't have an option to output files to a
@@ -465,11 +467,11 @@ void link_dynamic_binary(
         }
     }
 
-    bake_project_attr *libpath_attr = project->get_attr("libpath");
+    bake_attribute *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *lib = ut_iter_next(&it);
+            bake_attribute *lib = ut_iter_next(&it);
             ut_strbuf_append(&cmd, " -L%s", lib->is.string);
 
             if (is_darwin()) {
@@ -479,11 +481,11 @@ void link_dynamic_binary(
         }
     }
 
-    bake_project_attr *lib_attr = project->get_attr("lib");
+    bake_attribute *lib_attr = driver->get_attr("lib");
     if (lib_attr) {
         ut_iter it = ut_ll_iter(lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_project_attr *lib = ut_iter_next(&it);
+            bake_attribute *lib = ut_iter_next(&it);
             const char *mapped = lib_map(lib->is.string);
             if (mapped) {
                 ut_strbuf_append(&cmd, " -l%s", mapped);
@@ -493,7 +495,7 @@ void link_dynamic_binary(
 
     ut_strbuf_append(&cmd, " -o %s", target);
 
-    char *cmdstr = ut_strbuf_str(&cmd);
+    char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
     free(cmdstr);
 
@@ -501,9 +503,10 @@ void link_dynamic_binary(
     it = ut_ll_iter(static_object_paths);
     while (ut_iter_hasNext(&it)) {
         char *obj_path = ut_iter_next(&it);
-        //ut_rm(obj_path);
+        ut_rm(obj_path);
         free(obj_path);
     }
+
     if (static_object_paths) {
         ut_ll_free(static_object_paths);
     }
@@ -511,41 +514,39 @@ void link_dynamic_binary(
 
 static
 void link_static_binary(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
     ut_strbuf cmd = UT_STRBUF_INIT;
     ut_strbuf_append(&cmd, "ar rcs %s %s", target, source);
-    char *cmdstr = ut_strbuf_str(&cmd);
+    char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
     free(cmdstr);
 }
 
 static
 void link_binary(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
-    char *target,
-    void *ctx)
+    char *target)
 {
-    bool link_static = project->get_attr_bool("static_artefact");
+    bool link_static = driver->get_attr_bool("static_artefact");
 
     if (link_static) {
-        link_static_binary(driver, project, c, source, target, ctx);
+        link_static_binary(driver, config, project, source, target);
     } else {
-        link_dynamic_binary(driver, project, c, source, target, ctx);
+        link_dynamic_binary(driver, config, project, source, target);
     }
 }
 
 static
 void init(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
 {
@@ -554,7 +555,7 @@ void init(
 
 static
 void clean(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
 {
@@ -563,10 +564,10 @@ void clean(
 
 static
 int16_t setup_project(
-    bake_driver *driver,
+    bake_driver_api *driver,
     bake_config *config,
     const char *id,
-    bake_project_kind kind)
+    bake_project_type kind)
 {
     /* Get short project id */
     const char *short_id = get_short_name(id);
@@ -646,9 +647,9 @@ int16_t setup_project(
 }
 
 /* -- Rules */
-int bakemain(bake_driver *driver) {
+int bakemain(bake_driver_api *driver) {
 
-    ut_platform_init("driver/bake/c");
+    ut_init("driver/bake/c");
 
     /* Create pattern that matches source files */
     driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
@@ -676,7 +677,7 @@ int bakemain(bake_driver *driver) {
     driver->artefact(artefact_name);
 
     /* Callback for setting up a project */
-    driver->setup_project(setup_project);
+    driver->setup(setup_project);
 
     return 0;
 }

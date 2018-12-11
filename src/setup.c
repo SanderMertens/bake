@@ -118,12 +118,12 @@ int16_t bake_setup(
         "failed to build C driver");
 
     if (!strcmp(UT_OS_STRING, "darwin")) {
-        ut_try (ut_rename("libbake_lang_c.dylib", "libbake_lang_c.so"),
+        ut_try (ut_rename("drivers/lang/c/libbake_lang_c.dylib", "drivers/lang/c/libbake_lang_c.so"),
             "failed to rename bake C driver library");
     }
 
     ut_try(cmd(
-      "bake install --id bake.lang.c --artefact libbake_lang_c.so --build-to-home"),
+      "bake install drivers/lang/c --id bake.lang.c --artefact libbake_lang_c.so --build-to-home"),
         "failed to install bake C driver");
 
     return 0;

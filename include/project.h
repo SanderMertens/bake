@@ -36,7 +36,7 @@ typedef enum bake_project_type {
 typedef struct bake_project_driver {
     bake_driver *driver;
     void *json;
-    ut_ll config;
+    ut_ll attributes;
 } bake_project_driver;
 
 struct bake_project {

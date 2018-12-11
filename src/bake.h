@@ -26,11 +26,6 @@
 #include "crawler.h"
 #include "project.h"
 
-/*
-#include "install.h"
-#include "language.h"
-*/
-
 /* -- Configuration functions -- */
 
 int16_t bake_config_load(
@@ -72,7 +67,7 @@ int bake_do_foreach(
     bake_crawler *crawler,
     bake_project *p);
 
-/* -- Export functions -- */
+/* -- Install functions -- */
 
 /** Copy project file to target environment */
 int16_t bake_install_metadata(
@@ -102,8 +97,80 @@ int16_t bake_install_uninstall(
 
 /* -- Driver functions -- */
 
+extern bake_driver_api bake_driver_api_impl;
+
+typedef struct bake_driver_impl {
+    bake_driver_cb init;
+    bake_artefact_cb artefact;
+    bake_setup_cb setup;
+    bake_driver_cb clean;
+} bake_driver_impl;
+
+struct bake_driver {
+    char *id;
+    char *package_id;
+    ut_dl dl;
+
+    /* Dependency rules */
+    ut_ll nodes;
+
+    /* True if error occured */
+    int error;
+
+    /* Callbacks set by the driver */
+    bake_driver_impl impl;
+};
+
 bake_driver* bake_driver_get(
     const char *id);
+
+/* -- Rule API -- */
+
+typedef struct bake_node {
+    bake_rule_kind kind;
+    const char *name;
+    ut_ll deps;
+    bake_condition_cb cond;
+} bake_node;
+
+typedef struct bake_pattern {
+    bake_node super;
+    const char *pattern;
+} bake_pattern;
+
+typedef struct bake_rule {
+    bake_node super;
+    const char *source;
+    bake_rule_target target;
+    bake_rule_action_cb action;
+} bake_rule;
+
+typedef struct bake_dependency_rule {
+    bake_node super;
+    bake_rule_target target;
+    const char *deps;
+    bake_rule_action_cb action;
+} bake_dependency_rule;
+
+bake_node* bake_node_find(
+    bake_driver *driver,
+    const char *name);
+
+bake_pattern* bake_pattern_new(
+    const char *name,
+    const char *pattern);
+
+bake_rule* bake_rule_new(
+    const char *name,
+    const char *source,
+    bake_rule_target target,
+    bake_rule_action_cb action);
+
+bake_dependency_rule* bake_dependency_rule_new(
+    const char *name,
+    const char *deps,
+    bake_rule_target dep_mapping,
+    bake_rule_action_cb action);
 
 /* -- Filelist -- */
 

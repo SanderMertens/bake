@@ -82,8 +82,6 @@ int bake_do_install(
     bake_crawler *crawler,
     bake_project *p)
 {
-    printf("Install (%s)\n", ut_cwd());
-
     /* Step 1: export metadata to environment to make project discoverable */
     ut_try (bake_install_metadata(config, p), NULL);
 

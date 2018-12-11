@@ -1,12 +1,12 @@
 
-workspace "driver_bake_c"
+workspace "bake_lang_c"
   configurations { "debug", "release" }
   location "build"
 
   configuration { "linux", "gmake" }
     buildoptions { "-std=c99", "-D_XOPEN_SOURCE=600" }
 
-  project "driver_bake_c"
+  project "bake_lang_c"
     kind "SharedLib"
     language "C"
     location "build"

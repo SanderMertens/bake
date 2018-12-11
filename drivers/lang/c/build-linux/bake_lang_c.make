@@ -13,7 +13,7 @@ endif
 ifeq ($(config),debug)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libdriver_bake_c.so
+  TARGET = $(TARGETDIR)/libbake_lang_c.so
   OBJDIR = ../.bake_cache/debug
   DEFINES += -DDEBUG
   INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
@@ -24,7 +24,7 @@ ifeq ($(config),debug)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libdriver_bake_c.so
+  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libbake_lang_c.so
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -40,7 +40,7 @@ endif
 ifeq ($(config),release)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libdriver_bake_c.so
+  TARGET = $(TARGETDIR)/libbake_lang_c.so
   OBJDIR = ../.bake_cache/release
   DEFINES += -DNDEBUG
   INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
@@ -51,7 +51,7 @@ ifeq ($(config),release)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libdriver_bake_c.so -s
+  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libbake_lang_c.so -s
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -77,7 +77,7 @@ ifeq (.exe,$(findstring .exe,$(ComSpec)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES) | $(TARGETDIR)
-	@echo Linking driver_bake_c
+	@echo Linking bake_lang_c
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -100,7 +100,7 @@ else
 endif
 
 clean:
-	@echo Cleaning driver_bake_c
+	@echo Cleaning bake_lang_c
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)

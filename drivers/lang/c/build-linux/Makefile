@@ -9,26 +9,26 @@ ifndef verbose
 endif
 
 ifeq ($(config),debug)
-  driver_bake_c_config = debug
+  bake_lang_c_config = debug
 endif
 ifeq ($(config),release)
-  driver_bake_c_config = release
+  bake_lang_c_config = release
 endif
 
-PROJECTS := driver_bake_c
+PROJECTS := bake_lang_c
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
-driver_bake_c:
-ifneq (,$(driver_bake_c_config))
-	@echo "==== Building driver_bake_c ($(driver_bake_c_config)) ===="
-	@${MAKE} --no-print-directory -C . -f driver_bake_c.make config=$(driver_bake_c_config)
+bake_lang_c:
+ifneq (,$(bake_lang_c_config))
+	@echo "==== Building bake_lang_c ($(bake_lang_c_config)) ===="
+	@${MAKE} --no-print-directory -C . -f bake_lang_c.make config=$(bake_lang_c_config)
 endif
 
 clean:
-	@${MAKE} --no-print-directory -C . -f driver_bake_c.make clean
+	@${MAKE} --no-print-directory -C . -f bake_lang_c.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -40,6 +40,6 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   driver_bake_c"
+	@echo "   bake_lang_c"
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

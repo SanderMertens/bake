@@ -21,7 +21,7 @@ ifeq ($(config),debug)
     AR = ar
   endif
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libdriver_bake_c.dylib
+  TARGET = $(TARGETDIR)/libbake_lang_c.dylib
   OBJDIR = ../.bake_cache/debug
   DEFINES += -DDEBUG
   INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
@@ -32,7 +32,7 @@ ifeq ($(config),debug)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libdriver_bake_c.dylib
+  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -56,7 +56,7 @@ ifeq ($(config),release)
     AR = ar
   endif
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libdriver_bake_c.dylib
+  TARGET = $(TARGETDIR)/libbake_lang_c.dylib
   OBJDIR = ../.bake_cache/release
   DEFINES += -DNDEBUG
   INCLUDES += -I.. -I../../platform -I../../builder -I"$(BAKE_HOME)/include"
@@ -67,7 +67,7 @@ ifeq ($(config),release)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libdriver_bake_c.dylib
+  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_lang_c.dylib
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -93,7 +93,7 @@ ifeq (.exe,$(findstring .exe,$(ComSpec)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES) | $(TARGETDIR)
-	@echo Linking driver_bake_c
+	@echo Linking bake_lang_c
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -116,7 +116,7 @@ else
 endif
 
 clean:
-	@echo Cleaning driver_bake_c
+	@echo Cleaning bake_lang_c
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)

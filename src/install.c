@@ -521,6 +521,7 @@ int16_t bake_install_postbuild(
     }
 
     char *targetBinary = ut_asprintf("%s/%s", targetDir, artefact);
+
     if (!ut_file_test(targetBinary) || project->freshly_baked) {
         /* Copy binary */
         if (ut_cp(artefact_full, targetBinary)) {

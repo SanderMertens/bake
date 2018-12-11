@@ -29,7 +29,7 @@ ut_tls BAKE_PROJECT_KEY;
 const char *cfg = "debug";
 const char *env = "default";
 const char *action = "build";
-const char *path = NULL;
+const char *path = ".";
 bool build = true;
 bool build_to_home = false;
 bool local_setup = false;
@@ -201,13 +201,7 @@ int bake_parse_args(
                 return -1;
             }
         } else {
-            if (!path) {
-                path = argv[i];
-            } else {
-                ut_throw("more than one path provided (current = %s, arg = %s)",
-                    path, argv[i]);
-                return -1;
-            }
+            path = argv[i];
         }
     }
 
@@ -240,7 +234,7 @@ bake_crawler* bake_discovery(
         project->id = ut_strdup(id);
         project->type = type;
         project->artefact = ut_strdup(artefact);
-        project->path = ut_strdup(".");
+        project->path = ut_strdup(path);
         project->public = true;
         if (includes) {
             project->includes = ut_ll_new();
