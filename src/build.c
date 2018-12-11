@@ -27,7 +27,7 @@ int bake_do_build(
     bake_project *p)
 {
     /* Step 2: export metadata to environment to make project discoverable */
-    ut_try (bake_export_metadata(config, p), NULL);
+    ut_try (bake_install_metadata(config, p), NULL);
 
     /* Step 3: parse driver configuration in project JSON */
     ut_try (bake_project_parse_driver_config(config, p), NULL);
@@ -42,10 +42,10 @@ int bake_do_build(
     ut_try (bake_project_generate(config, p), NULL);
 
     /* Step 7: clear environment of old project files */
-    ut_try (bake_export_clear(config, p), NULL);
+    ut_try (bake_install_clear(config, p), NULL);
 
     /* Step 8: export project files to environment */
-    ut_try (bake_export_prebuild(config, p), NULL);
+    ut_try (bake_install_prebuild(config, p), NULL);
 
     /* Step 9: build generated projects, in case code generation created any */
     ut_try (bake_project_build_generated(config, p), NULL);
@@ -54,7 +54,7 @@ int bake_do_build(
     ut_try (bake_project_build(config, p), NULL);
 
     /* Step 11: install binary to environment */
-    ut_try (bake_export_postbuild(config, p), NULL);
+    ut_try (bake_install_postbuild(config, p), NULL);
 
     return 0;
 error:
@@ -77,12 +77,25 @@ int bake_do_rebuild(
     return 0;
 }
 
-int bake_do_export(
+int bake_do_install(
     bake_config *config,
     bake_crawler *crawler,
     bake_project *p)
 {
+    printf("Install (%s)\n", ut_cwd());
+
+    /* Step 1: export metadata to environment to make project discoverable */
+    ut_try (bake_install_metadata(config, p), NULL);
+
+    /* Step 2: export project files to environment */
+    ut_try (bake_install_prebuild(config, p), NULL);
+
+    /* Step 3: install binary to environment */
+    ut_try (bake_install_postbuild(config, p), NULL);
+
     return 0;
+error:
+    return -1;
 }
 
 int bake_do_uninstall(

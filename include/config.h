@@ -22,8 +22,6 @@
 #ifndef BAKE_CONFIG_H_
 #define BAKE_CONFIG_H_
 
-#include "../util/include/util.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

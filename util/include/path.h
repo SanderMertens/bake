@@ -58,6 +58,12 @@ UT_EXPORT
 char* ut_path_dirname(
     const char *path);
 
+
+/** Turn package id into path in place */
+UT_EXPORT
+void ut_package_to_path(
+    char *package);
+
 /** Obtain an array with the individual elements of a path.
  * This function splits up a path using the specified separator. An element with
  * at least *UT_MAX_SCOPE_DEPTH* elements must be provided.

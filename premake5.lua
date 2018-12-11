@@ -14,7 +14,13 @@ workspace "bake"
     files { "include/*.h", "src/*.c", "util/include/*.h", "util/src/*.c"}
     includedirs { ".", "util" }
 
+    postbuildcommands {
+      "cd .. && ./bake setup"
+    }
+
     objdir (".bake_cache")
+
+    defines { "BAKE_IMPL" }
 
     configuration "debug"
       defines { "DEBUG" }
@@ -26,7 +32,7 @@ workspace "bake"
 
     filter { "system:macosx", "action:gmake"}
       toolset "clang"
-      links { "dl", "m", "ffi", "pthread" }
+      links { "dl", "pthread" }
 
     filter { "system:linux", "action:gmake"}
-      links { "rt", "dl", "m", "ffi", "pthread" }
+      links { "rt", "dl", "pthread", "m" }

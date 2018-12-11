@@ -25,23 +25,34 @@ ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
 ut_tls BAKE_PROJECT_KEY;
 
+/* Bake configuration */
 const char *cfg = "debug";
 const char *env = "default";
 const char *action = "build";
 const char *path = NULL;
 bool build = true;
+bool build_to_home = false;
+bool local_setup = false;
+
+/* Command line project configuration */
+const char *id = NULL;
+bake_project_type type = BAKE_PACKAGE;
+const char *artefact = NULL;
+const char *includes = NULL;
 
 #define ARG(short, long, action)\
-    if (argv[i][0] == '-') {\
-        if (argv[i][1] == '-') {\
-            if (long && !strcmp(&argv[i][2], long ? long : "")) {\
-                action;\
-                parsed = true;\
-            }\
-        } else {\
-            if (short && argv[i][1] == short) {\
-                action;\
-                parsed = true;\
+    if (i < argc) {\
+        if (argv[i][0] == '-') {\
+            if (argv[i][1] == '-') {\
+                if (long && !strcmp(&argv[i][2], long ? long : "")) {\
+                    action;\
+                    parsed = true;\
+                }\
+            } else {\
+                if (short && argv[i][1] == short) {\
+                    action;\
+                    parsed = true;\
+                }\
             }\
         }\
     }
@@ -56,15 +67,20 @@ void bake_usage(void)
     printf("\n");
     printf("  --cfg <configuration>      Specify configuration id\n");
     printf("  --env <environment>        Specify environment id\n");
+    printf("  --build-to-home            Install to BAKE_HOME instead of BAKE_TARGET\n");
+    printf("\n");
+    printf("  --id <project id>          Manually specify a project id\n");
+    printf("  --type <project type>      Manually specify a project type (application|package)\n");
+    printf("  --artefact <binary>        Manually specify a binary file for project\n");
+    printf("  --includes <include path>  Manually specify an include path for project\n");
     printf("\n");
     printf("  --trace                    Set verbosity to TRACE\n");
     printf("  -v,--verbosity <kind>      Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
-    printf("\n");
     printf("Commands:\n");
     printf("  build                      Build a project\n");
     printf("  rebuild                    Clean and build a project\n");
     printf("  clean                      Clean a project\n");
-    printf("  export                     Copy project files to bake environment\n");
+    printf("  install                    Install project to bake environment\n");
     printf("  uninstall                  Remove project files from bake environment\n");
     printf("  env                        Echo bake environment\n");
     printf("\n");
@@ -90,6 +106,8 @@ void bake_set_verbosity(
         return;
     }
 
+    printf("set verbosity\n");
+
     if (!stricmp(verbosity, "DEBUG")) {
         ut_log_verbositySet(UT_DEBUG);
     } else if (!stricmp(verbosity, "TRACE")) {
@@ -109,19 +127,31 @@ void bake_set_verbosity(
     }
 }
 
+bake_project_type bake_parse_project_type(
+    const char *type)
+{
+    if (!strcmp(type, "application")) return BAKE_APPLICATION;
+    if (!strcmp(type, "package")) return BAKE_PACKAGE;
+    if (!strcmp(type, "tool")) return BAKE_TOOL;
+    ut_throw("'%s' is not a valid project kind", type);
+    return 0;
+}
+
 bool bake_is_action(
     const char *arg)
 {
     if (!strcmp(arg, "build") ||
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
-        !strcmp(arg, "export") ||
+        !strcmp(arg, "install") ||
         !strcmp(arg, "uninstall"))
     {
         return true;
     }
 
-    if (!strcmp(arg, "env")) {
+    if (!strcmp(arg, "env") ||
+        !strcmp(arg, "setup"))
+    {
         build = false;
         return true;
     } else {
@@ -149,9 +179,17 @@ int bake_parse_args(
             bool parsed = false;
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
+            ARG(0, "build-to-home", build_to_home = true; i ++);
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
             ARG('v', "verbosity", bake_set_verbosity(argv[i + 1]); i ++);
+
+            ARG(0, "local-setup", local_setup = true; i ++);
+
+            ARG(0, "id", id = argv[i + 1]; i ++);
+            ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
+            ARG(0, "artefact", artefact = argv[i + 1]; i ++);
+            ARG(0, "includes", includes = argv[i + 1]; i ++);
 
             ARG('h', "help", bake_usage(); i ++);
             ARG('v', "version", bake_version(); i ++);
@@ -178,6 +216,8 @@ int bake_parse_args(
     }
 
     return 0;
+error:
+    return -1;
 }
 
 bake_crawler* bake_discovery(
@@ -186,15 +226,35 @@ bake_crawler* bake_discovery(
     bake_crawler *crawler = bake_crawler_new(config);
     uint32_t project_count = 0;
 
-    /* Discover projects */
-    project_count = bake_crawler_search(crawler, path);
-    if (!project_count) {
-        ut_log("no projects found in '%s'\n", path);
-        bake_crawler_free(crawler);
-        crawler = NULL;
+    if (!id) {
+        /* Discover projects */
+        project_count = bake_crawler_search(crawler, path);
+        if (!project_count) {
+            ut_log("no projects found in '%s'\n", path);
+            bake_crawler_free(crawler);
+            crawler = NULL;
+        }
+    } else {
+        /* Add manually configured project */
+        bake_project *project = bake_project_new(NULL, NULL);
+        project->id = ut_strdup(id);
+        project->type = type;
+        project->artefact = ut_strdup(artefact);
+        project->path = ut_strdup(".");
+        project->public = true;
+        if (includes) {
+            project->includes = ut_ll_new();
+            ut_ll_append(project->includes, ut_strdup(includes));
+        }
+
+        ut_package_to_path(project->id);
+
+        ut_try(bake_crawler_add(crawler, project), NULL);
     }
 
     return crawler;
+error:
+    return NULL;
 }
 
 int bake_build(
@@ -207,7 +267,7 @@ int bake_build(
     if (!strcmp(action, "build")) cb = bake_do_build;
     else if (!strcmp(action, "clean")) cb = bake_do_clean;
     else if (!strcmp(action, "rebuild")) cb = bake_do_rebuild;
-    else if (!strcmp(action, "export")) cb = bake_do_export;
+    else if (!strcmp(action, "install")) cb = bake_do_install;
     else if (!strcmp(action, "uninstall")) cb = bake_do_uninstall;
     else if (!strcmp(action, "foreach")) cb = bake_do_foreach;
     else {
@@ -270,7 +330,7 @@ int main(int argc, const char *argv[]) {
     ut_log_pop();
 
     ut_log_push("config");
-    ut_try (bake_config_load(&config, cfg, env), NULL);
+    ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
     ut_log_pop();
 
     if (build) {
@@ -282,7 +342,7 @@ int main(int argc, const char *argv[]) {
         /* If projects have been discovered, build them */
         if (crawler) {
             ut_log_push("build");
-            bake_build(&config, crawler, action);
+            ut_try(bake_build(&config, crawler, action), NULL);
             ut_log_pop();
 
             bake_crawler_free(crawler);
@@ -291,6 +351,8 @@ int main(int argc, const char *argv[]) {
         /* Actions that don't need project discovery */
         if (!strcmp(action, "env")) {
             ut_try( bake_env(&config), NULL);
+        } else if (!strcmp(action, "setup")) {
+            ut_try (bake_setup(local_setup), NULL);
         }
     }
 

@@ -22,8 +22,6 @@
 #ifndef BAKE_ATTRIBUTE_H_
 #define BAKE_ATTRIBUTE_H_
 
-#include "../util/include/util.h"
-
 typedef enum bake_attribute_kind {
     BAKE_BOOLEAN,
     BAKE_STRING,

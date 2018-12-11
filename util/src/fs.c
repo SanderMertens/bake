@@ -750,7 +750,7 @@ ut_dirstack ut_dirstack_push(
 {
     if (!stack) {
         stack = ut_ll_new();
-        ut_ll_append(stack, strdup(ut_cwd()));
+        ut_ll_append(stack, ut_strdup(dir));
     } else {
         ut_ll_append(stack, ut_asprintf("%s/%s", ut_ll_last(stack), dir));
     }
@@ -769,10 +769,6 @@ void ut_dirstack_pop(
 const char* ut_dirstack_wd(
     ut_dirstack stack)
 {
-    if (!stack || ut_ll_count(stack) == 1) {
-        return ".";
-    }
-
     return ut_ll_last(stack);
 }
 

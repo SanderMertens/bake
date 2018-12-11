@@ -1,0 +1,9 @@
+{
+    "id": "driver.bake.c",
+    "type": "package",
+    "value": {
+        "author": "Sander Mertens",
+        "description": "Driver for building C packages",
+        "language": null
+    }
+}

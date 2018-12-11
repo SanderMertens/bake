@@ -149,7 +149,7 @@ int16_t bake_node_run_rule_map(
     while (ut_iter_hasNext(&it)) {
         bake_file *src = ut_iter_next(&it);
         bake_file *dst = NULL;
-        const char *map = r->target.is.map(driver, p, src->name, NULL);
+        const char *map = r->target.is.map(driver, c, p, src->name, NULL);
         if (!map) {
             ut_throw("failed to map file '%s'", src->name);
             goto error;
@@ -173,7 +173,7 @@ int16_t bake_node_run_rule_map(
             if (src->offset) {
                 srcPath = ut_asprintf("%s/%s", src->offset, src->name);
             }
-            r->action(driver, p, c, srcPath, dst->name, NULL);
+            r->action(driver, c, p, srcPath, dst->name, NULL);
             if (srcPath != src->name) {
                 free(srcPath);
             }
@@ -270,7 +270,7 @@ int16_t bake_node_run_rule_pattern(
             ut_ok("from #[bold]%s#[normal]", source_list_str);
         }
 
-        r->action(driver, p, c, source_list_str, dst, NULL);
+        r->action(driver, c, p, source_list_str, dst, NULL);
         if (p->error) {
             if (dst) {
                 ut_throw("command for task '%s' failed", dst);
@@ -306,7 +306,7 @@ int16_t bake_node_eval(
 {
     bake_filelist *targets = NULL, *inputs = NULL;
 
-    if (n->cond && !n->cond(p)) {
+    if (n->cond && !n->cond(driver, c, p)) {
         return 0;
     }
 
@@ -362,7 +362,7 @@ int16_t bake_node_eval(
                     char *tok = strtok(pattern, ",");
                     while (tok) {
                         bake_node *targetNode = bake_node_find(driver, &tok[1]);
-                        if (!targetNode->cond || targetNode->cond(p)) {
+                        if (!targetNode->cond || targetNode->cond(driver, c, p)) {
                             bake_filelist *list = bake_filelist_new(
                                 NULL, ((bake_pattern*)targetNode)->pattern);
                             if (!list || !bake_filelist_count(list)) {

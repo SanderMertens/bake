@@ -61,13 +61,12 @@ uint32_t bake_crawler_count(
 /** Manually add a project to the crawler.
  *
  * @param _this A crawler object.
- * @param id Package id of the project.
- * @param path Location of the project.
+ * @param project Project to add.
  * @return 0 if success, non-zero if failed.
  */
-bake_project* bake_crawler_addProject(
-    bake_crawler *_this,
-    const char *path);
+ int16_t bake_crawler_add(
+     bake_crawler *_this,
+     bake_project *project);
 
 /** Walk projects.
  * This walks projects found with bake_crawler_search in correct dependency

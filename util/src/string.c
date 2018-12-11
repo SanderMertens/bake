@@ -317,9 +317,13 @@ void strset(char **out, const char *str) {
 
 /* strdup is not a standard C function, so provide own implementation. */
 char* ut_strdup(const char* str) {
-    char *result = malloc(strlen(str) + 1);
-    strcpy(result, str);
-    return result;
+    if (!str) {
+        return NULL;
+    } else {
+        char *result = malloc(strlen(str) + 1);
+        strcpy(result, str);
+        return result;
+    }
 }
 
 /**

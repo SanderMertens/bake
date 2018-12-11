@@ -35,8 +35,9 @@
 
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *cfg,
-    const char *env);
+    const char *cfg_id,
+    const char *env_id,
+    bool build_to_home);
 
 
 /* -- Build functions -- */
@@ -56,7 +57,7 @@ int bake_do_rebuild(
     bake_crawler *crawler,
     bake_project *p);
 
-int bake_do_export(
+int bake_do_install(
     bake_config *config,
     bake_crawler *crawler,
     bake_project *p);
@@ -74,27 +75,27 @@ int bake_do_foreach(
 /* -- Export functions -- */
 
 /** Copy project file to target environment */
-int16_t bake_export_metadata(
+int16_t bake_install_metadata(
     bake_config *config,
     bake_project *project);
 
 /** Copy static files to target environment (pre build) */
-int16_t bake_export_prebuild(
+int16_t bake_install_prebuild(
     bake_config *config,
     bake_project *project);
 
 /** Copy artefact to target environment (post build) */
-int16_t bake_export_postbuild(
+int16_t bake_install_postbuild(
     bake_config *config,
     bake_project *project);
 
 /** Remove files from target environment for project except metadata */
-int16_t bake_export_clear(
+int16_t bake_install_clear(
     bake_config *config,
     bake_project *project);
 
 /** Remove files from target environment for project */
-int16_t bake_export_uninstall(
+int16_t bake_install_uninstall(
     bake_config *config,
     bake_project *project);
 
@@ -172,3 +173,8 @@ int16_t bake_json_set_array(
     ut_ll *ptr,
     const char *member,
     JSON_Value *v);
+
+/* -- Setup -- */
+
+int16_t bake_setup(
+    bool local);

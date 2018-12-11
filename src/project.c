@@ -307,19 +307,23 @@ bake_project* bake_project_new(
     result->drivers = ut_ll_new();
 
     /* Parse project.json if available */
-    ut_try (
-        bake_project_parse(result), "failed to parse '%s/project.json'", path);
+    if (path) {
+        ut_try (
+            bake_project_parse(result),
+            "failed to parse '%s/project.json'",
+            path);
 
-    /* If 'src' and 'includes' weren't set, use defaults */
-    if (!ut_ll_count(result->sources)) {
-        ut_ll_append(result->sources, "src");
-    }
-    if (!ut_ll_count(result->includes)) {
-        ut_ll_append(result->includes, "include");
-    }
+        /* If 'src' and 'includes' weren't set, use defaults */
+        if (!ut_ll_count(result->sources)) {
+            ut_ll_append(result->sources, "src");
+        }
+        if (!ut_ll_count(result->includes)) {
+            ut_ll_append(result->includes, "include");
+        }
 
-    if (!result->language) {
-        result->language = ut_strdup("c");
+        if (!result->language) {
+            result->language = ut_strdup("c");
+        }
     }
 
     return result;

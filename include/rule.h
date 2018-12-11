@@ -22,8 +22,8 @@
 typedef
 void (*bake_rule_action_cb)(
     bake_driver *driver,
+    bake_config *config,
     bake_project *project,
-    bake_config *c,
     char *src,
     char *target,
     void *ctx);
@@ -31,31 +31,21 @@ void (*bake_rule_action_cb)(
 typedef
 char* (*bake_rule_map_cb)(
     bake_driver *driver,
+    bake_config *config,
     bake_project *project,
     const char *input,
     void *ctx);
 
 typedef
-char* (*bake_rule_artefact_cb)(
-    bake_driver *driver,
-    bake_project *project);
-
-typedef
-void (*bake_rule_init_cb)(
-    bake_project *p);
-
-typedef
-void (*bake_rule_clean_cb)(
-    bake_driver *driver,
-    bake_project *project);
-
-typedef
 bool (*bake_rule_condition_cb)(
+    bake_driver *driver,
+    bake_config *config,
     bake_project *project);
 
 typedef
 int16_t (*bake_rule_setup_project_cb)(
     bake_driver *driver,
+    bake_config *config,
     const char *id,
     bake_project_type kind);
 

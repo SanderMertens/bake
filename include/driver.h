@@ -22,8 +22,6 @@
 #ifndef BAKE_DRIVER_H_
 #define BAKE_DRIVER_H_
 
-#include "../util/include/util.h"
-
 typedef int (*bake_driver_cb)(
     bake_config *config,
     bake_project *project,

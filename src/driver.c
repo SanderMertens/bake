@@ -28,7 +28,6 @@ extern ut_tls BAKE_DRIVER_KEY;
 extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
 
-static
 bake_node* bake_node_find(
     bake_driver *driver,
     const char *name)

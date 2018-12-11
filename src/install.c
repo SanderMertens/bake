@@ -22,7 +22,7 @@
 #include "bake.h"
 
 static
-int16_t bake_export_dir_for_target(
+int16_t bake_install_dir_for_target(
     char *id,
     char *dir,
     char *subdir,
@@ -32,6 +32,10 @@ int16_t bake_export_dir_for_target(
 {
     ut_dirstack stack = NULL;
     ut_iter it;
+
+    ut_debug(
+      "install dir id='%s' dir='%s' subdir='%s' target='%s' softlink=%d uninstallFile='%p'",
+      id, dir, subdir, target, softlink, uninstallFile);
 
     char *source;
     if (!subdir) {
@@ -52,10 +56,12 @@ int16_t bake_export_dir_for_target(
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        if (ut_isdir(file)) {
+        char *filepath = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+
+        if (ut_isdir(filepath)) {
             if (ut_os_match(file)) {
                 ut_trace("install files for current OS in '%s'", file);
-                if (bake_export_dir_for_target(
+                if (bake_install_dir_for_target(
                     id, dir, file, target, softlink, uninstallFile))
                 {
                     goto error;
@@ -65,7 +71,7 @@ int16_t bake_export_dir_for_target(
             } else if (!stricmp(file, "everywhere"))
             {
                 /* Always copy all contents in everywhere */
-                if (bake_export_dir_for_target(
+                if (bake_install_dir_for_target(
                     id, dir, file, target, softlink, uninstallFile))
                 {
                     goto error;
@@ -83,13 +89,14 @@ int16_t bake_export_dir_for_target(
 
         /* Copy file to target */
         if (softlink) {
-            if (ut_symlink(file, dst)) goto error;
+            if (ut_symlink(filepath, dst)) goto error;
         } else {
-            if (ut_cp(file, dst)) goto error;
+            if (ut_cp(filepath, dst)) goto error;
         }
 
         fprintf(uninstallFile, "%s\n", dst);
         free(dst);
+        free(filepath);
     }
 
     ut_dirstack_pop(stack);
@@ -102,7 +109,7 @@ error:
 }
 
 static
-int16_t bake_export_dir(
+int16_t bake_install_dir(
     bake_config *config,
     char *id,
     char *dir,
@@ -122,7 +129,7 @@ int16_t bake_export_dir(
             dir);
     }
 
-    if (bake_export_dir_for_target(
+    if (bake_install_dir_for_target(
         id,
         dir,
         subdir,
@@ -161,7 +168,7 @@ FILE* bake_uninstaller_open(
     return result;
 }
 
-int16_t bake_export_clear(
+int16_t bake_install_clear(
     bake_config *config,
     bake_project *project)
 {
@@ -220,11 +227,11 @@ error:
     return -1;
 }
 
-int16_t bake_export_uninstall(
+int16_t bake_install_uninstall(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_export_clear(config, project), NULL);
+    ut_try( bake_install_clear(config, project), NULL);
 
     char *projectDir = ut_envparse(
         "%s/meta/%s", config->target, project->id);
@@ -255,7 +262,7 @@ error:
     return -1;
 }
 
-int16_t bake_export_metadata(
+int16_t bake_install_metadata(
     bake_config *config,
     bake_project *project)
 {
@@ -315,7 +322,7 @@ error:
     return -1;
 }
 
-int16_t bake_export_prebuild(
+int16_t bake_install_prebuild(
     bake_config *config,
     bake_project *project)
 {
@@ -332,7 +339,7 @@ int16_t bake_export_prebuild(
         if (project->public) {
             ut_iter it = ut_ll_iter(project->includes);
             while (ut_iter_hasNext(&it)) {
-                if (bake_export_dir(
+                if (bake_install_dir(
                     config,
                     project->id,
                     "include",
@@ -345,7 +352,7 @@ int16_t bake_export_prebuild(
             }
         }
 
-        if (bake_export_dir(
+        if (bake_install_dir(
             config,
             project->id,
             "etc",
@@ -357,7 +364,7 @@ int16_t bake_export_prebuild(
         }
 
         if (project->type == BAKE_PACKAGE) {
-            if (bake_export_dir(
+            if (bake_install_dir(
                 config,
                 project->id,
                 "lib",
@@ -374,7 +381,7 @@ int16_t bake_export_prebuild(
             if (ut_chdir("install")) {
                 goto error;
             }
-            if (bake_export_dir(
+            if (bake_install_dir(
                 config,
                 NULL,
                 "include",
@@ -384,7 +391,7 @@ int16_t bake_export_prebuild(
             {
                 goto error;
             }
-            if (bake_export_dir(
+            if (bake_install_dir(
                 config,
                 NULL,
                 "lib",
@@ -394,7 +401,7 @@ int16_t bake_export_prebuild(
             {
                 goto error;
             }
-            if (bake_export_dir(
+            if (bake_install_dir(
                 config,
                 NULL,
                 "etc",
@@ -404,7 +411,7 @@ int16_t bake_export_prebuild(
             {
                 goto error;
             }
-            if (bake_export_dir(
+            if (bake_install_dir(
                 config,
                 NULL,
                 "java",
@@ -457,7 +464,7 @@ error:
     return -1;
 }
 
-int16_t bake_export_postbuild(
+int16_t bake_install_postbuild(
     bake_config *config,
     bake_project *project)
 {

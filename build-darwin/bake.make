@@ -23,14 +23,14 @@ ifeq ($(config),debug)
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/debug
-  DEFINES += -DDEBUG
+  DEFINES += -DBAKE_IMPL -DDEBUG
   INCLUDES += -I.. -I../util
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -ldl -lm -lffi -lpthread
+  LIBS += -ldl -lpthread
   LDDEPS +=
   ALL_LDFLAGS += $(LDFLAGS)
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -39,6 +39,8 @@ ifeq ($(config),debug)
   define PRELINKCMDS
   endef
   define POSTBUILDCMDS
+	@echo Running postbuild commands
+	cd .. && ./bake setup
   endef
 all: prebuild prelink $(TARGET)
 	@:
@@ -58,14 +60,14 @@ ifeq ($(config),release)
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/release
-  DEFINES += -DNDEBUG
+  DEFINES += -DBAKE_IMPL -DNDEBUG
   INCLUDES += -I.. -I../util
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -ldl -lm -lffi -lpthread
+  LIBS += -ldl -lpthread
   LDDEPS +=
   ALL_LDFLAGS += $(LDFLAGS)
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -74,6 +76,8 @@ ifeq ($(config),release)
   define PRELINKCMDS
   endef
   define POSTBUILDCMDS
+	@echo Running postbuild commands
+	cd .. && ./bake setup
   endef
 all: prebuild prelink $(TARGET)
 	@:
@@ -86,12 +90,13 @@ OBJECTS := \
 	$(OBJDIR)/config.o \
 	$(OBJDIR)/crawler.o \
 	$(OBJDIR)/driver.o \
-	$(OBJDIR)/export.o \
 	$(OBJDIR)/filelist.o \
+	$(OBJDIR)/install.o \
 	$(OBJDIR)/json_utils.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/rule.o \
+	$(OBJDIR)/setup.o \
 	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
 	$(OBJDIR)/expr.o \
@@ -187,10 +192,10 @@ $(OBJDIR)/crawler.o: ../src/crawler.c
 $(OBJDIR)/driver.o: ../src/driver.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/export.o: ../src/export.c
+$(OBJDIR)/filelist.o: ../src/filelist.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/filelist.o: ../src/filelist.c
+$(OBJDIR)/install.o: ../src/install.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/json_utils.o: ../src/json_utils.c
@@ -203,6 +208,9 @@ $(OBJDIR)/project.o: ../src/project.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rule.o: ../src/rule.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/setup.o: ../src/setup.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/dl.o: ../util/src/dl.c

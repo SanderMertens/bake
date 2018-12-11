@@ -27,9 +27,9 @@ extern "C" {
 #endif
 
 typedef enum bake_project_type {
-    BAKE_APPLICATION,   /* Executable project in bake package store */
-    BAKE_PACKAGE,       /* Library project in bake package store */
-    BAKE_TOOL           /* Executable project accessible globally */
+    BAKE_APPLICATION = 1,   /* Executable project in bake package store */
+    BAKE_PACKAGE = 2,       /* Library project in bake package store */
+    BAKE_TOOL = 3           /* Executable project accessible globally */
 } bake_project_type;
 
 /* Driver required by project with its configuration */

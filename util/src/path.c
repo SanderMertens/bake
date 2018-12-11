@@ -297,3 +297,14 @@ void ut_path_offset(
 
     outptr[0] = '\0';
 }
+
+void ut_package_to_path(
+    char *package)
+{
+    char *ptr, ch;
+    for (ptr = package; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
+            *ptr = '/';
+        }
+    }
+}

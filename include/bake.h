@@ -22,7 +22,11 @@
 #ifndef BAKE_H
 #define BAKE_H
 
+#ifdef BAKE_IMPL
 #include "util/include/util.h"
+#else
+#include <bake/util/util.h>
+#endif
 
 typedef struct bake_project bake_project;
 typedef struct bake_driver bake_driver;

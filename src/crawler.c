@@ -68,15 +68,10 @@ void bake_crawler_addDependency(
     ut_ll_append(dep->dependents, p);
 }
 
-bake_project* bake_crawler_addProject(
+int16_t bake_crawler_add(
     bake_crawler *_this,
-    const char *path)
+    bake_project *p)
 {
-    bake_project *p = bake_project_new(path, _this->cfg);
-    if (!p) {
-        return NULL;
-    }
-
     if (!_this->nodes) _this->nodes = ut_rb_new(project_cmp, NULL);
 
     if (p->type == BAKE_PACKAGE && p->public) {
@@ -137,9 +132,9 @@ bake_project* bake_crawler_addProject(
 
     ut_trace("found project '%s'", p->id);
 
-    return p;
+    return 0;
 error:
-    return NULL;
+    return -1;
 }
 
 static
@@ -162,7 +157,13 @@ int16_t bake_crawler_crawl(
 
     if (ut_file_test(strarg("%s/project.json", fullpath))) {
         isProject = true;
-        if (!(p = bake_crawler_addProject(_this, fullpath))) {
+
+        bake_project *p = bake_project_new(fullpath, _this->cfg);
+        if (!p) {
+            goto error;
+        }
+
+        if (bake_crawler_add(_this, p)) {
             ut_warning("ignoring '%s' because of errors", fullpath);
         } else {
             if (ut_file_test("rakefile")) {
@@ -339,7 +340,7 @@ int16_t bake_crawler_build_project(
         goto error;
     }
 
-    if (!action(config, _this, p)) {
+    if (action(config, _this, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
         free(prev);
         goto error;
@@ -431,7 +432,7 @@ int16_t bake_crawler_walk(
 
     ut_ll_free(readyForBuild);
 
-    return 1;
-error:
     return 0;
+error:
+    return -1;
 }
