@@ -14,10 +14,6 @@ workspace "bake"
     files { "include/*.h", "src/*.c", "util/include/*.h", "util/src/*.c"}
     includedirs { ".", "util" }
 
-    postbuildcommands {
-      "cd .. && ./bake setup"
-    }
-
     objdir (".bake_cache")
 
     defines { "BAKE_IMPL" }

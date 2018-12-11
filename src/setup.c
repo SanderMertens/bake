@@ -68,7 +68,6 @@ int16_t bake_create_script(void)
     fprintf(f, "}\n\n");
 
     fprintf(f, "install_bake() {\n");
-    fprintf(f, "    pwd\n");
     fprintf(f, "    ./bake --setup-local\n");
     fprintf(f, "}\n\n");
 
