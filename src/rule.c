@@ -313,7 +313,6 @@ error:
     return -1;
 }
 
-static
 int16_t bake_node_eval(
     bake_driver *driver,
     bake_node *n,

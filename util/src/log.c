@@ -327,7 +327,7 @@ char* ut_log_categoryIndent(
 
     while (categories[i] && (!count || i < count)) {
         i ++;
-        ut_strbuf_append(&buff, "%s|#[normal]  ", color);
+        ut_strbuf_append(&buff, "%s|#[reset]  ", color);
     }
 
     return ut_strbuf_get(&buff);
@@ -349,7 +349,7 @@ char* ut_log_categoryString(
                 ut_strbuf_appendstr(&buff, ".");
             }
         }
-        ut_strbuf_appendstr(&buff, "#[normal]");
+        ut_strbuf_appendstr(&buff, "#[reset]");
     }
 
     if (!i) {
@@ -524,7 +524,7 @@ void ut_logprint_kind(
 
     ut_strbuf_append(
         buf,
-        "%s%s%*s#[normal]",
+        "%s%s%*s#[reset]",
         color,
         levelstr,
         levelspace - strlen(levelstr),
@@ -575,7 +575,7 @@ void ut_logprint_deltaTime(
             ut_strbuf_appendstr(buf, " --------");
         }
     }
-    ut_strbuf_appendstr(buf, "#[normal]");
+    ut_strbuf_appendstr(buf, "#[reset]");
 }
 
 static
@@ -589,13 +589,13 @@ bool ut_logprint_sumTime(
         struct timespec delta = timespec_sub(now, frame->lastTime);
         if (!delta.tv_sec && delta.tv_nsec < 50000) {
             if (UT_LOG_PROFILE) {
-                ut_strbuf_appendstr(buf, "#[grey] -------- #[normal]");
+                ut_strbuf_appendstr(buf, "#[grey] -------- #[reset]");
             }
             return false;
         }
-        ut_strbuf_append(buf, " #[green]%.2d.%.5d#[normal]", delta.tv_sec, delta.tv_nsec / 10000);
+        ut_strbuf_append(buf, " #[green]%.2d.%.5d#[reset]", delta.tv_sec, delta.tv_nsec / 10000);
     } else {
-        ut_strbuf_appendstr(buf, "#[grey] --------#[normal]");
+        ut_strbuf_appendstr(buf, "#[grey] --------#[reset]");
     }
     return true;
 }
@@ -657,14 +657,14 @@ int ut_logprint_file(
     file = ut_log_stripFunctionName(file);
     if (file) {
         if (!fixedWidth) {
-            ut_strbuf_append(buf, "#[bold]%s#[normal]", file);
+            ut_strbuf_append(buf, "#[bold]%s#[reset]", file);
         } else {
             int len = strlen(file);
             if (len > (UT_LOG_FILE_LEN)) {
                 file += len - UT_LOG_FILE_LEN + 2;
-                ut_strbuf_append(buf, "#[bold]..%*s#[normal]", UT_LOG_FILE_LEN - 2, file);
+                ut_strbuf_append(buf, "#[bold]..%*s#[reset]", UT_LOG_FILE_LEN - 2, file);
             } else {
-                ut_strbuf_append(buf, "#[bold]%*s#[normal]", UT_LOG_FILE_LEN, file);
+                ut_strbuf_append(buf, "#[bold]%*s#[reset]", UT_LOG_FILE_LEN, file);
             }
         }
         return 1;
@@ -680,7 +680,7 @@ int ut_logprint_line(
     bool fixedWidth)
 {
     if (line) {
-        ut_strbuf_append(buf, "#[bold]%u#[normal]", line);
+        ut_strbuf_append(buf, "#[bold]%u#[reset]", line);
         if (fixedWidth) {
             int len = 4 - (floor(log10(line)) + 1);
             if (len) {
@@ -699,7 +699,7 @@ int ut_logprint_function(
     char const *function)
 {
     if (function) {
-        ut_strbuf_append(buf, "#[cyan]%s#[normal]", function);
+        ut_strbuf_append(buf, "#[cyan]%s#[reset]", function);
         return 1;
     } else {
         return 0;
@@ -720,7 +720,7 @@ int ut_logprint_proc(
         "grey",
     };
     ut_proc id = ut_proc();
-    ut_strbuf_append(buf, "#[%s]%u#[normal]", colors[id % 6], id);
+    ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[id % 6], id);
     return 1;
 }
 
@@ -842,14 +842,14 @@ void ut_logprint(
                                 ut_logprint(
                                     f, log_fmt, kind, categories, file, line, function, NULL, i + 1, computeSum);
                                 ut_log(
-                                    "%s#[grey]├> %s#[normal]\n",
+                                    "%s#[grey]├> %s#[reset]\n",
                                     indent,
                                     data->categories[i]);
                             } else {
                                 ut_logprint(
                                     f, log_fmt, kind, categories, file, line, function, NULL, i + 1, computeSum);
                                 ut_log(
-                                    "#[grey]%s#[normal]\n",
+                                    "#[grey]%s#[reset]\n",
                                     data->categories[i]);
                             }
                             data->frames[i].printed = true;
@@ -871,7 +871,7 @@ void ut_logprint(
             case 'l': ret = ut_logprint_line(cur, line, !ut_log_shouldEmbedCategories); break;
             case 'r': ret = ut_logprint_function(cur, function); break;
             case 'm': ret = ut_logprint_msg(cur, msg); break;
-            case 'a': ut_strbuf_append(cur, "#[cyan]%s#[normal]", ut_log_appName); break;
+            case 'a': ut_strbuf_append(cur, "#[cyan]%s#[reset]", ut_log_appName); break;
             case 'A': ret = ut_logprint_proc(cur); break;
             case 'V': if (kind >= UT_WARNING || kind == UT_THROW) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
             case 'F': if (kind >= UT_WARNING || kind == UT_THROW) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
@@ -1439,7 +1439,7 @@ void _ut_log_pop(
                 ut_logprint(
                     stderr, UT_LOG_FMT_CURRENT, UT_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
                 ut_log(
-                    "%s#[grey]+#[normal]\n", indent ? indent : "");
+                    "%s#[grey]+#[reset]\n", indent ? indent : "");
                 if (indent) free(indent);
             }
         }

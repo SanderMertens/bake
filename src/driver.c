@@ -276,6 +276,14 @@ void bake_driver_artefact_cb(
 }
 
 static
+void bake_driver_link_to_lib_cb(
+    bake_link_to_lib_cb link_to_lib)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    driver->impl.link_to_lib = link_to_lib;
+}
+
+static
 void bake_driver_clean_cb(
     bake_driver_cb clean)
 {
@@ -350,11 +358,43 @@ bake_driver_api bake_driver_api_impl = {
     .init = bake_driver_init_cb,
     .setup = bake_driver_setup_cb,
     .artefact = bake_driver_artefact_cb,
+    .link_to_lib = bake_driver_link_to_lib_cb,
     .clean = bake_driver_clean_cb,
     .exec = bake_driver_exec_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb
 };
+
+char* bake_driver__artefact(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.artefact) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        return driver->impl.artefact(
+            &bake_driver_api_impl, config, project);
+    }
+
+    return NULL;
+}
+
+char* bake_driver__link_to_lib(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *link)
+{
+    if (driver->impl.artefact) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        return driver->impl.link_to_lib(
+            &bake_driver_api_impl, config, project, link);
+    }
+
+    return NULL;
+}
 
 bake_driver* bake_driver_get(
     const char *id)

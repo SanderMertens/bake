@@ -38,6 +38,14 @@ char* (*bake_artefact_cb)(
     bake_config *config,
     bake_project *project);
 
+/** link_to_lib callback */
+typedef
+char* (*bake_link_to_lib_cb)(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *link);
+
 /** Condition callback */
 typedef
 bool (*bake_condition_cb)(
@@ -131,6 +139,10 @@ struct bake_driver_api {
     /* Return the name of the artefact for a project */
     void (*artefact)(
         bake_artefact_cb action);
+
+    /* Locate library file based on a link path */
+    void (*link_to_lib)(
+        bake_link_to_lib_cb action);
 
     /* Create a new project */
     void (*setup)(

@@ -24,56 +24,60 @@
 int bake_do_build(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     /* Step 2: export metadata to environment to make project discoverable */
     ut_log_push("install_metadata");
-    ut_try (bake_install_metadata(config, p), NULL);
+    if (project->public)
+        ut_try (bake_install_metadata(config, project), NULL);
     ut_log_pop();
 
     /* Step 3: parse driver configuration in project JSON */
     ut_log_push("load_drivers");
-    ut_try (bake_project_parse_driver_config(config, p), NULL);
+    ut_try (bake_project_parse_driver_config(config, project), NULL);
     ut_log_pop();
 
     /* Step 4: parse dependee configuration */
     ut_log_push("load_dependees");
-    ut_try (bake_project_parse_dependee_config(config, p), NULL);
+    ut_try (bake_project_parse_dependee_config(config, project), NULL);
     ut_log_pop();
 
     /* Step 5: now that project config is fully loaded, check dependencies */
     ut_log_push("validate_dependencies");
-    ut_try (bake_project_check_dependencies(config, p), NULL);
+    ut_try (bake_project_check_dependencies(config, project), NULL);
     ut_log_pop();
 
     /* Step 6: invoke code generators, if any */
     ut_log_push("generate_code");
-    ut_try (bake_project_generate(config, p), NULL);
+    ut_try (bake_project_generate(config, project), NULL);
     ut_log_pop();
 
     /* Step 7: clear environment of old project files */
     ut_log_push("clear");
-    ut_try (bake_install_clear(config, p, false), NULL);
+    if (project->public)
+        ut_try (bake_install_clear(config, project, false), NULL);
     ut_log_pop();
 
     /* Step 8: export project files to environment */
     ut_log_push("install_prebuild");
-    ut_try (bake_install_prebuild(config, p), NULL);
+    if (project->public)
+        ut_try (bake_install_prebuild(config, project), NULL);
     ut_log_pop();
 
     /* Step 9: build generated projects, in case code generation created any */
     ut_log_push("build_generated");
-    ut_try (bake_project_build_generated(config, p), NULL);
+    ut_try (bake_project_build_generated(config, project), NULL);
     ut_log_pop();
 
     /* Step 10: build project */
     ut_log_push("build");
-    ut_try (bake_project_build(config, p), NULL);
+    ut_try (bake_project_build(config, project), NULL);
     ut_log_pop();
 
     /* Step 11: install binary to environment */
     ut_log_push("install_postbuild");
-    ut_try (bake_install_postbuild(config, p), NULL);
+    if (project->public)
+        ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
 
     return 0;
@@ -84,7 +88,7 @@ error:
 int bake_do_clean(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     return 0;
 }
@@ -92,7 +96,7 @@ int bake_do_clean(
 int bake_do_rebuild(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     return 0;
 }
@@ -100,16 +104,16 @@ int bake_do_rebuild(
 int bake_do_install(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     /* Step 1: export metadata to environment to make project discoverable */
-    ut_try (bake_install_metadata(config, p), NULL);
+    ut_try (bake_install_metadata(config, project), NULL);
 
     /* Step 2: export project files to environment */
-    ut_try (bake_install_prebuild(config, p), NULL);
+    ut_try (bake_install_prebuild(config, project), NULL);
 
     /* Step 3: install binary to environment */
-    ut_try (bake_install_postbuild(config, p), NULL);
+    ut_try (bake_install_postbuild(config, project), NULL);
 
     return 0;
 error:
@@ -119,7 +123,7 @@ error:
 int bake_do_uninstall(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     return 0;
 }
@@ -127,7 +131,7 @@ int bake_do_uninstall(
 int bake_do_foreach(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *p)
+    bake_project *project)
 {
     return 0;
 }

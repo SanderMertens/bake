@@ -103,6 +103,7 @@ extern bake_driver_api bake_driver_api_impl;
 typedef struct bake_driver_impl {
     bake_driver_cb init;
     bake_artefact_cb artefact;
+    bake_link_to_lib_cb link_to_lib;
     bake_setup_cb setup;
     bake_driver_cb clean;
 } bake_driver_impl;
@@ -124,6 +125,62 @@ struct bake_driver {
 
 bake_driver* bake_driver_get(
     const char *id);
+
+/* Obtain artefact name from driver */
+char* bake_driver__artefact(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
+/* Convert library name from link from driver */
+char* bake_driver__link_to_lib(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *link);
+
+/* -- Filelist -- */
+
+typedef struct bake_file {
+    char *name;
+    char *offset;
+    uint64_t timestamp;
+} bake_file;
+
+typedef struct bake_filelist {
+    char *pattern;
+    ut_ll files;
+    int16_t (*set)(const char *pattern);
+} bake_filelist;
+
+bake_filelist* bake_filelist_new(
+    const char *path, const char *pattern);
+
+void bake_filelist_free(
+    bake_filelist* fl);
+
+int16_t bake_filelist_set(
+    bake_filelist *fl,
+    const char *pattern);
+
+ut_iter bake_filelist_iter(
+    bake_filelist *fl);
+
+bake_file* bake_filelist_add(
+    bake_filelist *fl,
+    const char *filename);
+
+int16_t bake_filelist_addPattern(
+    bake_filelist *fl,
+    const char *offset,
+    const char *pattern);
+
+int16_t bake_filelist_addList(
+    bake_filelist *fl,
+    bake_filelist *src);
+
+uint64_t bake_filelist_count(
+    bake_filelist *fl);
 
 /* -- Rule API -- */
 
@@ -173,48 +230,14 @@ bake_dependency_rule* bake_dependency_rule_new(
     bake_rule_target dep_mapping,
     bake_rule_action_cb action);
 
-/* -- Filelist -- */
+int16_t bake_node_eval(
+    bake_driver *driver,
+    bake_node *n,
+    bake_project *p,
+    bake_config *c,
+    bake_filelist *inherits,
+    bake_filelist *outputs);
 
-typedef struct bake_file {
-    char *name;
-    char *offset;
-    uint64_t timestamp;
-} bake_file;
-
-typedef struct bake_filelist {
-    char *pattern;
-    ut_ll files;
-    int16_t (*set)(const char *pattern);
-} bake_filelist;
-
-bake_filelist* bake_filelist_new(
-    const char *path, const char *pattern);
-
-void bake_filelist_free(
-    bake_filelist* fl);
-
-int16_t bake_filelist_set(
-    bake_filelist *fl,
-    const char *pattern);
-
-ut_iter bake_filelist_iter(
-    bake_filelist *fl);
-
-bake_file* bake_filelist_add(
-    bake_filelist *fl,
-    const char *filename);
-
-int16_t bake_filelist_addPattern(
-    bake_filelist *fl,
-    const char *offset,
-    const char *pattern);
-
-int16_t bake_filelist_addList(
-    bake_filelist *fl,
-    bake_filelist *src);
-
-uint64_t bake_filelist_count(
-    bake_filelist *fl);
 
 /* Attribute API */
 
@@ -224,6 +247,15 @@ ut_ll bake_attributes_parse(
     const char *project_id, /* differs from project if parsing dependee cfg */
     JSON_Object *object,
     ut_ll existing);
+
+char* bake_attribute_replace(
+    bake_config *config,
+    bake_project *project,
+    const char *package_id,
+    const char *input);
+
+void bake_clean_string_array(
+    ut_ll list);
 
 /* -- JSON utilities -- */
 

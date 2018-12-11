@@ -326,36 +326,6 @@ char *project_name(
 }
 
 static
-char* artefact_name(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    char *result;
-    char *id = project_name(project->id);
-
-    if (project->type == BAKE_PACKAGE) {
-        bool link_static = driver->get_attr_bool("static_artefact");
-
-        if (link_static) {
-            result = ut_asprintf("lib%s.a", id);
-        } else {
-            if (is_dylib(driver, project)) {
-                result = ut_asprintf("lib%s.dylib", id);
-            } else {
-                result = ut_asprintf("lib%s.so", id);
-            }
-        }
-    } else {
-        result = ut_strdup(id);
-    }
-
-    free(id);
-
-    return result;
-}
-
-static
 void link_dynamic_binary(
     bake_driver_api *driver,
     bake_config *config,
@@ -646,6 +616,122 @@ int16_t setup_project(
     return 0;
 }
 
+/* -- Infrastructure functions -- */
+
+static
+char* artefact_name(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    char *result;
+    char *id = project_name(project->id);
+
+    if (project->type == BAKE_PACKAGE) {
+        bool link_static = driver->get_attr_bool("static_artefact");
+
+        if (link_static) {
+            result = ut_asprintf("lib%s.a", id);
+        } else {
+            if (is_dylib(driver, project)) {
+                result = ut_asprintf("lib%s.dylib", id);
+            } else {
+                result = ut_asprintf("lib%s.so", id);
+            }
+        }
+    } else {
+        result = ut_strdup(id);
+    }
+
+    free(id);
+
+    return result;
+}
+
+static
+char *link_to_lib(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *name)
+{
+    char *result = NULL;
+
+    /* If link points to hardcoded filename, return as is */
+    if (ut_file_test(name)) {
+        return ut_strdup(name);
+    }
+
+    /* If not found, check if provided name has an extension */
+    char *ext = strrchr(name, '.');
+    if (ext && !strchr(name, '/')) {
+        /* Hardcoded filename was provided but not found */
+        return NULL;
+    }
+
+    /* Try finding a library called lib*.so or lib*.dylib (OSX only) */
+    char *full_path = strdup(name);
+    char *lib_name = strrchr(full_path, '/');
+    if (lib_name) {
+        lib_name[0] = '\0';
+        lib_name ++;
+    } else {
+        lib_name = full_path;
+        full_path = NULL;
+    }
+
+    /* Try .so */
+    if (full_path) {
+        char *so = ut_asprintf("%s/lib%s.so", full_path, lib_name);
+        if (ut_file_test(so)) {
+            result = so;
+        }
+    } else {
+        char *so = ut_asprintf("lib%s.so", lib_name);
+        if (ut_file_test(so)) {
+            result = so;
+        }
+    }
+
+    /* Try .dylib */
+    if (!result && !strcmp(UT_OS_STRING, "darwin")) {
+        if (full_path) {
+            char *dylib = ut_asprintf("%s/lib%s.dylib", full_path, lib_name);
+            if (ut_file_test(dylib)) {
+                result = dylib;
+            }
+        } else {
+            char *dylib = ut_asprintf("lib%s.dylib", lib_name);
+            if (ut_file_test(dylib)) {
+                result = dylib;
+            }
+        }
+    }
+
+    /* Try .a */
+    if (!result) {
+        if (full_path) {
+            char *a = ut_asprintf("%s/lib%s.a", full_path, lib_name);
+            if (ut_file_test(a)) {
+                result = a;
+            }
+        } else {
+            char *a = ut_asprintf("lib%s.a", lib_name);
+            if (ut_file_test(a)) {
+                result = a;
+            }
+        }
+    }
+
+    if (full_path) {
+        free(full_path);
+    } else if (lib_name) {
+        free(lib_name);
+    }
+
+    return result;
+}
+
 /* -- Rules */
 int bakemain(bake_driver_api *driver) {
 
@@ -675,6 +761,9 @@ int bakemain(bake_driver_api *driver) {
 
     /* Callback for generating artefact name(s) */
     driver->artefact(artefact_name);
+
+    /* Callback for looking up library from link */
+    driver->link_to_lib(link_to_lib);
 
     /* Callback for setting up a project */
     driver->setup(setup_project);

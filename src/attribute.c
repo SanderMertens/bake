@@ -157,7 +157,6 @@ int16_t bake_attribute_func(
     return 0;
 }
 
-static
 char* bake_attribute_replace(
     bake_config *config,
     bake_project *project,
@@ -383,7 +382,7 @@ ut_ll bake_attribute_parse_object(
     if (!jo) {
         return NULL;
     }
-    
+
     uint32_t i, count = json_object_get_count(jo);
     ut_ll result = existing ? existing : ut_ll_new();
 
@@ -462,4 +461,15 @@ bake_attribute *bake_attribute_get(
     }
 
     return NULL;
+}
+
+void bake_clean_string_array(
+    ut_ll list)
+{
+    ut_iter it = ut_ll_iter(list);
+    while (ut_iter_hasNext(&it)) {
+        char *str = ut_iter_next(&it);
+        free(str);
+    }
+    ut_ll_free(list);
 }

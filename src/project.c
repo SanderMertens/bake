@@ -21,6 +21,10 @@
 
 #include "bake.h"
 
+extern ut_tls BAKE_DRIVER_KEY;
+extern ut_tls BAKE_FILELIST_KEY;
+extern ut_tls BAKE_PROJECT_KEY;
+
 static
 int16_t bake_project_parse_value(
     bake_project *p,
@@ -190,7 +194,6 @@ int bake_project_load_driver(
     const char *driver_id,
     JSON_Object *config)
 {
-
     bake_project_driver *project_driver =
         bake_project_get_driver(project, driver_id);
 
@@ -298,10 +301,10 @@ error:
 
 bake_project* bake_project_new(
     const char *path,
-    bake_config *cfg)
+    bake_config *config)
 {
     bake_project *result = ut_calloc(sizeof (bake_project));
-    if (!path && !cfg) {
+    if (!path && !config) {
         return result;
     }
 
@@ -314,6 +317,7 @@ bake_project* bake_project_new(
     result->link = ut_ll_new();
     result->files_to_clean = ut_ll_new();
     result->drivers = ut_ll_new();
+    result->public = true;
 
     /* Parse project.json if available */
     if (path) {
@@ -345,6 +349,15 @@ bake_project* bake_project_new(
                 strarg("lang.%s", result->language),
                 NULL),
                   "failed to load driver for language '%s'", result->language);
+
+            bake_project_driver *driver = ut_ll_get(result->drivers, 0);
+            result->language_driver = driver;
+
+            result->artefact = bake_driver__artefact(
+                driver->driver, config, result);
+
+            ut_trace("building artefact '%s' for project '%s'",
+                result->artefact, result->id);
         }
     }
 
@@ -543,9 +556,273 @@ int16_t bake_project_build_generated(
     return 0;
 }
 
+static
+int16_t bake_project_resolve_links(
+    bake_config *config,
+    bake_project *project)
+{
+    ut_ll resolved = ut_ll_new();
+    ut_iter it = ut_ll_iter(project->link);
+
+    while (ut_iter_hasNext(&it)) {
+        char *link = ut_iter_next(&it);
+        char *parsed = bake_attribute_replace(config, project, NULL, link);
+        if (!parsed) {
+            goto error;
+        }
+
+        char *lib = bake_driver__link_to_lib(
+            project->language_driver->driver, config, project, parsed);
+        if (!lib) {
+            ut_throw("cannot find library '%s' in 'link' attribute", parsed);
+            goto error;
+        }
+
+        ut_ll_append(resolved, lib);
+    }
+
+    bake_clean_string_array(project->link);
+    project->link = resolved;
+
+    return 0;
+error:
+    bake_clean_string_array(resolved);
+    return -1;
+}
+
+static
+void bake_project_link_cleanup(
+    ut_ll link)
+{
+    ut_iter it = ut_ll_iter(link);
+    while (ut_iter_hasNext(&it)) {
+        char *link = ut_iter_next(&it);
+        free(link);
+    }
+    ut_ll_free(link);
+}
+
+static
+ut_ll bake_project_copy_libs(
+    bake_project *p,
+    const char *path)
+{
+    ut_ll link_list = ut_ll_new();
+
+    ut_iter it = ut_ll_iter(p->link);
+    while (ut_iter_hasNext(&it)) {
+        char *link = ut_iter_next(&it);
+
+        char *link_lib = strrchr(link, '/');
+        if (!link_lib) {
+            link_lib = link;
+        } else {
+            link_lib ++;
+        }
+
+        if (!strncmp(link_lib, "lib", 3)) {
+            link_lib += 3;
+        }
+
+        char *target_link = ut_asprintf("%s/lib%s_%s",
+            path, p->id, link_lib);
+        char *ptr = target_link + strlen(path) + 1, ch;
+        for (; (ch = *ptr); ptr ++) {
+            if (ch == '/') {
+                *ptr = '_';
+            }
+        }
+
+        /* Copy to path */
+        if (ut_cp(link, target_link)) {
+            ut_throw("failed to library in link '%s'", link);
+            goto error;
+        }
+
+        free(target_link);
+
+        /* Create library name for linking */
+        char *link_name = ut_asprintf("%s_%s", p->id, link_lib);
+        for (ptr = link_name; (ch = *ptr); ptr ++) {
+            if (ch == '/') {
+                *ptr = '_';
+            }
+        }
+
+        /* Strip extension */
+        char *ext = strrchr(link_name, '.');
+        if (ext) {
+            ext[0] = '\0';
+        }
+
+        ut_ll_append(link_list, link_name);
+    }
+
+    return link_list;
+error:
+    bake_project_link_cleanup(link_list);
+    return NULL;
+}
+
+static
+int16_t bake_project_add_dependency(
+    bake_project *p,
+    const char *dep)
+{
+    const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PACKAGE);
+    if (!libpath) {
+        ut_throw(
+            "failed to locate library path for dependency '%s'", dep);
+        goto error;
+    }
+
+    const char *lib = ut_locate(dep, NULL, UT_LOCATE_LIB);
+    if (lib) {
+        char *dep_lib = ut_strdup(dep);
+        char *ptr, ch;
+        for (ptr = dep_lib; (ch = *ptr); ptr ++) {
+            if (ch == '/' || ch == '.') {
+                ptr[0] = '_';
+            }
+        }
+
+        ut_ll_append(p->link, dep_lib);
+    } else {
+        /* A dependency may not have a library that can be linked, but could
+         * only contain build instructions */
+        ut_catch();
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_project_add_dependencies(
+    bake_project *p)
+{
+    /* Add dependencies to link list */
+    if (p->use) {
+        ut_iter it = ut_ll_iter(p->use);
+        while (ut_iter_hasNext(&it)) {
+            char *dep = ut_iter_next(&it);
+            if (bake_project_add_dependency(p, dep)) {
+                goto error;
+            }
+        }
+    }
+
+    /* Add private dependencies to link list */
+    if (p->use_private) {
+        ut_iter it = ut_ll_iter(p->use_private);
+        while (ut_iter_hasNext(&it)) {
+            char *dep = ut_iter_next(&it);
+            if (bake_project_add_dependency(p, dep)) {
+                goto error;
+            }
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_project_build_artefact(
+    bake_config *config,
+    bake_project *project,
+    const char *artefact,
+    const char *artefact_path,
+    const char *rule_name)
+{
+    bake_driver *driver = project->language_driver->driver;
+    bake_node *root = bake_node_find(driver, rule_name);
+    if (!root) {
+        ut_throw("rule '%s' not found in driver '%s'", rule_name, driver->id);
+        goto error;
+    }
+
+    ut_try (ut_mkdir(artefact_path), NULL);
+
+    ut_tls_set(BAKE_PROJECT_KEY, project);
+
+    /* Evaluate root node */
+    char *binaryPath = config->target_lib;
+    bake_filelist *artefact_fl = bake_filelist_new(
+        binaryPath,
+        NULL
+    );
+    
+    bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
+    if (bake_node_eval(driver, root, project, config, artefact_fl, NULL)) {
+        ut_throw("failed to build rule '%s'", rule_name);
+        goto error;
+    }
+    bake_filelist_free(artefact_fl);
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_project_build(
     bake_config *config,
     bake_project *project)
 {
+    if (!project->artefact) {
+        return 0;
+    }
+
+    char *artefact = project->artefact;
+
+    /* Resolve libraries in project link attribute */
+    if (bake_project_resolve_links(config, project)) {
+        goto error;
+    }
+
+    /* Copy libraries to BAKE_TARGET, return list with local library names */
+    ut_ll old_link = project->link;
+    project->link = bake_project_copy_libs(project, config->target_lib);
+    if (!project->link) {
+        ut_throw(NULL);
+        goto error;
+    }
+
+    /* Add use dependencies to the link attribute */
+    if (bake_project_add_dependencies(project)) {
+        goto error;
+    }
+
+    char *artefact_path = ut_asprintf(
+        "bin/%s-%s", UT_PLATFORM_STRING, config->configuration);
+
+    /* Run the top-level ARTEFACT rule */
+    if (bake_project_build_artefact(
+        config,
+        project,
+        artefact,
+        artefact_path,
+        "ARTEFACT"))
+    {
+        free(artefact);
+        bake_project_link_cleanup(project->link);
+        project->link = old_link;
+        goto error;
+    }
+
+    free(artefact_path);
+
+    /* Cleanup temporary list */
+    bake_project_link_cleanup(project->link);
+
+    /* Restore old list */
+    project->link = old_link;
+
+    free(artefact);
+
     return 0;
+error:
+    return -1;
 }
