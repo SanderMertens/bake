@@ -68,7 +68,7 @@ int16_t bake_create_script(void)
     fprintf(f, "}\n\n");
 
     fprintf(f, "install_bake() {\n");
-    fprintf(f, "    ./bake --setup-local\n");
+    fprintf(f, "    ./bake setup --local-setup\n");
     fprintf(f, "}\n\n");
 
     fprintf(f, "if [ \"$1\" = \"upgrade\" ]; then\n");
