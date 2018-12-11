@@ -453,6 +453,9 @@ char* ut_log_colorize(
                 if (UT_LOG_USE_COLORS) ut_strbuf_appendstr(&buff, UT_BOLD);
             } else if (!strncmp(&ptr[2], "normal]", strlen("normal]"))) {
                 if (UT_LOG_USE_COLORS) ut_strbuf_appendstr(&buff, UT_NORMAL);
+            } else if (!strncmp(&ptr[2], "reset]", strlen("reset]"))) {
+                overrideColor = false;
+                if (UT_LOG_USE_COLORS) ut_strbuf_appendstr(&buff, UT_NORMAL);
             } else {
                 isColor = false;
                 overrideColor = false;

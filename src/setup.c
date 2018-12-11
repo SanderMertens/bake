@@ -21,6 +21,8 @@
 
 #include "bake.h"
 
+#define GLOBAL_PATH "/usr/local/bin"
+
 static
 int16_t cmd(
    char *cmd)
@@ -37,10 +39,9 @@ int16_t cmd(
 
 int16_t bake_create_script(void)
 {
-    FILE *f = fopen ("/usr/local/bin/bake", "w");
+    FILE *f = fopen ("/tmp/bake", "w");
     if (!f) {
-        ut_error("cannot open '/usr/local/bin/bake': %s", strerror(errno));
-        ut_log("  try running as 'sudo bake setup', or 'bake setup --local-setup'\n");
+        ut_error("cannot open '/tmp/bake': %s", strerror(errno));
         goto error;
     }
 
@@ -50,6 +51,7 @@ int16_t bake_create_script(void)
     fprintf(f, "    if [ ! -d \"bake\" ]; then\n");
     fprintf(f, "        echo \"Cloning bake repository...\"\n");
     fprintf(f, "        git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
+    fprintf(f, "        cd \"bake\"\n");
     fprintf(f, "    else\n");
     fprintf(f, "        cd \"bake\"\n");
     fprintf(f, "        echo \"Reset bake repository...\"\n");
@@ -75,7 +77,6 @@ int16_t bake_create_script(void)
     fprintf(f, "    mkdir -p $HOME/bake/src\n");
     fprintf(f, "    cd $HOME/bake/src\n");
     fprintf(f, "    clone_bake\n");
-    fprintf(f, "    cd bake\n");
     fprintf(f, "    build_bake\n");
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
@@ -84,11 +85,18 @@ int16_t bake_create_script(void)
     fclose(f);
 
     /* Make executable for everyone */
-    if (ut_setperm("/usr/local/bin/bake", 0755)) {
+    if (ut_setperm("/tmp/bake", 0755)) {
         ut_raise();
-        ut_log(
-       "#[red]x#[normal] failed to set permissions of '/usr/local/bin/bake'\n");
+        ut_log("failed to set permissions of bake script\n");
     }
+
+    /* Copy file to global location, may ask for password */
+    ut_log("#[yellow]ATTENTION#[reset] -- copying script to '" GLOBAL_PATH "', setup may request password\n");
+    ut_try( cmd("sudo cp /tmp/bake " GLOBAL_PATH "/bake"),
+      "Failed to instal bake script. If you do not have the privileges to install to\n"
+      GLOBAL_PATH ", you can install bake just to your home directory by doing:\n"
+      "   bake setup --local-setup\n");
+    ut_log("#[green]OK#[reset] bake script installed to '" GLOBAL_PATH "'\n");
 
     return 0;
 error:
@@ -106,15 +114,19 @@ int16_t bake_setup(
 
     ut_try(ut_cp("./bake", "~/bake/bake"),
         "failed to copy bake executable to user bake environment");
+    ut_log("#[green]OK#[reset] bake executable copied to $BAKE_HOME\n");
 
     ut_try(cmd("bake install --id bake --type application --includes include --build-to-home"),
         "failed to install bake include files");
+    ut_log("#[green]OK#[reset] bake include files installed to $BAKE_HOME\n");
 
     ut_try(cmd("bake install --id bake.util --type package --includes util/include --build-to-home"),
         "failed to install bake util include files");
+    ut_log("#[green]OK#[reset] bake utility include files installed to $BAKE_HOME\n");
 
     ut_try(cmd(strarg("make -C drivers/lang/c/build-%s", UT_OS_STRING)),
         "failed to build C driver");
+    ut_log("#[green]OK#[reset] bake C driver built\n");
 
     if (!strcmp(UT_OS_STRING, "darwin")) {
         ut_try (ut_rename("drivers/lang/c/libbake_lang_c.dylib", "drivers/lang/c/libbake_lang_c.so"),
@@ -124,6 +136,17 @@ int16_t bake_setup(
     ut_try(cmd(
       "bake install drivers/lang/c --id bake.lang.c --artefact libbake_lang_c.so --build-to-home"),
         "failed to install bake C driver");
+    ut_log("#[green]OK#[reset] bake C driver installed to $BAKE_HOME\n");
+
+    /*
+
+     ______   ______   ______   __   __       ______   ______  ______
+    /\  __ \ /\  ___\ /\  ___\ /\ \ /\ \     /\  __ \ /\  == \/\__  _\
+    \ \  __ \\ \___  \\ \ \____\ \ \\ \ \    \ \  __ \\ \  __<\/_/\ \/
+     \ \_\ \_\\/\_____\\ \_____\\ \_\\ \_\    \ \_\ \_\\ \_\ \_\ \ \_\
+      \/_/\/_/ \/_____/ \/_____/ \/_/ \/_/     \/_/\/_/ \/_/ /_/  \/_/
+
+     */
 
     ut_log(
       "#[white]\n"
@@ -135,7 +158,7 @@ int16_t bake_setup(
       "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
       "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
 
-    printf("     ~ installation successful ~\n\n");
+    printf("     ~ installation complete ~\n\n");
 
     return 0;
 error:
