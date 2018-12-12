@@ -75,7 +75,10 @@ typedef enum ut_log_verbosity {
     /* Internal usage */
     UT_ERROR_FROM = 8,
     UT_ERROR_PUSH = 9,
-    UT_ERROR_PROC = 10
+    UT_ERROR_PROC = 10,
+
+    /* Print no verbosity */
+    UT_LOG = 11
 } ut_log_verbosity;
 
 /** Set verbosity level.

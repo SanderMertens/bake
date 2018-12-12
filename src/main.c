@@ -109,8 +109,6 @@ void bake_set_verbosity(
         return;
     }
 
-    printf("set verbosity\n");
-
     if (!stricmp(verbosity, "DEBUG")) {
         ut_log_verbositySet(UT_DEBUG);
     } else if (!stricmp(verbosity, "TRACE")) {

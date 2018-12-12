@@ -123,6 +123,9 @@ int ut_proc_cmd(
     char *cmd,
     int8_t *rc);
 
+UT_EXPORT
+int ut_proc_cmd_stderr_only(char* cmd, int8_t *rc);
+
 /** Function that checks if process is being traced (experimental)
  *
  * @return non-zero if being traced, otherwise 0.

@@ -149,7 +149,8 @@ int ut_proc_wait(ut_proc pid, int8_t *rc) {
 #define BUFFER_SIZE (256)
 
 /* Simple blocking function to create and wait for a process */
-int ut_proc_cmd(char* cmd, int8_t *rc) {
+static
+int ut_proc_cmd_intern(char* cmd, int8_t *rc, bool stderr_only) {
     int pid;
     char *args[UT_MAX_CMD_ARGS];
     char stack_buffer[BUFFER_SIZE];
@@ -178,8 +179,20 @@ int ut_proc_cmd(char* cmd, int8_t *rc) {
     }
     args[argCount + 1] = NULL;
 
-    if (!(pid = ut_proc_run(args[0], args))) {
-        goto error;
+    if (stderr_only) {
+        if (!(pid = ut_proc_runRedirect(
+            args[0],
+            args,
+            stdin,
+            NULL,
+            stderr)))
+        {
+            goto error;
+        }
+    } else {
+        if (!(pid = ut_proc_run(args[0], args))) {
+            goto error;
+        }
     }
 
     if (buffer != stack_buffer) free(buffer);
@@ -187,6 +200,14 @@ int ut_proc_cmd(char* cmd, int8_t *rc) {
 error:
     if (buffer != stack_buffer) free(buffer);
     return -1;
+}
+
+int ut_proc_cmd(char* cmd, int8_t *rc) {
+    return ut_proc_cmd_intern(cmd, rc, false);
+}
+
+int ut_proc_cmd_stderr_only(char* cmd, int8_t *rc) {
+    return ut_proc_cmd_intern(cmd, rc, true);
 }
 
 int ut_proc_check(ut_proc pid, int8_t *rc) {

@@ -522,13 +522,15 @@ void ut_logprint_kind(
 
     levelspace = 5;
 
-    ut_strbuf_append(
-        buf,
-        "%s%s%*s#[reset]",
-        color,
-        levelstr,
-        levelspace - strlen(levelstr),
-        "");
+    if (kind != UT_LOG) {
+        ut_strbuf_append(
+            buf,
+            "%s%s%*s#[reset]",
+            color,
+            levelstr,
+            levelspace - strlen(levelstr),
+            "");
+    }
 }
 
 static
@@ -773,6 +775,8 @@ void ut_logprint(
     bool stop = false;
     bool isTail = kind < UT_LOG_LEVEL;
 
+    bool only_warn = (kind >= UT_WARNING || kind == UT_THROW) && kind != UT_LOG;
+
     if (kind == UT_THROW && UT_LOG_LEVEL == UT_DEBUG) {
         isTail = false;
     }
@@ -873,10 +877,10 @@ void ut_logprint(
             case 'm': ret = ut_logprint_msg(cur, msg); break;
             case 'a': ut_strbuf_append(cur, "#[cyan]%s#[reset]", ut_log_appName); break;
             case 'A': ret = ut_logprint_proc(cur); break;
-            case 'V': if (kind >= UT_WARNING || kind == UT_THROW) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
-            case 'F': if (kind >= UT_WARNING || kind == UT_THROW) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
-            case 'L': if (kind >= UT_WARNING || kind == UT_THROW) { ret = ut_logprint_line(cur, line, FALSE); } else { ret = 0; } break;
-            case 'R': if (kind >= UT_WARNING || kind == UT_THROW) { ret = ut_logprint_function(cur, function); } else { ret = 0; } break;
+            case 'V': if (only_warn) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
+            case 'F': if (only_warn) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
+            case 'L': if (only_warn) { ret = ut_logprint_line(cur, line, FALSE); } else { ret = 0; } break;
+            case 'R': if (only_warn) { ret = ut_logprint_function(cur, function); } else { ret = 0; } break;
             default:
                 ut_strbuf_appendstr(cur, "%");
                 ut_strbuf_appendstrn(cur, &fmtptr[1], 1);

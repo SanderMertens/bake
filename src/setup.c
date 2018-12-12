@@ -28,7 +28,7 @@ int16_t cmd(
    char *cmd)
 {
     int8_t ret;
-    int sig = ut_proc_cmd(cmd, &ret);
+    int sig = ut_proc_cmd_stderr_only(cmd, &ret);
     if (sig || ret) {
         ut_error("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
         return -1;
@@ -113,9 +113,13 @@ int16_t bake_build_make_project(
       path, id);
     ut_try(cmd(install_cmd), "failed to install %s include files", id);
     free(install_cmd);
+    ut_log("#[green]OK#[reset] install include files for '%s'\n", id);
 
+    ut_log(".. build '%s'", id);
+    fflush(stdout);
     ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
       "failed to build %s", id);
+    ut_log("#[green]OK#[reset] build '%s'\n", id);
 
     if (!strcmp(UT_OS_STRING, "darwin")) {
         ut_try (ut_rename(
@@ -138,7 +142,7 @@ int16_t bake_build_make_project(
       "bake install %s --id %s --artefact lib%s.so --build-to-home",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
-    ut_log("#[green]OK#[reset] %s installed to $BAKE_HOME\n", id);
+    ut_log("#[green]OK#[reset] install '%s' to $BAKE_HOME\n", id);
     free(install_cmd);
 
     return 0;
