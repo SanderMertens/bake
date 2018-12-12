@@ -189,7 +189,7 @@ int16_t bake_setup(
       "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
       "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
 
-    printf("     ~ installation complete ~\n\n");
+    printf("\n       Installation complete \n\n");
 
     return 0;
 error:

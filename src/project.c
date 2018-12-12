@@ -575,7 +575,7 @@ int16_t bake_project_check_dependencies(
     }
 
     if (project->artefact_outdated) {
-        if (ut_rm(project->artefact)) {
+        if (ut_rm(project->artefact_file)) {
             goto error;
         }
     }

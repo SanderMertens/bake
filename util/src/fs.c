@@ -291,8 +291,6 @@ int16_t ut_cp(
         goto error;
     }
 
-    ut_trace("cp '%s' => '%s'", src, dst);
-
     if (!ut_file_test(src)) {
         ut_throw("source '%s' does not exist", dst_parsed);
         goto error;
@@ -303,6 +301,8 @@ int16_t ut_cp(
     } else {
         result = ut_cp_file(src_parsed, dst_parsed);
     }
+
+    ut_trace("cp '%s' => '%s'", src, dst);
 
     free(src_parsed);
     free(dst_parsed);
