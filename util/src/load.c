@@ -936,6 +936,8 @@ int16_t ut_load_init(
     }
 
     free(cwd);
+
+    return 0;
 }
 
 const char* ut_load_homePath(void) {

@@ -316,6 +316,7 @@ bool bake_driver_get_bool_attr_cb(
     } else {
         project->error = true;
         ut_throw("attribute '%s' is not of type boolean", name);
+        return false;
     }
 }
 
