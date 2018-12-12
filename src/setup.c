@@ -103,6 +103,49 @@ error:
     return -1;
 }
 
+int16_t bake_build_make_project(
+    const char *path,
+    const char *id,
+    const char *artefact)
+{
+    char *install_cmd = ut_asprintf(
+      "bake install %s --id %s --type package --includes include --build-to-home",
+      path, id);
+    ut_try(cmd(install_cmd), "failed to install %s include files", id);
+    free(install_cmd);
+
+    ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
+      "failed to build %s", id);
+
+    if (!strcmp(UT_OS_STRING, "darwin")) {
+        ut_try (ut_rename(
+          strarg("%s/lib%s.dylib", path, artefact),
+          strarg("%s/lib%s.so", path, artefact)),
+            "failed to rename %s", id);
+    }
+
+    char *bin_path = ut_asprintf("%s/bin/%s-debug", path, UT_PLATFORM_STRING);
+    ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
+
+    ut_try (ut_rename(
+      strarg("%s/lib%s.so", path, artefact),
+      strarg("%s/lib%s.so", bin_path, artefact)),
+        "failed to move %s to project bin path", id);
+
+    free(bin_path);
+
+    install_cmd = ut_asprintf(
+      "bake install %s --id %s --artefact lib%s.so --build-to-home",
+      path, id, artefact);
+    ut_try(cmd(install_cmd), "failed to install bake %s library", id);
+    ut_log("#[green]OK#[reset] %s installed to $BAKE_HOME\n", id);
+    free(install_cmd);
+
+    return 0;
+error:
+    return -1;
+}
+
 int16_t bake_setup(
     bool local)
 {
@@ -122,37 +165,9 @@ int16_t bake_setup(
         "failed to install bake include files");
     ut_log("#[green]OK#[reset] bake include files installed to $BAKE_HOME\n");
 
-    ut_try(cmd("bake install --id bake.util --type package --includes util/include --build-to-home"),
-        "failed to install bake util include files");
-    ut_log("#[green]OK#[reset] bake utility include files installed to $BAKE_HOME\n");
+    ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
 
-    ut_try(cmd(strarg("make -C util/build-%s clean all", UT_OS_STRING)),
-        "failed to build utility library");
-    ut_log("#[green]OK#[reset] bake utility library built\n");
-
-    if (!strcmp(UT_OS_STRING, "darwin")) {
-        ut_try (ut_rename("util/libbake_util.dylib", "util/libbake_util.so"),
-            "failed to rename bake util library");
-    }
-
-    ut_try(cmd(
-      "bake install util --id bake.util --artefact libbake_util.so --build-to-home"),
-        "failed to install bake utility library");
-    ut_log("#[green]OK#[reset] bake utility library installed to $BAKE_HOME\n");
-
-    ut_try(cmd(strarg("make -C drivers/lang/c/build-%s clean all", UT_OS_STRING)),
-        "failed to build C driver");
-    ut_log("#[green]OK#[reset] bake C driver built\n");
-
-    if (!strcmp(UT_OS_STRING, "darwin")) {
-        ut_try (ut_rename("drivers/lang/c/libbake_lang_c.dylib", "drivers/lang/c/libbake_lang_c.so"),
-            "failed to rename bake C driver library");
-    }
-
-    ut_try(cmd(
-      "bake install drivers/lang/c --id bake.lang.c --artefact libbake_lang_c.so --build-to-home"),
-        "failed to install bake C driver");
-    ut_log("#[green]OK#[reset] bake C driver installed to $BAKE_HOME\n");
+    ut_try( bake_build_make_project("drivers/lang/c", "bake.lang.c", "bake_lang_c"), NULL);
 
     /*
 

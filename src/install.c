@@ -24,6 +24,7 @@
 static
 int16_t bake_install_dir_for_target(
     char *id,
+    char *source_path,
     char *dir,
     char *subdir,
     char *target,
@@ -39,9 +40,9 @@ int16_t bake_install_dir_for_target(
 
     char *source;
     if (!subdir) {
-        source = strdup(dir);
+        source = ut_asprintf("%s/%s", source_path, dir);
     } else {
-        source = strdup(subdir);
+        source = ut_asprintf("%s/%s", source_path, subdir);
     }
 
     /* If source path does not exist, nothing needs to be copied. */
@@ -62,7 +63,7 @@ int16_t bake_install_dir_for_target(
             if (ut_os_match(file)) {
                 ut_trace("install files for current OS in '%s'", file);
                 if (bake_install_dir_for_target(
-                    id, dir, file, target, softlink, uninstallFile))
+                    id, source_path, dir, file, target, softlink, uninstallFile))
                 {
                     goto error;
                 }
@@ -72,7 +73,7 @@ int16_t bake_install_dir_for_target(
             {
                 /* Always copy all contents in everywhere */
                 if (bake_install_dir_for_target(
-                    id, dir, file, target, softlink, uninstallFile))
+                    id, source_path, dir, file, target, softlink, uninstallFile))
                 {
                     goto error;
                 }
@@ -112,12 +113,14 @@ static
 int16_t bake_install_dir(
     bake_config *config,
     char *id,
+    char *source_path,
     char *dir,
     char *subdir,
     bool softlink,
     FILE *uninstallFile)
 {
     char *target;
+
     if (id) {
         target = ut_envparse("%s/%s/%s",
             config->target,
@@ -131,6 +134,7 @@ int16_t bake_install_dir(
 
     if (bake_install_dir_for_target(
         id,
+        source_path,
         dir,
         subdir,
         target,
@@ -164,7 +168,6 @@ FILE* bake_uninstaller_open(
     char *filename = bake_uninstaller_filename(config, project);
     FILE *result = ut_file_open(filename, mode);
     free(filename);
-
     return result;
 }
 
@@ -272,23 +275,27 @@ int16_t bake_install_metadata(
 {
     if (project->type != BAKE_TOOL) {
         /* Copy project.json and file that points back to source */
-        if (ut_file_test("project.json")) {
+        char *project_json = ut_asprintf("%s/project.json", project->path);
+        if (ut_file_test(project_json)) {
             char *projectDir = ut_envparse(
                 "%s/meta/%s", config->target, project->id);
 
             ut_try (ut_mkdir(projectDir), NULL);
 
             /* Copy project file */
-            if (ut_cp("project.json", projectDir)) {
+            if (ut_cp(project_json, projectDir)) {
                 free(projectDir);
                 goto error;
             }
 
+            free(project_json);
+            char *license = ut_asprintf("%s/LICENSE", project->path);
+
             /* Copy license file */
-            if (ut_file_test("LICENSE")) {
-                if (ut_cp("LICENSE", projectDir)) {
-                    ut_throw("failed to copy 'LICENSE' to '%s'",
-                        projectDir);
+            if (ut_file_test(license)) {
+                if (ut_cp(license, projectDir)) {
+                    ut_throw("failed to copy '%s' to '%s'",
+                        license, projectDir);
                     goto error;
                 }
             }
@@ -301,7 +308,7 @@ int16_t bake_install_metadata(
                     project->id);
                 goto error;
             }
-            fprintf(src_location, "%s\n", ut_cwd());
+            fprintf(src_location, "%s\n", project->path);
             fclose(src_location);
 
             /* If project contains dependee JSON, write to dependee.json */
@@ -336,98 +343,56 @@ int16_t bake_install_prebuild(
             goto error;
         }
 
-        /* Install files to project-specific locations in package hierarchy */
-        if (project->public) {
-            ut_iter it = ut_ll_iter(project->includes);
-            while (ut_iter_hasNext(&it)) {
-                if (bake_install_dir(
-                    config,
-                    project->id,
-                    "include",
-                    ut_iter_next(&it),
-                    true,
-                    uninstallFile))
-                {
-                    goto error;
-                }
+        /* Install files to project-specific locations in $BAKE_TARGET */
+        ut_iter it = ut_ll_iter(project->includes);
+        while (ut_iter_hasNext(&it)) {
+            if (bake_install_dir(
+                config, project->id, project->path, "include", ut_iter_next(&it), true,
+                uninstallFile))
+            {
+                goto error;
             }
         }
 
         if (bake_install_dir(
-            config,
-            project->id,
-            "etc",
-            NULL,
-            true,
-            uninstallFile))
+            config, project->id, project->path, "etc", NULL, true, uninstallFile))
         {
             goto error;
         }
 
         if (project->type == BAKE_PACKAGE) {
             if (bake_install_dir(
-                config,
-                project->id,
-                "lib",
-                NULL,
-                true,
-                uninstallFile))
+                config, project->id, project->path, "lib", NULL, true, uninstallFile))
             {
                 goto error;
             }
         }
 
         /* Install files to BAKE_TARGET directly from 'install' folder */
-        if (ut_file_test("install")) {
-            if (ut_chdir("install")) {
-                goto error;
-            }
+        char *install_path = ut_asprintf("%s/install", project->path);
+        if (install_path) {
             if (bake_install_dir(
-                config,
-                NULL,
-                "include",
-                NULL,
-                true,
-                uninstallFile))
+                config, NULL, install_path, "include", NULL, true, uninstallFile))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config,
-                NULL,
-                "lib",
-                NULL,
-                true,
-                uninstallFile))
+                config, NULL, install_path, "lib", NULL, true, uninstallFile))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config,
-                NULL,
-                "etc",
-                NULL,
-                true,
-                uninstallFile))
+                config, NULL, install_path, "etc", NULL, true, uninstallFile))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config,
-                NULL,
-                "java",
-                NULL,
-                true,
-                uninstallFile))
+                config, NULL, install_path, "java", NULL, true, uninstallFile))
             {
-                goto error;
-            }
-            if (ut_chdir("..")) {
                 goto error;
             }
         }
-
-        fclose(uninstallFile);
+        free(install_path);
     }
 
     return 0;
@@ -441,8 +406,7 @@ int16_t bake_post_install_bin(
     bake_project *project,
     const char *targetDir)
 {
-    char *bin_path = ut_asprintf("bin/%s-%s",
-        UT_PLATFORM_STRING, config->configuration);
+    char *bin_path = project->artefact_path;
 
     if (ut_file_test(bin_path) == 1) {
         ut_iter it;
@@ -456,8 +420,6 @@ int16_t bake_post_install_bin(
         }
     }
 
-    free (bin_path);
-
     return 0;
 error:
     return -1;
@@ -467,7 +429,7 @@ int16_t bake_install_postbuild(
     bake_config *config,
     bake_project *project)
 {
-    char *kind, *subdir, *targetDir = NULL, *artefact = project->artefact;
+    char *kind, *subdir, *targetDir = NULL;
     bool copy = false;
 
     if (project->type == BAKE_PACKAGE) {
@@ -476,37 +438,15 @@ int16_t bake_install_postbuild(
         targetDir = config->target_bin;
     }
 
-    if (!artefact) {
-        /* If no artefact is provided, but there is a bin directory, install the
-         * files in the bin directory. This makes it easy to install prebuilt
-         * binaries. */
-        if (bake_post_install_bin(config, project, targetDir)) {
-            goto error;
-        }
-
-        free(targetDir);
-        return 0;
+    if (!ut_file_test(project->artefact_file)) {
+        ut_throw("cannot find artefact '%s'", project->artefact_file);
+        goto error;
     }
 
-    char *artefact_full = ut_asprintf("bin/%s-%s/%s",
-        UT_PLATFORM_STRING, config->configuration, artefact);
-
-    if (!ut_file_test(artefact_full)) {
-
-        /* If artefact cannot be found, try just the artefact name itself */
-        if (ut_file_test(artefact)) {
-            free(artefact_full);
-            artefact_full = ut_strdup(artefact);
-        } else {
-            ut_throw("cannot find artefact '%s'", artefact_full);
-            goto error;
-        }
-    }
-
-    if (ut_isdir(artefact_full)) {
+    if (ut_isdir(project->artefact_file)) {
         ut_throw(
             "specified artefact '%s' is a directory, expecting regular file",
-            artefact_full);
+            project->artefact_file);
         goto error;
     }
 
@@ -514,11 +454,11 @@ int16_t bake_install_postbuild(
         goto error;
     }
 
-    char *targetBinary = ut_asprintf("%s/%s", targetDir, artefact);
+    char *targetBinary = ut_asprintf("%s/%s", targetDir, project->artefact);
 
     if (!ut_file_test(targetBinary) || project->freshly_baked) {
         /* Copy binary */
-        if (ut_cp(artefact_full, targetBinary)) {
+        if (ut_cp(project->artefact_file, targetBinary)) {
             goto error;
         }
 
@@ -526,7 +466,7 @@ int16_t bake_install_postbuild(
          * file timestamp. If the build is running in a VM, the clock between the
          * client and host could be out of sync temporarily, which can result in
          * strange behavior. */
-        char *installedArtefact = ut_asprintf("%s/%s", targetDir, artefact);
+        char *installedArtefact = ut_asprintf("%s/%s", targetDir, project->artefact);
         time_t t_artefact = ut_lastmodified(installedArtefact);
         time_t t = time(NULL);
         int i = 0;
@@ -540,11 +480,10 @@ int16_t bake_install_postbuild(
         }
         free(installedArtefact);
 
-        ut_ok("installed '%s/%s'", targetDir, artefact);
+        ut_ok("installed '%s/%s'", targetDir, project->artefact);
     }
 
     free(targetBinary);
-    free(artefact_full);
 
     return 0;
 error:

@@ -39,6 +39,7 @@ const char *id = NULL;
 bake_project_type type = BAKE_PACKAGE;
 const char *artefact = NULL;
 const char *includes = NULL;
+const char *language = NULL;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -70,7 +71,8 @@ void bake_usage(void)
     printf("  --build-to-home            Install to BAKE_HOME instead of BAKE_TARGET\n");
     printf("\n");
     printf("  --id <project id>          Manually specify a project id\n");
-    printf("  --type <project type>      Manually specify a project type (application|package)\n");
+    printf("  --type <project type>      Manually specify a project type (default = \"package\")\n");
+    printf("  --language <language>      Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>        Manually specify a binary file for project\n");
     printf("  --includes <include path>  Manually specify an include path for project\n");
     printf("\n");
@@ -151,7 +153,8 @@ bool bake_is_action(
     }
 
     if (!strcmp(arg, "env") ||
-        !strcmp(arg, "setup"))
+        !strcmp(arg, "setup") ||
+        !strcmp(arg, "init"))
     {
         build = false;
         return true;
@@ -189,6 +192,7 @@ int bake_parse_args(
 
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
+            ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
 
@@ -215,6 +219,32 @@ error:
     return -1;
 }
 
+bake_project *bake_project_from_cmdline(
+    bake_config *config)
+{
+    bake_project *project = bake_project_new(NULL, NULL);
+    project->id = ut_strdup(id);
+    project->type = type;
+    project->artefact = ut_strdup(artefact);
+    project->path = ut_strdup(path);
+    project->public = true;
+    project->freshly_baked = true;
+    project->language = ut_strdup(language);
+    if (includes) {
+        project->includes = ut_ll_new();
+        ut_ll_append(project->includes, ut_strdup(includes));
+    }
+
+    ut_package_to_path(project->id);
+
+    ut_try( bake_project_init(config, project), NULL);
+
+    return project;
+error:
+    return NULL;
+}
+
+
 bake_crawler* bake_discovery(
     bake_config *config)
 {
@@ -228,21 +258,8 @@ bake_crawler* bake_discovery(
             ut_log("no projects found in '%s'\n", path);
         }
     } else {
-        /* Add manually configured project */
-        bake_project *project = bake_project_new(NULL, NULL);
-        project->id = ut_strdup(id);
-        project->type = type;
-        project->artefact = ut_strdup(artefact);
-        project->path = ut_strdup(path);
-        project->public = true;
-        project->freshly_baked = true;
-        if (includes) {
-            project->includes = ut_ll_new();
-            ut_ll_append(project->includes, ut_strdup(includes));
-        }
-
-        ut_package_to_path(project->id);
-
+        language = "none";
+        bake_project *project = bake_project_from_cmdline(config);
         ut_try(bake_crawler_add(crawler, project), NULL);
     }
 
@@ -305,6 +322,39 @@ int bake_env(
     return 0;
 }
 
+int bake_init_project(
+    bake_config *config)
+{
+    if (ut_file_test("project.json") == 1) {
+        ut_throw("project already exists in '%s'", ut_cwd());
+        goto error;
+    }
+
+    if (!id) {
+        char *cwd = ut_cwd();
+        char *last_elem = strrchr(cwd, '/');
+        if (last_elem && last_elem[1]) {
+            id = last_elem + 1;
+        } else {
+            id = cwd;
+        }
+
+        id = ut_strdup(id);
+    }
+
+    bake_project *project = bake_project_from_cmdline(config);
+    if (!project->language) {
+        free(project->language);
+        project->language = ut_strdup("c");
+    }
+
+    ut_try( bake_project_setup(config, project), NULL);
+
+    return 0;
+error:
+    return -1;
+}
+
 int main(int argc, const char *argv[]) {
     bake_config config = {};
 
@@ -356,6 +406,8 @@ int main(int argc, const char *argv[]) {
             ut_try( bake_env(&config), NULL);
         } else if (!strcmp(action, "setup")) {
             ut_try (bake_setup(local_setup), NULL);
+        } else if (!strcmp(action, "init")) {
+            ut_try (bake_init_project(&config), NULL);
         }
     }
 

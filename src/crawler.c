@@ -334,32 +334,20 @@ int16_t bake_crawler_build_project(
         "begin %s %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->type), p->id, p->path);
 
-    char *prev = strdup(ut_cwd());
-    if (ut_chdir(p->path)) {
-        free(prev);
-        goto error;
-    }
-
     if (action(config, _this, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
-        free(prev);
         goto error;
     }
 
     if (p->changed) {
-        ut_info(
-            "%s %s '%s' in '%s'",
+        ut_log(
+            "%s %s '%s' in '%s'\n",
             action_name, bake_project_kind_str(p->type), p->id, p->path);
     } else if (p->language) {
-        ut_info(
-            "#[grey]up to date#[normal] '%s'",
+        ut_log(
+            "#[grey]up to date#[normal] '%s'\n",
             p->id);
     }
-    if (ut_chdir(prev)) {
-        free(prev);
-        goto error;
-    }
-    free(prev);
 
     /* Decrease unresolved_dependencies of dependents */
     bake_crawler_decrease_dependents(p, readyForBuild);
@@ -425,7 +413,8 @@ int16_t bake_crawler_walk(
 
     /* If there are still unbuilt projects there must be a cycle in the graph */
     if (built != _this->count) {
-        ut_throw("project dependency graph contains cycles (%d built vs %d total)",
+        ut_throw(
+            "project dependency graph contains cycles (%d built vs %d total)",
             built, _this->count);
         goto error;
     }

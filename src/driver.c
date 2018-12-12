@@ -261,7 +261,7 @@ void bake_driver_init_cb(
 
 static
 void bake_driver_setup_cb(
-    bake_setup_cb setup)
+    bake_driver_cb setup)
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     driver->impl.setup = setup;
@@ -386,7 +386,7 @@ char* bake_driver__link_to_lib(
     bake_project *project,
     const char *link)
 {
-    if (driver->impl.artefact) {
+    if (driver->impl.link_to_lib) {
         ut_tls_set(BAKE_DRIVER_KEY, driver);
         ut_tls_set(BAKE_PROJECT_KEY, project);
         return driver->impl.link_to_lib(
@@ -394,6 +394,47 @@ char* bake_driver__link_to_lib(
     }
 
     return NULL;
+}
+
+int16_t bake_driver__clean(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.clean) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        driver->impl.clean(
+            &bake_driver_api_impl, config, project);
+
+        if (project->error) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int16_t bake_driver__setup(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.setup) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        driver->impl.setup(&bake_driver_api_impl, config, project);
+
+        if (project->error) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+    ut_throw("driver doesn't support project setup");
+
+    return -1;
 }
 
 bake_driver* bake_driver_get(

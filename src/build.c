@@ -71,12 +71,13 @@ int bake_do_build(
 
     /* Step 10: build project */
     ut_log_push("build");
-    ut_try (bake_project_build(config, project), NULL);
+    if (project->artefact)
+        ut_try (bake_project_build(config, project), NULL);
     ut_log_pop();
 
     /* Step 11: install binary to environment */
     ut_log_push("install_postbuild");
-    if (project->public)
+    if (project->public && project->artefact)
         ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
 
@@ -90,7 +91,7 @@ int bake_do_clean(
     bake_crawler *crawler,
     bake_project *project)
 {
-    return 0;
+    return bake_project_clean(config, project);
 }
 
 int bake_do_rebuild(
@@ -98,7 +99,13 @@ int bake_do_rebuild(
     bake_crawler *crawler,
     bake_project *project)
 {
+    ut_try( bake_project_clean_current_platform(config, project), NULL);
+
+    ut_try( bake_do_build(config, crawler, project), NULL);
+
     return 0;
+error:
+    return -1;
 }
 
 int bake_do_install(
@@ -106,6 +113,8 @@ int bake_do_install(
     bake_crawler *crawler,
     bake_project *project)
 {
+    if (!project->public) return 0;
+
     /* Step 1: export metadata to environment to make project discoverable */
     ut_try (bake_install_metadata(config, project), NULL);
 
@@ -113,7 +122,8 @@ int bake_do_install(
     ut_try (bake_install_prebuild(config, project), NULL);
 
     /* Step 3: install binary to environment */
-    ut_try (bake_install_postbuild(config, project), NULL);
+    if (project->artefact)
+        ut_try (bake_install_postbuild(config, project), NULL);
 
     return 0;
 error:
@@ -125,7 +135,11 @@ int bake_do_uninstall(
     bake_crawler *crawler,
     bake_project *project)
 {
+    ut_try (bake_install_uninstall(config, project), NULL);
+
     return 0;
+error:
+    return -1;
 }
 
 int bake_do_foreach(

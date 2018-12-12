@@ -216,7 +216,7 @@ void compile_src(
         ut_strbuf_append(&cmd, " -I %s/include", config->home);
     }
 
-    ut_strbuf_append(&cmd, " -I. -c %s -o %s", source, target);
+    ut_strbuf_append(&cmd, " -I%s -c %s -o %s", project->path, source, target);
 
     char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
@@ -533,13 +533,14 @@ void clean(
 }
 
 static
-int16_t setup_project(
+void setup_project(
     bake_driver_api *driver,
     bake_config *config,
-    const char *id,
-    bake_project_type kind)
+    bake_project *project)
 {
     /* Get short project id */
+    const char *id = project->id;
+    bake_project_type kind = project->type;
     const char *short_id = get_short_name(id);
 
     /* Create directories */
@@ -555,8 +556,8 @@ int16_t setup_project(
         "}\n",
         id,
         kind == BAKE_APPLICATION
-            ? "executable"
-            : "library"
+            ? "application"
+            : "package"
     );
     fclose(f);
 
@@ -595,25 +596,29 @@ int16_t setup_project(
     /* Create main header file */
     char *header_filename = ut_asprintf("include/%s.h", short_id);
     f = fopen(header_filename, "w");
+
     fprintf(f,
         "#ifndef %s_H\n"
-        "#define %s_H\n"
-        "\n"
-        "#ifdef __cplusplus\n"
-        "extern \"C\" {\n"
-        "#endif\n"
-        "\n"
-        "#ifdef __cplusplus\n"
-        "}\n"
-        "#endif\n"
-        "\n"
-        "#endif\n"
-        "\n",
+        "#define %s_H\n",
         id_upper,
-        id_upper
-    );
+        id_upper);
 
-    return 0;
+    if (kind != BAKE_PACKAGE) {
+        fprintf(f, "%s",
+            "\n"
+            "#ifdef __cplusplus\n"
+            "extern \"C\" {\n"
+            "#endif\n"
+            "\n"
+            "#ifdef __cplusplus\n"
+            "}\n"
+            "#endif\n");
+    }
+
+    fprintf(f, "%s",
+        "\n"
+        "#endif\n"
+        "\n");
 }
 
 /* -- Infrastructure functions -- */

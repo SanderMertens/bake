@@ -24,6 +24,11 @@ bake_project* bake_project_new(
     const char *path,
     bake_config *cfg);
 
+/* Initialize project that wasn't loaded from a project.json */
+int16_t bake_project_init(
+    bake_config *config,
+    bake_project *project);
+
 /** Cleanup project */
 void bake_project_free(
     bake_project *p);
@@ -59,6 +64,21 @@ int16_t bake_project_build_generated(
 
 /* Build project */
 int16_t bake_project_build(
+    bake_config *config,
+    bake_project *project);
+
+/* Clean project */
+int16_t bake_project_clean(
+    bake_config *config,
+    bake_project *project);
+
+/* Initialize files for a new bake project */
+int16_t bake_project_setup(
+    bake_config *config,
+    bake_project *project);
+
+/* Only clean current platform (used by rebuild) */
+int16_t bake_project_clean_current_platform(
     bake_config *config,
     bake_project *project);
 

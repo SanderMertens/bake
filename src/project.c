@@ -70,8 +70,8 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "includes")) {
             ut_try (bake_json_set_array(&p->includes, member, v), NULL);
         } else
-        if (!strcmp(member, "keep_binary")) {
-            ut_try (bake_json_set_boolean(&p->keep_binary, member, v), NULL);
+        if (!strcmp(member, "keep_artefact")) {
+            ut_try (bake_json_set_boolean(&p->keep_artefact, member, v), NULL);
         } else {
             ut_throw("unknown member '%s' in project.json", member);
             goto error;
@@ -206,6 +206,7 @@ int bake_project_load_driver(
         project_driver = malloc(sizeof(bake_project_driver));
         project_driver->driver = driver;
         project_driver->json = NULL;
+        project_driver->attributes = NULL;
         ut_ll_append(project->drivers, project_driver);
     }
 
@@ -299,6 +300,91 @@ error:
 
 /* -- Public API -- */
 
+int16_t bake_project_init(
+    bake_config *config,
+    bake_project *project)
+{
+    if (!project->sources) {
+        project->sources = ut_ll_new();
+    }
+    if (!project->includes) {
+        project->includes = ut_ll_new();
+    }
+    if (!project->drivers) {
+        project->drivers = ut_ll_new();
+    }
+    if (!project->use) {
+        project->use = ut_ll_new();
+    }
+    if (!project->use_private) {
+        project->use_private = ut_ll_new();
+    }
+    if (!project->use_build) {
+        project->use_build = ut_ll_new();
+    }
+    if (!project->link) {
+        project->link = ut_ll_new();
+    }
+    if (!project->files_to_clean) {
+        project->files_to_clean = ut_ll_new();
+    }
+
+    /* If 'src' and 'includes' weren't set, use defaults */
+    if (!ut_ll_count(project->sources)) {
+        ut_ll_append(project->sources, "src");
+    }
+    if (!ut_ll_count(project->includes)) {
+        ut_ll_append(project->includes, "include");
+    }
+
+    if (!project->language) {
+        project->language = ut_strdup("c");
+    }
+
+    if (!strcmp(project->language, "none")) {
+        free(project->language);
+        project->language = NULL;
+    }
+
+    if (project->language) {
+        ut_try( bake_project_load_driver(
+            project,
+            strarg("lang.%s", project->language),
+            NULL),
+              "failed to load driver for language '%s'", project->language);
+
+        bake_project_driver *driver = ut_ll_get(project->drivers, 0);
+        project->language_driver = driver;
+
+        if (!project->artefact) {
+            project->artefact = bake_driver__artefact(
+                driver->driver, config, project);
+        }
+    }
+
+    project->artefact_path = ut_asprintf(
+        "%s/bin/%s-%s", project->path, UT_PLATFORM_STRING,
+        config->configuration);
+
+    if (project->artefact) {
+        project->artefact_file = ut_asprintf(
+            "%s/%s", project->artefact_path, project->artefact);
+
+        ut_trace("building artefact '%s' for project '%s'",
+            project->artefact, project->id);
+    }
+
+    project->bin_path = ut_asprintf(
+        "%s/bin", project->path);
+
+    project->cache_path = ut_asprintf(
+        "%s/.bake_cache", project->path);
+
+    return 0;
+error:
+    return -1;
+}
+
 bake_project* bake_project_new(
     const char *path,
     bake_config *config)
@@ -309,14 +395,6 @@ bake_project* bake_project_new(
     }
 
     result->path = path ? strdup(path) : NULL;
-    result->sources = ut_ll_new();
-    result->includes = ut_ll_new();
-    result->use = ut_ll_new();
-    result->use_private = ut_ll_new();
-    result->use_build = ut_ll_new();
-    result->link = ut_ll_new();
-    result->files_to_clean = ut_ll_new();
-    result->drivers = ut_ll_new();
     result->public = true;
 
     /* Parse project.json if available */
@@ -326,39 +404,7 @@ bake_project* bake_project_new(
             "failed to parse '%s/project.json'",
             path);
 
-        /* If 'src' and 'includes' weren't set, use defaults */
-        if (!ut_ll_count(result->sources)) {
-            ut_ll_append(result->sources, "src");
-        }
-        if (!ut_ll_count(result->includes)) {
-            ut_ll_append(result->includes, "include");
-        }
-
-        if (!result->language) {
-            result->language = ut_strdup("c");
-        }
-
-        if (!strcmp(result->language, "none")) {
-            free(result->language);
-            result->language = NULL;
-        }
-
-        if (result->language) {
-            ut_try( bake_project_load_driver(
-                result,
-                strarg("lang.%s", result->language),
-                NULL),
-                  "failed to load driver for language '%s'", result->language);
-
-            bake_project_driver *driver = ut_ll_get(result->drivers, 0);
-            result->language_driver = driver;
-
-            result->artefact = bake_driver__artefact(
-                driver->driver, config, result);
-
-            ut_trace("building artefact '%s' for project '%s'",
-                result->artefact, result->id);
-        }
+        ut_try( bake_project_init(config, result), NULL);
     }
 
     return result;
@@ -499,12 +545,10 @@ int16_t bake_project_check_dependencies(
 {
     time_t artefact_modified = 0;
 
-    char *artefact_full = ut_asprintf("bin/%s-%s/%s",
-        UT_PLATFORM_STRING, config->configuration, project->artefact);
+    char *artefact_full = project->artefact_file;
     if  (ut_file_test(artefact_full)) {
         artefact_modified = ut_lastmodified(artefact_full);
     }
-    free(artefact_full);
 
     if (project->use) {
         ut_iter it = ut_ll_iter(project->use);
@@ -750,12 +794,9 @@ int16_t bake_project_build_artefact(
 
     /* Evaluate root node */
     char *binaryPath = config->target_lib;
-    bake_filelist *artefact_fl = bake_filelist_new(
-        binaryPath,
-        NULL
-    );
+    bake_filelist *artefact_fl = bake_filelist_new(NULL, NULL);
 
-    bake_filelist_add(artefact_fl, strarg("%s/%s", artefact_path, artefact));
+    bake_filelist_add_file(artefact_fl, project->artefact_file);
     if (bake_node_eval(driver, root, project, config, artefact_fl, NULL)) {
         ut_throw("failed to build rule '%s'", rule_name);
         goto error;
@@ -795,8 +836,7 @@ int16_t bake_project_build(
         goto error;
     }
 
-    char *artefact_path = ut_asprintf(
-        "bin/%s-%s", UT_PLATFORM_STRING, config->configuration);
+    char *artefact_path = project->artefact_path;
 
     /* Run the top-level ARTEFACT rule */
     if (bake_project_build_artefact(
@@ -806,19 +846,78 @@ int16_t bake_project_build(
         artefact_path,
         "ARTEFACT"))
     {
-        free(artefact);
         bake_project_link_cleanup(project->link);
         project->link = old_link;
         goto error;
     }
-
-    free(artefact_path);
 
     /* Cleanup temporary list */
     bake_project_link_cleanup(project->link);
 
     /* Restore old list */
     project->link = old_link;
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_clean(
+    bake_config *config,
+    bake_project *project)
+{
+    bake_driver *driver = project->language_driver->driver;
+
+    ut_try( bake_driver__clean(driver, config, project), NULL);
+
+    ut_try( ut_rm(project->cache_path), NULL);
+
+    if (!project->keep_artefact) {
+        ut_try( ut_rm(project->bin_path), NULL);
+    }
+
+    project->changed = true;
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_clean_current_platform(
+    bake_config *config,
+    bake_project *project)
+{
+    bake_driver *driver = project->language_driver->driver;
+
+    ut_try( bake_driver__clean(driver, config, project), NULL);
+
+    ut_try( ut_rm(project->cache_path), NULL);
+
+    if (!project->keep_artefact) {
+        ut_try( ut_rm(project->artefact_path), NULL);
+    }
+
+    project->changed = true;
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_setup(
+    bake_config *config,
+    bake_project *project)
+{
+    bake_driver *driver = project->language_driver->driver;
+
+    if (driver) {
+        ut_try( bake_driver__setup(driver, config, project), NULL);
+    } else {
+        ut_throw(
+            "cannot init: project '%s' does not configure a language",
+            project->id);
+        goto error;
+    }
 
     return 0;
 error:

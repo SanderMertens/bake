@@ -436,7 +436,8 @@ bool ut_isdir(const char *path) {
 
 int ut_rename(const char *oldName, const char *newName) {
     if (rename(oldName, newName)) {
-        ut_throw(strerror(errno));
+        ut_throw("failed to move '%s' => '%s': %s",
+            oldName, newName, strerror(errno));
         goto error;
     }
     return 0;

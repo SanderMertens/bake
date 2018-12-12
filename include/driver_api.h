@@ -70,14 +70,6 @@ char* (*bake_rule_map_cb)(
     bake_project *project,
     const char *input);
 
-/** Project setup callback */
-typedef
-int16_t (*bake_setup_cb)(
-    bake_driver_api *driver,
-    bake_config *config,
-    const char *id,
-    bake_project_type kind);
-
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */
@@ -146,7 +138,7 @@ struct bake_driver_api {
 
     /* Create a new project */
     void (*setup)(
-        bake_setup_cb action);
+        bake_driver_cb action);
 
     /* Clean a project */
     void (*clean)(

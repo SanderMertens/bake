@@ -104,7 +104,7 @@ typedef struct bake_driver_impl {
     bake_driver_cb init;
     bake_artefact_cb artefact;
     bake_link_to_lib_cb link_to_lib;
-    bake_setup_cb setup;
+    bake_driver_cb setup;
     bake_driver_cb clean;
 } bake_driver_impl;
 
@@ -139,15 +139,29 @@ char* bake_driver__link_to_lib(
     bake_project *project,
     const char *link);
 
+/* Clean project */
+int16_t bake_driver__clean(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
+/* Setup new project */
+int16_t bake_driver__setup(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
 /* -- Filelist -- */
 
 typedef struct bake_file {
+    char *path;
     char *name;
-    char *offset;
+    char *file_path;
     uint64_t timestamp;
 } bake_file;
 
 typedef struct bake_filelist {
+    char *path;
     char *pattern;
     ut_ll files;
     int16_t (*set)(const char *pattern);
@@ -166,16 +180,16 @@ int16_t bake_filelist_set(
 ut_iter bake_filelist_iter(
     bake_filelist *fl);
 
-bake_file* bake_filelist_add(
+bake_file* bake_filelist_add_file(
     bake_filelist *fl,
     const char *filename);
 
-int16_t bake_filelist_addPattern(
+int16_t bake_filelist_add_pattern(
     bake_filelist *fl,
     const char *offset,
     const char *pattern);
 
-int16_t bake_filelist_addList(
+int16_t bake_filelist_merge(
     bake_filelist *fl,
     bake_filelist *src);
 
