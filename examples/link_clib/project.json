@@ -1,0 +1,7 @@
+{
+    "id":"linkclib",
+    "type":"application",
+    "lang.c": {
+        "lib": ["m"]
+    }
+}

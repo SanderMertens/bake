@@ -91,12 +91,12 @@ int16_t bake_create_script(void)
     }
 
     /* Copy file to global location, may ask for password */
-    ut_log("#[yellow]ATTENTION#[reset] -- copying script to '" GLOBAL_PATH "', setup may request password\n");
+    ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
     ut_try( cmd("sudo cp /tmp/bake " GLOBAL_PATH "/bake"),
       "Failed to instal bake script. If you do not have the privileges to install to\n"
       GLOBAL_PATH ", you can install bake just to your home directory by doing:\n"
       "   bake setup --local-setup\n");
-    ut_log("#[green]OK#[reset] bake script installed to '" GLOBAL_PATH "'\n");
+    ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
 
     return 0;
 error:
@@ -113,13 +113,13 @@ int16_t bake_build_make_project(
       path, id);
     ut_try(cmd(install_cmd), "failed to install %s include files", id);
     free(install_cmd);
-    ut_log("#[green]OK#[reset] install include files for '%s'\n", id);
+    ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
 
-    ut_log(".. build '%s'", id);
+    ut_log("...  build '%s'", id);
     fflush(stdout);
     ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
       "failed to build %s", id);
-    ut_log("#[green]OK#[reset] build '%s'\n", id);
+    ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
     if (!strcmp(UT_OS_STRING, "darwin")) {
         ut_try (ut_rename(
@@ -142,7 +142,7 @@ int16_t bake_build_make_project(
       "bake install %s --id %s --artefact lib%s.so --build-to-home",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
-    ut_log("#[green]OK#[reset] install '%s' to $BAKE_HOME\n", id);
+    ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
     free(install_cmd);
 
     return 0;
@@ -163,11 +163,11 @@ int16_t bake_setup(
 
     ut_try(ut_cp("./bake", "~/bake/bake"),
         "failed to copy bake executable to user bake environment");
-    ut_log("#[green]OK#[reset] bake executable copied to $BAKE_HOME\n");
+    ut_log("#[green]OK#[reset]   copy bake executable to $BAKE_HOME\n");
 
     ut_try(cmd("bake install --id bake --type application --includes include --build-to-home"),
         "failed to install bake include files");
-    ut_log("#[green]OK#[reset] bake include files installed to $BAKE_HOME\n");
+    ut_log("#[green]OK#[reset]   install bake include files to $BAKE_HOME\n");
 
     ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
 
