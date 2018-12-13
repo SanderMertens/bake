@@ -246,7 +246,7 @@ int16_t bake_project_load_dependee_config(
         if (!strcmp(member, "value") || !strcmp(member, "id") ||
             !strcmp(member, "type"))
         {
-            ut_throw("dependee concig cannot override 'value', 'type' or 'id'");
+            ut_throw("dependee config cannot override 'value', 'type' or 'id'");
             goto error;
         }
 
@@ -446,7 +446,12 @@ int bake_project_load_drivers(
 
         JSON_Value *value = json_object_get_value_at(project->json, i);
         JSON_Object *obj = json_value_get_object(value);
-        ut_try( bake_project_load_driver(project, member, obj), NULL);
+
+        if (strcmp(member, "dependee")) {
+            ut_try( bake_project_load_driver(project, member, obj), NULL);
+        } else {
+            project->dependee_json = json_serialize_to_string(value);
+        }
     }
 
     return 0;
@@ -520,17 +525,17 @@ int16_t bake_check_dependency(
 
     if (!artefact_modified || dep_modified <= artefact_modified) {
         const char *fmt = private
-            ? "use '%s' => '%s' #[yellow](private)"
-            : "use '%s' => '%s'"
+            ? "#[grey] use %s => %s (modified=%d private)"
+            : "#[grey] use %s => %s (modified=%d)"
             ;
         ut_ok(fmt, dependency, lib);
     } else {
         p->artefact_outdated = true;
         const char *fmt = private
-            ? "use '%s' => '%s' #[green](changed) #[yellow](private)"
-            : "use '%s' => '%s' #[green](changed)"
+            ? "#[grey] use %s => %s (modified=%d, changed, private)"
+            : "#[grey] use %s => %s (modified=%d, changed)"
             ;
-        ut_ok(fmt, dependency, lib);
+        ut_ok(fmt, dependency, lib, dep_modified);
     }
 
 proceed:
@@ -585,11 +590,17 @@ error:
     return -1;
 }
 
-
 int16_t bake_project_generate(
     bake_config *config,
     bake_project *project)
 {
+    /* Invoke generate action for all drivers */
+    ut_iter it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        bake_driver__generate(driver->driver, config, project);
+    }
+
     return 0;
 }
 
@@ -862,9 +873,10 @@ error:
     return -1;
 }
 
-int16_t bake_project_clean(
+int16_t bake_project_clean_intern(
     bake_config *config,
-    bake_project *project)
+    bake_project *project,
+    bool all_platforms)
 {
     bake_driver *driver = project->language_driver->driver;
 
@@ -873,7 +885,17 @@ int16_t bake_project_clean(
     ut_try( ut_rm(project->cache_path), NULL);
 
     if (!project->keep_artefact) {
-        ut_try( ut_rm(project->bin_path), NULL);
+        if (all_platforms) {
+            ut_try( ut_rm(project->bin_path), NULL);
+        } else {
+            ut_try( ut_rm(project->artefact_path), NULL);
+        }
+    }
+
+    ut_iter it = ut_ll_iter(project->files_to_clean);
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        ut_try(ut_rm(strarg("%s/%s", project->path, file)), NULL);
     }
 
     project->changed = true;
@@ -883,25 +905,18 @@ error:
     return -1;
 }
 
+int16_t bake_project_clean(
+    bake_config *config,
+    bake_project *project)
+{
+    return bake_project_clean_intern(config, project, true);
+}
+
 int16_t bake_project_clean_current_platform(
     bake_config *config,
     bake_project *project)
 {
-    bake_driver *driver = project->language_driver->driver;
-
-    ut_try( bake_driver__clean(driver, config, project), NULL);
-
-    ut_try( ut_rm(project->cache_path), NULL);
-
-    if (!project->keep_artefact) {
-        ut_try( ut_rm(project->artefact_path), NULL);
-    }
-
-    project->changed = true;
-
-    return 0;
-error:
-    return -1;
+    return bake_project_clean_intern(config, project, true);
 }
 
 int16_t bake_project_setup(

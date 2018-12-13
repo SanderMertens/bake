@@ -76,7 +76,7 @@ int ut_mkdir(const char *fmt, ...) {
         return 0;
     }
 
-    ut_trace("mkdir '%s'", name);
+    ut_trace("#[cyan]mkdir %s", name);
 
     if (mkdir(name, 0755)) {
         _errno = errno;
@@ -302,7 +302,7 @@ int16_t ut_cp(
         result = ut_cp_file(src_parsed, dst_parsed);
     }
 
-    ut_trace("cp '%s' => '%s'", src, dst);
+    ut_trace("#[cyan]cp %s %s", src, dst);
 
     free(src_parsed);
     free(dst_parsed);
@@ -354,7 +354,7 @@ int ut_symlink(
         fullname = (char*)oldname;
     }
 
-    ut_trace("symlink '%s' => '%s'", newname, fullname);
+    ut_trace("#[cyan]symlink %s %s", newname, fullname);
 
     if (symlink(fullname, newname)) {
 
@@ -402,7 +402,7 @@ int16_t ut_setperm(
     const char *name,
     int perm)
 {
-    ut_trace("setperm '%s' => %d", name, perm);
+    ut_trace("#[cyan]setperm %s %d", name, perm);
     if (chmod(name, perm)) {
         ut_throw("chmod: %s", strerror(errno));
         return -1;
@@ -436,7 +436,7 @@ bool ut_isdir(const char *path) {
 
 int ut_rename(const char *oldName, const char *newName) {
     if (rename(oldName, newName)) {
-        ut_throw("failed to move '%s' => '%s': %s",
+        ut_throw("failed to move %s %s: %s",
             oldName, newName, strerror(errno));
         goto error;
     }
@@ -464,7 +464,7 @@ int ut_rm(const char *name) {
     if (remove(name)) {
         if (errno != ENOENT) {
             if (ut_isdir(name)) {
-                ut_trace("rm '%s' (D)", name);
+                ut_trace("#[cyan]rm %s (D)", name);
                 return ut_rmtree(name);
             } else {
                 result = -1;
@@ -476,7 +476,7 @@ int ut_rm(const char *name) {
     }
 
     if (!result) {
-        ut_trace("rm '%s'", name);
+        ut_trace("#[cyan]rm %s", name);
     }
 
     return result;

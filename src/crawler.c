@@ -74,6 +74,11 @@ int16_t bake_crawler_add(
 {
     if (!_this->nodes) _this->nodes = ut_rb_new(project_cmp, NULL);
 
+    /* Initialize project drivers before building dependency administration */
+    if (bake_project_load_drivers(p)) {
+        goto error;
+    }
+
     if (p->type == BAKE_PACKAGE && p->public) {
         bake_project *found;
         if ((found = ut_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
@@ -95,11 +100,6 @@ int16_t bake_crawler_add(
     } else {
         if (!_this->leafs) _this->leafs = ut_ll_new();
         ut_ll_append(_this->leafs, p);
-    }
-
-    /* Initialize project drivers before building dependency administration */
-    if (bake_project_load_drivers(p)) {
-        goto error;
     }
 
     /* Add dependency information */
@@ -331,7 +331,7 @@ int16_t bake_crawler_build_project(
     ut_ll readyForBuild)
 {
     ut_ok(
-        "begin %s %s '%s' in '%s'",
+        "#[grey]begin %s %s of '%s' in '%s'",
         action_name, bake_project_kind_str(p->type), p->id, p->path);
 
     if (action(config, _this, p)) {

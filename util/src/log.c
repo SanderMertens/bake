@@ -327,7 +327,7 @@ char* ut_log_categoryIndent(
 
     while (categories[i] && (!count || i < count)) {
         i ++;
-        ut_strbuf_append(&buff, "%s|#[reset]  ", color);
+        ut_strbuf_append(&buff, "%s|#[reset] ", color);
     }
 
     return ut_strbuf_get(&buff);

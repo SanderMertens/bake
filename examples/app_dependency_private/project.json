@@ -1,0 +1,7 @@
+{
+    "id":"app_dependency_private",
+    "type":"application",
+    "value": {
+        "use_private": ["pkg_helloworld"]
+    }
+}

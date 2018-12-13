@@ -1,7 +1,0 @@
-{
-    "id":"hellodependency",
-    "type":"application",
-    "value": {
-        "use": ["hellopackage"]
-    }
-}

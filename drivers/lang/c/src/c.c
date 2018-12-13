@@ -149,20 +149,6 @@ void compile_src(
     ut_strbuf_appendstr(&cmd, building_macro);
     free(building_macro);
 
-    char *etc_macro = ut_asprintf(" -D%s_ETC", project->id);
-    strupper(etc_macro);
-    for (ptr = etc_macro; (ch = *ptr); ptr++) {
-        if (ch == '/') {
-            *ptr = '_';
-        }
-    }
-    if (project->public) {
-        ut_strbuf_append(&cmd, "%s=ut_locate(PACKAGE_ID,NULL,UT_LOCATE_ETC)", etc_macro);
-    } else {
-        ut_strbuf_append(&cmd, "%s=\"etc\"", etc_macro);
-    }
-    free(etc_macro);
-
     if (config->symbols) {
         ut_strbuf_appendstr(&cmd, " -g");
     }
@@ -529,7 +515,7 @@ void clean(
     bake_config *config,
     bake_project *project)
 {
-
+    driver->remove("include/dependencies.h");
 }
 
 static
@@ -564,22 +550,16 @@ void setup_project(
     /* Create main source file */
     char *source_filename = ut_asprintf("src/main.c");
     f = fopen(source_filename, "w");
-    if (kind != BAKE_PACKAGE) {
-        fprintf(f,
-            "#include <include/%s.h>\n"
-            "\n"
-            "int main(int argc, char *argv[]) {\n"
-            "    return 0;\n"
-            "}\n",
-            short_id
-        );
-    } else {
-        fprintf(f,
-            "#include <include/%s.h>\n"
-            "\n",
-            short_id
-        );
-    }
+
+    fprintf(f,
+        "#include <include/%s.h>\n"
+        "\n"
+        "int main(int argc, char *argv[]) {\n"
+        "    return 0;\n"
+        "}\n",
+        short_id
+    );
+
     fclose(f);
     free(source_filename);
 
@@ -599,7 +579,9 @@ void setup_project(
 
     fprintf(f,
         "#ifndef %s_H\n"
-        "#define %s_H\n",
+        "#define %s_H\n\n"
+        "/* This generated file contains includes for project dependencies */\n"
+        "#include \"dependencies.h\"\n",
         id_upper,
         id_upper);
 
@@ -737,6 +719,80 @@ char *link_to_lib(
     return result;
 }
 
+static
+void add_dependency_includes(
+    bake_config *config,
+    FILE *f,
+    ut_ll dependencies)
+{
+    ut_iter it = ut_ll_iter(dependencies);
+    while (ut_iter_hasNext(&it)) {
+        char *project_id = ut_iter_next(&it);
+        char *short_project_id = get_short_name(project_id);
+        fprintf(f, "#include <%s/%s.h>\n", project_id, short_project_id);
+    }
+}
+
+static
+void generate(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    const char *id = project->id;
+    const char *short_id = get_short_name(id);
+
+    /* Create upper-case id for defines in header file */
+    char *id_upper = strdup(id);
+    strupper(id_upper);
+    char *ptr, ch;
+    for (ptr = id_upper; (ch = *ptr); ptr ++) {
+        if (ch == '/' || ch == '.') {
+            ptr[0] = '_';
+        }
+    }
+
+    /* Create main header file */
+    char *header_filename = ut_asprintf(
+        "%s/include/dependencies.h", project->path);
+    FILE *f = fopen(header_filename, "w");
+    if (!f) {
+        ut_throw("failed to open file '%s'", header_filename);
+        project->error = true;
+        return;
+    }
+
+    fprintf(f,
+        "#ifndef %s_DEPENDENCIES_H\n"
+        "#define %s_DEPENDENCIES_H\n"
+        "/* This file is generated. Do not modify. */\n\n",
+        id_upper,
+        id_upper);
+
+    fprintf(f, "/* Public dependencies */\n");
+    add_dependency_includes(config, f, project->use);
+
+    fprintf(f, "\n/* Private dependencies */\n");
+    fprintf(f, "#ifdef %s_IMPL\n", id_upper);
+    add_dependency_includes(config, f, project->use_private);
+    fprintf(f, "#endif\n");
+
+    fprintf(f, "\n/* Macro for exporting symbols */\n");
+    fprintf(f,
+      "#if %s_IMPL && defined _MSC_VER\n"
+      "#define %s_EXPORT __declspec(dllexport)\n"
+      "#elif %s_IMPL\n"
+      "#define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
+      "#elif defined _MSC_VER\n"
+      "#define %s_EXPORT __declspec(dllimport)\n"
+      "#else\n"
+      "#define %s_EXPORT\n"
+      "#endif\n", id_upper, id_upper, id_upper, id_upper, id_upper, id_upper);
+
+    fprintf(f, "%s", "\n#endif\n\n");
+    fclose(f);
+}
+
 /* -- Rules */
 int bakemain(bake_driver_api *driver) {
 
@@ -757,6 +813,9 @@ int bakemain(bake_driver_api *driver) {
 
     /* Create rule for creating binary from objects */
     driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);
+
+    /* Generate header file that automatically includes project dependencies */
+    driver->generate(generate);
 
     /* Callback that initializes projects with the right build dependencies */
     driver->init(init);

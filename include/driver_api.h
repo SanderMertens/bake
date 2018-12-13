@@ -124,25 +124,33 @@ struct bake_driver_api {
         const char *name,
         bake_condition_cb cond);
 
-    /* Initialize a project before a build */
+    /* Callback to initialize a driver before building the project */
     void (*init)(
         bake_driver_cb action);
 
-    /* Return the name of the artefact for a project */
+    /* Callback that returns name of artefact */
     void (*artefact)(
         bake_artefact_cb action);
 
-    /* Locate library file based on a link path */
+    /* Callback that locates library file based on logical package id */
     void (*link_to_lib)(
         bake_link_to_lib_cb action);
 
-    /* Create a new project */
+    /* Callback for initializing a new project in a directory */
     void (*setup)(
         bake_driver_cb action);
 
-    /* Clean a project */
+    /* Callback for generating code */
+    void (*generate)(
+        bake_driver_cb action);
+
+    /* Callback for specifying files to clean */
     void (*clean)(
         bake_driver_cb action);
+
+    /* Mark a file to be removed when project is cleaned */
+    void (*remove)(
+        const char *file);
 
     /* Execute a command */
     void (*exec)(

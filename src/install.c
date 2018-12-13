@@ -179,7 +179,6 @@ int16_t bake_install_clear(
     ut_iter it;
 
     ut_log_push("uninstall");
-    ut_trace("begin");
 
     if (project->type != BAKE_TOOL) {
         char *projectDir = ut_asprintf(
@@ -323,6 +322,7 @@ int16_t bake_install_metadata(
                 }
                 fprintf(dependee_config, "%s\n", project->dependee_json);
                 fclose(dependee_config);
+                ut_trace("#[cyan]write %s/dependee.json", projectDir);
             }
             free(projectDir);
         }
@@ -479,8 +479,6 @@ int16_t bake_install_postbuild(
                 "clock drift of >1sec between the OS clock and the filesystem detected");
         }
         free(installedArtefact);
-
-        ut_ok("installed '%s/%s'", targetDir, project->artefact);
     }
 
     free(targetBinary);

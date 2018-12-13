@@ -113,7 +113,6 @@ bake_filelist* bake_node_eval_pattern(
     bool isSources = false;
     bake_filelist *targets = NULL;
 
-    ut_trace("evaluating pattern");
     if (n->name && !stricmp(n->name, "SOURCES")) {
         targets = bake_filelist_new(p->path, NULL); /* Create empty list */
         isSources = true;
@@ -242,12 +241,12 @@ int16_t bake_node_run_rule_pattern(
                     bake_file *dst = ut_iter_next(&dst_iter);
                     if (!src->timestamp) {
                         shouldBuild = true;
-                        ut_trace("'%s' does not exist for '%s', rebuilding",
+                        ut_trace("#[grey]%s does not exist for %s, rebuilding",
                             dst->name,
                             ((bake_node*)r)->name);
                     } else if (src->timestamp > dst->timestamp) {
                         shouldBuild = true;
-                        ut_trace("'%s' is newer than '%s', rebuilding",
+                        ut_trace("#[grey]%s is newer than %s, rebuilding",
                             src->name,
                             dst->name);
                     }
@@ -331,7 +330,6 @@ int16_t bake_node_eval(
             targets = inherits;
         }
     } else {
-        ut_trace("evaluating rule");
         targets = inherits;
     }
 
@@ -414,7 +412,6 @@ int16_t bake_node_eval(
         bake_filelist_merge(outputs, targets);
     }
 
-    ut_trace("done");
     ut_log_pop();
 
     return 0;

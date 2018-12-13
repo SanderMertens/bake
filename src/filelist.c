@@ -75,9 +75,9 @@ bake_file* bake_filelist_add_intern(
     ut_ll_append(fl->files, bfile);
 
     if (timestamp) {
-        ut_debug("add '%s' with timestamp %d (path = '%s')", filename, timestamp, path);
+        ut_trace("#[grey]%s (modified=%d, path='%s')", filename, timestamp, path);
     } else {
-        ut_debug("add '%s' with timestamp 0 (path = '%s')", filename, path);
+        ut_trace("#[grey]%s (modified=0, path='%s')", filename, path);
     }
 
     return bfile;

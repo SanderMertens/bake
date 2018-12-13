@@ -1,5 +1,0 @@
-#ifndef HELLODEPENDENCY_H
-#define HELLODEPENDENCY_H
-
-#endif
-

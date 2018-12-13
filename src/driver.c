@@ -268,6 +268,14 @@ void bake_driver_setup_cb(
 }
 
 static
+void bake_driver_generate_cb(
+    bake_driver_cb generate)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    driver->impl.generate = generate;
+}
+
+static
 void bake_driver_artefact_cb(
     bake_artefact_cb artefact)
 {
@@ -348,6 +356,14 @@ void bake_driver_exec_cb(
     }
 }
 
+static
+void bake_driver_remove_cb(
+    const char *file)
+{
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    ut_ll_append(project->files_to_clean, ut_strdup(file));
+}
+
 /* Initialize driver API */
 bake_driver_api bake_driver_api_impl = {
     .pattern = bake_driver_pattern_cb,
@@ -358,9 +374,11 @@ bake_driver_api bake_driver_api_impl = {
     .target_map = bake_driver_target_map_cb,
     .init = bake_driver_init_cb,
     .setup = bake_driver_setup_cb,
+    .generate = bake_driver_generate_cb,
     .artefact = bake_driver_artefact_cb,
     .link_to_lib = bake_driver_link_to_lib_cb,
     .clean = bake_driver_clean_cb,
+    .remove = bake_driver_remove_cb,
     .exec = bake_driver_exec_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb
@@ -436,6 +454,23 @@ int16_t bake_driver__setup(
     ut_throw("driver doesn't support project setup");
 
     return -1;
+}
+
+int16_t bake_driver__generate(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.generate) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        driver->impl.generate(&bake_driver_api_impl, config, project);
+        if (project->error) {
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 bake_driver* bake_driver_get(

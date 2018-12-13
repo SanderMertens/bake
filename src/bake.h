@@ -105,6 +105,7 @@ typedef struct bake_driver_impl {
     bake_artefact_cb artefact;
     bake_link_to_lib_cb link_to_lib;
     bake_driver_cb setup;
+    bake_driver_cb generate;
     bake_driver_cb clean;
 } bake_driver_impl;
 
@@ -147,6 +148,12 @@ int16_t bake_driver__clean(
 
 /* Setup new project */
 int16_t bake_driver__setup(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
+/* Generate driver code */
+int16_t bake_driver__generate(
     bake_driver *driver,
     bake_config *config,
     bake_project *project);

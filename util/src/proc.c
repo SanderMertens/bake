@@ -48,7 +48,7 @@ ut_proc ut_proc_run(const char* exec, char *argv[]) {
                 i++;
             }
             char *str = ut_strbuf_get(&buff);
-            ut_trace("exec '%s' [%d]", str, pid);
+            ut_trace("#[cyan]%s [%d]", str, pid);
             free(str);
         }
     } else {

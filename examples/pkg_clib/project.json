@@ -1,0 +1,7 @@
+{
+    "id":"pkg_clib",
+    "type":"package",
+    "lang.c": {
+        "lib": ["m"]
+    }
+}

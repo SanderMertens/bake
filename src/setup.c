@@ -111,21 +111,21 @@ int16_t bake_build_make_project(
     char *install_cmd = ut_asprintf(
       "bake install %s --id %s --type package --includes include --build-to-home",
       path, id);
-    ut_try(cmd(install_cmd), "failed to install %s include files", id);
+    ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
     ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
 
     ut_log("...  build '%s'", id);
     fflush(stdout);
     ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
-      "failed to build %s", id);
+      "failed to build '%s'", id);
     ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
     if (!strcmp(UT_OS_STRING, "darwin")) {
         ut_try (ut_rename(
           strarg("%s/lib%s.dylib", path, artefact),
           strarg("%s/lib%s.so", path, artefact)),
-            "failed to rename %s", id);
+            "failed to rename '%s'", id);
     }
 
     char *bin_path = ut_asprintf("%s/bin/%s-debug", path, UT_PLATFORM_STRING);
@@ -134,7 +134,7 @@ int16_t bake_build_make_project(
     ut_try (ut_rename(
       strarg("%s/lib%s.so", path, artefact),
       strarg("%s/lib%s.so", bin_path, artefact)),
-        "failed to move %s to project bin path", id);
+        "failed to move '%s' to project bin path", id);
 
     free(bin_path);
 
