@@ -238,31 +238,33 @@ int16_t bake_project_load_dependee_config(
         goto error;
     }
 
-    uint32_t i, count = json_object_get_count(project->json);
+    uint32_t i, count = json_object_get_count(jo);
 
     for (i = 0; i < count; i ++) {
-        const char *member = json_object_get_name(project->json, i);
+        const char *member = json_object_get_name(jo, i);
 
-        if (!strcmp(member, "value") || !strcmp(member, "id") ||
-            !strcmp(member, "type"))
-        {
-            ut_throw("dependee config cannot override 'value', 'type' or 'id'");
+        if (!strcmp(member, "id") || !strcmp(member, "type")) {
+            ut_throw("dependee config cannot override '%s'", member);
             goto error;
         }
 
-        JSON_Value *value = json_object_get_value_at(project->json, i);
+        JSON_Value *value = json_object_get_value_at(jo, i);
         JSON_Object *obj = json_value_get_object(value);
 
-        bake_project_driver *driver = bake_project_get_driver(project, member);
-        if (!driver) {
-            ut_try( bake_project_load_driver(project, member, obj), NULL);
-        } else {
-            if (!bake_attributes_parse(
-                config, project, project->id, driver->json, driver->attributes))
-            {
-                ut_throw("failed to load dependee config for driver %s",member);
-                goto error;
+        if (strcmp(member, "value")) {
+            bake_project_driver *driver = bake_project_get_driver(project, member);
+            if (!driver) {
+                ut_try( bake_project_load_driver(project, member, obj), NULL);
+            } else {
+                if (!bake_attributes_parse(
+                    config, project, project->id, obj, driver->attributes))
+                {
+                    ut_throw("failed to parse dependee config for driver %s", member);
+                    goto error;
+                }
             }
+        } else {
+            ut_try (bake_project_parse_value(project, obj), NULL);
         }
     }
 

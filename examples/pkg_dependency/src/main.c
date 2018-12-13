@@ -1,5 +1,7 @@
 #include <include/pkg_dependency.h>
+#include <stdio.h>
 
-int main(int argc, char *argv[]) {
-    return 0;
+void pkg_dependency() {
+    printf("pkg_dependency\n");
+    pkg_helloworld();
 }

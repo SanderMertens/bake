@@ -1,4 +1,12 @@
 {
     "id":"pkg_w_dependee",
-    "type":"package"
+    "type":"package",
+    "dependee": {
+        "value": {
+            "use": ["pkg_helloworld"]
+        },
+        "lang.c": {
+            "lib": ["m"]
+        }
+    }
 }

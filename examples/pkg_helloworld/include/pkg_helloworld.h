@@ -2,10 +2,10 @@
 #define PKG_HELLOWORLD_H
 
 /* This generated file contains includes for project dependencies */
-#include "dependencies.h"
+#include "prebaked.h"
 
 
 PKG_HELLOWORLD_EXPORT
-void helloworld(void);
+void pkg_helloworld(void);
 
 #endif

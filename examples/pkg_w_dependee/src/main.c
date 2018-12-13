@@ -1,5 +1,6 @@
 #include <include/pkg_w_dependee.h>
+#include <stdio.h>
 
-int main(int argc, char *argv[]) {
-    return 0;
+void pkg_w_dependee() {
+    printf("pkg_w_dependee\n");
 }

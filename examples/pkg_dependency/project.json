@@ -1,4 +1,7 @@
 {
     "id":"pkg_dependency",
-    "type":"package"
+    "type":"package",
+    "value": {
+        "use": ["pkg_helloworld"]
+    }
 }
