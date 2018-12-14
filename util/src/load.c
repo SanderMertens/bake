@@ -345,8 +345,11 @@ int16_t ut_locate_binary(
         }
     }
 
-    /* Test for .so library */
-    char *bin = ut_asprintf("%s/lib/lib%s.so", loaded->env, pkg_underscore);
+    char *bin = NULL;
+
+#ifdef UT_MACOS
+    /* Test for .dylib library */
+    bin = ut_asprintf("%s/lib/lib%s.dylib", loaded->env, pkg_underscore);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
         loaded->lib = bin;
@@ -360,10 +363,11 @@ int16_t ut_locate_binary(
             free(bin);
         }
     }
+#endif
 
+    /* Test for .so library */
     if (ret == 0) {
-        /* Test for .dylib library */
-        bin = ut_asprintf("%s/lib/lib%s.dylib", loaded->env, pkg_underscore);
+        bin = ut_asprintf("%s/lib/lib%s.so", loaded->env, pkg_underscore);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->lib = bin;

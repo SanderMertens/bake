@@ -80,6 +80,7 @@ int16_t bake_create_script(void)
     fprintf(f, "    build_bake\n");
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
+    fprintf(f, "    export `$HOME/bake/bake env`\n");
     fprintf(f, "    exec $HOME/bake/bake $@\n");
     fprintf(f, "fi\n");
     fclose(f);
@@ -121,25 +122,27 @@ int16_t bake_build_make_project(
       "failed to build '%s'", id);
     ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
-    if (!strcmp(UT_OS_STRING, "darwin")) {
-        ut_try (ut_rename(
-          strarg("%s/lib%s.dylib", path, artefact),
-          strarg("%s/lib%s.so", path, artefact)),
-            "failed to rename '%s'", id);
-    }
-
     char *bin_path = ut_asprintf("%s/bin/%s-debug", path, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
 
+    /* On macOS, remove rpath that premake automatically adds */
+    /*#ifdef UT_MACOS
+      install_cmd = ut_asprintf(
+          "install_name_tool -change @rpath/libbake_util.dylib libbake_util.dylib %s/lib%s%s",
+          path, artefact, UT_OS_LIB_EXT);
+      ut_try( cmd(install_cmd), NULL);
+    #endif
+    */
+
     ut_try (ut_rename(
-      strarg("%s/lib%s.so", path, artefact),
-      strarg("%s/lib%s.so", bin_path, artefact)),
+      strarg("%s/lib%s" UT_OS_LIB_EXT, path, artefact),
+      strarg("%s/lib%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
 
     free(bin_path);
 
     install_cmd = ut_asprintf(
-      "bake install %s --id %s --artefact lib%s.so --build-to-home",
+      "bake install %s --id %s --artefact %s --build-to-home",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
     ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);

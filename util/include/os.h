@@ -33,7 +33,7 @@ extern "C" {
 #elif INTPTR_MAX == INT64_MAX
 #define UT_CPU_64BIT
 #else
-#warning "corto is not supported on platforms which are neither 32- nor 64-bit."
+#warning "bake is not supported on platforms which are neither 32- nor 64-bit."
 #endif
 
 #if defined(WIN32) || defined(WIN64)
@@ -43,7 +43,7 @@ extern "C" {
 #elif defined(__APPLE__) && defined(__MACH__)
 #define UT_OS_OSX
 #else
-#warning "corto is not supported on non-unix or windows operating systems."
+#warning "bake is not supported on non-unix or windows operating systems."
 #endif
 
 #ifdef __i386__
@@ -58,10 +58,17 @@ extern "C" {
 
 #ifdef UT_OS_WINDOWS
 #define UT_OS_STRING "windows"
+#define UT_OS_LIB_EXT ".dll"
+#define UT_WINDOWS
 #elif defined(UT_OS_LINUX)
 #define UT_OS_STRING "linux"
+#define UT_OS_LIB_EXT ".so"
+#define UT_LINUX
 #elif defined(UT_OS_OSX)
 #define UT_OS_STRING "darwin"
+#define UT_OS_LIB_EXT ".dylib"
+#define UT_MACOS
+#define UT_LINUX
 #endif
 
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING

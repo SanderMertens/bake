@@ -283,8 +283,8 @@ bool is_dylib(
     bake_driver_api *driver,
     bake_project *project)
 {
-    if (is_darwin()) {
-        bool dylib = false;
+    if (is_darwin() && project->type == BAKE_PACKAGE) {
+        bool dylib = true;
         bake_attribute *dylib_attr = driver->get_attr("dylib");
         if (dylib_attr) {
             dylib = dylib_attr->is.boolean;

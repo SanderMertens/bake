@@ -32,7 +32,10 @@ int16_t ut_setenv(const char *varname, const char *value, ...) {
             goto error;
         }
         va_end(arglist);
-        setenv(varname, buff, 1);
+        if (setenv(varname, buff, 1)) {
+            ut_throw("failed to set variable '%s'", varname);
+            goto error;
+        }
         free(buff);
     } else {
         unsetenv(varname);
