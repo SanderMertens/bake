@@ -73,8 +73,7 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "keep_artefact")) {
             ut_try (bake_json_set_boolean(&p->keep_artefact, member, v), NULL);
         } else {
-            ut_throw("unknown member '%s' in project.json", member);
-            goto error;
+            ut_warning("unknown member '%s' in project.json", member);
         }
     }
 
@@ -829,8 +828,6 @@ int16_t bake_project_build(
         return 0;
     }
 
-    char *artefact = project->artefact;
-
     /* Resolve libraries in project link attribute */
     if (bake_project_resolve_links(config, project)) {
         goto error;
@@ -849,14 +846,12 @@ int16_t bake_project_build(
         goto error;
     }
 
-    char *artefact_path = project->artefact_path;
-
     /* Run the top-level ARTEFACT rule */
     if (bake_project_build_artefact(
         config,
         project,
-        artefact,
-        artefact_path,
+        project->artefact,
+        project->artefact_path,
         "ARTEFACT"))
     {
         bake_project_link_cleanup(project->link);

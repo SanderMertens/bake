@@ -34,10 +34,6 @@ int16_t bake_install_dir_for_target(
     ut_dirstack stack = NULL;
     ut_iter it;
 
-    ut_debug(
-      "install dir id='%s' dir='%s' subdir='%s' target='%s' softlink=%d uninstallFile='%p'",
-      id, dir, subdir, target, softlink, uninstallFile);
-
     char *source;
     if (!subdir) {
         source = ut_asprintf("%s/%s", source_path, dir);

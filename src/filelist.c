@@ -69,7 +69,12 @@ bake_file* bake_filelist_add_intern(
     bake_file *bfile = malloc(sizeof(bake_file));
     bfile->name = ut_strdup(filename);
     bfile->path = ut_strdup(path);
-    bfile->file_path = ut_asprintf("%s/%s", path, filename);
+
+    if (filename[0] == '/') {
+        bfile->file_path = ut_strdup(filename);
+    } else {
+        bfile->file_path = ut_asprintf("%s/%s", path, filename);
+    }
     bfile->timestamp = timestamp;
 
     ut_ll_append(fl->files, bfile);
@@ -170,7 +175,19 @@ bake_file* bake_filelist_add_file(
     bake_filelist *fl,
     const char *file)
 {
-    char *path = ut_asprintf("%s/%s", fl->path, file);
+    char *path;
+    time_t lastmodified = 0;
+
+    if (file && file[0] == '/') {
+        path = ut_strdup(file);
+    } else {
+        path = ut_asprintf("%s/%s", fl->path, file);
+    }
+
+    if (ut_file_test(path) == 1) {
+        lastmodified = ut_lastmodified(path);
+    }
+
     char *name = strrchr(path, '/');
     if (name) {
         *name = '\0';
@@ -181,13 +198,7 @@ bake_file* bake_filelist_add_file(
         name = (char*)file;
     }
 
-    bake_file *result;
-    if (ut_file_test(file)) {
-        result = bake_filelist_add_intern(fl, path, name, ut_lastmodified(file));
-    } else {
-        result = bake_filelist_add_intern(fl, path, name, 0);
-    }
-
+    bake_file *result = bake_filelist_add_intern(fl, path, name, lastmodified);
     if (path != fl->path) free(path);
     return result;
 }
