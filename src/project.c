@@ -515,7 +515,7 @@ int16_t bake_check_dependency(
     uint32_t artefact_modified,
     bool private)
 {
-    const char *lib = ut_locate(dependency, NULL, UT_LOCATE_PACKAGE);
+    const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
     if (!lib) {
         ut_info("use '%s' => #[red]missing#[normal]", dependency, lib);
         ut_throw("missing dependency '%s'", dependency);
