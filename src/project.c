@@ -371,7 +371,7 @@ int16_t bake_project_init(
         project->artefact_file = ut_asprintf(
             "%s/%s", project->artefact_path, project->artefact);
 
-        ut_trace("building artefact '%s' for project '%s'",
+        ut_trace("#[grey]building artefact '%s' for project '%s'",
             project->artefact, project->id);
     }
 

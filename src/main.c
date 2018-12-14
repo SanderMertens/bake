@@ -145,15 +145,16 @@ bool bake_is_action(
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
         !strcmp(arg, "install") ||
-        !strcmp(arg, "uninstall"))
+        !strcmp(arg, "uninstall") ||
+        !strcmp(arg, "update") ||
+        !strcmp(arg, "clone"))
     {
         return true;
     }
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
-        !strcmp(arg, "init") ||
-        !strcmp(arg, "clone"))
+        !strcmp(arg, "init"))
     {
         build = false;
         return true;
@@ -402,7 +403,27 @@ int main(int argc, const char *argv[]) {
     if (build) {
         /* If build is true, first discover projects in provided path */
         ut_log_push("discovery");
-        bake_crawler *crawler = bake_discovery(&config);
+        bake_crawler *crawler = NULL;
+        bake_project *project = NULL;
+
+        if (!strcmp(action, "clone")) {
+            project = bake_clone(&config, path);
+            if (!project)
+                goto error;
+        } else if (!strcmp(action, "update")) {
+            project = bake_update(&config, path);
+            if (!project)
+                goto error;
+        }
+
+        if (project) {
+            crawler = bake_crawler_new(&config);
+            ut_try( bake_crawler_add(crawler, project), NULL);
+            action = "build";
+        } else {
+            crawler = bake_discovery(&config);
+        }
+
         ut_log_pop();
 
         /* If projects have been discovered, build them */
@@ -424,8 +445,6 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_setup(local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
-        } else if (!strcmp(action, "clone")) {
-            ut_try (bake_clone(&config, path), NULL);
         } else {
             ut_throw("invalid command '%s'", action);
             goto error;

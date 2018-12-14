@@ -69,13 +69,13 @@ int bake_do_foreach(
 
 /* -- Remote install functions -- */
 
-/* Installation from remote repository */
-int16_t bake_install_remote(
-    bake_config *config,
-    const char *id);
-
 /* Clone remote repository */
-int16_t bake_clone(
+bake_project* bake_clone(
+    bake_config *config,
+    const char *url);
+
+/* Update remote repository */
+bake_project* bake_update(
     bake_config *config,
     const char *url);
 
