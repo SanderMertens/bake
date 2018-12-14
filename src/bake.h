@@ -67,6 +67,18 @@ int bake_do_foreach(
     bake_crawler *crawler,
     bake_project *p);
 
+/* -- Remote install functions -- */
+
+/* Installation from remote repository */
+int16_t bake_install_remote(
+    bake_config *config,
+    const char *id);
+
+/* Clone remote repository */
+int16_t bake_clone(
+    bake_config *config,
+    const char *url);
+
 /* -- Install functions -- */
 
 /** Copy project file to target environment */

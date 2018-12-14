@@ -152,7 +152,8 @@ bool bake_is_action(
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
-        !strcmp(arg, "init"))
+        !strcmp(arg, "init") ||
+        !strcmp(arg, "clone"))
     {
         build = false;
         return true;
@@ -210,6 +211,19 @@ int bake_parse_args(
 
     if (!path) {
         path = ".";
+    }
+
+    if (!strcmp(action, "install")) {
+        if (ut_file_test(path) != 1) {
+            action = "install_remote";
+            build = false;
+        }
+    }
+
+    if (artefact) {
+        if (type == BAKE_PACKAGE) {
+            artefact = ut_asprintf("lib%s" UT_OS_LIB_EXT, artefact);
+        }
     }
 
     return 0;
@@ -341,6 +355,10 @@ int bake_init_project(
     }
 
     bake_project *project = bake_project_from_cmdline(config);
+    if (!project) {
+        goto error;
+    }
+
     if (!project->language) {
         free(project->language);
         project->language = ut_strdup("c");
@@ -406,6 +424,11 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_setup(local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
+        } else if (!strcmp(action, "clone")) {
+            ut_try (bake_clone(&config, path), NULL);
+        } else {
+            ut_throw("invalid command '%s'", action);
+            goto error;
         }
     }
 

@@ -88,6 +88,7 @@ OBJECTS := \
 	$(OBJDIR)/driver.o \
 	$(OBJDIR)/filelist.o \
 	$(OBJDIR)/install.o \
+	$(OBJDIR)/install_remote.o \
 	$(OBJDIR)/json_utils.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/project.o \
@@ -192,6 +193,9 @@ $(OBJDIR)/filelist.o: ../src/filelist.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/install.o: ../src/install.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/install_remote.o: ../src/install_remote.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/json_utils.o: ../src/json_utils.c
