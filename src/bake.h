@@ -70,13 +70,15 @@ int bake_do_foreach(
 /* -- Remote install functions -- */
 
 /* Clone remote repository */
-bake_project* bake_clone(
+bake_crawler* bake_clone(
     bake_config *config,
+    bake_crawler *crawler,
     const char *url);
 
 /* Update remote repository */
-bake_project* bake_update(
+bake_crawler* bake_update(
     bake_config *config,
+    bake_crawler *crawler,
     const char *url);
 
 /* -- Install functions -- */
@@ -274,14 +276,14 @@ int16_t bake_node_eval(
 
 /* Attribute API */
 
-ut_ll bake_attributes_parse(
+ut_ll bake_attrs_parse(
     bake_config *config,
     bake_project *project,
     const char *project_id, /* differs from project if parsing dependee cfg */
     JSON_Object *object,
     ut_ll existing);
 
-char* bake_attribute_replace(
+char* bake_attr_replace(
     bake_config *config,
     bake_project *project,
     const char *package_id,

@@ -479,7 +479,7 @@ const char* ut_locate(
         case UT_LOCATE_ENV:
             result = loaded->env; /* always set */
             break;
-        case UT_LOCATE_PACKAGE:
+        case UT_LOCATE_PROJECT:
             result = loaded->project; /* always set */
             break;
         case UT_LOCATE_ETC:

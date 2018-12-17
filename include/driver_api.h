@@ -157,7 +157,7 @@ struct bake_driver_api {
         const char *cmd);
 
     /* Get a driver-specific attribute */
-    bake_attribute* (*get_attr)(
+    bake_attr* (*get_attr)(
         const char *name);
 
     /* Get a driver-specific attribute */

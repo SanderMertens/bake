@@ -377,6 +377,8 @@ int main(int argc, const char *argv[]) {
 
     ut_init("bake");
 
+    ut_log_fmt("%C %V %m");
+
     /* Init thread keys, which are used to pass arguments in driver API */
     ut_try (ut_tls_new(&BAKE_DRIVER_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_FILELIST_KEY, NULL), NULL);
@@ -407,18 +409,12 @@ int main(int argc, const char *argv[]) {
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            project = bake_clone(&config, path);
-            if (!project)
-                goto error;
+            crawler = bake_clone(&config, NULL, path);
         } else if (!strcmp(action, "update")) {
-            project = bake_update(&config, path);
-            if (!project)
-                goto error;
+            crawler = bake_update(&config, NULL, path);
         }
 
-        if (project) {
-            crawler = bake_crawler_new(&config);
-            ut_try( bake_crawler_add(crawler, project), NULL);
+        if (crawler) {
             action = "build";
         } else {
             crawler = bake_discovery(&config);

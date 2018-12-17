@@ -68,6 +68,25 @@ void bake_crawler_addDependency(
     ut_ll_append(dep->dependents, p);
 }
 
+bool bake_crawler_has(
+    bake_crawler *_this,
+    const char *id)
+{
+    ut_id use_buffer;
+    char *ptr, ch;
+    strcpy(use_buffer, id);
+    for (ptr = use_buffer; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
+            *ptr = '/';
+        }
+    }
+    if (_this->nodes && ut_rb_find(_this->nodes, use_buffer) != NULL) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int16_t bake_crawler_add(
     bake_crawler *_this,
     bake_project *p)

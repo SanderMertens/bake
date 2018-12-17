@@ -22,11 +22,11 @@
 #include "bake.h"
 
 static
-bake_attribute* bake_attribute_parse_value(
+bake_attr* bake_attr_parse_value(
     bake_config *config,
     bake_project *project,
     const char *package_id,
-    bake_attribute *existing,
+    bake_attr *existing,
     JSON_Value *v);
 
 static
@@ -41,7 +41,7 @@ int16_t bake_project_func_locate(
         package_id = project->id;
     }
     if (!strcmp(argument, "package")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_PACKAGE);
+        value = ut_locate(package_id, NULL, UT_LOCATE_PROJECT);
     } else if (!strcmp(argument, "include")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_INCLUDE);
     } else if (!strcmp(argument, "etc")) {
@@ -136,7 +136,7 @@ int16_t bake_project_func_language(
 }
 
 static
-int16_t bake_attribute_func(
+int16_t bake_attr_func(
     bake_config *config,
     bake_project *project,
     const char *package_id,
@@ -157,7 +157,7 @@ int16_t bake_attribute_func(
     return 0;
 }
 
-char* bake_attribute_replace(
+char* bake_attr_replace(
     bake_config *config,
     bake_project *project,
     const char *package_id,
@@ -215,7 +215,7 @@ char* bake_attribute_replace(
                 arg_id[ptr - start] = '\0';
             }
 
-            if (bake_attribute_func(
+            if (bake_attr_func(
                 config,
                 project,
                 package_id,
@@ -252,24 +252,24 @@ error:
 
 
 static
-bake_attribute* bake_attribute_parse_array(
+bake_attr* bake_attr_parse_array(
     bake_config *config,
     bake_project *project,
     const char *package_id,
-    bake_attribute *existing,
+    bake_attr *existing,
     JSON_Array *a)
 {
     uint32_t i, count = json_array_get_count(a);
-    bake_attribute *result = existing;
+    bake_attr *result = existing;
     if (!result) {
-        result = ut_calloc(sizeof(bake_attribute));
+        result = ut_calloc(sizeof(bake_attr));
         result->kind = BAKE_ARRAY;
         result->is.array = ut_ll_new();
     }
 
     for (i = 0; i < count; i ++) {
         JSON_Value *v = json_array_get_value(a, i);
-        bake_attribute *attr = bake_attribute_parse_value(
+        bake_attr *attr = bake_attr_parse_value(
             config, project, package_id, NULL, v);
         if (attr) {
             ut_ll_append(result->is.array, attr);
@@ -285,17 +285,17 @@ error:
 }
 
 static
-bake_attribute* bake_attribute_parse_string(
+bake_attr* bake_attr_parse_string(
     bake_config *config,
     bake_project *project,
     const char *package_id,
     const char *str)
 {
-    bake_attribute *result = ut_calloc(sizeof(bake_attribute));
+    bake_attr *result = ut_calloc(sizeof(bake_attr));
     result->kind = BAKE_STRING;
 
     if (str) {
-        result->is.string = bake_attribute_replace(
+        result->is.string = bake_attr_replace(
             config, project, package_id, str);
         if (!result->is.string) {
             free(result);
@@ -309,10 +309,10 @@ bake_attribute* bake_attribute_parse_string(
 }
 
 static
-bake_attribute* bake_attribute_parse_number(
+bake_attr* bake_attr_parse_number(
     double v)
 {
-    bake_attribute *result = ut_calloc(sizeof(bake_attribute));
+    bake_attr *result = ut_calloc(sizeof(bake_attr));
     result->kind = BAKE_NUMBER;
 
     result->is.number = v;
@@ -321,10 +321,10 @@ bake_attribute* bake_attribute_parse_number(
 }
 
 static
-bake_attribute* bake_attribute_parse_bool(
+bake_attr* bake_attr_parse_bool(
     bool v)
 {
-    bake_attribute *result = ut_calloc(sizeof(bake_attribute));
+    bake_attr *result = ut_calloc(sizeof(bake_attr));
     result->kind = BAKE_BOOLEAN;
 
     result->is.boolean = v;
@@ -333,35 +333,35 @@ bake_attribute* bake_attribute_parse_bool(
 }
 
 static
-bake_attribute* bake_attribute_parse_value(
+bake_attr* bake_attr_parse_value(
     bake_config *config,
     bake_project *project,
     const char *package_id,
-    bake_attribute *existing,
+    bake_attr *existing,
     JSON_Value *v)
 {
-    bake_attribute *attr = NULL;
+    bake_attr *attr = NULL;
 
     JSON_Value_Type t = json_value_get_type(v);
     switch(t) {
     case JSONArray:
-        attr = bake_attribute_parse_array(
+        attr = bake_attr_parse_array(
             config, project, package_id, existing, json_value_get_array(v));
         break;
     case JSONNull:
     case JSONString:
-        attr = bake_attribute_parse_string(
+        attr = bake_attr_parse_string(
             config, project, package_id, json_value_get_string(v));
         break;
     case JSONNumber:
-        attr = bake_attribute_parse_number(json_value_get_number(v));
+        attr = bake_attr_parse_number(json_value_get_number(v));
         break;
     case JSONBoolean:
-        attr = bake_attribute_parse_bool(json_value_get_boolean(v));
+        attr = bake_attr_parse_bool(json_value_get_boolean(v));
         break;
     case JSONObject:
         /* Ignore objects- placeholder */
-        attr = ut_calloc(sizeof(bake_attribute));
+        attr = ut_calloc(sizeof(bake_attr));
         attr->kind = BAKE_BOOLEAN;
         break;
     default:
@@ -372,14 +372,16 @@ bake_attribute* bake_attribute_parse_value(
 }
 
 static
-ut_ll bake_attribute_parse_object(
+ut_ll bake_attr_parse_object(
     bake_config *config,
     bake_project *project,
-    const char *package_id,
+    const char *project_id,
     JSON_Object *jo,
     ut_ll existing)
 {
     if (!jo) {
+        ut_throw("bake_attr_parse_object: no object to parse");
+        printf("no object error\n ");
         return NULL;
     }
 
@@ -387,16 +389,17 @@ ut_ll bake_attribute_parse_object(
     ut_ll result = existing ? existing : ut_ll_new();
 
     for (i = 0; i < count; i ++) {
-        bake_attribute *attr = NULL;
+        bake_attr *attr = NULL;
         JSON_Value *v = json_object_get_value_at(jo, i);
         const char *json_name = json_object_get_name(jo, i);
         char *name = (char*)json_name;
 
         if (name[0] == '$') {
             /* If name contains function, parse it */
-            name = bake_attribute_replace(
+            name = bake_attr_replace(
                 config, project, NULL, json_name);
             if (!name) {
+                printf("function error\n");
                 goto error;
             }
         }
@@ -405,8 +408,12 @@ ut_ll bake_attribute_parse_object(
             JSON_Value *value = json_object_get_value_at(jo, i);
             if (json_value_get_type(value) == JSONObject) {
                 JSON_Object *obj = json_value_get_object(value);
-                ut_try (bake_attribute_parse_object(
-                    config, project, NULL, obj, result), NULL);
+
+                ut_try (!bake_attr_parse_object(
+                    config, project, project_id, obj, result), NULL);
+            } else {
+                ut_throw("JSON object expected for expression '%s'", json_name);
+                goto error;
             }
         } else
 
@@ -414,11 +421,10 @@ ut_ll bake_attribute_parse_object(
             /* Ignore */
         } else {
             /* Check if attribute already exists */
-            attr = bake_attribute_get(result, name);
+            attr = bake_attr_get(result, name);
 
             /* Add member to list of project attributes */
-            attr = bake_attribute_parse_value(
-                config, project, package_id, attr, v);
+            attr = bake_attr_parse_value(config, project, project_id, attr, v);
             if (attr) {
                 attr->name = ut_strdup(name);
                 ut_ll_append(result, attr);
@@ -434,25 +440,25 @@ error:
     return NULL;
 }
 
-ut_ll bake_attributes_parse(
+ut_ll bake_attrs_parse(
     bake_config *config,
     bake_project *project,
     const char *project_id,
     JSON_Object *object,
     ut_ll existing)
 {
-    return bake_attribute_parse_object(
+    return bake_attr_parse_object(
         config, project, project_id, object, existing);
 }
 
-bake_attribute *bake_attribute_get(
+bake_attr *bake_attr_get(
     ut_ll attributes,
     const char *name)
 {
     if (attributes) {
         ut_iter it = ut_ll_iter(attributes);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *attr = ut_iter_next(&it);
+            bake_attr *attr = ut_iter_next(&it);
 
             if (!strcmp(attr->name, name)) {
                 return attr;
@@ -472,4 +478,34 @@ void bake_clean_string_array(
         free(str);
     }
     ut_ll_free(list);
+}
+
+void bake_attr_free_string_array(
+    ut_ll list)
+{
+    ut_iter it = ut_ll_iter(list);
+    while (ut_iter_hasNext(&it)) {
+        free( ut_iter_next(&it));
+    }
+    ut_ll_free(list);
+}
+
+void bake_attr_free_attr_array(
+    ut_ll list)
+{
+    ut_iter it = ut_ll_iter(list);
+    while (ut_iter_hasNext(&it)) {
+        bake_attr_free( ut_iter_next(&it));
+    }
+    ut_ll_free(list);
+}
+
+void bake_attr_free(
+    bake_attr *attr)
+{
+    if (attr->kind == BAKE_STRING) {
+        free(attr->is.string);
+    } else if (attr->kind == BAKE_ARRAY) {
+        bake_attr_free_string_array(attr->is.array);
+    }
 }

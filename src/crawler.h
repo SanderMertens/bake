@@ -68,6 +68,16 @@ uint32_t bake_crawler_count(
      bake_crawler *_this,
      bake_project *project);
 
+ /** Test if crawler has a project.
+  *
+  * @param _this A crawler object.
+  * @param id Id of project to check.
+  * @return true if project has been added, false if not.
+  */
+  bool bake_crawler_has(
+      bake_crawler *_this,
+      const char *id);
+
 /** Walk projects.
  * This walks projects found with bake_crawler_search in correct dependency
  * order.

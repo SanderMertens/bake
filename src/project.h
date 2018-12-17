@@ -83,7 +83,7 @@ int16_t bake_project_clean_current_platform(
     bake_project *project);
 
 /* Get driver specific attribute */
-bake_attribute* bake_project_get_attr(
+bake_attr* bake_project_get_attr(
     bake_project *project,
     const char *driver_id,
     const char *attr);

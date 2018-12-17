@@ -166,31 +166,31 @@ void compile_src(
 
     if (!cpp) {
         /* CFLAGS for c projects */
-        bake_attribute *flags_attr = driver->get_attr("cflags");
+        bake_attr *flags_attr = driver->get_attr("cflags");
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                bake_attribute *flag = ut_iter_next(&it);
+                bake_attr *flag = ut_iter_next(&it);
                 ut_strbuf_append(&cmd, " %s", flag->is.string);
             }
         }
     } else {
         /* CXXFLAGS for c4cpp projects */
-        bake_attribute *flags_attr = driver->get_attr("cxxflags");
+        bake_attr *flags_attr = driver->get_attr("cxxflags");
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                bake_attribute *flag = ut_iter_next(&it);
+                bake_attr *flag = ut_iter_next(&it);
                 ut_strbuf_append(&cmd, " %s", flag->is.string);
             }
         }
     }
 
-    bake_attribute *include_attr = driver->get_attr("include");
+    bake_attr *include_attr = driver->get_attr("include");
     if (include_attr) {
         ut_iter it = ut_ll_iter(include_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *include = ut_iter_next(&it);
+            bake_attr *include = ut_iter_next(&it);
             char* file = include->is.string;
             ut_strbuf_append(&cmd, " -I%s", file);
         }
@@ -256,11 +256,11 @@ char* find_static_lib(
     free(file);
 
     /* If static library is not found in configuration, try libpath */
-    bake_attribute *libpath_attr = driver->get_attr("libpath");
+    bake_attr *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *lib_attr = ut_iter_next(&it);
+            bake_attr *lib_attr = ut_iter_next(&it);
             file = ut_asprintf("%s/lib%s.a", lib_attr->is.string, lib);
 
             if ((ret = ut_file_test(file)) == 1) {
@@ -285,7 +285,7 @@ bool is_dylib(
 {
     if (is_darwin() && project->type == BAKE_PACKAGE) {
         bool dylib = true;
-        bake_attribute *dylib_attr = driver->get_attr("dylib");
+        bake_attr *dylib_attr = driver->get_attr("dylib");
         if (dylib_attr) {
             dylib = dylib_attr->is.boolean;
         }
@@ -354,11 +354,11 @@ void link_dynamic_binary(
     }
 
     /* LDFLAGS */
-    bake_attribute *flags_attr = driver->get_attr("ldflags");
+    bake_attr *flags_attr = driver->get_attr("ldflags");
     if (flags_attr) {
         ut_iter it = ut_ll_iter(flags_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *flag = ut_iter_next(&it);
+            bake_attr *flag = ut_iter_next(&it);
             ut_strbuf_append(&cmd, " %s", flag->is.string);
         }
     }
@@ -379,11 +379,11 @@ void link_dynamic_binary(
         ut_strbuf_append(&cmd, " -l%s", dep);
     }
 
-    bake_attribute *static_lib_attr = driver->get_attr("static_lib");
+    bake_attr *static_lib_attr = driver->get_attr("static_lib");
     if (static_lib_attr) {
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *lib = ut_iter_next(&it);
+            bake_attr *lib = ut_iter_next(&it);
             if (hide_symbols) {
                 /* If hiding symbols and linking with static library, unpack
                  * library objects to temp directory. If the library would be
@@ -418,16 +418,16 @@ void link_dynamic_binary(
 
                 ut_ll_append(static_object_paths, obj_path);
             } else {
-                ut_strbuf_append(&cmd, " -l%s", lib);
+                ut_strbuf_append(&cmd, " -l%s", lib->is.string);
             }
         }
     }
 
-    bake_attribute *libpath_attr = driver->get_attr("libpath");
+    bake_attr *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *lib = ut_iter_next(&it);
+            bake_attr *lib = ut_iter_next(&it);
             ut_strbuf_append(&cmd, " -L%s", lib->is.string);
 
             if (is_darwin()) {
@@ -437,11 +437,11 @@ void link_dynamic_binary(
         }
     }
 
-    bake_attribute *lib_attr = driver->get_attr("lib");
+    bake_attr *lib_attr = driver->get_attr("lib");
     if (lib_attr) {
         ut_iter it = ut_ll_iter(lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
-            bake_attribute *lib = ut_iter_next(&it);
+            bake_attr *lib = ut_iter_next(&it);
             const char *mapped = lib_map(lib->is.string);
             if (mapped) {
                 ut_strbuf_append(&cmd, " -l%s", mapped);

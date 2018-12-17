@@ -300,7 +300,7 @@ void bake_driver_clean_cb(
 }
 
 static
-bake_attribute* bake_driver_get_attr_cb(
+bake_attr* bake_driver_get_attr_cb(
     const char *name)
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
@@ -314,7 +314,7 @@ bool bake_driver_get_bool_attr_cb(
 {
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
-    bake_attribute *attr = bake_project_get_attr(project, driver->id, name);
+    bake_attr *attr = bake_project_get_attr(project, driver->id, name);
     if (!attr) {
         return false;
     }

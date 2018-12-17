@@ -90,7 +90,7 @@ struct bake_project {
     ut_ll files_to_clean;
 
     /* Interface for bake plugin */
-    bake_attribute* (*get_attr)(const char *name);
+    bake_attr* (*get_attr)(const char *name);
     char* (*get_attr_string)(const char *name);
     bool (*get_attr_bool)(const char *name);
     void (*add_build_dependency)(const char *file);

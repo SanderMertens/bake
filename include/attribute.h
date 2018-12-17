@@ -19,29 +19,38 @@
  * THE SOFTWARE.
  */
 
-#ifndef BAKE_ATTRIBUTE_H_
-#define BAKE_ATTRIBUTE_H_
+#ifndef bake_attr_H_
+#define bake_attr_H_
 
-typedef enum bake_attribute_kind {
+typedef enum bake_attr_kind {
     BAKE_BOOLEAN,
     BAKE_STRING,
     BAKE_NUMBER,
     BAKE_ARRAY
-} bake_attribute_kind;
+} bake_attr_kind;
 
-typedef struct bake_attribute {
+typedef struct bake_attr {
     char *name;
-    bake_attribute_kind kind;
+    bake_attr_kind kind;
     union {
         bool boolean;
         char *string;
         double number;
         ut_ll array;
     } is;
-} bake_attribute;
+} bake_attr;
 
-bake_attribute *bake_attribute_get(
+bake_attr *bake_attr_get(
     ut_ll attributes,
     const char *name);
+
+void bake_attr_free(
+    bake_attr *attr);
+
+void bake_attr_free_attr_array(
+    ut_ll list);
+
+void bake_attr_free_string_array(
+    ut_ll list);
 
 #endif

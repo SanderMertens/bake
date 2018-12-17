@@ -27,7 +27,9 @@ extern ut_tls BAKE_PROJECT_KEY;
 
 static
 int16_t bake_project_parse_value(
+    bake_config *config,
     bake_project *p,
+    const char *project_id,
     JSON_Object *jo)
 {
     uint32_t i, count = json_object_get_count(jo);
@@ -35,7 +37,7 @@ int16_t bake_project_parse_value(
 
     for (i = 0; i < count; i ++) {
         JSON_Value *v = json_object_get_value_at(jo, i);
-        const char *member = json_object_get_name(jo, i);
+        char *member = (char*)json_object_get_name(jo, i);
 
         if (!strcmp(member, "public")) {
            ut_try (bake_json_set_boolean(&p->public, member, v), NULL);
@@ -73,7 +75,7 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "keep_artefact")) {
             ut_try (bake_json_set_boolean(&p->keep_artefact, member, v), NULL);
         } else {
-            ut_warning("unknown member '%s' in project.json", member);
+            ut_warning("unknown member '%s' in project.json of '%s'", member, p->id);
         }
     }
 
@@ -109,12 +111,12 @@ int16_t bake_project_set(
         p->type = BAKE_TOOL;
     } else if (!strcmp(type, "executable")) {
         p->type = BAKE_APPLICATION;
-        ut_warning("'executable' is deprecated, use 'application' instead");
+        ut_warning("'executable' is deprecated, use 'application' instead for '%s'", p->id);
     } else if (!strcmp(type, "library")) {
         p->type = BAKE_PACKAGE;
-        ut_warning("'library' is deprecated, use 'package' instead");
+        ut_warning("'library' is deprecated, use 'package' instead for '%s'", p->id);
     } else {
-        ut_throw("project type '%s' is not valid", type);
+        ut_throw("project type '%s' is not valid for '%s'", type, p->id);
         goto error;
     }
 
@@ -125,6 +127,7 @@ error:
 
 static
 int16_t bake_project_parse(
+    bake_config *config,
     bake_project *project)
 {
     char *file = ut_asprintf("%s/project.json", project->path);
@@ -157,7 +160,7 @@ int16_t bake_project_parse(
 
         JSON_Object *j_value = json_object_get_object(jo, "value");
         if (j_value) {
-            ut_try (bake_project_parse_value(project, j_value), NULL);
+            ut_try (bake_project_parse_value(config, project, project->id, j_value), NULL);
         }
 
         project->json = jo;
@@ -222,7 +225,7 @@ static
 int16_t bake_project_load_dependee_config(
     bake_config *config,
     bake_project *project,
-    const char *package_id,
+    const char *project_id,
     const char *file)
 {
     JSON_Value *j = json_parse_file(file);
@@ -250,20 +253,20 @@ int16_t bake_project_load_dependee_config(
         JSON_Value *value = json_object_get_value_at(jo, i);
         JSON_Object *obj = json_value_get_object(value);
 
-        if (strcmp(member, "value")) {
+        if (!strcmp(member, "value")) {
+            ut_try (bake_project_parse_value(config, project, project_id, obj), NULL);
+        } else {
             bake_project_driver *driver = bake_project_get_driver(project, member);
             if (!driver) {
                 ut_try( bake_project_load_driver(project, member, obj), NULL);
             } else {
-                if (!bake_attributes_parse(
-                    config, project, project->id, obj, driver->attributes))
-                {
-                    ut_throw("failed to parse dependee config for driver %s", member);
+                driver->attributes = bake_attrs_parse(
+                    config, project, project->id, obj, driver->attributes);
+                if (!driver->attributes) {
+                    ut_throw("failed to parse dependee config for driver '%s'", member);
                     goto error;
                 }
             }
-        } else {
-            ut_try (bake_project_parse_value(project, obj), NULL);
         }
     }
 
@@ -278,7 +281,7 @@ int16_t bake_project_add_dependee_config(
     bake_project *project,
     const char *dependency)
 {
-    const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PACKAGE);
+    const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
     if (!libpath) {
         ut_throw("failed to locate path for dependency '%s'", dependency);
         goto error;
@@ -332,10 +335,10 @@ int16_t bake_project_init(
 
     /* If 'src' and 'includes' weren't set, use defaults */
     if (!ut_ll_count(project->sources)) {
-        ut_ll_append(project->sources, "src");
+        ut_ll_append(project->sources, ut_strdup("src"));
     }
     if (!ut_ll_count(project->includes)) {
-        ut_ll_append(project->includes, "include");
+        ut_ll_append(project->includes, ut_strdup("include"));
     }
 
     if (!project->language) {
@@ -401,7 +404,7 @@ bake_project* bake_project_new(
     /* Parse project.json if available */
     if (path) {
         ut_try (
-            bake_project_parse(result),
+            bake_project_parse(config, result),
             "failed to parse '%s/project.json'",
             path);
 
@@ -413,20 +416,32 @@ error:
     return NULL;
 }
 
+
 void bake_project_free(
     bake_project *project)
 {
+    bake_attr_free_string_array(project->use);
+    bake_attr_free_string_array(project->use_private);
+    bake_attr_free_string_array(project->use_build);
+    bake_attr_free_string_array(project->sources);
+    bake_attr_free_string_array(project->includes);
+    bake_attr_free_string_array(project->link);
 
+    ut_iter it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        bake_attr_free_attr_array(driver->attributes);
+    }
 }
 
-bake_attribute* bake_project_get_attr(
+bake_attr* bake_project_get_attr(
     bake_project *project,
     const char *driver_id,
     const char *attr)
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
     if (driver && driver->attributes) {
-        return bake_attribute_get(driver->attributes, attr);
+        return bake_attr_get(driver->attributes, attr);
     } else {
         return NULL;
     }
@@ -445,13 +460,17 @@ int bake_project_load_drivers(
             !strcmp(member, "value"))
             continue;
 
-        JSON_Value *value = json_object_get_value_at(project->json, i);
-        JSON_Object *obj = json_value_get_object(value);
+        if (member[0] == '$') {
 
-        if (strcmp(member, "dependee")) {
-            ut_try( bake_project_load_driver(project, member, obj), NULL);
         } else {
-            project->dependee_json = json_serialize_to_string(value);
+            JSON_Value *value = json_object_get_value_at(project->json, i);
+            JSON_Object *obj = json_value_get_object(value);
+
+            if (strcmp(member, "dependee")) {
+                ut_try( bake_project_load_driver(project, member, obj), NULL);
+            } else {
+                project->dependee_json = json_serialize_to_string(value);
+            }
         }
     }
 
@@ -468,8 +487,15 @@ int bake_project_parse_driver_config(
 
     while (ut_iter_hasNext(&it)) {
         bake_project_driver *driver = ut_iter_next(&it);
-        driver->attributes = bake_attributes_parse(
+        if (!driver->json) {
+            continue;
+        }
+
+        driver->attributes = bake_attrs_parse(
             config, project, project->id, driver->json, NULL);
+        if (!driver->attributes) {
+            goto error;
+        }
     }
 
     return 0;
@@ -510,15 +536,36 @@ error:
 
 static
 int16_t bake_check_dependency(
+    bake_config *config,
     bake_project *p,
     const char *dependency,
     uint32_t artefact_modified,
     bool private)
 {
+    const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+    bool dep_has_lib = false;
+
+    if (path) {
+        bake_project *dep = bake_project_new(path, config);
+        if (dep) {
+            if (dep->type != BAKE_PACKAGE) {
+                ut_throw("invalid dependency '%s', not a package", dependency);
+                goto error;
+            }
+            if (dep->language) {
+                dep_has_lib = true;
+            }
+        }
+        bake_project_free(dep);
+    }
+
+    if (!dep_has_lib) {
+        return 0;
+    }
+
     const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
     if (!lib) {
-        ut_info("use '%s' => #[red]missing#[normal]", dependency, lib);
-        ut_throw("missing dependency '%s'", dependency);
+        ut_throw("binary for dependency '%s' not found", dependency);
         goto error;
     }
 
@@ -551,6 +598,10 @@ int16_t bake_project_check_dependencies(
 {
     time_t artefact_modified = 0;
 
+    if (!project->language) {
+        return 0;
+    }
+
     char *artefact_full = project->artefact_file;
     if  (ut_file_test(artefact_full)) {
         artefact_modified = ut_lastmodified(artefact_full);
@@ -561,7 +612,7 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                project, package, artefact_modified, false))
+                config, project, package, artefact_modified, false))
             {
                 goto error;
             }
@@ -573,7 +624,7 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                project, package, artefact_modified, true))
+                config, project, package, artefact_modified, true))
             {
                 goto error;
             }
@@ -622,7 +673,7 @@ int16_t bake_project_resolve_links(
 
     while (ut_iter_hasNext(&it)) {
         char *link = ut_iter_next(&it);
-        char *parsed = bake_attribute_replace(config, project, NULL, link);
+        char *parsed = bake_attr_replace(config, project, NULL, link);
         if (!parsed) {
             goto error;
         }
@@ -725,7 +776,7 @@ int16_t bake_project_add_dependency(
     bake_project *p,
     const char *dep)
 {
-    const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PACKAGE);
+    const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
     if (!libpath) {
         ut_throw(
             "failed to locate library path for dependency '%s'", dep);
@@ -875,9 +926,13 @@ int16_t bake_project_clean_intern(
     bake_project *project,
     bool all_platforms)
 {
-    bake_driver *driver = project->language_driver->driver;
-
-    ut_try( bake_driver__clean(driver, config, project), NULL);
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+            ut_try( bake_driver__clean(driver->driver, config, project), NULL);
+        }
+    }
 
     ut_try( ut_rm(project->cache_path), NULL);
 
@@ -889,10 +944,12 @@ int16_t bake_project_clean_intern(
         }
     }
 
-    ut_iter it = ut_ll_iter(project->files_to_clean);
-    while (ut_iter_hasNext(&it)) {
-        char *file = ut_iter_next(&it);
-        ut_try(ut_rm(strarg("%s/%s", project->path, file)), NULL);
+    if (project->files_to_clean) {
+        ut_iter it = ut_ll_iter(project->files_to_clean);
+        while (ut_iter_hasNext(&it)) {
+            char *file = ut_iter_next(&it);
+            ut_try(ut_rm(strarg("%s/%s", project->path, file)), NULL);
+        }
     }
 
     project->changed = true;

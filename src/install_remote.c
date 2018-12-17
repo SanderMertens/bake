@@ -39,6 +39,7 @@ static
 int16_t bake_parse_repo_url(
     const char *url,
     char **full_url_out,
+    char **base_url_out,
     char **name_out,
     char **src_out)
 {
@@ -86,7 +87,16 @@ int16_t bake_parse_repo_url(
 
     char *src_path = ut_envparse("$BAKE_HOME/src/%s", name);
 
+    char *last_elem = strrchr(full_url, '/');
+    char *base_url = NULL;
+    if (last_elem) {
+        *last_elem = '\0';
+        base_url = ut_strdup(full_url);
+        *last_elem = '/';
+    }
+
     *full_url_out = full_url;
+    *base_url_out = base_url;
     *name_out = name;
     *src_out = src_path;
 
@@ -95,13 +105,68 @@ error:
     return -1;
 }
 
-bake_project* bake_update(
+static
+int16_t bake_update_dependency_list(
     bake_config *config,
+    const char *base_url,
+    bake_crawler *crawler,
+    ut_ll dependencies)
+{
+    ut_iter it = ut_ll_iter(dependencies);
+    while (ut_iter_hasNext(&it)) {
+        char *dep = ut_iter_next(&it);
+
+        if (bake_crawler_has(crawler, dep)) {
+            continue;
+        }
+
+        char ch, *ptr, *dep_tmp = ut_strdup(dep);
+        for (ptr = dep_tmp; (ch = *ptr); ptr ++) {
+            if (ch == '.' || ch == '/') {
+                *ptr = '-';
+            }
+        }
+
+        char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
+        if (!bake_clone(config, crawler, url)) {
+            const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
+            if (!deppath) {
+                goto error;
+            } else {
+                ut_info("found dependency '%s' locally in '%s'", dep, deppath);
+            }
+        }
+        free(url);
+        free(dep_tmp);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_update_dependencies(
+    bake_config *config,
+    const char *base_url,
+    bake_crawler *crawler,
+    bake_project *project)
+{
+    ut_try(bake_update_dependency_list(config, base_url, crawler, project->use), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, crawler, project->use_private), NULL);
+    return 0;
+error:
+    return -1;
+}
+
+bake_crawler* bake_update(
+    bake_config *config,
+    bake_crawler *crawler,
     const char *url)
 {
-    char *full_url = NULL, *name = NULL, *src_path = NULL;
-    bake_project *result = NULL;
-    ut_try( bake_parse_repo_url(url, &full_url, &name, &src_path), NULL);
+    char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
+    bake_project *project = NULL;
+    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
 
     ut_log("update '%s' in '%s'\n", full_url, src_path);
 
@@ -113,40 +178,57 @@ bake_project* bake_update(
     gitcmd = ut_asprintf("git -C %s clean -q -xdf", src_path);
     ut_try(cmd(gitcmd), NULL);
 
-    result = bake_project_new(src_path, config);
+    if (!crawler) {
+        crawler = bake_crawler_new(config);
+    }
+    project = bake_project_new(src_path, config);
+    ut_try(bake_update_dependencies(config, base_url, crawler, project), NULL);
+
+    bake_crawler_add(crawler, project);
+
     free(full_url);
+    free(base_url);
     free(src_path);
 
-    return result;
+    return crawler;
 error:
     return NULL;
 }
 
-bake_project* bake_clone(
+bake_crawler* bake_clone(
     bake_config *config,
+    bake_crawler *crawler,
     const char *url)
 {
-    char *full_url = NULL, *name = NULL, *src_path = NULL;
-    bake_project *result = NULL;
-    ut_try( bake_parse_repo_url(url, &full_url, &name, &src_path), NULL);
+    char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
+    bake_project *project = NULL;
+    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
 
     if (ut_file_test(src_path) == 1) {
-        ut_trace("project '%s' already cloned, doing update instead", name);
+        ut_trace("project '%s' already cloned, updating instead", name);
         free(full_url);
         free(src_path);
-        return bake_update(config, url);
+        return bake_update(config, crawler, url);
     } else {
         ut_log("clone '%s' into '%s'\n", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);
         ut_try (cmd(gitcmd), NULL);
     }
 
-    result = bake_project_new(src_path, config);
+    if (!crawler) {
+        crawler = bake_crawler_new(config);
+    }
+
+    project = bake_project_new(src_path, config);
+    ut_try(bake_update_dependencies(config, base_url, crawler, project), NULL);
+
+    ut_try(bake_crawler_add(crawler, project), NULL);
 
     free(full_url);
+    free(base_url);
     free(src_path);
 
-    return result;
+    return crawler;
 error:
     return NULL;
 }
