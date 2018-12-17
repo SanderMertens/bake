@@ -420,15 +420,20 @@ ut_ll bake_attr_parse_object(
         if (!strcmp(name, "0") || !stricmp(name, "false")) {
             /* Ignore */
         } else {
+            bool new_attr = false;
+
             /* Check if attribute already exists */
             attr = bake_attr_get(result, name);
+            if (!attr) {
+                new_attr = true;
+            }
 
             /* Add member to list of project attributes */
             attr = bake_attr_parse_value(config, project, project_id, attr, v);
-            if (attr) {
+            if (new_attr) {
                 attr->name = ut_strdup(name);
                 ut_ll_append(result, attr);
-            } else {
+            } else if (!attr) {
                 ut_throw("failed to parse member '%s'", name);
                 goto error;
             }
@@ -495,7 +500,8 @@ void bake_attr_free_attr_array(
 {
     ut_iter it = ut_ll_iter(list);
     while (ut_iter_hasNext(&it)) {
-        bake_attr_free( ut_iter_next(&it));
+        bake_attr *attr = ut_iter_next(&it);
+        bake_attr_free(attr);
     }
     ut_ll_free(list);
 }
@@ -508,4 +514,6 @@ void bake_attr_free(
     } else if (attr->kind == BAKE_ARRAY) {
         bake_attr_free_string_array(attr->is.array);
     }
+    free(attr->name);
+    free(attr);
 }

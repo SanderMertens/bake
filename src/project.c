@@ -416,7 +416,6 @@ error:
     return NULL;
 }
 
-
 void bake_project_free(
     bake_project *project)
 {
