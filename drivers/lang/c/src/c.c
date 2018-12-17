@@ -733,8 +733,31 @@ void add_dependency_includes(
         ut_iter it = ut_ll_iter(dependencies);
         while (ut_iter_hasNext(&it)) {
             char *project_id = ut_iter_next(&it);
-            char *short_project_id = get_short_name(project_id);
-            fprintf(f, "#include <%s/%s.h>\n", project_id, short_project_id);
+            char ch, *ptr, *path = ut_strdup(project_id);
+            for (ptr = path; (ch = *ptr); ptr++) {
+                if (ch == '.') {
+                    *ptr = '/';
+                }
+            }
+
+            bool include_found = false;
+            char *short_project_id = get_short_name(path);
+            char *file = ut_asprintf("%s/include/%s/%s.h", config->home, path, short_project_id);
+            if (ut_file_test(file) != 1) {
+                free(file);
+                file = ut_asprintf("%s/include/%s/%s.h", config->target, path, short_project_id);
+                if (ut_file_test(file) == 1) {
+                    include_found = true;
+                }
+            } else {
+                include_found = true;
+            }
+            if (include_found) {
+                fprintf(f, "#include <%s/%s.h>\n", path, short_project_id);
+            }
+
+            free(file);
+            free(path);
         }
     }
 }
