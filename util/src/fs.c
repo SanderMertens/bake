@@ -646,7 +646,7 @@ int16_t ut_dir_collectRecursive(
         }
 
         /* If directory, crawl */
-        if (ut_isdir(file)) {
+        if (ut_isdir(path)) {
             if (ut_dir_collectRecursive(file, stack, filter, files)) {
                 goto error;
             }
