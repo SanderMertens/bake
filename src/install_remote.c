@@ -28,7 +28,7 @@ int16_t cmd(
     int8_t ret;
     int sig = ut_proc_cmd(cmd, &ret);
     if (sig || ret) {
-        ut_error("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
+        ut_throw("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
         return -1;
     }
 
@@ -129,8 +129,10 @@ int16_t bake_update_dependency_list(
 
         char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
         if (!bake_clone(config, crawler, url)) {
+            ut_catch();
             const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
             if (!deppath) {
+                ut_throw("cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
             } else {
                 ut_info("found dependency '%s' locally in '%s'", dep, deppath);
