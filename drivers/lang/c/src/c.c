@@ -1,5 +1,5 @@
 
-#include <bake/bake.h>
+#include <bake>
 
 #define OBJ_DIR ".bake_cache/obj"
 
@@ -136,16 +136,11 @@ void compile_src(
         ut_strbuf_appendstr(&cmd, " -std=c99 -D_XOPEN_SOURCE=600");
     }
 
-    ut_strbuf_append(&cmd, " -DPACKAGE_ID=\"%s\"", project->id);
+    ut_strbuf_append(&cmd, " -DBAKE_PROJECT_ID=\"%s\"", project->id);
 
-    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id);
+    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id_underscore);
     strupper(building_macro);
-    char *ptr, ch;
-    for (ptr = building_macro; (ch = *ptr); ptr++) {
-        if (ch == '/') {
-            *ptr = '_';
-        }
-    }
+
     ut_strbuf_appendstr(&cmd, building_macro);
     free(building_macro);
 
@@ -198,7 +193,7 @@ void compile_src(
 
     ut_strbuf_append(&cmd, " -I %s/include", config->target);
 
-    if (strcmp(ut_getenv("BAKE_TARGET"), ut_getenv("BAKE_HOME"))) {
+    if (strcmp(config->target, config->home)) {
         ut_strbuf_append(&cmd, " -I %s/include", config->home);
     }
 
@@ -296,22 +291,6 @@ bool is_dylib(
 }
 
 static
-char *project_name(
-    const char *project_id)
-{
-    char *result = NULL;
-    char *id = ut_strdup(project_id);
-    char *ptr, ch;
-    for (ptr = id; (ch = *ptr); ptr++) {
-        if (ch == '/') {
-            *ptr = '_';
-        }
-    }
-
-    return id;
-}
-
-static
 void link_dynamic_binary(
     bake_driver_api *driver,
     bake_config *config,
@@ -369,7 +348,7 @@ void link_dynamic_binary(
         ut_strbuf_append(&cmd, " -L%s", config->target_lib);
     }
 
-    if (strcmp(ut_getenv("BAKE_TARGET"), ut_getenv("BAKE_HOME"))) {
+    if (strcmp(config->target, config->home)) {
         ut_strbuf_append(&cmd, " -L%s/lib", config->home);
     }
 
@@ -614,7 +593,7 @@ char* artefact_name(
     bake_project *project)
 {
     char *result;
-    char *id = project_name(project->id);
+    char *id = project->id_underscore;
 
     if (project->type == BAKE_PACKAGE) {
         bool link_static = driver->get_attr_bool("static_artefact");
@@ -631,8 +610,6 @@ char* artefact_name(
     } else {
         result = ut_strdup(id);
     }
-
-    free(id);
 
     return result;
 }
@@ -727,38 +704,32 @@ void add_dependency_includes(
     FILE *f,
     ut_ll dependencies)
 {
-    if (!ut_ll_count(dependencies)) {
-        fprintf(f, "/* No dependencies */\n");
-    } else {
-        ut_iter it = ut_ll_iter(dependencies);
-        while (ut_iter_hasNext(&it)) {
-            char *project_id = ut_iter_next(&it);
-            char ch, *ptr, *path = ut_strdup(project_id);
-            for (ptr = path; (ch = *ptr); ptr++) {
-                if (ch == '.') {
-                    *ptr = '/';
-                }
-            }
+    uint32_t count = 0;
+    ut_iter it = ut_ll_iter(dependencies);
+    while (ut_iter_hasNext(&it)) {
+        char *project_id = ut_iter_next(&it);
 
-            bool include_found = false;
-            char *short_project_id = get_short_name(path);
-            char *file = ut_asprintf("%s/include/%s/%s.h", config->home, path, short_project_id);
-            if (ut_file_test(file) != 1) {
-                free(file);
-                file = ut_asprintf("%s/include/%s/%s.h", config->target, path, short_project_id);
-                if (ut_file_test(file) == 1) {
-                    include_found = true;
-                }
-            } else {
+        bool include_found = false;
+        char *file = ut_asprintf("%s/include/%s", config->home, project_id);
+        if (ut_file_test(file) != 1) {
+            free(file);
+            file = ut_asprintf("%s/include/%s", config->target, project_id);
+            if (ut_file_test(file) == 1) {
                 include_found = true;
             }
-            if (include_found) {
-                fprintf(f, "#include <%s/%s.h>\n", path, short_project_id);
-            }
-
-            free(file);
-            free(path);
+        } else {
+            include_found = true;
         }
+        if (include_found) {
+            fprintf(f, "#include <%s>\n", project_id);
+            count ++;
+        }
+
+        free(file);
+    }
+
+    if (!count) {
+        fprintf(f, "/* No dependencies */\n");
     }
 }
 
@@ -768,18 +739,14 @@ void generate(
     bake_config *config,
     bake_project *project)
 {
-    const char *id = project->id;
-    const char *short_id = get_short_name(id);
+    const char *short_id = get_short_name(project->id);
 
     /* Create upper-case id for defines in header file */
-    char *id_upper = strdup(id);
+    char *id_upper = ut_strdup(project->id_underscore);
     strupper(id_upper);
-    char *ptr, ch;
-    for (ptr = id_upper; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
-            ptr[0] = '_';
-        }
-    }
+
+    /* Ensure include directory exists */
+    ut_mkdir("%s/include", project->path);
 
     /* Create main header file */
     char *header_filename = ut_asprintf(

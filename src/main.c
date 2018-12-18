@@ -248,8 +248,6 @@ bake_project *bake_project_from_cmdline(
         ut_ll_append(project->includes, ut_strdup(includes));
     }
 
-    ut_package_to_path(project->id);
-
     ut_try( bake_project_init(config, project), NULL);
 
     return project;

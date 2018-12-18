@@ -394,31 +394,13 @@ error:
 }
 
 const char* ut_locate(
-    const char* id,
+    const char* package,
     ut_dl *dl_out,
     ut_locate_kind kind)
 {
     char *result = NULL;
     const char *env = NULL;
     struct ut_loaded *loaded = NULL;
-    ut_id package_buff;
-    char *package = package_buff;
-    strcpy(package, id);
-
-    char *ptr, ch;
-    for (ptr = package; (ch = *ptr); ptr ++) {
-        if (ch == '.') {
-            *ptr = '/';
-        }
-        if (isupper(ch)) {
-            return NULL;
-        }
-    }
-
-    if (package[0] == '/') {
-        /* Remove initial '/' to prevent double '/' in resulting paths */
-        package ++;
-    }
 
     if (!package[0]) {
         ut_throw("invalid package identifier");
@@ -456,15 +438,7 @@ const char* ut_locate(
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
         strset(&loaded->env, env);
-
-        /* Project location is guaranteed to exist if we have an env */
-        char *package_str = ut_strdup(package);
-        char *ptr, ch;
-        for (ptr = package_str; (ch = *ptr); ptr ++) {
-            if (ch == '.') *ptr = '/';
-        }
-        loaded->project = ut_asprintf("%s/meta/%s", env, package_str);
-        free(package_str);
+        loaded->project = ut_asprintf("%s/meta/%s", env, package);
     }
 
     /* If loaded hasn't been loaded by now, package isn't found */
@@ -915,6 +889,10 @@ int16_t ut_load_init(
     const char *config)
 {
     char *cwd = ut_strdup(ut_cwd());
+
+    if (!target) target = ut_getenv("BAKE_TARGET");
+    if (!home) home = ut_getenv("BAKE_HOME");
+    if (!config) config = ut_getenv("BAKE_CONFIG");
 
     if (!target) {
         UT_LOAD_TARGET_PATH = ut_strdup(cwd);

@@ -323,7 +323,12 @@ int jsw_rbhaskey_w_cmp ( jsw_rbtree_t *tree, const void *key, void** data, ut_eq
   0 if the insertion failed for any reason
   </returns>
 */
-void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key_ptr, void *data, bool overwrite, bool ptr )
+void* jsw_rbinsert (
+    jsw_rbtree_t *tree,
+    void* key_ptr,
+    void *data,
+    bool overwrite,
+    bool ptr )
 {
   void *key = key_ptr;
   if (ptr && key_ptr) {
@@ -390,6 +395,7 @@ void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key_ptr, void *data, bool overwri
       */
       int eq = tree->cmp ( tree->ctx, q->key, key );
       if ( eq == 0 ) {
+        q->key = key;
         if (overwrite) {
             q->data = data;
         }

@@ -28,8 +28,7 @@ int16_t bake_install_dir_for_target(
     char *dir,
     char *subdir,
     char *target,
-    bool softlink,
-    FILE *uninstallFile)
+    bool softlink)
 {
     ut_dirstack stack = NULL;
     ut_iter it;
@@ -47,19 +46,17 @@ int16_t bake_install_dir_for_target(
         return 0;
     }
 
-    if (!(stack = ut_dirstack_push(stack, source))) goto error;
-
-    if (ut_dir_iter(ut_dirstack_wd(stack), NULL, &it)) goto error;
+    if (ut_dir_iter(source, NULL, &it)) goto error;
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        char *filepath = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+        char *filepath = ut_asprintf("%s/%s", source, file);
 
         if (ut_isdir(filepath)) {
             if (ut_os_match(file)) {
                 ut_trace("install files for current OS in '%s'", file);
                 if (bake_install_dir_for_target(
-                    id, source_path, dir, file, target, softlink, uninstallFile))
+                    id, source_path, dir, file, target, softlink))
                 {
                     goto error;
                 }
@@ -69,7 +66,7 @@ int16_t bake_install_dir_for_target(
             {
                 /* Always copy all contents in everywhere */
                 if (bake_install_dir_for_target(
-                    id, source_path, dir, file, target, softlink, uninstallFile))
+                    id, source_path, dir, file, target, softlink))
                 {
                     goto error;
                 }
@@ -91,12 +88,9 @@ int16_t bake_install_dir_for_target(
             if (ut_cp(filepath, dst)) goto error;
         }
 
-        fprintf(uninstallFile, "%s\n", dst);
         free(dst);
         free(filepath);
     }
-
-    ut_dirstack_pop(stack);
 
     free(source);
 
@@ -112,8 +106,7 @@ int16_t bake_install_dir(
     char *source_path,
     char *dir,
     char *subdir,
-    bool softlink,
-    FILE *uninstallFile)
+    bool softlink)
 {
     char *target;
 
@@ -134,8 +127,7 @@ int16_t bake_install_dir(
         dir,
         subdir,
         target,
-        softlink,
-        uninstallFile))
+        softlink))
     {
         goto error;
     }
@@ -145,26 +137,29 @@ error:
     return -1;
 }
 
-static
-char* bake_uninstaller_filename(
-    bake_config *config,
-    bake_project *project)
-{
-    return ut_envparse(
-        "%s/meta/%s/uninstaller.txt",
-        config->target, project->id);
-}
-
-static
-FILE* bake_uninstaller_open(
-    bake_config *config,
+int16_t bake_uninstall_from_env(
+    const char *env,
     bake_project *project,
-    const char *mode)
+    bool uninstall)
 {
-    char *filename = bake_uninstaller_filename(config, project);
-    FILE *result = ut_file_open(filename, mode);
-    free(filename);
-    return result;
+    if (uninstall) {
+        ut_try( ut_rm(strarg("%s/meta/%s", env, project->id)), NULL);
+    }
+
+    ut_try( ut_rm(strarg("%s/etc/%s", env, project->id)), NULL);
+    ut_try( ut_rm(strarg("%s/include/%s.dir", env, project->id)), NULL);
+
+    if (project->type == BAKE_PACKAGE) {
+        ut_try( ut_rm(strarg("%s/lib/%s", env, project->artefact)), NULL);
+    } else if (project->type == BAKE_APPLICATION) {
+        ut_try( ut_rm(strarg("%s/bin/%s", env, project->artefact)), NULL);
+    } else if (project->type == BAKE_TOOL) {
+        ut_try( ut_rm(strarg("%s/%s", env, project->artefact)), NULL);
+    }
+
+    return 0;
+error:
+    return -1;
 }
 
 int16_t bake_install_clear(
@@ -172,56 +167,14 @@ int16_t bake_install_clear(
     bake_project *project,
     bool uninstall)
 {
-    ut_iter it;
-
     ut_log_push("uninstall");
+    ut_try(bake_uninstall_from_env(config->home, project, uninstall), NULL);
+    ut_try(bake_uninstall_from_env(config->target, project, uninstall), NULL);
 
-    if (project->type != BAKE_TOOL) {
-        char *projectDir = ut_asprintf(
-            "%s/meta/%s", config->target, project->id);
+    char *link_name = ut_asprintf("%s/include/%s", config->target, project->id);
+    ut_try( ut_rm(link_name), NULL);
+    free(link_name);
 
-        /* Uninstall files are stored in the project directory, try uninstalling
-         * first by removing all files in uninstaller file. */
-        if (ut_file_test(projectDir)) {
-            char *filename = bake_uninstaller_filename(config, project);
-            if (ut_file_iter(filename, &it)) {
-                ut_catch(); /* Catch last error */
-                if (uninstall) {
-                    ut_warning(
-                        "missing uninstaller for project '%s'", project->id);
-                }
-                free(filename);
-                goto skip;
-            }
-
-            while (ut_iter_hasNext(&it)) {
-                char *line = ut_iter_next(&it);
-                if (!line || !line[0]) continue; /* Skip empty lines in file */
-                if (line[0] == '/') {
-                    if (ut_rm(line)) {
-                        ut_warning("failed to uninstall '%s' for '%s'",
-                            line,
-                            project->id);
-                    }
-                } else {
-                    ut_warning(
-                        "ignoring '%s' in uninstaller.txt, path should be absolute",
-                        line);
-                }
-            }
-
-            /* Remove uninstaller */
-            if (ut_rm(filename)) {
-                ut_warning("failed to remove '%s'", filename);
-            }
-
-            /* Free project directory if it's empty (no nested packages) */
-            if (ut_dir_isEmpty(projectDir)) ut_rm(projectDir);
-            free(projectDir);
-        }
-    }
-
-skip:
     ut_log_pop();
     return 0;
 error:
@@ -233,35 +186,7 @@ int16_t bake_install_uninstall(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_install_clear(config, project, true), NULL);
-
-    char *projectDir = ut_envparse(
-        "%s/meta/%s", config->target, project->id);
-
-    if (ut_rm(projectDir)) {
-        ut_warning("failed to remove '%s'", projectDir);
-    }
-
-    free(projectDir);
-
-    /* In the case of an unsuccessful or interrupted uninstallation, some parts
-     * may be left behind. Check for lingering directories, and clean up. */
-
-    /* If include directory exists and is empty, clean up */
-    char *inc = ut_asprintf(
-        "%s/include/%s", config->target, project->id);
-    if (ut_file_test(inc) && ut_dir_isEmpty(inc)) ut_rm(inc);
-    free(inc);
-
-    /* If etc directory exists and is empty, clean up */
-    char *etc = ut_envparse(
-        "%s/etc/%s", config->target, project->id);
-    if (ut_file_test(etc) && ut_dir_isEmpty(etc)) ut_rm(etc);
-    free(etc);
-
-    return 0;
-error:
-    return -1;
+    return bake_install_clear(config, project, true);
 }
 
 int16_t bake_install_metadata(
@@ -334,31 +259,48 @@ int16_t bake_install_prebuild(
     bake_project *project)
 {
     if (project->type != BAKE_TOOL) {
-        FILE *uninstallFile = bake_uninstaller_open(config, project, "a");
-        if (!uninstallFile) {
-            goto error;
-        }
 
         /* Install files to project-specific locations in $BAKE_TARGET */
         ut_iter it = ut_ll_iter(project->includes);
         while (ut_iter_hasNext(&it)) {
+            char *tmp_id = ut_asprintf("%s.dir", project->id);
             if (bake_install_dir(
-                config, project->id, project->path, "include", ut_iter_next(&it), true,
-                uninstallFile))
+                config,
+                tmp_id,
+                project->path,
+                "include",
+                ut_iter_next(&it),
+                true))
             {
+                free(tmp_id);
                 goto error;
             }
+            free(tmp_id);
         }
 
+        /* Create softlink to main header file so projects can include packages
+         * using their logical name */
+        char *header_name = ut_asprintf("%s/include/%s.dir/%s.h",
+            config->target, project->id, project->id_short);
+        if (ut_file_test(header_name) == 1) {
+            char *link_name = ut_asprintf("%s/include/%s",
+                config->target, project->id);
+            FILE *f = fopen(link_name, "w");
+            fprintf(f, "#include \"%s.dir/%s.h\"\n", project->id, project->id_short);
+            fclose(f);
+            free(link_name);
+        }
+        free(header_name);
+
         if (bake_install_dir(
-            config, project->id, project->path, "etc", NULL, true, uninstallFile))
+            config, project->id, project->path, "etc", NULL, true))
         {
             goto error;
         }
 
         if (project->type == BAKE_PACKAGE) {
             if (bake_install_dir(
-                config, project->id, project->path, "lib", NULL, true, uninstallFile))
+                config, project->id, project->path, "lib", NULL, true))
             {
                 goto error;
             }
@@ -368,22 +310,22 @@ int16_t bake_install_prebuild(
         char *install_path = ut_asprintf("%s/install", project->path);
         if (install_path) {
             if (bake_install_dir(
-                config, NULL, install_path, "include", NULL, true, uninstallFile))
+                config, NULL, install_path, "include", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "lib", NULL, true, uninstallFile))
+                config, NULL, install_path, "lib", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "etc", NULL, true, uninstallFile))
+                config, NULL, install_path, "etc", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "java", NULL, true, uninstallFile))
+                config, NULL, install_path, "java", NULL, true))
             {
                 goto error;
             }

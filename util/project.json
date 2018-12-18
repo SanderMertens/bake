@@ -1,8 +1,8 @@
 {
-    "id": "bake.lang.c",
+    "id": "bake.util",
     "type": "package",
     "value": {
         "author": "Sander Mertens",
-        "description": "Driver for building C packages",
+        "description": "Bake utility functions"
     }
 }

@@ -67,6 +67,9 @@ struct bake_project {
     char *artefact_file;    /* Project path including artefact name */
     char *bin_path;         /* Project bin path (not including platform) */
     char *cache_path;       /* Project path containing temporary build files */
+    char *id_underscore;    /* Id with underscores instead of dots */
+    char *id_dash;          /* Id with dashes instead of dots */
+    char *id_short;         /* Last element of id */
 
     /* Direct access to the parson JSON data */
     void *json;

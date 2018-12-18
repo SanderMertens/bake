@@ -502,7 +502,7 @@ error:
 
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
-    return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH);
+    return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
 }
 
 /* Read the contents of a directory */

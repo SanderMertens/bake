@@ -43,21 +43,11 @@ void bake_crawler_addDependency(
     bake_project *p,
     char *use)
 {
-  /* Replace '.' with '/' */
-    ut_id use_buffer;
-    char *ptr, ch;
-    strcpy(use_buffer, use);
-    for (ptr = use_buffer; (ch = *ptr); ptr ++) {
-        if (ch == '.') {
-            *ptr = '/';
-        }
-    }
-
-    bake_project *dep = ut_rb_find(_this->nodes, use_buffer);
+    bake_project *dep = ut_rb_find(_this->nodes, use);
     if (!dep) {
         /* Create placeholder */
         dep = bake_project_new(NULL, NULL);
-        dep->id = ut_strdup(use_buffer);
+        dep->id = ut_strdup(use);
         ut_rb_set(_this->nodes, dep->id, dep);
     }
 
@@ -72,15 +62,7 @@ bool bake_crawler_has(
     bake_crawler *_this,
     const char *id)
 {
-    ut_id use_buffer;
-    char *ptr, ch;
-    strcpy(use_buffer, id);
-    for (ptr = use_buffer; (ch = *ptr); ptr ++) {
-        if (ch == '.') {
-            *ptr = '/';
-        }
-    }
-    if (_this->nodes && ut_rb_find(_this->nodes, use_buffer) != NULL) {
+    if (_this->nodes && ut_rb_find(_this->nodes, id) != NULL) {
         return true;
     } else {
         return false;

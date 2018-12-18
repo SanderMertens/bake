@@ -25,7 +25,7 @@
 #ifdef BAKE_IMPL
 #include "util/include/util.h"
 #else
-#include <bake/util/util.h>
+#include <bake.util>
 #endif
 
 typedef struct bake_project bake_project;

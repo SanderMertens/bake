@@ -90,18 +90,7 @@ int16_t bake_project_set(
     const char *id,
     const char *type)
 {
-    p->id = strdup(id);
-    char *ptr, ch;
-    for (ptr = p->id; (ch = *ptr); ptr ++) {
-        if (ch == '.') {
-            *ptr = '/';
-        } else
-        if (!isalpha(ch) && !isdigit(ch) &&
-            ch != '_' && ch != '/' && ch != '-') {
-            ut_throw("project id '%s' contains invalid characters", id);
-            goto error;
-        }
-    }
+    p->id = ut_strdup(id);
 
     if (!strcmp(type, "application")) {
         p->type = BAKE_APPLICATION;
@@ -308,6 +297,25 @@ int16_t bake_project_init(
     bake_config *config,
     bake_project *project)
 {
+    project->id_underscore = ut_strdup(project->id);
+    project->id_dash = ut_strdup(project->id);
+
+    const char *ptr;
+    char ch;
+    for (ptr = project->id; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
+            project->id_underscore[ptr - project->id] = '_';
+            project->id_dash[ptr - project->id] = '-';
+        }
+    }
+
+    project->id_short = strrchr(project->id, '.');
+    if (!project->id_short) {
+        project->id_short = project->id;
+    } else {
+        project->id_short ++;
+    }
+
     if (!project->sources) {
         project->sources = ut_ll_new();
     }
@@ -431,6 +439,10 @@ void bake_project_free(
         bake_project_driver *driver = ut_iter_next(&it);
         bake_attr_free_attr_array(driver->attributes);
     }
+
+    free(project->id);
+    free(project->id_underscore);
+    free(project->id_dash);
 }
 
 bake_attr* bake_project_get_attr(
@@ -554,8 +566,11 @@ int16_t bake_check_dependency(
             if (dep->language) {
                 dep_has_lib = true;
             }
+            bake_project_free(dep);
+        } else {
+            ut_throw("failed to create project for path '%s'", path);
+            goto error;
         }
-        bake_project_free(dep);
     }
 
     if (!dep_has_lib) {
@@ -731,13 +746,7 @@ ut_ll bake_project_copy_libs(
         }
 
         char *target_link = ut_asprintf("%s/lib%s_%s",
-            path, p->id, link_lib);
-        char *ptr = target_link + strlen(path) + 1, ch;
-        for (; (ch = *ptr); ptr ++) {
-            if (ch == '/') {
-                *ptr = '_';
-            }
-        }
+            path, p->id_underscore, link_lib);
 
         /* Copy to path */
         if (ut_cp(link, target_link)) {
@@ -748,12 +757,7 @@ ut_ll bake_project_copy_libs(
         free(target_link);
 
         /* Create library name for linking */
-        char *link_name = ut_asprintf("%s_%s", p->id, link_lib);
-        for (ptr = link_name; (ch = *ptr); ptr ++) {
-            if (ch == '/') {
-                *ptr = '_';
-            }
-        }
+        char *link_name = ut_asprintf("%s_%s", p->id_underscore, link_lib);
 
         /* Strip extension */
         char *ext = strrchr(link_name, '.');
