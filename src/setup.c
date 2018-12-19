@@ -164,7 +164,20 @@ int16_t bake_setup(
         ut_chdir(dir);
     }
 
-    ut_try( ut_mkdir("~/bake"), NULL);
+    char *cur_env = ut_envparse("~/bake");
+    char *cur_dir = ut_strdup(ut_cwd());
+
+    if (!strcmp(cur_env, cur_dir)) {
+        char *target_dir = ut_envparse("~/bake/src");
+        ut_rename(cur_dir, target_dir);
+        ut_chdir(target_dir);
+        free(target_dir);
+    }
+
+    free(cur_dir);
+
+    ut_try( ut_mkdir(cur_env), NULL);
+    free (cur_env);
 
     ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
 
