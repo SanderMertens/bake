@@ -136,7 +136,7 @@ int16_t bake_update_dependency_list(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
             } else {
-                ut_info("found dependency '%s' locally in '%s'", dep, deppath);
+                ut_log("found dependency '%s' locally in '%s'", dep, deppath);
             }
         }
         free(url);
