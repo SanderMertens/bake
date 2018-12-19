@@ -187,10 +187,6 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
 
     if (!local) {
-        /* The next line may ask for a password. Clean stdin, so that if
-         * commands were pasted in after the setup, they don't result in a
-         * failed password attempt. */
-        fflush(stdin);
         ut_try(bake_create_script(), "failed to create global bake script");
     }
 
