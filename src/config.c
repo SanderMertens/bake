@@ -339,7 +339,7 @@ ut_ll bake_config_find_files(
         if (ut_file_test(file) == 1) {
             if (ut_isdir(file)) {
                 char *cfg = ut_asprintf("%s/bake.json", file);
-                if (ut_file_test(cfg)) {
+                if (ut_file_test(cfg) == 1) {
                     if (!config_files) config_files = ut_ll_new();
                     ut_ll_append(config_files, cfg);
                     ut_trace("using configuration file '%s'", cfg);
@@ -353,8 +353,10 @@ ut_ll bake_config_find_files(
             free(file);
         }
 
+
         file = ut_asprintf("%s/bake.json", cur_path);
         if (ut_file_test(file) == 1) {
+            if (!config_files) config_files = ut_ll_new();
             ut_ll_append(config_files, file);
             ut_trace("using configuration file '%s'", file);
         } else {
@@ -415,6 +417,7 @@ int16_t bake_config_load(
 
     /* Collect & load configuration files */
     ut_ll config_files = bake_config_find_config();
+
     if (config_files) {
         if (bake_config_load_config(
             config_files,
