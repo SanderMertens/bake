@@ -80,8 +80,9 @@ int16_t bake_config_loadEnvironment(
     for (i = 0; i < json_object_get_count(envcfg); i ++) {
         const char *var = json_object_get_name(envcfg, i);
         if (!bake_config_var_is_valid(var)) {
-            ut_throw("'%s' is not a valid environment variable name");
-            goto error;
+            ut_warning(
+                "'%s' is not a valid environment variable name, skipping", var);
+            continue;
         }
 
         /* Accept both arrays and strings */
@@ -481,7 +482,7 @@ int16_t bake_config_load(
     } else {
         cfg_out->target = ut_strdup(ut_getenv("BAKE_HOME"));
     }
-    
+
     cfg_out->home = ut_strdup(ut_getenv("BAKE_HOME"));
     cfg_out->home_lib = ut_asprintf("%s/lib", cfg_out->home);
     cfg_out->home_bin = ut_asprintf("%s/bin", cfg_out->home);
@@ -515,5 +516,137 @@ int16_t bake_config_load(
     return 0;
 error:
     ut_log_pop();
+    return -1;
+}
+
+int16_t bake_config_export(
+    bake_config *cfg,
+    const char *expr)
+{
+    bool is_add = false;
+    char *var = ut_strdup(expr), *value = NULL;
+
+    value = strrchr(var, '=');
+    if (value) {
+        if (value == expr) {
+            ut_throw("missing variable name in export expression");
+            goto error;
+        }
+
+        if (value[-1] == '+') {
+            is_add = true;
+            if (value - 1 == expr) {
+                ut_throw("missing variable name in export expression");
+                goto error;
+            }
+            value[-1] = '\0';
+        } else {
+            value[0] = '\0';
+        }
+        value ++;
+    }
+
+    char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
+
+    if (ut_file_test(bake_json) != 1) {
+        FILE *f = fopen(bake_json, "w");
+        fprintf(f,
+            "{\"environment\":{}}"
+        );
+        fclose(f);
+    }
+
+    JSON_Value *root = json_parse_file(bake_json);
+    if (!root) {
+        ut_throw("failed to parse file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *root_obj = json_value_get_object(root);
+    if (!root_obj) {
+        ut_throw("expected JSON object as root of file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *env = bake_json_find_or_create_object(root_obj, "environment");
+    if (!env) {
+        goto error;
+    }
+
+    JSON_Object *cur = bake_json_find_or_create_object(env, cfg->environment);
+    if (!cur) {
+        goto error;
+    }
+
+    JSON_Value *val = json_object_get_value(cur, var);
+
+    if (!is_add) {
+        if (json_value_get_type(val) != JSONString) {
+            json_object_remove(cur, var);
+        }
+        json_object_set_string(cur, var, value);
+    } else {
+        if (json_value_get_type(val) != JSONArray) {
+            json_object_remove(cur, var);
+            json_object_set_value(cur, var, json_value_init_array());
+            val = json_object_get_value(cur, var);
+        }
+        JSON_Array *array = json_value_get_array(val);
+        json_array_append_string(array, value);
+    }
+
+    json_set_escape_slashes(0);
+
+    json_serialize_to_file_pretty(root, bake_json);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_config_unset(
+    bake_config *cfg,
+    const char *var)
+{
+    char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
+
+    if (ut_file_test(bake_json) != 1) {
+        FILE *f = fopen(bake_json, "w");
+        fprintf(f,
+            "{\"environment\":{}}"
+        );
+        fclose(f);
+    }
+
+    JSON_Value *root = json_parse_file(bake_json);
+    if (!root) {
+        ut_throw("failed to parse file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *root_obj = json_value_get_object(root);
+    if (!root_obj) {
+        ut_throw("expected JSON object as root of file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *env = bake_json_find_or_create_object(root_obj, "environment");
+    if (!env) {
+        goto error;
+    }
+
+    JSON_Object *cur = bake_json_find_or_create_object(env, cfg->environment);
+    if (!cur) {
+        goto error;
+    }
+
+    json_object_remove(cur, var);
+
+    json_set_escape_slashes(0);
+
+    json_serialize_to_file_pretty(root, bake_json);
+
+    return 0;
+error:
     return -1;
 }

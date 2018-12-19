@@ -89,3 +89,29 @@ int16_t bake_json_set_array(
 
     return 0;
 }
+
+JSON_Object* bake_json_find_or_create_object(
+    JSON_Object *jsonObject,
+    const char *member)
+{
+    JSON_Object *result = NULL;
+    if (json_object_has_value(jsonObject, member)) {
+        result = json_object_get_object(jsonObject, member);
+        if (!result) {
+            /* If JSON has a value member, but wasn't resolved by the previous
+             * call, it is not of an object type */
+            ut_throw("invalid JSON: expected '%s' to be a JSON object", member);
+            goto error;
+        }
+    } else {
+        /* This is not an error, a project file can leave all project
+         * settings to defaults. Add a value member. */
+        json_object_set_value(
+            jsonObject, member, json_value_init_object());
+        result = json_object_get_object(jsonObject, member);
+    }
+
+    return result;
+error:
+    return NULL;
+}

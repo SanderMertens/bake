@@ -34,6 +34,13 @@ int16_t bake_config_load(
     const char *env_id,
     bool build_to_home);
 
+int16_t bake_config_export(
+    bake_config *cfg,
+    const char *expr);
+
+int16_t bake_config_unset(
+    bake_config *cfg,
+    const char *expr);
 
 /* -- Build functions -- */
 
@@ -308,6 +315,10 @@ int16_t bake_json_set_array(
     ut_ll *ptr,
     const char *member,
     JSON_Value *v);
+
+JSON_Object* bake_json_find_or_create_object(
+    JSON_Object *value,
+    const char *member);
 
 /* -- Setup -- */
 

@@ -132,7 +132,8 @@ int16_t bake_update_dependency_list(
             ut_catch();
             const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
             if (!deppath) {
-                ut_throw("cannot find repository '%s' in '%s'", dep_tmp, base_url);
+                ut_throw(
+                    "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
             } else {
                 ut_info("found dependency '%s' locally in '%s'", dep, deppath);

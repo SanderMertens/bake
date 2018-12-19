@@ -41,6 +41,9 @@ const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
 
+/* Environment variable export */
+const char *export_expr = NULL;
+
 #define ARG(short, long, action)\
     if (i < argc) {\
         if (argv[i][0] == '-') {\
@@ -86,9 +89,8 @@ void bake_usage(void)
     printf("  install                    Install project to bake environment\n");
     printf("  uninstall                  Remove project files from bake environment\n");
     printf("  env                        Echo bake environment\n");
+    printf("  export NAME=|+=VALUE       Add variable to bake environment\n");
     printf("\n");
-
-    build = false;
 }
 
 void bake_version(void)
@@ -97,8 +99,6 @@ void bake_version(void)
         UT_PLATFORM_STRING,
         __DATE__,
         __TIME__);
-
-    build = false;
 }
 
 static
@@ -154,7 +154,9 @@ bool bake_is_action(
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
-        !strcmp(arg, "init"))
+        !strcmp(arg, "init") ||
+        !strcmp(arg, "export") ||
+        !strcmp(arg, "unset"))
     {
         build = false;
         return true;
@@ -196,8 +198,8 @@ int bake_parse_args(
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
 
-            ARG('h', "help", bake_usage(); i ++);
-            ARG('v', "version", bake_version(); i ++);
+            ARG('h', "help", bake_usage(); action = NULL; i ++);
+            ARG('v', "version", bake_version(); action = NULL; i ++);
 
             if (!parsed) {
                 ut_throw(
@@ -210,6 +212,10 @@ int bake_parse_args(
         }
     }
 
+    if (!action) {
+        return 0;
+    }
+
     if (!path) {
         path = ".";
     }
@@ -219,6 +225,14 @@ int bake_parse_args(
             action = "install_remote";
             build = false;
         }
+    }
+
+    else if (!strcmp(action, "export") || !strcmp(action, "unset")) {
+        if (!path) {
+            ut_throw("missing expression for export command");
+            goto error;
+        }
+        export_expr = path;
     }
 
     if (artefact) {
@@ -390,6 +404,10 @@ int main(int argc, const char *argv[]) {
     ut_trace("action: %s", action);
     ut_log_pop();
 
+    if (!action) {
+        return 0;
+    }
+
     ut_log_push("config");
     ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
     ut_log_pop();
@@ -439,6 +457,10 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_setup(local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
+        } else if (!strcmp(action, "export")) {
+            ut_try (bake_config_export(&config, export_expr), NULL);
+        } else if (!strcmp(action, "unset")) {
+           ut_try (bake_config_unset(&config, export_expr), NULL);
         } else {
             ut_throw("invalid command '%s'", action);
             goto error;
