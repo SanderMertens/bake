@@ -168,11 +168,15 @@ int16_t bake_setup(
     char *cur_dir = ut_strdup(ut_cwd());
 
     if (!strcmp(cur_env, cur_dir)) {
-        char *target_dir = ut_envparse("~/bake_src");
-        ut_rm(target_dir);
-        ut_rename(cur_dir, target_dir);
-        ut_chdir(target_dir);
+        char *tmp_dir = ut_envparse("~/bake_tmp");
+        char *target_dir = ut_envparse("~/bake/src");
+        ut_try(ut_rm(tmp_dir), NULL);
+        ut_try(ut_rename(cur_dir, tmp_dir), NULL);
+        ut_try(ut_mkdir("~/bake"), NULL);
+        ut_try(ut_rename(tmp_dir, target_dir), NULL);
+        ut_try(ut_chdir(target_dir), NULL);
         free(target_dir);
+        free(tmp_dir);
     }
 
     free(cur_dir);
@@ -183,6 +187,10 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
 
     if (!local) {
+        /* The next line may ask for a password. Clean stdin, so that if
+         * commands were pasted in after the setup, they don't result in a
+         * failed password attempt. */
+        fflush(stdin);
         ut_try(bake_create_script(), "failed to create global bake script");
     }
 
