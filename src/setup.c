@@ -169,10 +169,10 @@ int16_t bake_setup(
 
     if (!strcmp(cur_env, cur_dir)) {
         char *tmp_dir = ut_envparse("~/bake_tmp");
-        char *target_dir = ut_envparse("~/bake/src");
+        char *target_dir = ut_envparse("~/bake/src/bake");
         ut_try(ut_rm(tmp_dir), NULL);
         ut_try(ut_rename(cur_dir, tmp_dir), NULL);
-        ut_try(ut_mkdir("~/bake"), NULL);
+        ut_try(ut_mkdir("~/bake/src"), NULL);
         ut_try(ut_rename(tmp_dir, target_dir), NULL);
         ut_try(ut_chdir(target_dir), NULL);
         free(target_dir);
