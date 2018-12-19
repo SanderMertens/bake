@@ -454,7 +454,7 @@ int main(int argc, const char *argv[]) {
         if (!strcmp(action, "env")) {
             ut_try( bake_env(&config), NULL);
         } else if (!strcmp(action, "setup")) {
-            ut_try (bake_setup(local_setup), NULL);
+            ut_try (bake_setup(argv[0], local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
         } else if (!strcmp(action, "export")) {

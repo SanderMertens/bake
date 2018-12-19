@@ -323,4 +323,5 @@ JSON_Object* bake_json_find_or_create_object(
 /* -- Setup -- */
 
 int16_t bake_setup(
+    const char *cmd,
     bool local);

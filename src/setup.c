@@ -154,8 +154,16 @@ error:
 }
 
 int16_t bake_setup(
+    const char *bake_cmd,
     bool local)
 {
+    char *dir = ut_strdup(bake_cmd);
+    char *last_elem = strrchr(dir, '/');
+    if (last_elem) {
+        *last_elem = '\0';
+        ut_chdir(dir);
+    }
+
     ut_try( ut_mkdir("~/bake"), NULL);
 
     ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
