@@ -89,6 +89,9 @@ void bake_usage(void)
     printf("  install                    Install project to bake environment\n");
     printf("  uninstall                  Remove project files from bake environment\n");
     printf("  env                        Echo bake environment\n");
+    printf("  clone                      Clone and build git repository and dependencies\n");
+    printf("  update                     Update an installed package or application\n");
+    printf("  upgrade                    Upgrade to new bake version\n");
     printf("  export NAME=|+=VALUE       Add variable to bake environment\n");
     printf("\n");
 }
@@ -156,6 +159,7 @@ bool bake_is_action(
         !strcmp(arg, "setup") ||
         !strcmp(arg, "init") ||
         !strcmp(arg, "export") ||
+        !strcmp(arg, "upgrade") ||
         !strcmp(arg, "unset"))
     {
         build = false;
@@ -460,7 +464,13 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "export")) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
-           ut_try (bake_config_unset(&config, export_expr), NULL);
+            ut_try (bake_config_unset(&config, export_expr), NULL);
+        } else if (!strcmp(action, "upgrade")) {
+            ut_log("#[bold]Cannot upgrade bake while bake is running\n");
+            printf("  This is likely happening because the bake environment is exported. To\n");
+            printf("  upgrade bake, either start a new terminal with a clean environment and\n");
+            printf("  try again, or run this command from this terminal:\n");
+            printf("    /usr/local/bin/bake upgrade\n");
         } else {
             ut_throw("invalid command '%s'", action);
             goto error;
