@@ -168,7 +168,7 @@ int16_t bake_setup(
     char *cur_dir = ut_strdup(ut_cwd());
 
     if (!strcmp(cur_env, cur_dir)) {
-        char *target_dir = ut_envparse("~/bake/src");
+        char *target_dir = ut_envparse("~/bake_src");
         ut_rename(cur_dir, target_dir);
         ut_chdir(target_dir);
         free(target_dir);
