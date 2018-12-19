@@ -189,7 +189,7 @@ int16_t bake_config_findSection(
     }
 
     if (i == json_object_get_count(object)) {
-        ut_throw("%s '%s' not found", item, lookfor);
+        ut_trace("%s '%s' not found", item, lookfor);
         goto not_found;
     }
 
@@ -301,7 +301,7 @@ int16_t bake_config_load_config(
 {
     char *file;
     while ((file = ut_ll_takeFirst(config_files))) {
-        if (bake_config_load_file(file, cfg_out, cfg_id, env_id)) {
+        if (bake_config_load_file(file, cfg_out, cfg_id, env_id) == -1) {
             goto error;
         }
         free(file);
