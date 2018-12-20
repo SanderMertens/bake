@@ -74,7 +74,7 @@ int bake_do_foreach(
     bake_crawler *crawler,
     bake_project *p);
 
-/* -- Remote install functions -- */
+/* -- Git functions -- */
 
 /* Clone remote repository */
 bake_crawler* bake_clone(
@@ -87,6 +87,12 @@ bake_crawler* bake_update(
     bake_config *config,
     bake_crawler *crawler,
     const char *url);
+
+/* Publish new version for repository */
+int16_t bake_publish(
+    bake_config *config,
+    bake_project *project,
+    const char *publish_cmd);
 
 /* -- Install functions -- */
 

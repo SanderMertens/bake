@@ -512,23 +512,9 @@ void setup_project(
     ut_mkdir("src");
     ut_mkdir("include");
 
-    /* Create project.json */
-    FILE *f = fopen("project.json", "w");
-    fprintf(f,
-        "{\n"
-        "    \"id\":\"%s\",\n"
-        "    \"type\":\"%s\"\n"
-        "}\n",
-        id,
-        kind == BAKE_APPLICATION
-            ? "application"
-            : "package"
-    );
-    fclose(f);
-
     /* Create main source file */
     char *source_filename = ut_asprintf("src/main.c");
-    f = fopen(source_filename, "w");
+    FILE *f = fopen(source_filename, "w");
 
     fprintf(f,
         "#include <include/%s.h>\n"

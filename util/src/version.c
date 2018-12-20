@@ -18,7 +18,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
- 
+
 #include "../include/util.h"
 
 static
@@ -135,4 +135,27 @@ int ut_version_strcmp(
     }
 
     return ut_version_cmp(&version_1, &version_2);
+}
+
+char* ut_version_inc(
+    const char *old_version,
+    ut_version_kind kind)
+{
+    ut_version version;
+    ut_try( ut_version_parse(old_version, &version), NULL);
+
+    if (kind == UT_VERSION_PATCH) {
+        version.patch ++;
+    } else if (kind == UT_VERSION_MINOR) {
+        version.minor ++;
+        version.patch = 0;
+    } else if (kind == UT_VERSION_MAJOR) {
+        version.major ++;
+        version.minor = 0;
+        version.patch = 0;
+    }
+
+    return ut_version_str(&version);
+error:
+    return NULL;
 }

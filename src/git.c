@@ -235,3 +235,63 @@ bake_crawler* bake_clone(
 error:
     return NULL;
 }
+
+int16_t bake_publish(
+    bake_config *config,
+    bake_project *project,
+    const char *publish_cmd)
+{
+    ut_version_kind kind;
+    if (!strcmp(publish_cmd, "patch")) {
+        kind = UT_VERSION_PATCH;
+    } else if (!strcmp(publish_cmd, "minor")) {
+        kind = UT_VERSION_MINOR;
+    } else if (!strcmp(publish_cmd, "major")) {
+        kind = UT_VERSION_MAJOR;
+    }
+
+    char *new_version = ut_version_inc(project->version, kind);
+    if (!new_version) {
+        goto error;
+    }
+
+    free(project->version);
+    project->version = new_version;
+
+    JSON_Value *project_json = json_parse_file("project.json");
+    if (!project_json) {
+        ut_throw("failed to parse 'project.json'");
+        goto error;
+    }
+
+    JSON_Object *obj = json_value_get_object(project_json);
+    JSON_Object *value = bake_json_find_or_create_object(obj, "value");
+    if (!value) {
+        ut_throw("failed to obtain 'value' member of project.json");
+        goto error;
+    }
+
+    json_object_set_string(value, "version", new_version);
+
+    json_set_escape_slashes(0);
+
+    ut_try (json_serialize_to_file_pretty(project_json, "project.json"), NULL);
+
+    char *command = ut_asprintf("git add project.json", project->version);
+    ut_try( cmd(command), NULL);
+
+    command = ut_asprintf("git commit -m \"Published version %s\"", project->version);
+    ut_try( cmd(command), NULL);
+    ut_log("#[green]OK #[normal]Committed version '%s'\n", project->version);
+
+    command = ut_asprintf("git tag -a V%s -m \"Version v%s\"",
+        project->version, project->version);
+    ut_try( cmd(command), NULL);
+    ut_log("#[green]OK #[normal]Created tag 'V%s'\n", project->version);
+
+    ut_log("#[green]OK #[normal]Published %s:%s\n", project->id, project->version);
+
+    return 0;
+error:
+    return -1;
+}

@@ -595,7 +595,19 @@ int16_t bake_config_export(
             val = json_object_get_value(cur, var);
         }
         JSON_Array *array = json_value_get_array(val);
-        json_array_append_string(array, value);
+
+        /* Don't add duplicate values */
+        int32_t i;
+        for (i = 0; i < json_array_get_count(array); i ++) {
+            const char *str = json_array_get_string(array, i);
+            if (!strcmp(str, value)) {
+                break;
+            }
+        }
+
+        if (i == json_array_get_count(array)) {
+            json_array_append_string(array, value);
+        }
     }
 
     json_set_escape_slashes(0);

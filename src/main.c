@@ -41,8 +41,9 @@ const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
 
-/* Environment variable export */
+/* Command specific parameters */
 const char *export_expr = NULL;
+const char *publish_cmd = NULL;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -66,33 +67,36 @@ void bake_usage(void)
     printf("Usage: bake [options] <command> <path>\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -h,--help                  Display this usage information\n");
-    printf("  -v,--version               Display version information\n");
+    printf("  -h,--help                    Display this usage information\n");
+    printf("  -v,--version                 Display version information\n");
     printf("\n");
-    printf("  --cfg <configuration>      Specify configuration id\n");
-    printf("  --env <environment>        Specify environment id\n");
-    printf("  --build-to-home            Install to BAKE_HOME instead of BAKE_TARGET\n");
+    printf("  --cfg <configuration>        Specify configuration id\n");
+    printf("  --env <environment>          Specify environment id\n");
+    printf("  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET\n");
     printf("\n");
-    printf("  --id <project id>          Manually specify a project id\n");
-    printf("  --type <project type>      Manually specify a project type (default = \"package\")\n");
-    printf("  --language <language>      Manually specify a language for project (default = \"c\")\n");
-    printf("  --artefact <binary>        Manually specify a binary file for project\n");
-    printf("  --includes <include path>  Manually specify an include path for project\n");
+    printf("  --id <project id>            Manually specify a project id\n");
+    printf("  --type <project type>        Manually specify a project type (default = \"package\")\n");
+    printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
+    printf("  --artefact <binary>          Manually specify a binary file for project\n");
+    printf("  --includes <include path>    Manually specify an include path for project\n");
     printf("\n");
-    printf("  --trace                    Set verbosity to TRACE\n");
-    printf("  -v,--verbosity <kind>      Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
+    printf("  --trace                      Set verbosity to TRACE\n");
+    printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  build                      Build a project\n");
-    printf("  rebuild                    Clean and build a project\n");
-    printf("  clean                      Clean a project\n");
-    printf("  install                    Install project to bake environment\n");
-    printf("  uninstall                  Remove project files from bake environment\n");
-    printf("  env                        Echo bake environment\n");
-    printf("  clone                      Clone and build git repository and dependencies\n");
-    printf("  update                     Update an installed package or application\n");
-    printf("  upgrade                    Upgrade to new bake version\n");
-    printf("  export NAME=|+=VALUE       Add variable to bake environment\n");
+    printf("  init [path]                  Initialize new bake project\n");
+    printf("  build [path]                 Build a project\n");
+    printf("  rebuild [path]               Clean and build a project\n");
+    printf("  clean [path]                 Clean a project\n");
+    printf("  publish <patch|minor|major>  Publish new project version\n");
+    printf("  install [path]               Install project to bake environment\n");
+    printf("  uninstall [project id]       Remove project from bake environment\n");
+    printf("  clone <git url>              Clone and build git repository and dependencies\n");
+    printf("  update [project id]          Update an installed package or application\n");
+    printf("\n");
+    printf("  env                          Echo bake environment\n");
+    printf("  upgrade                      Upgrade to new bake version\n");
+    printf("  export <NAME>=|+=<VALUE>     Add variable to bake environment\n");
     printf("\n");
 }
 
@@ -160,6 +164,7 @@ bool bake_is_action(
         !strcmp(arg, "init") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "upgrade") ||
+        !strcmp(arg, "publish") ||
         !strcmp(arg, "unset"))
     {
         build = false;
@@ -175,6 +180,8 @@ int bake_parse_args(
 {
     int i = 1;
 
+    /* Parse action (if any) */
+
     const char *arg = argv[i];
     if (arg && arg[0] != '-') {
         if (bake_is_action(arg)) {
@@ -183,6 +190,8 @@ int bake_parse_args(
             arg = argv[i];
         }
     }
+
+    /* Parse remainder of arguments */
 
     for (; i < argc; i ++) {
         if (argv[i][0] == '-') {
@@ -216,13 +225,12 @@ int bake_parse_args(
         }
     }
 
+    /* Certain options like --help and --version don't require further action */
     if (!action) {
         return 0;
     }
 
-    if (!path) {
-        path = ".";
-    }
+    /* Set command-specific variables & do input checking */
 
     if (!strcmp(action, "install")) {
         if (ut_file_test(path) != 1) {
@@ -232,13 +240,31 @@ int bake_parse_args(
     }
 
     else if (!strcmp(action, "export") || !strcmp(action, "unset")) {
-        if (!path) {
+        if (!strcmp(path, ".")) {
             ut_throw("missing expression for export command");
             goto error;
         }
         export_expr = path;
     }
 
+    else if (!strcmp(action, "publish")) {
+        if (!strcmp(path, ".")) {
+            ut_throw("missing publish command (specify patch, minor or major)");
+            goto error;
+        } else {
+            if (strcmp(path, "patch") && strcmp(path, "minor") &&
+                strcmp(path, "major"))
+            {
+                ut_throw(
+                    "invalid publish command (expected patch, minor or major)");
+                goto error;
+            }
+        }
+
+        publish_cmd = path;
+    }
+
+    /* If artefact is manually specified, translate to platform specific name */
     if (artefact) {
         if (type == BAKE_PACKAGE) {
             artefact = ut_asprintf("lib%s" UT_OS_LIB_EXT, artefact);
@@ -250,6 +276,7 @@ error:
     return -1;
 }
 
+/* Create project from manually specified parameters */
 bake_project *bake_project_from_cmdline(
     bake_config *config)
 {
@@ -273,7 +300,7 @@ error:
     return NULL;
 }
 
-
+/* Discover all projects in a directory */
 bake_crawler* bake_discovery(
     bake_config *config)
 {
@@ -297,6 +324,7 @@ error:
     return NULL;
 }
 
+/* Build all discovered projects */
 int bake_build(
     bake_config *config,
     bake_crawler *crawler,
@@ -323,37 +351,37 @@ error:
     return -1;
 }
 
+/* Print environment to stdout */
 int bake_env(
     bake_config *config)
 {
     const char *env;
     ut_strbuf buff = UT_STRBUF_INIT;
-    int32_t count = 0;
 
     if (config->env_variables) {
         ut_iter it = ut_ll_iter(config->env_variables);
         while (ut_iter_hasNext(&it)) {
             char *var = ut_iter_next(&it);
-            if (count) {
-                ut_strbuf_appendstr(&buff, " ");
-            }
-            ut_strbuf_append(&buff, "%s=%s", var, ut_getenv(var));
-            count ++;
+            ut_strbuf_append(&buff, "%s=%s\n", var, ut_getenv(var));
         }
     }
 
     char *str = ut_strbuf_get(&buff);
-
     printf("%s\n", str);
-
     free(str);
 
     return 0;
 }
 
+/* Initialize a new bake project */
 int bake_init_project(
     bake_config *config)
 {
+    if (path && strcmp(path, ".")) {
+        ut_mkdir(path);
+        ut_chdir(path);
+    }
+
     if (ut_file_test("project.json") == 1) {
         ut_throw("project already exists in '%s'", ut_cwd());
         goto error;
@@ -388,8 +416,38 @@ error:
     return -1;
 }
 
+/* Publish a new version for a project */
+int bake_publish_project(
+    bake_config *config)
+{
+    if (ut_file_test("project.json") != 1) {
+        ut_throw("directory '%s' does not contain a bake project", ut_cwd());
+        goto error;
+    }
+
+    printf("This command creates a new tag. Commit all your changes"
+           " before continuing!\n Proceed? [y/N] ");
+    char answer = getchar();
+    if (answer != 'y' && answer != 'Y') {
+        return 0;
+    }
+
+    bake_project *project = bake_project_new(".", config);
+    if (!project) {
+        goto error;
+    }
+
+    ut_try(bake_publish(config, project, publish_cmd), NULL);
+
+    return 0;
+error:
+    return -1;
+}
+
 int main(int argc, const char *argv[]) {
     bake_config config = {};
+
+    srand (time(NULL));
 
     ut_init("bake");
 
@@ -461,6 +519,8 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_setup(argv[0], local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
+        } else if (!strcmp(action, "publish")) {
+            ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "export")) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {

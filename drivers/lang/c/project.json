@@ -4,5 +4,6 @@
     "value": {
         "author": "Sander Mertens",
         "description": "Driver for building C packages",
+        "language": "none"
     }
 }

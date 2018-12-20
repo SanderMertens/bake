@@ -166,15 +166,23 @@ int ut_proc_cmd_intern(char* cmd, int8_t *rc, bool stderr_only) {
     /* Split up commands */
     char ch, *ptr;
     uint8_t argCount = 0;
-    bool newArg = FALSE;
+    bool newArg = false;
+    bool isString = false;
     args[argCount] = buffer;
     for (ptr = buffer; (ch = *ptr); ptr++) {
-        if (isspace(ch)) {
+        if (ch == '"') {
             *ptr = '\0';
-            newArg = TRUE;
+            isString = !isString;
+            if (!isString) {
+                newArg = true;
+            }
+        } else
+        if (!isString && isspace(ch)) {
+            *ptr = '\0';
+            newArg = true;
         } else if (newArg) {
             args[++argCount] = ptr;
-            newArg = FALSE;
+            newArg = false;
         }
     }
     args[argCount + 1] = NULL;

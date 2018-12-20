@@ -32,11 +32,11 @@ typedef struct ut_version {
     int32_t patch;
 } ut_version;
 
-typedef enum ut_versionKind {
+typedef enum ut_version_kind {
     UT_VERSION_MAJOR = 1,
     UT_VERSION_MINOR = 2,
     UT_VERSION_PATCH = 3
-} ut_versionKind;
+} ut_version_kind;
 
 UT_EXPORT
 int16_t ut_version_parse(
@@ -56,6 +56,11 @@ UT_EXPORT
 int ut_version_strcmp(
     const char *v1,
     const char *v2);
+
+UT_EXPORT
+char* ut_version_inc(
+    const char *old_version,
+    ut_version_kind kind);
 
 #ifdef __cplusplus
 }

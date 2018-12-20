@@ -54,6 +54,9 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "repository")) {
             ut_try (bake_json_set_string(&p->repository, member, v), NULL);
         } else
+        if (!strcmp(member, "license")) {
+            ut_try (bake_json_set_string(&p->license, member, v), NULL);
+        } else
         if (!strcmp(member, "language")) {
             ut_try (bake_json_set_string(&p->language, member, v), NULL);
         } else
@@ -351,6 +354,10 @@ int16_t bake_project_init(
 
     if (!project->language) {
         project->language = ut_strdup("c");
+    }
+
+    if (!project->version) {
+        project->version = ut_strdup("0.0.0");
     }
 
     if (!strcmp(project->language, "none")) {
@@ -976,11 +983,109 @@ int16_t bake_project_clean_current_platform(
     return bake_project_clean_intern(config, project, true);
 }
 
+static
+char* bake_random_description(void) {
+    char buffer[256];
+
+    char *function[] = {
+        "Car rentals",
+        "Ride sharing",
+        "Room sharing",
+        "Vegan meal delivery",
+        "Instant noodles",
+        "Premium coffee beans",
+        "Air conditioners",
+        "Sunscreen",
+        "Furniture",
+        "A microwave",
+        "Conditioner",
+        "Grocery stores",
+        "Photo sharing",
+        "A social network",
+        "Coding tutorials",
+        "Bodybuilding",
+        "Laser hair removal",
+        "A movie theater subscription service",
+        "Plant delivery",
+        "Shaving supplies",
+        "On demand country music",
+        "A dating site",
+        "Wine tasting",
+        "Solar energy",
+        "A towel",
+        "A middle out compression algorithm",
+        "Putting birds on ",
+        "Winter is coming",
+        "Space travel",
+        "Lightsabers",
+        "Hi-speed internet",
+        "A web framework",
+        "A fitness tracker"};
+
+    char *subject[] = {
+        "drones",
+        "self driving cars",
+        "air travel",
+        "kids",
+        "millenials",
+        "coders",
+        "project managers",
+        "entrepreneurs",
+        "influencers",
+        "movie stars",
+        "boy bands",
+        "designers",
+        "web developers",
+        "venture capitalists",
+        "sales reps",
+        "married couples",
+        "wookies",
+        "dogs",
+        "cats"};
+
+    strcpy(buffer, function[rand() % (sizeof(function) / sizeof(char*))]);
+    if (buffer[strlen(buffer) - 1] != ' ') {
+        strcat(buffer, " for ");
+    }
+    strcat(buffer, subject[rand() % (sizeof(subject) / sizeof(char*))]);
+
+    return strdup(buffer);
+}
+
+
 int16_t bake_project_setup(
     bake_config *config,
     bake_project *project)
 {
     bake_driver *driver = project->language_driver->driver;
+
+    char *description = bake_random_description();
+
+    ut_try(!
+        ut_proc_runRedirect("git", (char*[]){"git", "init", NULL}, stdin, stdout, stderr),
+        "failed to initialize git repository");
+
+    /* Create project.json */
+    FILE *f = fopen("project.json", "w");
+    fprintf(f,
+        "{\n"
+        "    \"id\": \"%s\",\n"
+        "    \"type\": \"%s\",\n"
+        "    \"value\":{\n"
+        "        \"author\": \"John Doe\",\n"
+        "        \"description\": \"%s\",\n"
+        "        \"version\": \"0.0.0\",\n"
+        "        \"repository\": null,\n"
+        "        \"license\": null\n"
+        "    }\n"
+        "}\n",
+        project->id,
+        project->type == BAKE_APPLICATION
+            ? "application"
+            : "package",
+        description
+    );
+    fclose(f);
 
     if (driver) {
         ut_try( bake_driver__setup(driver, config, project), NULL);
@@ -990,6 +1095,12 @@ int16_t bake_project_setup(
             project->id);
         goto error;
     }
+
+    ut_log("Created new %s with id '%s'\n",
+        project->type == BAKE_APPLICATION
+            ? "application"
+            : "package",
+        project->id);
 
     return 0;
 error:

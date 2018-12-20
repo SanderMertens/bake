@@ -46,6 +46,7 @@ struct bake_project {
     bake_project_type type; /* Project kind */
     char *version;          /* Project version */
     char *repository;       /* Project repository */
+    char *license;          /* Project license */
     char *author;           /* Project author */
     char *description;      /* Project description */
     char *language;         /* Project programming language */
