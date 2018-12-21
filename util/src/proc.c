@@ -21,7 +21,10 @@
 
 #include "../include/util.h"
 
-ut_proc ut_proc_run(const char* exec, char *argv[]) {
+ut_proc ut_proc_run(
+    const char* exec,
+    char *argv[])
+{
     pid_t pid = fork();
 
     if (pid == 0) {
@@ -59,7 +62,11 @@ ut_proc ut_proc_run(const char* exec, char *argv[]) {
 }
 
 ut_proc ut_proc_runRedirect(
-    const char* exec, char *argv[], FILE *in, FILE *out, FILE *err)
+    const char* exec,
+    char *argv[],
+    FILE *in,
+    FILE *out,
+    FILE *err)
 {
     pid_t pid = fork();
 
@@ -150,7 +157,11 @@ int ut_proc_wait(ut_proc pid, int8_t *rc) {
 
 /* Simple blocking function to create and wait for a process */
 static
-int ut_proc_cmd_intern(char* cmd, int8_t *rc, bool stderr_only) {
+int ut_proc_cmd_intern(
+    char* cmd,
+    int8_t *rc,
+    bool stderr_only)
+{
     int pid;
     char *args[UT_MAX_CMD_ARGS];
     char stack_buffer[BUFFER_SIZE];
@@ -171,7 +182,9 @@ int ut_proc_cmd_intern(char* cmd, int8_t *rc, bool stderr_only) {
     args[argCount] = buffer;
     for (ptr = buffer; (ch = *ptr); ptr++) {
         if (ch == '"') {
-            *ptr = '\0';
+            if (isspace(ptr[-1])) {
+                *ptr = '\0';
+            }
             isString = !isString;
             if (!isString) {
                 newArg = true;
