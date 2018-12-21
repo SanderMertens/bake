@@ -402,7 +402,7 @@ Here, only the `libmy_binary.so` that is in the directory that matches the platf
 
 The platform string is case independent. It allows for a number of different notations. For example, both `x86-linux` and `linux-x86` are allowed. In addition, projects can also just specify the operating system name, in which case the file will be installed to all architectures, as long as the operating system matches the directory name.
 
-To see the exact matching of the platform string, see the implementation of `ut_os_match` in the https://github.com/cortoproject/platform repository.
+To see the exact matching of the platform string, see the implementation of `ut_os_match` in `bake.util`.
 
 ### Integrating Non-Bake Projects
 It is not uncommon that a project needs to include or link with a project that itself was not built with bake. Often such projects require that you specify custom include paths, library paths, and link with specific libraries. When you have many projects that depend on such an external project, it can become tedious having to repeat these properties in every `project.json`.
@@ -648,7 +648,7 @@ $BAKE_TARGET/platform-config/etc/my_lib
 ```
 Platform and config here are replaced respectively with the platform that bake is running on, and the current configuration (for example `debug` or `release`).
 
-When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/corto`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
+When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/bake`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
 
 ### Environment Variables
 Bake uses the following environment variables:
@@ -772,7 +772,7 @@ driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), compile_src)
 driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);
 ```
 
-Patterns create a label for a pattern (using the corto `idmatch` syntax). Rules are patterns that have dependencies and actions. The syntax for a rule is:
+Patterns create a label for a pattern (using the `ut_expr` syntax). Rules are patterns that have dependencies and actions. The syntax for a rule is:
 
 ```c
 driver->rule(<id>, <dependencies>, <function to map target to output>, <action>);
