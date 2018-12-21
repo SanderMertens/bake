@@ -116,17 +116,10 @@ bake clean
 ```
 
 ### Rebuild a project
-This command first cleans, then builds the project:
+This command first cleans, then builds the project or projects located in my_project:
 
 ```demo
-bake rebuild
-```
-
-### Build a directory
-This command builds the project (or projects) in the `my_project` directory:
-
-```demo
-bake my_project
+bake rebuild my_project
 ```
 
 ### Build a remote project
@@ -150,19 +143,7 @@ bake export PATH+=/my/path
 
 These variables are stored in a configuration file called `bake.json` in the root of the bake environment, which by default is `$HOME/bake`.
 
-### View and export bake environment variables
-To see the environment variables and their values in the default environment, do:
-
-```demo
-bake env
-```
-
-To get the environment variables and values of a custom environment, do:
-
-```demo
-bake env --env custom
-```
-
+### Export bake environment variables
 To export the environment variables to the shell, do:
 
 ```demo
@@ -180,18 +161,21 @@ bake --cfg release
 You can add/modify/remove bake configurations in the bake configuration file.
 ```
 
-### Debug bake
-Can't figure out why bake is doing something (or not doing something)? By enabling tracing, you can get much more information out of bake. Try this command:
+## FAQ
 
-```demo
-bake --trace
-```
+### Bake is built under the GPL3.0 license. Does this mean I cannot use it for commercial projects?
+No. As long as you do not distribute bake (either as source or binary) as part of your product, you can use bake for building your projects. This is no different than when you would use make for your projects, which is also GPL licensed.
 
-Or if that is not enough, try this command:
+### I want my customers to use bake. Does the license allow for this?
+Yes. As long as your customers use the open source version of bake, and you do not distribute bake binaries or source files with your product, your customers can use bake.
 
-```demo
-bake -v debug
-```
+### I've noticed a premake file in the bake repository. Does bake need premake to be installed?
+No. Bake uses premake to generate its makefiles (we would've used bake to build bake- but chicken & egg etc). The generated makefiles are included in the bake repository, so you won't need premake to use bake.
+
+### Why build yet another build tool?
+Bake started as an embedded buildsystem of the corto framework (https://corto.io). We really liked the way it simplified building code with lots of dependencies, and decided to turn it into a separate project! We also believe that there is currently no other tool out there that offers the same kind of holistic approach and level of usability like bake does.
+
+Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
 
 ## Manual
 [everything there is to know about bake]
