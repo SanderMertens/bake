@@ -66,7 +66,7 @@ bake init my_app
 ```
 
 ### Basic configuration with dependency and configuration for C driver
-This example shows a simple configuration with a dependency on the `foo.bar` package.
+This example shows a simple configuration with a dependency on the `foo.bar` package and links with `pthread`.
 
 ```json
 {
