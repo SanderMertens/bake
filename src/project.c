@@ -706,12 +706,12 @@ int16_t bake_project_resolve_links(
         ut_ll_append(resolved, lib);
     }
 
-    bake_clean_string_array(project->link);
+    bake_attr_free_string_array(project->link);
     project->link = resolved;
 
     return 0;
 error:
-    bake_clean_string_array(resolved);
+    bake_attr_free_string_array(resolved);
     return -1;
 }
 

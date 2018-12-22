@@ -370,7 +370,7 @@ int16_t bake_install_postbuild(
     char *kind, *subdir, *targetDir = NULL;
     bool copy = false;
 
-    if (!project->changed) {
+    if (!project->changed && project->language) {
         return 0;
     }
 

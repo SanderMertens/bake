@@ -124,6 +124,10 @@ typedef enum bake_rule_kind {
  * The 'pattern' callback will then retrieve the driver object from TLS, and
  * create the pattern with the driver object. */
 struct bake_driver_api {
+    /* Import definitions from another driver */
+    void (*import)(
+        const char *driver);
+
     /* Create a pattern */
     void (*pattern)(
         const char *name,

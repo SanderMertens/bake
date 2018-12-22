@@ -757,8 +757,6 @@ ut_dirstack ut_dirstack_push(
     }
 
     return stack;
-error:
-    return NULL;
 }
 
 void ut_dirstack_pop(

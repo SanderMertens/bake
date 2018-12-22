@@ -29,6 +29,11 @@ extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
 
 static
+bake_driver* bake_driver_get_intern(
+    const char *id,
+    bake_driver *driver);
+
+static
 void* bake_node_add(
     bake_driver *driver,
     void *n) /* void* to prevent excessive upcasting */
@@ -364,8 +369,19 @@ void bake_driver_remove_cb(
     ut_ll_append(project->files_to_clean, ut_strdup(file));
 }
 
+static
+void bake_driver_import_cb(
+    const char *id)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    if (!bake_driver_get_intern(id, driver)) {
+        driver->error = true;
+    }
+}
+
 /* Initialize driver API */
 bake_driver_api bake_driver_api_impl = {
+    .import = bake_driver_import_cb,
     .pattern = bake_driver_pattern_cb,
     .rule = bake_driver_rule_cb,
     .dependency_rule = bake_driver_dependency_rule_cb,
@@ -473,26 +489,31 @@ int16_t bake_driver__generate(
     return 0;
 }
 
-bake_driver* bake_driver_get(
-    const char *id)
+/** Load new driver, or import definitions from other driver */
+static
+bake_driver* bake_driver_get_intern(
+    const char *id,
+    bake_driver *driver)
 {
     char *package_id = ut_asprintf("bake.%s", id);
-    bake_driver *driver = NULL;
+    bool new_driver = driver == NULL;
 
     if (!drivers) {
         drivers = ut_ll_new();
     }
 
     /* Check if driver is already loaded */
-    ut_iter it = ut_ll_iter(drivers);
-    while (ut_iter_hasNext(&it) && !driver) {
-        bake_driver *e = ut_iter_next(&it);
-        if (!strcmp(e->package_id, package_id)) {
-            driver = e;
+    if (!driver) {
+        ut_iter it = ut_ll_iter(drivers);
+        while (ut_iter_hasNext(&it) && !driver) {
+            bake_driver *e = ut_iter_next(&it);
+            if (!strcmp(e->package_id, package_id)) {
+                driver = e;
+            }
         }
     }
 
-    if (!driver) {
+    if (!driver || strcmp(driver->id, id)) {
         ut_dl dl = NULL;
 
         /* Load package library and bakemain symbol */
@@ -507,11 +528,13 @@ bake_driver* bake_driver_get(
         }
 
         /* Create a new driver */
-        driver = malloc(sizeof(bake_driver));
-        driver->dl = dl;
-        driver->id = ut_strdup(id);
-        driver->package_id = package_id;
-        driver->nodes = ut_ll_new();
+        if (new_driver) {
+            driver = malloc(sizeof(bake_driver));
+            driver->dl = dl;
+            driver->id = ut_strdup(id);
+            driver->package_id = package_id;
+            driver->nodes = ut_ll_new();
+        }
 
         /* Set driver object in tls so callbacks can retrieve the driver
          * object without having to explicitly specify it. */
@@ -519,12 +542,26 @@ bake_driver* bake_driver_get(
 
         cb(&bake_driver_api_impl);
 
-        ut_ll_append(drivers, driver);
+        if (new_driver) {
+            ut_ll_append(drivers, driver);
+        }
 
-        ut_trace("driver '%s' loaded (package id = '%s')", id, package_id);
+        if (new_driver) {
+            ut_trace("driver '%s' loaded (package = '%s')",
+                id, package_id);
+        } else {
+            ut_trace("driver '%s' imported '%s' (package = '%s')",
+                driver->id, id, package_id);
+        }
     }
 
     return driver;
 error:
     return NULL;
+}
+
+bake_driver* bake_driver_get(
+    const char *id)
+{
+    return bake_driver_get_intern(id, NULL);
 }

@@ -233,7 +233,7 @@ int16_t bake_filelist_set(
 ut_iter bake_filelist_iter(
     bake_filelist *fl);
 
-/** Manually add file to filelist */x
+/** Manually add file to filelist */
 bake_file* bake_filelist_add_file(
     bake_filelist *fl,
     const char *filename);
