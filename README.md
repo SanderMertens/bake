@@ -1,5 +1,5 @@
 # bake
-Bake is a build tool, build system, package manager and environment manager in one. The goal of bake is to be able to download, build and run applications that rely on many packages, with a single command. Other than package managers like `brew` and `conan`, bake is also a build system (like `make` and `cmake`), so building projects is seamlessly integrated with using remote projects. For now, bake focusses on building C/C++ projects.
+Bake is a build tool, build system, package manager and environment manager in one. The goal of bake is to be able to download, build and run applications that rely on many packages, with a single command. Other than package managers like `brew` and `conan`, bake is also a build system (like `make` and `cmake`), so building projects is seamlessly integrated with using remote projects. For now, bake focuses on building C/C++ projects.
 
 Some of its features are:
 
