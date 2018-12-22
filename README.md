@@ -177,6 +177,17 @@ Bake started as an embedded buildsystem of the corto framework (https://corto.io
 
 Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
 
+### Why use JSON?
+A number of people have asked me why I used JSON for project configuration. There are two reasons: 
+- It's a ubiquitous language that everyone understands, 
+- It has a C parser that can be easily embedded into bake without adding dependencies
+
+A disadvantage of JSON is that while it is easy for trivial configurations, it can get a bit unwieldy once project configurations get more complex. In bake however, there are several mechanisms that allow you to encapsulate complexity into a configuration-only project, and then simply including that project as a dependency in your project file.
+
+Additionally, bake is not like traditional build tools where you specify rules with inputs and outputs in your project configuration. If you want to, for example, add a code generation step to your build, you write a driver for it, and then include the driver in your project configuration.
+
+Because of the above, bake project configurations typically aren't very complex. If your configuration is complex, you should probably ask yourself whether part of it can be encapsulated in a separate project, or whether you should build a custom driver.
+
 ## Manual
 [everything there is to know about bake]
 
