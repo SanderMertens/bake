@@ -51,29 +51,21 @@ After you've installed bake once, you can upgrade to the latest version with:
 bake upgrade
 ```
 
-We will add support for package managers like brew in the future.
-
-## Platform support
-[platforms on which bake is supported]
-
-Bake is currently only supported on Linux and macOS.
+We will add support for package managers like brew in the future. Bake is currently only supported on Linux and macOS.
 
 ## Getting started
 [useful tips for new bake users]
 
 The following commands are useful for getting started with bake. Also, check out the `bake --help` command, which lists all the options and commands available in the bake tool.
 
-### Basic configuration
-This example shows the simplest possible bake configuration file that builds an executable called `my_app`. Bake project configuration is stored in a file called `project.json`.
+### Create new project
+To create a new bake application project called `my_app`, run the following commands:
 
-```json
-{
-    "id": "my_app",
-    "type": "application"
-}
+```demo
+bake init my_app
 ```
 
-### Configuration with dependency
+### Basic configuration with dependency and configuration for C driver
 This example shows a simple configuration with a dependency on the `foo.bar` package.
 
 ```json
@@ -82,47 +74,28 @@ This example shows a simple configuration with a dependency on the `foo.bar` pac
     "type": "application",
     "value": {
         "use": ["foo.bar"]
-    }
-}
-```
-
-### Configuration with C driver
-Bake projects can include configuration for drivers, which will be loaded during the build. This is an example that specifies settings specific for the driver responsible for building C code:
-
-```json
-{
-    "id": "my_app",
-    "type": "application",
+    },
     "lang.c": {
         "lib": ["pthread"]
     }
 }
 ```
 
-### Create new project
-To create a new bake project called `my_app`, run the following commands:
+### Build, rebuild and clean a project
 
 ```demo
-bake init my_app
-```
-
-This creates a folder called `my_app` with a new `project.json` containing a basic configuration, a `src` and `include` folder for your source and include files.
-
-### Clean a project
-This command removes all temporary files and binaries from the project:
-
-```demo
+bake
 bake clean
+bake rebuild
 ```
 
-### Rebuild a project
-This command first cleans, then builds the project or projects located in my_project:
+Specify a build configuration:
 
 ```demo
-bake rebuild my_project
+bake --cfg release
 ```
 
-### Build a remote project
+### Clone & build a project from git
 This command builds a project and its dependencies directly from a git repository:
 
 ```demo
@@ -143,22 +116,9 @@ bake export PATH+=/my/path
 
 These variables are stored in a configuration file called `bake.json` in the root of the bake environment, which by default is `$HOME/bake`.
 
-### Export bake environment variables
-To export the environment variables to the shell, do:
-
-```demo
+To export the bake environment to a terminal, do:
+```
 export `bake env`
-```
-
-### Do a release build
-By default, bake builds projects in debug mode, which disables optimizations and enables symbols. If you want to build projects in release build, specify the `release` configuration, like this:
-
-```demo
-bake --cfg release
-```
-
-```note
-You can add/modify/remove bake configurations in the bake configuration file.
 ```
 
 ## FAQ
