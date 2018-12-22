@@ -85,8 +85,8 @@ This example shows a simple configuration with a dependency on the `foo.bar` pac
 
 ```demo
 bake
-bake clean
 bake rebuild
+bake clean
 ```
 
 Specify a build configuration:
