@@ -81,7 +81,7 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/c.o \
+	$(OBJDIR)/main.o \
 
 RESOURCES := \
 
@@ -140,7 +140,7 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/c.o: ../src/c.c
+$(OBJDIR)/main.o: ../src/main.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

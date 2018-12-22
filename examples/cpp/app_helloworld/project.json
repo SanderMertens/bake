@@ -1,0 +1,7 @@
+{
+    "id": "app_helloworld",
+    "type": "application",
+    "value": {
+        "language": "cpp"
+    }
+}

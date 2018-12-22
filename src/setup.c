@@ -202,6 +202,8 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers/lang/c", "bake.lang.c", "bake_lang_c"), NULL);
 
+    ut_try( bake_build_make_project("drivers/lang/cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
+
     /*
 
      ______   ______   ______   __   __       ______   ______  ______

@@ -52,7 +52,7 @@ int16_t bake_json_set_string(
     }
     const char *str = json_value_get_string(v);
     if (str) {
-        *ptr = strdup(str);
+        *ptr = ut_strdup(str);
     } else {
         *ptr = NULL;
     }

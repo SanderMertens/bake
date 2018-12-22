@@ -360,17 +360,24 @@ int16_t bake_project_init(
         project->version = ut_strdup("0.0.0");
     }
 
-    if (!strcmp(project->language, "none")) {
+    if (project->language && !strcmp(project->language, "c++")) {
+        free(project->language);
+        project->language = ut_strdup("cpp");
+    }
+
+    if (project->language && !strcmp(project->language, "none")) {
         free(project->language);
         project->language = NULL;
     }
 
     if (project->language) {
+        char *driver_id = ut_asprintf("lang.%s", project->language);
         ut_try( bake_project_load_driver(
             project,
-            strarg("lang.%s", project->language),
+            driver_id,
             NULL),
               "failed to load driver for language '%s'", project->language);
+        free(driver_id);
 
         bake_project_driver *driver = ut_ll_get(project->drivers, 0);
         project->language_driver = driver;
@@ -1068,20 +1075,26 @@ int16_t bake_project_setup(
         "{\n"
         "    \"id\": \"%s\",\n"
         "    \"type\": \"%s\",\n"
-        "    \"value\":{\n"
+        "    \"value\": {\n"
         "        \"author\": \"John Doe\",\n"
         "        \"description\": \"%s\",\n"
         "        \"version\": \"0.0.0\",\n"
         "        \"repository\": null,\n"
-        "        \"license\": null\n"
-        "    }\n"
-        "}\n",
-        project->id,
-        project->type == BAKE_APPLICATION
-            ? "application"
-            : "package",
-        description
-    );
+        "        \"license\": null",
+            project->id,
+            project->type == BAKE_PACKAGE
+                ? "package"
+                : project->type == BAKE_APPLICATION
+                    ? "application"
+                    : "tool",
+            description);
+    if (strcmp(project->language, "c")) {
+        fprintf(f,
+        ",\n        \"language\": \"%s\"",
+            project->language);
+    }
+    fprintf(f, "\n    }\n}\n");
+
     fclose(f);
 
     if (driver) {
