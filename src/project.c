@@ -388,9 +388,6 @@ int16_t bake_project_init(
     if (project->artefact) {
         project->artefact_file = ut_asprintf(
             "%s/%s", project->artefact_path, project->artefact);
-
-        ut_trace("#[grey]building artefact '%s' for project '%s'",
-            project->artefact, project->id);
     }
 
     project->bin_path = ut_asprintf(
@@ -594,15 +591,15 @@ int16_t bake_check_dependency(
 
     if (!artefact_modified || dep_modified <= artefact_modified) {
         const char *fmt = private
-            ? "#[grey] use %s => %s (modified=%d private)"
-            : "#[grey] use %s => %s (modified=%d)"
+            ? "#[grey]use %s => %s (modified=%d private)"
+            : "#[grey]use %s => %s (modified=%d)"
             ;
         ut_ok(fmt, dependency, lib);
     } else {
         p->artefact_outdated = true;
         const char *fmt = private
-            ? "#[grey] use %s => %s (modified=%d, changed, private)"
-            : "#[grey] use %s => %s (modified=%d, changed)"
+            ? "#[grey]use %s => %s (modified=%d, changed, private)"
+            : "#[grey]use %s => %s (modified=%d, changed)"
             ;
         ut_ok(fmt, dependency, lib, dep_modified);
     }

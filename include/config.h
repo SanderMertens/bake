@@ -19,6 +19,11 @@
  * THE SOFTWARE.
  */
 
+/** @file
+ * @section config Configuration type
+ * @brief Configuration settings loaded from bake configuration file.
+ **/
+
 #ifndef BAKE_CONFIG_H_
 #define BAKE_CONFIG_H_
 
@@ -27,23 +32,27 @@ extern "C" {
 #endif
 
 struct bake_config {
-    const char *environment;
-    const char *configuration;
-    bool symbols;
-    bool debug;
-    bool optimizations;
-    bool coverage;
-    bool strict;
-    ut_ll env_variables;
-    ut_ll env_values;
+    const char *environment;    /* Id of environment in use */
+    const char *configuration;  /* Id of configuration in use */
+
+    /* Configuration attributes */
+    bool symbols;               /* Enable symbols in binaries */
+    bool debug;                 /* Enable debug information in binaries */
+    bool optimizations;         /* Enable optimizations in binaries */
+    bool coverage;              /* Enable code coverage in binaries */
+    bool strict;                /* Enable strict compiler settings */
+
+    /* Environment attribubtes */
+    ut_ll env_variables;        /* List with environment variable names */
+    ut_ll env_values;           /* List with environment variable values */
 
     /* Set by configuration loader */
-    char *home;
-    char *target;
-    char *home_bin;
-    char *home_lib;
-    char *target_bin;
-    char *target_lib;
+    char *home;              /* $BAKE_HOME */
+    char *target;            /* $BAKE_TARGET/<platform>-<configuration> */
+    char *home_bin;          /* $BAKE_HOME/bin */
+    char *home_lib;          /* $BAKE_HOME/lib */
+    char *target_bin;        /* $BAKE_TARGET/<platform>-<configuration>/bin */
+    char *target_lib;        /* $BAKE_TARGET/<platform>-<configuration>/lib */
 };
 
 #ifdef __cplusplus

@@ -37,10 +37,4 @@ typedef struct bake_config bake_config;
 #include "config.h"
 #include "driver_api.h"
 
-/*
-#include "filelist.h"
-#include "rule.h"
-#include "language.h"
-*/
-
 #endif

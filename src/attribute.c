@@ -29,10 +29,13 @@ bake_attr* bake_attr_parse_value(
     bake_attr *existing,
     JSON_Value *v);
 
+/** ${locate ...} bake function.
+ * This function returns paths associated with the bake project, like the
+ * include path, etc path, metadata path and path to the project binary. */
 static
 int16_t bake_project_func_locate(
     bake_project *project,
-    const char *package_id, /* Different from project when parsing dependee config */
+    const char *package_id,
     ut_strbuf *buffer,
     const char *argument)
 {
@@ -65,6 +68,9 @@ int16_t bake_project_func_locate(
     }
 }
 
+/** ${os ...} bake function.
+ * This function returns 'true' if the argument passes into the function matches
+ * the current operating system, or false if it doesn't. */
 static
 int16_t bake_project_func_os(
     bake_project *project,
@@ -117,6 +123,9 @@ bool bake_project_language_match(
     return false;
 }
 
+/** ${language ...} bake function.
+ * This function returns 'true' if the argument passes into the function matches
+ * the current language system, or false if it doesn't. */
 static
 int16_t bake_project_func_language(
   bake_project *project,
@@ -135,6 +144,7 @@ int16_t bake_project_func_language(
     return 0;
 }
 
+/** Forward a function call from project.json to the right implementation. */
 static
 int16_t bake_attr_func(
     bake_config *config,
@@ -157,6 +167,8 @@ int16_t bake_attr_func(
     return 0;
 }
 
+/** Parse a string from a project.json configuration, parse functions and
+ * environment variables. */
 char* bake_attr_replace(
     bake_config *config,
     bake_project *project,
@@ -250,7 +262,7 @@ error:
     return NULL;
 }
 
-
+/* Parse JSON array, return ARRAY attribute */
 static
 bake_attr* bake_attr_parse_array(
     bake_config *config,
@@ -284,6 +296,7 @@ error:
     return NULL;
 }
 
+/* Return STRING attribute */
 static
 bake_attr* bake_attr_parse_string(
     bake_config *config,
@@ -308,6 +321,7 @@ bake_attr* bake_attr_parse_string(
     return result;
 }
 
+/* Return NUMBER attribute */
 static
 bake_attr* bake_attr_parse_number(
     double v)
@@ -320,6 +334,7 @@ bake_attr* bake_attr_parse_number(
     return result;
 }
 
+/* Return BOOLEAN attribute */
 static
 bake_attr* bake_attr_parse_bool(
     bool v)
@@ -332,6 +347,7 @@ bake_attr* bake_attr_parse_bool(
     return result;
 }
 
+/* Parse JSON value */
 static
 bake_attr* bake_attr_parse_value(
     bake_config *config,
@@ -371,6 +387,7 @@ bake_attr* bake_attr_parse_value(
     return attr;
 }
 
+/* Parse JSON object */
 static
 ut_ll bake_attr_parse_object(
     bake_config *config,
@@ -445,6 +462,7 @@ error:
     return NULL;
 }
 
+/** Parse JSON into new attribute list, or append to existing list */
 ut_ll bake_attrs_parse(
     bake_config *config,
     bake_project *project,
@@ -456,6 +474,7 @@ ut_ll bake_attrs_parse(
         config, project, project_id, object, existing);
 }
 
+/** Find attribute in list */
 bake_attr *bake_attr_get(
     ut_ll attributes,
     const char *name)
@@ -472,17 +491,6 @@ bake_attr *bake_attr_get(
     }
 
     return NULL;
-}
-
-void bake_clean_string_array(
-    ut_ll list)
-{
-    ut_iter it = ut_ll_iter(list);
-    while (ut_iter_hasNext(&it)) {
-        char *str = ut_iter_next(&it);
-        free(str);
-    }
-    ut_ll_free(list);
 }
 
 void bake_attr_free_string_array(

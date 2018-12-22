@@ -19,6 +19,11 @@
  * THE SOFTWARE.
  */
 
+/** @file
+ * @section project Project types
+ * @brief Project settings loaded from project.json.
+ **/
+
 #ifndef BAKE_PROJECT_H_
 #define BAKE_PROJECT_H_
 

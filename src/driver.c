@@ -519,6 +519,8 @@ bake_driver* bake_driver_get(
 
         cb(&bake_driver_api_impl);
 
+        ut_ll_append(drivers, driver);
+
         ut_trace("driver '%s' loaded (package id = '%s')", id, package_id);
     }
 

@@ -19,6 +19,11 @@
  * THE SOFTWARE.
  */
 
+/** @file
+ * @section attribute Attribute API
+ * @brief API for retrieving driver-specific configuration.
+ **/
+
 #ifndef bake_attr_H_
 #define bake_attr_H_
 
@@ -40,16 +45,20 @@ typedef struct bake_attr {
     } is;
 } bake_attr;
 
+/** Get attribute from attribute list */
 bake_attr *bake_attr_get(
     ut_ll attributes,
     const char *name);
 
+/** Free attribute */
 void bake_attr_free(
     bake_attr *attr);
 
+/** Free attribute list */
 void bake_attr_free_attr_array(
     ut_ll list);
 
+/** Free list of strings (used for array attributes) */
 void bake_attr_free_string_array(
     ut_ll list);
 

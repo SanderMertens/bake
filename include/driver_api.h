@@ -19,6 +19,11 @@
  * THE SOFTWARE.
  */
 
+/** @file
+ * @section driver_api Driver interface
+ * @brief Interface that can be implemented by bake drivers.
+ **/
+
 #ifndef BAKE_DRIVER_API_H_
 #define BAKE_DRIVER_API_H_
 
@@ -73,24 +78,51 @@ char* (*bake_rule_map_cb)(
 
 /* Bake target is a convenience type wrapped by functions that lets users
  * specify different kinds of targets as argument type. */
+
+/* A PATTERN is a list of files matched against a pattern (string expression
+ * that contains wildcards). A  map is a function that transforms input
+ * files to output files (like foo.c => foo.o) */
 typedef enum bake_rule_targetKind {
     BAKE_RULE_TARGET_MAP,
     BAKE_RULE_TARGET_PATTERN
 } bake_rule_targetKind;
 
+/* A rule target specifies the expected list of files as result of a rule. When
+ * the rule target is a MAP, this file list will be determined by invoking the
+ * map callback on the input file list.
+ * If the target pattern is a PATTERN, the output list will be populated by the
+ * pattern in the target. */
+typedef struct bake_rule_target {
+    bake_rule_targetKind kind; /* Is the target a MAP or a PATTERN */
+    union {
+        bake_rule_map_cb map; /* MAP callback */
+        const char *pattern;  /* PATTERN expression */
+    } is;
+} bake_rule_target;
+
+/* A driver can create rules and patterns. A pattern is a string expression that
+ * contains wildcards, and matches a list of files. A rule is a construct that
+ * has an input file list (a pattern) and an output file list (a rule target).
+ * When an output of a rule is required by the build, bake will evaluate the
+ * corresponding inputs. If the input files are newer than the output files, the
+ * rule will be invoked.
+ * When the target is a PATTERN, the rule will be invoked once for the target.
+ * When the target is a MAP, the rule will be invoked for every input-output
+ * file (typical example: a .c file and .o file). */
 typedef enum bake_rule_kind {
     BAKE_RULE_PATTERN,
     BAKE_RULE_RULE
 } bake_rule_kind;
 
-typedef struct bake_rule_target {
-    bake_rule_targetKind kind;
-    union {
-        bake_rule_map_cb map;
-        const char *pattern;
-    } is;
-} bake_rule_target;
-
+/* The driver API is a struct that is passed to the bakemain function, which is
+ * invoked when the driver is loaded. This struct is prepopulated with functions
+ * the driver can call to create patterns and rules.
+ * Before the bakemain function of the driver is invoked, bake will set the
+ * driver object (of type bake_driver) in TLS memory. This enables the driver to
+ * invoke the callbacks without explicitly passing the driver, like this:
+ *    driver->pattern("SOURCES", "*.c");
+ * The 'pattern' callback will then retrieve the driver object from TLS, and
+ * create the pattern with the driver object. */
 struct bake_driver_api {
     /* Create a pattern */
     void (*pattern)(

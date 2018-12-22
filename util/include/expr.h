@@ -29,6 +29,34 @@
 
 typedef struct ut_expr_program_s* ut_expr_program;
 
+typedef enum ut_exprToken {
+    UT_EXPR_TOKEN_NONE,
+    UT_EXPR_TOKEN_THIS,
+    UT_EXPR_TOKEN_PARENT,
+    UT_EXPR_TOKEN_IDENTIFIER,
+    UT_EXPR_TOKEN_FILTER,
+    UT_EXPR_TOKEN_AND,
+    UT_EXPR_TOKEN_OR,
+    UT_EXPR_TOKEN_NOT,
+    UT_EXPR_TOKEN_SCOPE,
+    UT_EXPR_TOKEN_TREE,
+    UT_EXPR_TOKEN_SEPARATOR
+} ut_exprToken;
+
+typedef struct ut_exprOp {
+    ut_exprToken token;
+    char *start;
+    bool containsWildcard;
+} ut_exprOp;
+
+struct ut_expr_program_s {
+    int kind; /* 0 = default, 1 = identifier, 2 = this, 3 = /, 4 = // */
+    ut_exprOp ops[UT_EXPR_MAX_OP];
+    uint8_t size;
+    char *tokens;
+};
+
+
 /** Match an id against a pattern.
  * Simple function that tests if an object id matches the provided pattern.
  *
@@ -143,5 +171,12 @@ bool ut_expr_hasOperators(
 UT_EXPORT
 int ut_expr_get_scope(
     ut_expr_program program);
+
+UT_EXPORT
+int16_t ut_exprParseIntern(
+    ut_expr_program data,
+    const char *expr,
+    bool allowScopes,
+    bool allowSeparators);
 
 #endif

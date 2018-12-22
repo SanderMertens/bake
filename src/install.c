@@ -144,18 +144,18 @@ int16_t bake_uninstall_from_env(
 {
     if (uninstall) {
         ut_try( ut_rm(strarg("%s/meta/%s", env, project->id)), NULL);
+
+        if (project->type == BAKE_PACKAGE) {
+            ut_try( ut_rm(strarg("%s/lib/%s", env, project->artefact)), NULL);
+        } else if (project->type == BAKE_APPLICATION) {
+            ut_try( ut_rm(strarg("%s/bin/%s", env, project->artefact)), NULL);
+        } else if (project->type == BAKE_TOOL) {
+            ut_try( ut_rm(strarg("%s/%s", env, project->artefact)), NULL);
+        }
     }
 
     ut_try( ut_rm(strarg("%s/etc/%s", env, project->id)), NULL);
     ut_try( ut_rm(strarg("%s/include/%s.dir", env, project->id)), NULL);
-
-    if (project->type == BAKE_PACKAGE) {
-        ut_try( ut_rm(strarg("%s/lib/%s", env, project->artefact)), NULL);
-    } else if (project->type == BAKE_APPLICATION) {
-        ut_try( ut_rm(strarg("%s/bin/%s", env, project->artefact)), NULL);
-    } else if (project->type == BAKE_TOOL) {
-        ut_try( ut_rm(strarg("%s/%s", env, project->artefact)), NULL);
-    }
 
     return 0;
 error:
@@ -369,6 +369,10 @@ int16_t bake_install_postbuild(
 {
     char *kind, *subdir, *targetDir = NULL;
     bool copy = false;
+
+    if (!project->changed) {
+        return 0;
+    }
 
     if (project->type == BAKE_PACKAGE) {
         targetDir = config->target_lib;
