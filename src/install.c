@@ -370,10 +370,6 @@ int16_t bake_install_postbuild(
     char *kind, *subdir, *targetDir = NULL;
     bool copy = false;
 
-    if (!project->changed && project->language) {
-        return 0;
-    }
-
     if (project->type == BAKE_PACKAGE) {
         targetDir = config->target_lib;
     } else {
@@ -398,7 +394,7 @@ int16_t bake_install_postbuild(
 
     char *targetBinary = ut_asprintf("%s/%s", targetDir, project->artefact);
 
-    if (!ut_file_test(targetBinary) || project->freshly_baked) {
+    if (!ut_file_test(targetBinary) || project->changed || !project->language) {
         /* Copy binary */
         if (ut_cp(project->artefact_file, targetBinary)) {
             goto error;
