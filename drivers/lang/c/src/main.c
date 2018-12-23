@@ -96,17 +96,28 @@ static
 const char *cc(
     bool is_cpp)
 {
+    const char *cxx = ut_getenv("CXX");
+    const char *cc = ut_getenv("CC");
+
     if (!is_darwin()) {
         if (is_cpp) {
-            return "g++";
+            if (!cxx)
+                cxx = "g++";
+            return cxx;
         } else {
-            return "gcc";
+            if (!cc)
+                cc = "gcc";
+            return cc;
         }
     } else {
         if (is_cpp) {
-            return "clang++";
+            if (!cxx)
+                cxx = "clang++";
+            return cxx;
         } else {
-            return "clang";
+            if (!cc)
+                cc = "gcc";
+            return cc;
         }
     }
 }
