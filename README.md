@@ -148,6 +148,20 @@ Additionally, bake is not like traditional build tools where you specify rules w
 
 Because of the above, bake project configurations typically aren't very complex. If your configuration is complex, you should probably ask yourself whether part of it can be encapsulated in a separate project, or whether you should build a custom driver.
 
+### How can I use a different compiler?
+The drivers for C & C++ projects by default use gcc/g++ (on Linux) and clang/clang++ (on MacOS). If you want to change the default compiler, you can set the `CC` (for C) and `CXX` (for C++) environment variables, as long as the command line options are compatible with gcc. Instead of setting the environment variables manually, you can make them part of a bake environment like this:
+
+```demo
+bake export CC=clang --env clang_env
+```
+
+To use the environment, and build with clang, you can then invoke bake like this:
+```demo
+bake --env clang_env
+```
+
+To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
+
 ## Manual
 [everything there is to know about bake]
 
