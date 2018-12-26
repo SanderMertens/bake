@@ -162,6 +162,18 @@ bake --env clang_env
 
 To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
 
+### How to use different versions of the same package
+Bake does not support having different versions of a package in the same environment. If you want to run different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_HOME` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_HOME` in a new environment called `my_env` with this command:
+
+```
+bake export BAKE_HOME=/home/user/my_path --env my_env
+```
+
+To use this environment, invoke bake like this:
+```demo
+bake --env my_env
+```
+
 ## Manual
 [everything there is to know about bake]
 
