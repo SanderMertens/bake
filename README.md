@@ -176,6 +176,9 @@ To prevent a project from being stored in `BAKE_TARGET`, add this to the `projec
 }
 ```
 
+### How do I do a release build
+By default, binaries are built with the default debug configuration. To build a release configuration, add `--cfg release` to your bake command. You can add/change configurations in the bake configuration file. See "Configuring Bake" for more details.
+
 ### How to use different versions of the same package
 Bake does not support having different versions of a package in the same environment. If you want to use different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_TARGET` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_TARGET` in a new environment called `my_env` (for example) with this command:
 
