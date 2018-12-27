@@ -24,7 +24,7 @@ Some of its features are:
 
 Bake development has focussed so far on improving user experience on commodity operating systems, like macOS and Linux (Windows is coming soon). Future releases will add more features, like cross-compilation, code coverage, static code analysis and CI integration.
 
-Bake only uses git, and does _not_ depend on its own server infrastructure for package management. **We do not collect any information when you clone, build or publish projects**.
+Bake only uses git, and does _not_ depend on its own server infrastructure for package management. **Bake does not collect any information when you clone, build or publish projects**.
 
 ## Installation
 [instructions on how to install bake]
@@ -129,11 +129,11 @@ No. As long as you do not distribute bake (either as source or binary) as part o
 ### I want my customers to use bake. Does the license allow for this?
 Yes. As long as your customers use the open source version of bake, and you do not distribute bake binaries or source files with your product, your customers can use bake.
 
-### I've noticed a premake file in the bake repository. Does bake need premake to be installed?
+### I noticed a premake file in the bake repository. Does bake need premake to be installed?
 No. Bake uses premake to generate its makefiles (we would've used bake to build bake- but chicken & egg etc). The generated makefiles are included in the bake repository, so you won't need premake to use bake.
 
 ### Why build yet another build tool?
-Bake started as an embedded buildsystem of the corto framework (https://corto.io). We really liked the way it simplified building code with lots of dependencies, and decided to turn it into a separate project! We also believe that there is currently no other tool out there that offers the same kind of holistic approach and level of usability like bake does.
+Bake started as an embedded buildsystem of the corto framework (https://corto.io). We really liked the way it simplified building code with lots of dependencies, and decided to turn it into a separate project! We also believe that there is currently no other tool out there that offers the same kind of holistic approach and level of usability that bake does.
 
 Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
 
@@ -165,7 +165,7 @@ To export `CC` or `CXX` to the default environment, simply leave out the `--env`
 ### What is the difference between BAKE_HOME and BAKE_TARGET
 `BAKE_HOME` is where all the installed projects are stored. These are projects that you did not build on your machine, but installed from a git repository. `BAKE_TARGET` is the location where all the projects you built are stored. By default, `BAKE_HOME` and `BAKE_TARGET` are set to the same location, which is `BAKE_HOME`. Whereas bake installs projects directly to `BAKE_HOME`, when building your own projects, they are stored in `$BAKE_TARGET/arch-os-config` (for example: `x64-darwin-debug`).
 
-### Where does bake store my binaries
+### Where does bake store my binaries?
 Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_TARGET/arch-os-config/bin` or `$BAKE_TARGET/arch-os-config/lib`. By default, `$BAKE_TARGET` is set to `$HOME/bake`, just like `$BAKE_HOME`.
 
 To prevent a project from being stored in `BAKE_TARGET`, add this to the `project.json`:
@@ -176,10 +176,10 @@ To prevent a project from being stored in `BAKE_TARGET`, add this to the `projec
 }
 ```
 
-### How do I do a release build
+### How do I do a release build?
 By default, binaries are built with the default debug configuration. To build a release configuration, add `--cfg release` to your bake command. You can add/change configurations in the bake configuration file. See "Configuring Bake" for more details.
 
-### How to use different versions of the same package
+### How to use different versions of the same package?
 Bake does not support having different versions of a package in the same environment. If you want to use different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_TARGET` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_TARGET` in a new environment called `my_env` (for example) with this command:
 
 ```
