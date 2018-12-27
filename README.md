@@ -162,7 +162,7 @@ bake --env clang_env
 
 To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
 
-### What is the difference between BAKE_HOME and BAKE_TARGET
+### What is the difference between BAKE_HOME and BAKE_TARGET?
 `BAKE_HOME` is where all the installed projects are stored. These are projects that you did not build on your machine, but installed from a git repository. `BAKE_TARGET` is the location where all the projects you built are stored. By default, `BAKE_HOME` and `BAKE_TARGET` are set to the same location, which is `BAKE_HOME`. Whereas bake installs projects directly to `BAKE_HOME`, when building your own projects, they are stored in `$BAKE_TARGET/arch-os-config` (for example: `x64-darwin-debug`).
 
 ### Where does bake store my binaries?
