@@ -127,6 +127,11 @@ Having said that, bake is not perfect and there is still lots of work to do. It 
 ### Why yet another package manager?
 Bake is different from package managers like conan, brew or apt-get. It is intended as a tool for developers to easily import and use code from other developers. Bake for example does not have an online package repository, does not distribute binaries and by default stores packages in the user $HOME directory. Its only dependency is git, so not data is collected by bake when you download or publish packages.
 
+### How does bake compare to make?
+GNU make is a tool for generating compiler commands. It has a custom language for specifying build rules, and allows for a lot of complexity and flexibility in the project-specific makefiles. In a makefile, you would ordinarily find all information that is required to build your project, from the names and locations of source files, to the compiler flags, to where your binary will be stored.
+
+Bake also generates compiler commands, but instead of requiring a user to create build rules from scratch, bake uses "drivers" (configurable plugins) to do much of the heavy lifting. This reduces project configuration files to simple declarative pieces of data, which makes them easier to write, maintain and port to other platforms.
+
 ### How do I install bake packages?
 Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
 
