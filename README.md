@@ -25,17 +25,10 @@ Bake depends on git for its package management features, and does _not_ have a s
 
 Install bake using the following commands:
 
-On MacOS:
+On Linux/MacOS:
 ```demo
 git clone https://github.com/SanderMertens/bake
-make -C bake/build-darwin
-bake/bake setup
-```
-
-On Linux:
-```demo
-git clone https://github.com/SanderMertens/bake
-make -C bake/build-linux
+make -C bake/build-$(uname)
 bake/bake setup
 ```
 
