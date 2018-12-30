@@ -4,17 +4,17 @@ Bake is a build tool, build system, package manager and environment manager in o
 The main features of bake are:
 - discover all projects in current directory & build them in right order
 - automatically include header files from dependencies
-- use logical hierarchical names to add dependencies on any project on the machine
+- use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
 - programmable C API for interacting with package management
 
-Bake only uses git, and does _not_ depend on its own server infrastructure for package management. **Bake does not collect any information when you clone, build or publish projects**.
+Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
 ## Installation
 [instructions on how to install bake]
 
 Install bake using the following commands:
 
-On macOS:
+On MacOS:
 ```demo
 git clone https://github.com/SanderMertens/bake
 make -C bake/build-darwin
@@ -127,7 +127,27 @@ Having said that, bake is not perfect and there is still lots of work to do. It 
 ### Why yet another package manager?
 Bake is different from package managers like conan, brew or apt-get. It is intended as a tool for developers to easily import and use code from other developers. Bake for example does not have an online package repository, does not distribute binaries and by default stores packages in the user $HOME directory. Its only dependency is git, so not data is collected by bake when you download or publish packages.
 
-### Why use JSON?
+### How do I install bake packages?
+Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
+
+```
+bake clone SanderMertens/example
+```
+
+If your git repository is not hosted on GitHub, simply provide the full git URL:
+
+```
+bake clone https://my_git_server.com/example
+```
+
+Any URL that is accepted by git is accepted by bake.
+
+### How does bake find dependencies of cloned projects?
+When bake clones a package with dependencies, it will try to also install those dependencies. It does this by taking the git URL specified to `bake clone`, and replacing the package name with the dependency name. For example, if the https://github.com/SanderMertens/example git repository depends on project `foobar`, bake would also look for https://github.com/SanderMertens/foobar.
+
+Future versions of bake may provide more intelligent ways to locate packages.
+
+### Why use JSON for project configuration?
 A number of people have asked me why I used JSON for project configuration. There are two reasons: 
 - It is a ubiquitous language that everyone understands, 
 - It has a C parser that can be easily embedded into bake without adding dependencies
@@ -136,7 +156,7 @@ A disadvantage of JSON is that while it is fine for trivial configurations, it c
 
 Additionally, bake is not like traditional build tools where you specify rules with inputs and outputs in your project configuration. If you want to, for example, add a code generation step to your build, you write a driver for it, and then include the driver in your project configuration.
 
-### How can I use a different compiler?
+### How can I specify a custom compiler?
 The drivers for C & C++ projects by default use gcc/g++ (on Linux) and clang/clang++ (on MacOS). If you want to change the default compiler, you can set the `CC` (for C) and `CXX` (for C++) environment variables, as long as the command line options are compatible with gcc. Instead of setting the environment variables manually, you can make them part of a bake environment like this:
 
 ```demo
