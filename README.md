@@ -367,7 +367,7 @@ They are used like this:
 The following functions are currently supported:
 
 Function | Type | Description
----------|------------
+---------|------|------
 locate | string | Locate various project paths in the bake environment
 target | bool | Match a target platform
 
