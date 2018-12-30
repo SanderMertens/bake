@@ -189,6 +189,66 @@ This is possible because bake copies header files of projects to the bake enviro
 
 There are of course many more differences, and this example covers only a small subset of the features of both CMake and bake, but hopefully it provides a bit more insight into how the two tools are different.
 
+### Can I link with non-bake libraries?
+Yes. You will have to add the library not as a bake dependency, but as a library for the C driver. This example shows how to link with the `m` (math) library:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "lang.c": {
+        "lib": ["m"]
+    }
+}
+```
+
+This makes the project configuration platform-specific which is not ideal. To improve the above configuration, we should ensure that `m` is only added on Linux (MacOS doesn't have a `m` library):
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "${os linux}": {
+        "lang.c": {
+            "lib": ["m"]
+        }
+    }
+}
+```
+
+For big projects, all these different rules could complicate the `project.json` quite a bit. It would be even better to encapsulate this logic in a separate bake project:
+
+```json
+{
+    "id": "math",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "dependee": {
+        "${os linux}": {
+            "lang.c": {
+                "lib": ["m"]
+            }
+        }
+    }
+}
+```
+
+This creates a new "math" package that you can now specify as regular bake dependency. The `"language": "none"` attribute lets bake know that there is no code to build, and this is a configuration-only project. The `dependee` attribute tells bake to not apply the settings inside the JSON object to the `math` project, but to the projects that depend on `math`.
+
+We can now change the configuration of `my_app` into this:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "value": {
+        "use": ["math"]
+    }
+}
+```
+
 ### How do I install bake packages?
 Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
 
