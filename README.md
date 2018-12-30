@@ -9,6 +9,14 @@ The main features of bake are:
 
 Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
+## Contents
+* [Installation](#installation)
+* [Getting Started](#getting-started)
+* [FAQ](#faq)
+* [Manual](#manual)
+* [Authors](#authors)
+* [Legal stuff](#legal-stuff)
+
 ## Installation
 [instructions on how to install bake]
 
