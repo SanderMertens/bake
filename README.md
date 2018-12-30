@@ -129,9 +129,9 @@ No. Bake uses premake to generate its makefiles (we would've used bake to build 
 ### Why yet another build tool?
 Bake originally was a build tool developed for a framework (https://corto.io). It ended up simplifying building code a lot, and we decided to turn it into a separate project. So why did bake simplify building code that much?
 
-Most build tools focus on the actual compilation process itself, and require project configurations to, for example, explicitly specify how source files get compiled to binaries. Since these rules are very similar for each C/C++ project, bake stores them into reusable drivers. As a result, bake project configurations can remain very simple and declarative.
+Most build tools focus on the actual compilation process itself, and require project configurations to explicitly specify how source files get compiled to binaries. Since these rules are very similar for each C/C++ project, bake stores them into reusable drivers. As a result, bake project configurations can remain very simple and declarative.
 
-In addition, bake is modular so that even when your build needs to do more than just compile C/C++ files, you can write a new driver that, for example, generates code, and simply reference that driver in your project configuration.
+In addition, bake is modular so that even when your build needs to do more than just compile C/C++ files, you can write a new driver that, for example, generates code. You can then simply reference that driver from your project configuration.
 
 Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
 
@@ -141,7 +141,7 @@ Bake is different from package managers like conan, brew or apt-get. It is inten
 ### How does bake compare to make?
 GNU make is a tool for generating compiler commands. It has a custom language for specifying build rules, and allows for a lot of complexity and flexibility in the project-specific makefiles. In a makefile, you would ordinarily find all information that is required to build your project, from the names and locations of source files, to the compiler flags, to where your binary will be stored.
 
-Bake also generates compiler commands, but instead of requiring a user to create build rules from scratch, bake uses "drivers" (configurable plugins) to do much of the heavy lifting. Driver implementations look very similar to makefiles, in that they also specify build rules with in & outputs. This moves the most complex part of a build to a reusable module, while keeping confiugration simple.
+Bake also generates compiler commands, but instead of requiring a user to create build rules from scratch, bake uses "drivers" (configurable plugins) to do much of the heavy lifting. Driver implementations look very similar to makefiles, in that they also specify build rules with in & outputs. This moves the most complex part of a build to a reusable module, while keeping configuration simple.
 
 Bake further differentiates itself when it comes to working with multiple projects at once. With make, users often rely on "super" makefiles, that specify the locations of projects and the order in which they must be built. In contrast, bake automatically discovers the projects to build, and computes the right build order based on the project dependencies. If a dependency is not discovered, bake will locate it in the bake environment (or throw an error).
 
