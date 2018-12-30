@@ -45,6 +45,8 @@ int16_t bake_create_script(void)
         goto error;
     }
 
+    fprintf(f, "#!/bin/bash\n\n");
+    
     fprintf(f, "UNAME=$(uname)\n\n");
 
     fprintf(f, "clone_bake() {\n");
