@@ -3,7 +3,7 @@ The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't ni
 
 To that end, bake is a build tool, build system, package manager and environment manager in one. Bake's goal is to automate the process of building code as much as possible, especially when having lots of projects that depend on each other. For now, bake focuses on building C/C++ code.
 
-Bake's main features of are:
+Bake's main features are:
 - discover all projects in current directory & build them in right order
 - automatically include header files from dependencies
 - use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
