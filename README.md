@@ -136,6 +136,48 @@ Bake further differentiates itself when it comes to working with multiple projec
 
 Finally, bake has many features beyond generating compiler commands that address problems commonly found during building, like managing environment variables, git integration and package versioning.
 
+## How does bake compare to CMake?
+CMake and bake have similar goals in that both tools simplify the build process, but they do so in very different ways. To highlight the differences, lets take an example CMake project configuration, and compare it to bake:
+
+```cmake
+cmake_minimum_required (VERSION 2.6)
+
+include_directories ("bar")
+add_subdirectory (bar)
+set (EXTRA_LIBS ${EXTRA_LIBS} bar)
+
+project (foo)
+add_executable(foo foo.c)
+
+target_link_libraries (foo ${EXTRA_LIBS})
+```
+
+This configuration will build an executable called `Foo` that depends on a library called `Bar` (configuration for `Bar` not shown). The `Bar` project is a subdirectory of the `Foo` project, and it is added to the configuration so CMake is able to find the `Bar` project. The equivalent bake project configuration looks like this:
+
+```json
+{
+    "id": "foo",
+    "type": "application",
+    "value": {
+        "use": ["bar"]
+    }
+}
+```
+A few things jump out. First of all, the bake configuration does not specify where to find `bar`. Bake will either automatically discover `bar` from where it is invoked, or find bar in the bake environment in `$HOME/bake` if it has been built before. 
+
+Secondly, the bake configuration does not explicitly specify the source files of the project. Bake looks for source files in well-defined locations, which is the same for each project (source files in `src`, include files in `include`).
+
+A more more subtle difference is how in CMake, the configuration adds the `bar` subdirectory to the list of include paths. In bake, projects can use logical package identifiers to include their headers, like so:
+
+```c
+#include <bar>
+#include <hello.world>  // Nested package
+```
+
+This is possible because bake copies header files of projects to the bake environment, and bake projects always are expected to have a header with the name of the project. This approach ensures that projects always can use the same include path, regardless of where packages are installed, and also prevents name collisions between header files of different projects.
+
+There are of course many more differences, and this example covers only a small set of the features of both CMake and bake, but hopefully this provides a bit more insight into how the two tools are different.
+
 ### How do I install bake packages?
 Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
 
