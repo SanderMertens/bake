@@ -147,7 +147,7 @@ Bake further differentiates itself when it comes to working with multiple projec
 
 Finally, bake has many features beyond generating compiler commands that address problems commonly found during building, like managing environment variables, git integration and package versioning.
 
-## How does bake compare to CMake?
+### How does bake compare to CMake?
 CMake and bake have similar goals in that both tools simplify the build process, but they do so in very different ways. To highlight the differences, lets take an example CMake project configuration, and then compare it to bake:
 
 ```cmake
