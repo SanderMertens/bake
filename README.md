@@ -1,37 +1,31 @@
 # bake
-Bake is a build tool, build system, package manager and environment manager in one. The goal of bake is to be able to download, build and run applications that rely on many packages, with a single command. Other than package managers like `brew` and `conan`, bake is also a build system (like `make` and `cmake`), so building projects is seamlessly integrated with using remote projects. For now, bake focuses on building C/C++ projects.
+The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated, this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, so lets try to make it as easy and painless as possible.
 
-Some of its features are:
+To that end, bake is a build tool, build system, package manager and environment manager in one. Bake's goal is to automate the process of building code as much as possible, especially when having lots of projects that depend on each other. For now, bake focuses on building C/C++ code.
 
-- Single command to create a new project
-- Minimal JSON file for project configuration
-- Recursively discover projects in a directory & build them in correct order, based on dependencies
-- Automatically clone bake projects from git, including their dependencies
-- Automatically generate include statements for header files of dependencies
-- Manage and export sets of environment variables with a single command
-- Manage different build configurations (like 'debug' and 'release')
-- Store packages in $HOME (or custom location), so no root privileges required
-- Hierarchical package identifiers
-- Use logical package names ('hello.world') instead of filenames and paths
-- Include dependency headers by logical package name (`#include <hello.world>`)
-- Publish new package versions with a single command
-- Include miscellaneous files, like HTML and JS to deploy with your project
-- Modular architecture, where projects can specify which build drivers they require
-- Reuse complex build configurations by storing them in special configuration packages
-- Apply filters to configurations like operating system, language and architecture
-- Simple redistribution of self-contained bake environments
-- Programmable C API for interacting with package management
+Bake's main features of are:
+- discover all projects in current directory & build them in right order
+- automatically include header files from dependencies
+- use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
+- programmable C API for interacting with package management
+- manage and automatically export environment variables used for builds
 
-Bake development has focussed so far on improving user experience on commodity operating systems, like macOS and Linux (Windows is coming soon). Future releases will add more features, like cross-compilation, code coverage, static code analysis and CI integration.
+Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
-Bake only uses git, and does _not_ depend on its own server infrastructure for package management. **We do not collect any information when you clone, build or publish projects**.
+## Contents
+* [Installation](#installation)
+* [Getting Started](#getting-started)
+* [FAQ](#faq)
+* [Manual](#manual)
+* [Authors](#authors)
+* [Legal stuff](#legal-stuff)
 
 ## Installation
 [instructions on how to install bake]
 
 Install bake using the following commands:
 
-On macOS:
+On MacOS:
 ```demo
 git clone https://github.com/SanderMertens/bake
 make -C bake/build-darwin
@@ -129,24 +123,143 @@ No. As long as you do not distribute bake (either as source or binary) as part o
 ### I want my customers to use bake. Does the license allow for this?
 Yes. As long as your customers use the open source version of bake, and you do not distribute bake binaries or source files with your product, your customers can use bake.
 
-### I've noticed a premake file in the bake repository. Does bake need premake to be installed?
+### I noticed a premake file in the bake repository. Does bake need premake to be installed?
 No. Bake uses premake to generate its makefiles (we would've used bake to build bake- but chicken & egg etc). The generated makefiles are included in the bake repository, so you won't need premake to use bake.
 
-### Why build yet another build tool?
-Bake started as an embedded buildsystem of the corto framework (https://corto.io). We really liked the way it simplified building code with lots of dependencies, and decided to turn it into a separate project! We also believe that there is currently no other tool out there that offers the same kind of holistic approach and level of usability like bake does.
+### Why yet another build tool?
+Bake originally was a build tool developed for a framework (https://corto.io). It ended up simplifying building code a lot, and we decided to turn it into a separate project. So why did bake simplify building code that much?
+
+Most build tools focus on the actual compilation process itself, and require project configurations to, for example, explicitly specify how source files get compiled to binaries. Since these rules are very similar for each C/C++ project, bake stores them into reusable drivers. As a result, bake project configurations can remain very simple and declarative.
+
+In addition, bake is modular so that even when your build needs to do more than just compile C/C++ files, you can write a new driver that, for example, generates code, and simply reference that driver in your project configuration.
 
 Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
 
-### Why use JSON?
+### Why yet another package manager?
+Bake is different from package managers like conan, brew or apt-get. It is intended as a tool for developers to easily import and use code from other developers. Bake for example does not have an online package repository, does not distribute binaries and by default stores packages in the user $HOME directory. Its only dependency is git, so not data is collected by bake when you download or publish packages.
+
+### How does bake compare to make?
+GNU make is a tool for generating compiler commands. It has a custom language for specifying build rules, and allows for a lot of complexity and flexibility in the project-specific makefiles. In a makefile, you would ordinarily find all information that is required to build your project, from the names and locations of source files, to the compiler flags, to where your binary will be stored.
+
+Bake also generates compiler commands, but instead of requiring a user to create build rules from scratch, bake uses "drivers" (configurable plugins) to do much of the heavy lifting. Driver implementations look very similar to makefiles, in that they also specify build rules with in & outputs. This moves the most complex part of a build to a reusable module, while keeping confiugration simple.
+
+Bake further differentiates itself when it comes to working with multiple projects at once. With make, users often rely on "super" makefiles, that specify the locations of projects and the order in which they must be built. In contrast, bake automatically discovers the projects to build, and computes the right build order based on the project dependencies. If a dependency is not discovered, bake will locate it in the bake environment (or throw an error).
+
+Finally, bake has many features beyond generating compiler commands that address problems commonly found during building, like managing environment variables, git integration and package versioning.
+
+## How does bake compare to CMake?
+CMake and bake have similar goals in that both tools simplify the build process, but they do so in very different ways. To highlight the differences, lets take an example CMake project configuration, and then compare it to bake:
+
+```cmake
+cmake_minimum_required (VERSION 2.6)
+
+include_directories ("bar")
+add_subdirectory (bar)
+set (EXTRA_LIBS ${EXTRA_LIBS} bar)
+
+project (foo)
+add_executable(foo foo.c)
+
+target_link_libraries (foo ${EXTRA_LIBS})
+```
+
+This configuration builds an executable called `Foo` that depends on a library called `Bar` (configuration for `Bar` not shown). The `Bar` project is a subdirectory of the `Foo` project, and it is added to the configuration so CMake is able to find the `Bar` project. The equivalent bake project configuration looks like this:
+
+```json
+{
+    "id": "foo",
+    "type": "application",
+    "value": {
+        "use": ["bar"]
+    }
+}
+```
+A few things jump out. First of all, the bake configuration does not specify where to find `bar`. Bake will either automatically discover `bar` from where it is invoked, or find bar in the bake environment in `$HOME/bake` if it has been built before. 
+
+Secondly, the bake configuration does not explicitly specify the source files of the project. Bake looks for source files in well-defined locations, which is the same for each project (source files in `src`, include files in `include`).
+
+A more subtle difference is how in CMake, the configuration adds the `bar` subdirectory to the list of include paths. In bake, projects can use logical package identifiers to include their headers, like so:
+
+```c
+#include <bar>
+#include <hello.world>  // Nested package
+```
+
+This is possible because bake copies header files of projects to the bake environment, and bake projects always are expected to have a header with the name of the project. This approach ensures that projects always can use the same include path, regardless of where packages are installed, and also prevents name collisions between header files of different projects.
+
+There are of course many more differences, and this example covers only a small subset of the features of both CMake and bake, but hopefully it provides a bit more insight into how the two tools are different.
+
+### How do I install bake packages?
+Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
+
+```
+bake clone SanderMertens/example
+```
+
+If your git repository is not hosted on GitHub, simply provide the full git URL:
+
+```
+bake clone https://my_git_server.com/example
+```
+
+Any URL that is accepted by git is accepted by bake.
+
+### How does bake find dependencies of cloned projects?
+When bake clones a package with dependencies, it will try to also install those dependencies. It does this by taking the git URL specified to `bake clone`, and replacing the package name with the dependency name. For example, if the https://github.com/SanderMertens/example git repository depends on project `foobar`, bake would also look for https://github.com/SanderMertens/foobar.
+
+Future versions of bake may provide more intelligent ways to locate packages.
+
+### Why use JSON for project configuration?
 A number of people have asked me why I used JSON for project configuration. There are two reasons: 
-- It's a ubiquitous language that everyone understands, 
+- It is a ubiquitous language that everyone understands, 
 - It has a C parser that can be easily embedded into bake without adding dependencies
 
 A disadvantage of JSON is that while it is fine for trivial configurations, it can get a bit unwieldy once project configurations get more complex. In bake however, you can encapsulate complexity into a configuration-only project, and then include that project as a dependency in your project configuration ([example](https://github.com/SanderMertens/bake/tree/master/examples/pkg_w_dependee)).
 
 Additionally, bake is not like traditional build tools where you specify rules with inputs and outputs in your project configuration. If you want to, for example, add a code generation step to your build, you write a driver for it, and then include the driver in your project configuration.
 
-Because of the above, bake project configurations typically aren't very complex. If your configuration is complex, you should probably ask yourself whether part of it can be encapsulated in a separate project, or whether you should build a custom driver.
+### How can I specify a custom compiler?
+The drivers for C & C++ projects by default use gcc/g++ (on Linux) and clang/clang++ (on MacOS). If you want to change the default compiler, you can set the `CC` (for C) and `CXX` (for C++) environment variables, as long as the command line options are compatible with gcc. Instead of setting the environment variables manually, you can make them part of a bake environment like this:
+
+```demo
+bake export CC=clang --env clang_env
+```
+
+To use the environment, and build with clang, you can then invoke bake like this:
+```demo
+bake --env clang_env
+```
+
+To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
+
+### What is the difference between BAKE_HOME and BAKE_TARGET?
+`BAKE_HOME` is where all the installed projects are stored. These are projects that you did not build on your machine, but installed from a git repository. `BAKE_TARGET` is the location where all the projects you built are stored. By default, `BAKE_HOME` and `BAKE_TARGET` are set to the same location, which is `BAKE_HOME`. Whereas bake installs projects directly to `BAKE_HOME`, when building your own projects, they are stored in `$BAKE_TARGET/arch-os-config` (for example: `x64-darwin-debug`).
+
+### Where does bake store my binaries?
+Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_TARGET/arch-os-config/bin` or `$BAKE_TARGET/arch-os-config/lib`. By default, `$BAKE_TARGET` is set to `$HOME/bake`, just like `$BAKE_HOME`.
+
+To prevent a project from being stored in `BAKE_TARGET`, add this to the `project.json`:
+
+```json
+"value": {
+    "public": false
+}
+```
+
+### How do I do a release build?
+By default, binaries are built with the default debug configuration. To build a release configuration, add `--cfg release` to your bake command. You can add/change configurations in the bake configuration file. See "Configuring Bake" for more details.
+
+### How to use different versions of the same package?
+Bake does not support having different versions of a package in the same environment. If you want to use different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_TARGET` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_TARGET` in a new environment called `my_env` (for example) with this command:
+
+```
+bake export BAKE_TARGET=/home/user/my_path --env my_env
+```
+
+To set the variables in this environment, add `--env my_env` to any bake command, like this:
+```demo
+bake --env my_env
+```
 
 ## Manual
 [everything there is to know about bake]
@@ -254,7 +367,7 @@ They are used like this:
 The following functions are currently supported:
 
 Function | Type | Description
----------|------------
+---------|------|------
 locate | string | Locate various project paths in the bake environment
 target | bool | Match a target platform
 
