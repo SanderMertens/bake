@@ -8,6 +8,7 @@ Bake's main features of are:
 - automatically include header files from dependencies
 - use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
 - programmable C API for interacting with package management
+- manage and automatically export environment variables used for builds
 
 Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
