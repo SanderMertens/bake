@@ -446,6 +446,14 @@ int16_t bake_project_init(
     project->cache_path = ut_asprintf(
         "%s/.bake_cache", project->path);
 
+    if (project->path[0] == '/') {
+        project->fullpath = ut_strdup(project->path);
+    } else if (strcmp(project->path, ".")) {
+        project->fullpath = ut_asprintf("%s/%s", ut_cwd(), project->path);
+    } else {
+        project->fullpath = ut_strdup(ut_cwd());
+    }
+
     return 0;
 error:
     return -1;

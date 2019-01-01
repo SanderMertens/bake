@@ -47,6 +47,7 @@ typedef struct bake_project_driver {
 struct bake_project {
     /* Project properties (managed by bake core) */
     char *path;             /* Project path */
+    char *fullpath;         /* Project path from root */
     char *id;               /* Project id */
     bake_project_type type; /* Project kind */
     char *version;          /* Project version */

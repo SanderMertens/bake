@@ -228,7 +228,8 @@ int16_t bake_install_metadata(
                     project->id);
                 goto error;
             }
-            fprintf(src_location, "%s\n", project->path);
+
+            fprintf(src_location, "%s\n", project->fullpath);
             fclose(src_location);
 
             /* If project contains dependee JSON, write to dependee.json */
