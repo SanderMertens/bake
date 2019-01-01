@@ -85,13 +85,16 @@ void bake_usage(void)
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
     printf("  --includes <include path>    Manually specify an include path for project\n");
     printf("\n");
+    printf("  --interactive                Rebuild project when files change (use with bake run)\n");
+    printf("  -a,--args [arguments]        Pass arguments to application ran with bake run\n");
+    printf("\n");
     printf("  --trace                      Set verbosity to TRACE\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("\n");
     printf("Commands:\n");
     printf("  init [path]                  Initialize new bake project\n");
-    printf("  run [path]                   Run bake project\n");
-    printf("  build [path]                 Build a project\n");
+    printf("  run [path|project id]         Build & run project\n");
+    printf("  build [path]                 Build a project (default command)\n");
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
@@ -103,6 +106,15 @@ void bake_usage(void)
     printf("  env                          Echo bake environment\n");
     printf("  upgrade                      Upgrade to new bake version\n");
     printf("  export <NAME>=|+=<VALUE>     Add variable to bake environment\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  bake                         Build all projects discovered in current directory\n");
+    printf("  bake my_app                  Build all projects discovered in my_app directory\n");
+    printf("  bake init                    Initialize new application project in current directory\n");
+    printf("  bake init my_app             Initialize new application project in directory my_app\n");
+    printf("  bake init my_lib --package   Initialize new package project in directory my_lib\n");
+    printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
+    printf("  bake publish major           Increase major project version, create git tag\n");
     printf("\n");
 }
 
