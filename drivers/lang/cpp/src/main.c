@@ -2,25 +2,6 @@
 #include <bake>
 
 static
-char* get_short_name(
-    const char *package)
-{
-    char *result = strrchr(package, '/');
-    if (!result) {
-        result = (char*)package;
-    } else {
-        result ++;
-    }
-
-    char *ptr = strrchr(package, '.');
-    if (ptr) {
-        result = ptr + 1;
-    }
-
-    return result;
-}
-
-static
 void setup_project(
     bake_driver_api *driver,
     bake_config *config,
@@ -29,7 +10,7 @@ void setup_project(
     /* Get short project id */
     const char *id = project->id;
     bake_project_type kind = project->type;
-    const char *short_id = get_short_name(id);
+    const char *short_id = project->id_short;
 
     /* Create directories */
     ut_mkdir("src");
@@ -69,7 +50,7 @@ void setup_project(
         "#ifndef %s_H\n"
         "#define %s_H\n\n"
         "/* This generated file contains includes for project dependencies */\n"
-        "#include \"prebaked.h\"\n\n",
+        "#include \"bake_config.h\"\n\n",
         id_upper,
         id_upper);
 

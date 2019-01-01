@@ -62,4 +62,13 @@ void bake_attr_free_attr_array(
 void bake_attr_free_string_array(
     ut_ll list);
 
+
+int16_t bake_attr_add(
+    bake_config *config,
+    bake_project *project,
+    const char *project_id,
+    ut_ll attributes,
+    const char *name,
+    JSON_Value *value);
+
 #endif

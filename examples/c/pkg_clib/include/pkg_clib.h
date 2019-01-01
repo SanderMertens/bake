@@ -2,7 +2,7 @@
 #define PKG_CLIB_H
 
 /* This generated file contains includes for project dependencies */
-#include "prebaked.h"
+#include "bake_config.h"
 
 PKG_CLIB_EXPORT
 void pkg_clib();

@@ -437,29 +437,46 @@ ut_ll bake_attr_parse_object(
         if (!strcmp(name, "0") || !stricmp(name, "false")) {
             /* Ignore */
         } else {
-            bool new_attr = false;
-
-            /* Check if attribute already exists */
-            attr = bake_attr_get(result, name);
-            if (!attr) {
-                new_attr = true;
-            }
-
-            /* Add member to list of project attributes */
-            attr = bake_attr_parse_value(config, project, project_id, attr, v);
-            if (new_attr) {
-                attr->name = ut_strdup(name);
-                ut_ll_append(result, attr);
-            } else if (!attr) {
-                ut_throw("failed to parse member '%s'", name);
-                goto error;
-            }
+            ut_try( bake_attr_add(
+                config, project, project_id, result, name, v), NULL);
         }
     }
 
     return result;
 error:
     return NULL;
+}
+
+/* Parse JSON object */
+int16_t bake_attr_add(
+    bake_config *config,
+    bake_project *project,
+    const char *project_id,
+    ut_ll attributes,
+    const char *name,
+    JSON_Value *value)
+{
+    bool new_attr = false;
+
+    /* Check if attribute already exists */
+    bake_attr *attr = bake_attr_get(attributes, name);
+    if (!attr) {
+        new_attr = true;
+    }
+
+    /* Add member to list of project attributes */
+    attr = bake_attr_parse_value(config, project, project_id, attr, value);
+    if (new_attr) {
+        attr->name = ut_strdup(name);
+        ut_ll_append(attributes, attr);
+    } else if (!attr) {
+        ut_throw("failed to parse member '%s'", name);
+        goto error;
+    }
+
+    return 0;
+error:
+    return -1;
 }
 
 /** Parse JSON into new attribute list, or append to existing list */

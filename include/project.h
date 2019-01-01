@@ -53,6 +53,7 @@ struct bake_project {
     char *repository;       /* Project repository */
     char *license;          /* Project license */
     char *author;           /* Project author */
+    char *organization;     /* Project organization */
     char *description;      /* Project description */
     char *language;         /* Project programming language */
     bool public;            /* Is package public or private */

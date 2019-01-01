@@ -196,9 +196,18 @@ struct bake_driver_api {
     bake_attr* (*get_attr)(
         const char *name);
 
-    /* Get a driver-specific attribute */
+    /* Get a driver-specific boolean attribute */
     bool (*get_attr_bool)(
         const char *name);
+
+    /* Get a driver-specific boolean attribute */
+    char* (*get_attr_string)(
+        const char *name);
+
+    /* Get a driver-specific attribute */
+    void (*set_attr_string)(
+        const char *name,
+        const char *value);
 };
 
 #endif

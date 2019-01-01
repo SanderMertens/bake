@@ -2,7 +2,7 @@
 #define PKG_HELLOWORLD_H
 
 /* This generated file contains includes for project dependencies */
-#include "prebaked.h"
+#include "bake_config.h"
 
 
 PKG_HELLOWORLD_EXPORT

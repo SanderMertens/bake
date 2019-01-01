@@ -24,6 +24,7 @@
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
 ut_tls BAKE_PROJECT_KEY;
+ut_tls BAKE_CONFIG_KEY;
 
 /* Bake configuration */
 const char *cfg = "debug";
@@ -75,7 +76,7 @@ void bake_usage(void)
     printf("  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET\n");
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
-    printf("  --type <project type>        Manually specify a project type (default = \"package\")\n");
+    printf("  --type <package|application> Manually specify a project type (default = \"application\")\n");
     printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
     printf("  --includes <include path>    Manually specify an include path for project\n");
@@ -457,6 +458,9 @@ int main(int argc, const char *argv[]) {
     ut_try (ut_tls_new(&BAKE_DRIVER_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_FILELIST_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_PROJECT_KEY, NULL), NULL);
+    ut_try (ut_tls_new(&BAKE_CONFIG_KEY, NULL), NULL);
+
+    ut_tls_set(BAKE_CONFIG_KEY, &config);
 
     ut_log_push("init");
     ut_try (bake_parse_args(argc, argv), NULL);

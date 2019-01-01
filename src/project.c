@@ -26,6 +26,27 @@ extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
 
 static
+int16_t bake_validate_dep_array(
+    ut_ll array)
+{
+    ut_iter it = ut_ll_iter(array);
+    while (ut_iter_hasNext(&it)) {
+        char *dep = ut_iter_next(&it);
+
+        char *ptr, ch;
+        for (ptr = dep; (ch = *ptr); ptr ++) {
+            if (ch == '/') {
+                ut_warning("dependency '%s' contains deprecated '/' character",
+                    dep);
+                *ptr = '.';
+            }
+        }
+    }
+
+    return 0;
+}
+
+static
 int16_t bake_project_parse_value(
     bake_config *config,
     bake_project *p,
@@ -45,6 +66,9 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "author")) {
             ut_try (bake_json_set_string(&p->author, member, v), NULL);
         } else
+        if (!strcmp(member, "organization")) {
+            ut_try (bake_json_set_string(&p->organization, member, v), NULL);
+        } else
         if (!strcmp(member, "description")) {
             ut_try (bake_json_set_string(&p->description, member, v), NULL);
         } else
@@ -62,6 +86,7 @@ int16_t bake_project_parse_value(
         } else
         if (!strcmp(member, "use")) {
             ut_try (bake_json_set_array(&p->use, member, v), NULL);
+            ut_try (bake_validate_dep_array(p->use), NULL);
         } else
         if (!strcmp(member, "use_private")) {
             ut_try (bake_json_set_array(&p->use_private, member, v), NULL);
@@ -300,15 +325,33 @@ int16_t bake_project_init(
     bake_config *config,
     bake_project *project)
 {
+    if (!isalpha(project->id[0])) {
+        ut_error("project id '%s' is invalid (should start with a letter)",
+            project->id);
+        goto error;
+    }
+
     project->id_underscore = ut_strdup(project->id);
     project->id_dash = ut_strdup(project->id);
 
-    const char *ptr;
+    char *ptr;
     char ch;
     for (ptr = project->id; (ch = *ptr); ptr ++) {
+        if (ch == '/') {
+            ut_warning("project id '%s' contains deprecated '/' character",
+                project->id);
+            *ptr = '.';
+            ch = '.';
+        }
+
         if (ch == '.') {
             project->id_underscore[ptr - project->id] = '_';
             project->id_dash[ptr - project->id] = '-';
+
+        } else if (!isalpha(ch) && !isdigit(ch) && ch != '_') {
+            ut_error("project id '%s' contains invalid character ('%c')",
+                project->id, ch);
+            goto error;
         }
     }
 
@@ -469,6 +512,27 @@ bake_attr* bake_project_get_attr(
     }
 }
 
+bake_attr* bake_project_set_attr_string(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *attr,
+    const char *value)
+{
+    bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+    
+    if (driver && driver->attributes) {
+        ut_try( bake_attr_add(
+            config, project, project->id, driver->attributes, attr,
+            json_value_init_string(value)), NULL);
+
+        return bake_attr_get(driver->attributes, attr);
+    }
+
+error:
+    return NULL;
+}
+
 int bake_project_load_drivers(
     bake_project *project)
 {
@@ -482,17 +546,13 @@ int bake_project_load_drivers(
             !strcmp(member, "value"))
             continue;
 
-        if (member[0] == '$') {
+        JSON_Value *value = json_object_get_value_at(project->json, i);
+        JSON_Object *obj = json_value_get_object(value);
 
+        if (strcmp(member, "dependee")) {
+            ut_try( bake_project_load_driver(project, member, obj), NULL);
         } else {
-            JSON_Value *value = json_object_get_value_at(project->json, i);
-            JSON_Object *obj = json_value_get_object(value);
-
-            if (strcmp(member, "dependee")) {
-                ut_try( bake_project_load_driver(project, member, obj), NULL);
-            } else {
-                project->dependee_json = json_serialize_to_string(value);
-            }
+            project->dependee_json = json_serialize_to_string(value);
         }
     }
 
@@ -601,7 +661,7 @@ int16_t bake_check_dependency(
             ? "#[grey]use %s => %s (modified=%d private)"
             : "#[grey]use %s => %s (modified=%d)"
             ;
-        ut_ok(fmt, dependency, lib);
+        ut_ok(fmt, dependency, lib, dep_modified);
     } else {
         p->artefact_outdated = true;
         const char *fmt = private
