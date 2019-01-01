@@ -37,7 +37,7 @@ bool local_setup = false;
 
 /* Command line project configuration */
 const char *id = NULL;
-bake_project_type type = BAKE_PACKAGE;
+bake_project_type type = BAKE_APPLICATION;
 const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
@@ -77,6 +77,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
     printf("  --type <package|application> Manually specify a project type (default = \"application\")\n");
+    printf("  --package                    Manually set the project type to package\n");
     printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
     printf("  --includes <include path>    Manually specify an include path for project\n");
@@ -208,6 +209,7 @@ int bake_parse_args(
 
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
+            ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);

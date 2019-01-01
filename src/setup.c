@@ -46,7 +46,7 @@ int16_t bake_create_script(void)
     }
 
     fprintf(f, "#!/bin/bash\n\n");
-    
+
     fprintf(f, "UNAME=$(uname)\n\n");
 
     fprintf(f, "clone_bake() {\n");
@@ -112,7 +112,7 @@ int16_t bake_build_make_project(
     const char *artefact)
 {
     char *install_cmd = ut_asprintf(
-      "bake install %s --id %s --type package --includes include --build-to-home",
+      "bake install %s --id %s --package --includes include --build-to-home",
       path, id);
     ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
@@ -144,7 +144,7 @@ int16_t bake_build_make_project(
     free(bin_path);
 
     install_cmd = ut_asprintf(
-      "bake install %s --id %s --artefact %s --build-to-home",
+      "bake install %s --id %s --artefact %s --build-to-home --package",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
     ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
@@ -196,7 +196,7 @@ int16_t bake_setup(
         "failed to copy bake executable to user bake environment");
     ut_log("#[green]OK#[reset]   copy bake executable to $BAKE_HOME\n");
 
-    ut_try(cmd("bake install --id bake --type application --includes include --build-to-home"),
+    ut_try(cmd("bake install --id bake --includes include --build-to-home"),
         "failed to install bake include files");
     ut_log("#[green]OK#[reset]   install bake include files to $BAKE_HOME\n");
 
