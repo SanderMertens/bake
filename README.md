@@ -45,11 +45,18 @@ We will add support for package managers like brew in the future. Bake is curren
 
 The following commands are useful for getting started with bake. Also, check out the `bake --help` command, which lists all the options and commands available in the bake tool.
 
-### Create new project
-To create a new bake application project called `my_app`, run the following commands:
+### Create and run new project
+To create and run a new bake application project called `my_app`, run the following commands:
 
 ```demo
 bake init my_app
+bake run my_app
+```
+
+You can also run projects in interactive mode. This will automatically rebuild and restart an application when a project file changes. To run in interactive mode, simply add `--interactive` to the bake command:
+
+```demo
+bake run my_app --interactive
 ```
 
 ### Basic configuration with dependency and configuration for C driver
@@ -857,17 +864,22 @@ Options:
   --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET
 
   --id <project id>            Manually specify a project id
-  --type <project type>        Manually specify a project type (default = "package")
+  --type <package|application> Manually specify a project type (default = "application")
+  --package                    Manually set the project type to package
   --language <language>        Manually specify a language for project (default = "c")
   --artefact <binary>          Manually specify a binary file for project
   --includes <include path>    Manually specify an include path for project
+
+  --interactive                Rebuild project when files change (use with bake run)
+  -a,--args [arguments]        Pass arguments to application ran with bake run
 
   --trace                      Set verbosity to TRACE
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
 
 Commands:
   init [path]                  Initialize new bake project
-  build [path]                 Build a project
+  run [path|project id]         Build & run project
+  build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
   publish <patch|minor|major>  Publish new project version
@@ -879,6 +891,15 @@ Commands:
   env                          Echo bake environment
   upgrade                      Upgrade to new bake version
   export <NAME>=|+=<VALUE>     Add variable to bake environment
+
+Examples:
+  bake                         Build all projects discovered in current directory
+  bake my_app                  Build all projects discovered in my_app directory
+  bake init                    Initialize new application project in current directory
+  bake init my_app             Initialize new application project in directory my_app
+  bake init my_lib --package   Initialize new package project in directory my_lib
+  bake run my_app -a hello     Run my_app project, pass 'hello' as argument
+  bake publish major           Increase major project version, create git tag
 
 ### Writing Plugins
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
