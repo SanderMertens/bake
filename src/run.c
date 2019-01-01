@@ -138,17 +138,12 @@ static
 bool filter_file(
     const char *file)
 {
-    char *ext = strchr(file, '.');
+    char *ext = strrchr(file, '.');
 
     if (!ut_isdir(file) &&
         strncmp(file, "test", 4) &&
         strncmp(file, "bin", 3) &&
-        strcmp(file, "include/_type.h") &&
-        strcmp(file, "include/_load.h") &&
-        strcmp(file, "include/_interface.h") &&
-        strcmp(file, "include/_api.h") &&
-        strcmp(file, "include/_project.h") &&
-        strcmp(file, "include/.prefix") &&
+        strcmp(file, "include/bake_config.h") &&
         !(file[0] == '.') &&
         ext &&
         strcmp(ext, ".so"))
