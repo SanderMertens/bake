@@ -520,7 +520,7 @@ bake_attr* bake_project_set_attr_string(
     const char *value)
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
-    
+
     if (driver && driver->attributes) {
         ut_try( bake_attr_add(
             config, project, project->id, driver->attributes, attr,
@@ -1126,7 +1126,7 @@ int16_t bake_project_setup(
     char *description = bake_random_description();
 
     ut_try(!
-        ut_proc_runRedirect("git", (char*[]){"git", "init", NULL}, stdin, stdout, stderr),
+        ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
         "failed to initialize git repository");
 
     /* Create project.json */

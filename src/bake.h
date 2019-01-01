@@ -87,6 +87,15 @@ int bake_do_foreach(
     bake_crawler *crawler,
     bake_project *p);
 
+/* -- Run project -- */
+
+int bake_run(
+    bake_config *config,
+    const char *app_id,
+    bool interactive,
+    int argc,
+    const char *argv[]);
+
 /* -- Git functions -- */
 
 /* Clone from remote repository */

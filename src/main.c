@@ -45,6 +45,9 @@ const char *language = NULL;
 /* Command specific parameters */
 const char *export_expr = NULL;
 const char *publish_cmd = NULL;
+bool interactive = false;
+int run_argc = -1;
+const char **run_argv = NULL;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -87,6 +90,7 @@ void bake_usage(void)
     printf("\n");
     printf("Commands:\n");
     printf("  init [path]                  Initialize new bake project\n");
+    printf("  run [path]                   Run bake project\n");
     printf("  build [path]                 Build a project\n");
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
@@ -164,6 +168,7 @@ bool bake_is_action(
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
         !strcmp(arg, "init") ||
+        !strcmp(arg, "run") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
@@ -205,14 +210,16 @@ int bake_parse_args(
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
             ARG('v', "verbosity", bake_set_verbosity(argv[i + 1]); i ++);
 
-            ARG(0, "local-setup", local_setup = true; i ++);
-
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
+
+            ARG(0, "local-setup", local_setup = true; i ++);
+            ARG(0, "interactive", interactive = true; i ++);
+            ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
             ARG('v', "version", bake_version(); action = NULL; i ++);
@@ -525,6 +532,9 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_setup(argv[0], local_setup), NULL);
         } else if (!strcmp(action, "init")) {
             ut_try (bake_init_project(&config), NULL);
+        } else if (!strcmp(action, "run")) {
+            ut_try (
+              bake_run(&config, path, interactive, run_argc, run_argv), NULL);
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "export")) {

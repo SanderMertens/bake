@@ -57,7 +57,7 @@ typedef enum ut_procsignal {
 UT_EXPORT
 ut_proc ut_proc_run(
     const char* exec,
-    char *argv[]);
+    const char *argv[]);
 
 /** Run a process, redirect stdin, stdout and stderr.
  * Use ut_proc_wait/ut_prochcheck with the returned handle to check if the
@@ -73,7 +73,7 @@ ut_proc ut_proc_run(
 UT_EXPORT
 ut_proc ut_proc_runRedirect(
     const char* exec,
-    char *argv[],
+    const char *argv[],
     FILE *in,
     FILE *out,
     FILE *err);

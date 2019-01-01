@@ -23,14 +23,14 @@
 
 ut_proc ut_proc_run(
     const char* exec,
-    char *argv[])
+    const char *argv[])
 {
     pid_t pid = fork();
 
     if (pid == 0) {
 
         /* Child process */
-        if (execvp(exec, argv)) {
+        if (execvp(exec, (char**)argv)) {
             ut_error("failed to start process '%s'\n  cwd='%s'\n  err='%s'",
               exec,
               ut_cwd(),
@@ -63,7 +63,7 @@ ut_proc ut_proc_run(
 
 ut_proc ut_proc_runRedirect(
     const char* exec,
-    char *argv[],
+    const char *argv[],
     FILE *in,
     FILE *out,
     FILE *err)
@@ -101,7 +101,7 @@ ut_proc ut_proc_runRedirect(
         if (in && (in != stdin)) fclose(in);
 
         /* Child process */
-        if (execvp(exec, argv)) {
+        if (execvp(exec, (char**)argv)) {
             ut_error("failed to start process '%s'", exec);
             abort();
         }
@@ -163,7 +163,7 @@ int ut_proc_cmd_intern(
     bool stderr_only)
 {
     int pid;
-    char *args[UT_MAX_CMD_ARGS];
+    const char *args[UT_MAX_CMD_ARGS];
     char stack_buffer[BUFFER_SIZE];
     char *buffer = stack_buffer;
 

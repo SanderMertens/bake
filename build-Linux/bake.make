@@ -77,6 +77,7 @@ OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/project.o \
 	$(OBJDIR)/rule.o \
+	$(OBJDIR)/run.o \
 	$(OBJDIR)/setup.o \
 	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
@@ -192,6 +193,9 @@ $(OBJDIR)/project.o: ../src/project.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rule.o: ../src/rule.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/run.o: ../src/run.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/setup.o: ../src/setup.c
