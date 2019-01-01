@@ -510,6 +510,11 @@ void setup_project(
     /* Create main source file */
     char *source_filename = ut_asprintf("src/main.c");
     FILE *f = fopen(source_filename, "w");
+    if (!f) {
+        ut_error("failed to open '%s'", source_filename);
+        project->error = true;
+        return;
+    }
 
     fprintf(f,
         "#include <include/%s.h>\n"
@@ -536,6 +541,11 @@ void setup_project(
     /* Create main header file */
     char *header_filename = ut_asprintf("include/%s.h", short_id);
     f = fopen(header_filename, "w");
+    if (!f) {
+        ut_error("failed to open '%s'", header_filename);
+        project->error = true;
+        return;
+    }
 
     fprintf(f,
         "#ifndef %s_H\n"
@@ -734,7 +744,7 @@ void generate(
         "%s/include/bake_config.h", project->path);
     FILE *f = fopen(header_filename, "w");
     if (!f) {
-        ut_throw("failed to open file '%s'", header_filename);
+        ut_error("failed to open file '%s'", header_filename);
         project->error = true;
         return;
     }
