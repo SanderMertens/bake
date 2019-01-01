@@ -362,6 +362,7 @@ void bake_driver_set_attr_string_cb(
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
     bake_config *config = ut_tls_get(BAKE_CONFIG_KEY);
+
     bake_project_set_attr_string(config, project, driver->id, name, value);
 }
 
@@ -504,6 +505,25 @@ int16_t bake_driver__setup(
     ut_throw("driver doesn't support project setup");
 
     return -1;
+}
+
+/* Initialize project */
+int16_t bake_driver__init(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.init) {
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+        driver->impl.init(&bake_driver_api_impl, config, project);
+
+        if (project->error) {
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 int16_t bake_driver__generate(

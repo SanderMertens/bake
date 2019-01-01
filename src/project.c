@@ -529,12 +529,15 @@ bake_attr* bake_project_set_attr_string(
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
 
-    if (driver && driver->attributes) {
+    if (driver) {
         ut_try( bake_attr_add(
             config, project, project->id, driver->attributes, attr,
             json_value_init_string(value)), NULL);
 
         return bake_attr_get(driver->attributes, attr);
+    } else {
+        project->error = true;
+        ut_error("failed to set attribute for unknown driver '%s'", driver_id);
     }
 
 error:
@@ -575,6 +578,7 @@ int bake_project_parse_driver_config(
 {
     ut_iter it = ut_ll_iter(project->drivers);
 
+    /* Parse attributes for drivers in project configuration */
     while (ut_iter_hasNext(&it)) {
         bake_project_driver *driver = ut_iter_next(&it);
         if (!driver->json) {
@@ -586,6 +590,19 @@ int bake_project_parse_driver_config(
         if (!driver->attributes) {
             goto error;
         }
+
+        ut_try(
+            bake_driver__init(driver->driver, config, project),
+            NULL);
+    }
+
+    /* If project loaded a language driver, but did not provide a configuration,
+     * initialize it */
+    if (project->language_driver && !project->language_driver->attributes) {
+        project->language_driver->attributes = ut_ll_new();
+        ut_try(
+          bake_driver__init(project->language_driver->driver, config, project),
+          NULL);
     }
 
     return 0;

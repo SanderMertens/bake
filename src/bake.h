@@ -201,6 +201,12 @@ int16_t bake_driver__setup(
     bake_config *config,
     bake_project *project);
 
+/* Initialize project */
+int16_t bake_driver__init(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
 /* Generate driver code */
 int16_t bake_driver__generate(
     bake_driver *driver,
