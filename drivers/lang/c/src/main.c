@@ -434,9 +434,7 @@ void link_dynamic_binary(
         free(obj_path);
     }
 
-    if (static_object_paths) {
-        ut_ll_free(static_object_paths);
-    }
+    ut_ll_free(static_object_paths);
 }
 
 static
