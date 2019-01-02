@@ -54,13 +54,13 @@ int bake_do_build(
 
     /* Step 7: clear environment of old project files */
     ut_log_push("clear");
-    if (project->public)
+    if (project->public && project->type != BAKE_TOOL)
         ut_try (bake_install_clear(config, project, false), NULL);
     ut_log_pop();
 
     /* Step 8: export project files to environment */
     ut_log_push("install_prebuild");
-    if (project->public)
+    if (project->public && project->type != BAKE_TOOL)
         ut_try (bake_install_prebuild(config, project), NULL);
     ut_log_pop();
 
