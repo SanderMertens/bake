@@ -342,7 +342,7 @@ char* bake_driver_get_string_attr_cb(
     bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
     bake_attr *attr = bake_project_get_attr(project, driver->id, name);
     if (!attr) {
-        return NULL;
+        return "";
     }
 
     if (attr->kind == BAKE_STRING) {
@@ -350,7 +350,7 @@ char* bake_driver_get_string_attr_cb(
     } else {
         project->error = true;
         ut_throw("attribute '%s' is not of type string", name);
-        return NULL;
+        return "";
     }
 }
 
@@ -596,7 +596,7 @@ bake_driver* bake_driver_get_intern(
 
         /* Create a new driver */
         if (new_driver) {
-            driver = malloc(sizeof(bake_driver));
+            driver = ut_calloc(sizeof(bake_driver));
             driver->dl = dl;
             driver->id = ut_strdup(id);
             driver->package_id = package_id;
@@ -608,6 +608,11 @@ bake_driver* bake_driver_get_intern(
         ut_tls_set(BAKE_DRIVER_KEY, driver);
 
         cb(&bake_driver_api_impl);
+
+        if (driver->error) {
+            ut_error("errors occurred while loading driver '%s'", id);
+            goto error;
+        }
 
         if (new_driver) {
             ut_ll_append(drivers, driver);
