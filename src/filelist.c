@@ -181,7 +181,7 @@ bake_file* bake_filelist_add_file(
     char *path;
     time_t lastmodified = 0;
 
-    if (file && file[0] == '/') {
+    if ((file && file[0] == '/') || (fl->path && !strcmp(fl->path, "."))) {
         path = ut_strdup(file);
     } else {
         path = ut_asprintf("%s/%s", fl->path, file);

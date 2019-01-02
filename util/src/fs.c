@@ -641,16 +641,21 @@ int16_t ut_dir_collectRecursive(
         /* Add file to results if it matches filter */
         char *path = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
         ut_path_clean(path, path);
+
         if (ut_expr_run(filter, path)) {
             ut_ll_append(files, path);
         }
 
+
         /* If directory, crawl */
-        if (ut_isdir(path)) {
+        char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), path);
+        if (ut_isdir(fullpath)) {
             if (ut_dir_collectRecursive(file, stack, filter, files)) {
+                free(fullpath);
                 goto error;
             }
         }
+        free(fullpath);
     }
 
     if (name && name[0]) {
