@@ -104,14 +104,17 @@ int16_t bake_filelist_populate(
 
     while (ut_iter_hasNext(&it)) {
         const char *file = ut_iter_next(&it);
-        const char *relative_file = file + strlen(clean_path);
+        char *file_path = ut_asprintf("%s/%s", path, file);
 
-        if (relative_file[0] == '/') {
-            relative_file ++;
+        time_t last_modified = ut_lastmodified(file_path);
+        if (last_modified == -1) {
+            ut_catch();
         }
 
+        free(file_path);
+
         bake_filelist_add_intern(
-            fl, path, relative_file, ut_lastmodified(file));
+            fl, path, file, last_modified);
     }
 
     free (clean_path);

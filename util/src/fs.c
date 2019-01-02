@@ -631,7 +631,7 @@ int16_t ut_dir_collectRecursive(
     }
 
     /* Obtain iterator to current directory */
-    if (ut_dir_iter(ut_dirstack_wd(stack), NULL, &it)) {
+    if (ut_dir_iter(ut_ll_last(stack), NULL, &it)) {
         goto error;
     }
 
@@ -768,7 +768,22 @@ void ut_dirstack_pop(
 const char* ut_dirstack_wd(
     ut_dirstack stack)
 {
-    return ut_ll_last(stack);
+    char *first = ut_ll_get(stack, 0);
+    char *last = ut_ll_last(stack);
+
+    size_t first_len = strlen(first);
+    size_t last_len = strlen(last);
+
+    if (first_len == last_len) {
+        return ".";
+    } else {
+        last += first_len;
+        if (last[0] == '/') {
+            last ++;
+        }
+
+        return last;
+    }
 }
 
 time_t ut_lastmodified(
