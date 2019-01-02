@@ -383,6 +383,24 @@ int16_t ut_locate_binary(
         }
     }
 
+    /* Test for executable */
+    if (ret == 0) {
+        bin = ut_asprintf("%s/bin/%s", loaded->env, pkg_underscore);
+        if ((ret = ut_file_test(bin)) == 1) {
+            /* Executable found */
+            loaded->app = bin;
+            loaded->bin = bin;
+        } else {
+            if (ret != 0) {
+                ut_throw("could not access file '%s'", bin);
+                free(bin);
+                goto error;
+            } else {
+                free(bin);
+            }
+        }
+    }
+
     free(pkg_underscore);
 
     /* Prevent looking for the binary again */
