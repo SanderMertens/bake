@@ -306,7 +306,7 @@ bool is_dylib(
     }
 }
 
-/* Link a library (package) */
+/* Link a binary */
 static
 void link_dynamic_binary(
     bake_driver_api *driver,
@@ -322,17 +322,21 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC -fno-stack-protector --shared", cc(cpp));
+    ut_strbuf_append(&cmd, "%s -Wall -fno-stack-protector", cc(cpp));
 
-    /* Set symbol visibility */
-    if (!export_symbols && !is_darwin()) {
-        ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
-        hide_symbols = true;
-    }
+    if (project->type == BAKE_PACKAGE) {
+        ut_strbuf_appendstr(&cmd, " --shared -fPIC");
 
-    /* Fail when symbols are not found in library */
-    if (!is_darwin()) {
-        ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
+        /* Set symbol visibility */
+        if (!export_symbols && !is_darwin()) {
+            ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
+            hide_symbols = true;
+        }
+
+        /* Fail when symbols are not found in library */
+        if (!is_darwin()) {
+            ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
+        }
     }
 
     /* Set optimizations */
