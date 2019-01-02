@@ -1136,9 +1136,9 @@ void ut_log_setError(
         int i;
         for (i = 1; i <= data->sp; i ++) {
             data->exceptionFrames[i - 1] = data->frames[data->sp - i];
-            data->exceptionFrames[i - 1].category = strdup(data->frames[data->sp - i].category);
-            data->exceptionFrames[i - 1].initial.file = strdup(data->frames[data->sp - i].initial.file);
-            data->exceptionFrames[i - 1].initial.function = strdup(data->frames[data->sp - i].initial.function);
+            data->exceptionFrames[i - 1].category = ut_strdup(data->frames[data->sp - i].category);
+            data->exceptionFrames[i - 1].initial.file = ut_strdup(data->frames[data->sp - i].initial.file);
+            data->exceptionFrames[i - 1].initial.function = ut_strdup(data->frames[data->sp - i].initial.function);
             data->exceptionFrames[i - 1].sp = 0;
         }
         data->exceptionCount = data->sp + 1;
@@ -1152,10 +1152,10 @@ void ut_log_setError(
         data->exceptionCategories[i - 1] = NULL;
 
         /* Set error in top-level frame */
-        data->exceptionFrames[0].frames[0].file = strdup(file);
-        data->exceptionFrames[0].frames[0].function = strdup(function);
+        data->exceptionFrames[0].frames[0].file = ut_strdup(file);
+        data->exceptionFrames[0].frames[0].function = ut_strdup(function);
         data->exceptionFrames[0].frames[0].line = line;
-        data->exceptionFrames[0].frames[0].error = error ? strdup(error) : NULL;
+        data->exceptionFrames[0].frames[0].error = error ? ut_strdup(error) : NULL;
         data->exceptionFrames[0].frames[0].thrown = true;
         data->exceptionFrames[0].sp = 1;
 
@@ -1175,10 +1175,10 @@ void ut_log_setError(
 
         ut_assert(frame->sp < UT_MAX_LOG_CODEFRAMES, "max number of code frames reached");
 
-        frame->frames[frame->sp].file = strdup(file);
-        frame->frames[frame->sp].function = strdup(function);
+        frame->frames[frame->sp].file = ut_strdup(file);
+        frame->frames[frame->sp].function = ut_strdup(function);
         frame->frames[frame->sp].line = line;
-        frame->frames[frame->sp].error = error ? strdup(error) : NULL;
+        frame->frames[frame->sp].error = error ? ut_strdup(error) : NULL;
         frame->frames[frame->sp].thrown = true;
         frame->sp ++;
     }
