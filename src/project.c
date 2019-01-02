@@ -782,10 +782,33 @@ int16_t bake_project_generate(
     ut_iter it = ut_ll_iter(project->drivers);
     while (ut_iter_hasNext(&it)) {
         bake_project_driver *driver = ut_iter_next(&it);
-        bake_driver__generate(driver->driver, config, project);
+        ut_try( bake_driver__generate(driver->driver, config, project), NULL);
+    }
+
+    /* Evaluate GENERATED-SOURCES nodes if there are any */
+    it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        bake_node *node = bake_node_find(driver->driver, "GENERATED-SOURCES");
+        if (!node) {
+            continue;
+        }
+
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        bake_filelist *fl = bake_filelist_new(project->path, NULL);
+
+        if (bake_node_eval(driver->driver, node, project, config, fl, NULL)) {
+            ut_throw("failed to build rule 'GENERATED_SOURCES'");
+            goto error;
+        }
+
+        bake_filelist_free(fl);
     }
 
     return 0;
+error:
+    return -1;
 }
 
 int16_t bake_project_build_generated(
