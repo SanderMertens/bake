@@ -551,6 +551,7 @@ int bake_locate(
             if (!dl) {
                 ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!load error!\n",
                     id, env ? env : bin);
+                ut_log("   #[grey]%s\n", ut_dl_error());
                 goto error;
             } else {
                 ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
