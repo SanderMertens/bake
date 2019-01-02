@@ -50,6 +50,7 @@ bool interactive = false;
 int run_argc = -1;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
+const char *list_filter = NULL;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -110,6 +111,7 @@ void bake_usage(void)
     printf("  export <NAME>=|+=<VALUE>     Add variable to bake environment\n");
     printf("\n");
     printf("  locate <package id>          Locate and diagnose a project in the bake environment\n");
+    printf("  list [filter]                List packages in bake environment\n");
     printf("\n");
     printf("Examples:\n");
     printf("  bake                         Build all projects discovered in current directory\n");
@@ -119,6 +121,8 @@ void bake_usage(void)
     printf("  bake init my_lib --package   Initialize new package project in directory my_lib\n");
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
+    printf("  bake locate foo.bar          Locate package foo.bar\n");
+    printf("  bake list foo.*              List all packages that start with foo.\n");
     printf("\n");
 }
 
@@ -190,6 +194,7 @@ int16_t bake_init_action(
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
         !strcmp(arg, "locate") ||
+        !strcmp(arg, "list") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
@@ -279,6 +284,8 @@ int bake_parse_args(
 
     /* Set command-specific variables & do input checking */
 
+    bool path_set = strcmp(path, ".");
+
     if (!strcmp(action, "install")) {
         if (ut_file_test(path) != 1) {
             action = "install_remote";
@@ -287,7 +294,7 @@ int bake_parse_args(
     }
 
     else if (!strcmp(action, "export") || !strcmp(action, "unset")) {
-        if (!strcmp(path, ".")) {
+        if (!path_set) {
             ut_throw("missing expression for export command");
             goto error;
         }
@@ -295,7 +302,7 @@ int bake_parse_args(
     }
 
     else if (!strcmp(action, "publish")) {
-        if (!strcmp(path, ".")) {
+        if (!path_set) {
             ut_throw("missing publish command (specify patch, minor or major)");
             goto error;
         } else {
@@ -313,6 +320,10 @@ int bake_parse_args(
 
     else if (!strcmp(action, "foreach") && !foreach_cmd) {
         foreach_cmd = path;
+    }
+
+    else if (!strcmp(action, "list") && path_set) {
+        list_filter = path;
     }
 
     /* If artefact is manually specified, translate to platform specific name */
@@ -497,7 +508,8 @@ error:
 
 int bake_locate(
     bake_config *config,
-    const char *id)
+    const char *id,
+    const char *env)
 {
     const char *bin = ut_locate(id, NULL, UT_LOCATE_BIN);
     if (!bin) {
@@ -507,18 +519,25 @@ int bake_locate(
         } else {
             bake_project *project = bake_project_new(path, config);
             if (!project) {
-                ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (invalid config)\n",
-                    id, path);
+                ut_log("?  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!invalid config!\n",
+                    id, env ? env : path);
                 goto error;
             } else {
                 if (project->language) {
-                    ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (missing binary)\n",
-                        id, path);
+                    if (project->type == BAKE_APPLICATION) {
+                        ut_log(
+                          "A  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
+                          id, env ? env : path);
+                    } else {
+                        ut_log(
+                          "P  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
+                          id, env ? env : path);
+                    }
                     bake_project_free(project);
                     goto error;
                 } else {
-                    ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (config)\n",
-                        id, path);
+                    ut_log("C  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                        id, env ? env : path);
                     bake_project_free(project);
                 }
             }
@@ -528,19 +547,127 @@ int bake_locate(
         if (lib) {
             ut_dl dl = ut_dl_open(bin);
             if (!dl) {
-                ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (package)\n",
-                    id, bin);
+                ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!load error!\n",
+                    id, env ? env : bin);
                 goto error;
             } else {
-                ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (package)\n",
-                    id, bin);
+                ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                    id, env ? env : bin);
                 ut_dl_close(dl);
             }
         } else {
-            ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (application)\n",
-                id, bin);
+            ut_log("A  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                id, env ? env : bin);
         }
     }
+
+    return 0;
+error:
+    return -1;
+}
+
+typedef struct env_package {
+    char *id;
+    bool in_home;
+    bool in_target;
+} env_package;
+
+int env_package_find(
+    void *id,
+    void *ptr)
+{
+    env_package *package = ptr;
+    return strcmp(package->id, id);
+}
+
+int env_package_compare(
+    const void *ptr1,
+    const void *ptr2)
+{
+    const env_package *package1 = ptr1;
+    const env_package *package2 = ptr2;
+    return strcmp(package1->id, package2->id);
+}
+
+char* bake_print_env(
+    bake_config *config,
+    env_package *package)
+{
+    if (package->in_home && package->in_target) {
+        return "#[green]BAKE_HOME#[normal],#[cyan]BAKE_TARGET";
+    } else if (package->in_home) {
+        return "#[green]BAKE_HOME";
+    } else if (package->in_target) {
+        return "#[cyan]BAKE_TARGET";
+    } else {
+        return "???";
+    }
+}
+
+int bake_list(
+    bake_config *config)
+{
+    ut_ll packages = ut_ll_new();
+    ut_iter it;
+
+    /* Collect packages from BAKE_HOME */
+    char *home_meta = ut_asprintf("%s/meta", config->home);
+    ut_try( ut_dir_iter(home_meta, "/*", &it), NULL);
+    while (ut_iter_hasNext(&it)) {
+        char *id = ut_iter_next(&it);
+        env_package *ep = ut_calloc(sizeof(env_package));
+        ep->id = ut_strdup(id);
+        ep->in_home = true;
+        ut_ll_append(packages, ep);
+    }
+
+    /* Collect packages from BAKE_TARGET */
+    char *target_meta = ut_asprintf("%s/meta", config->target);
+    ut_try( ut_dir_iter(target_meta, "/*", &it), NULL);
+    while (ut_iter_hasNext(&it)) {
+        char *id = ut_iter_next(&it);
+
+        env_package *ep = ut_ll_find(packages, env_package_find, id);
+        if (!ep) {
+            ep = ut_calloc(sizeof(env_package));
+            ep->id = ut_strdup(id);
+            ut_ll_append(packages, ep);
+        }
+
+        ep->in_target = true;
+    }
+
+    /* Copy packages to array so they can be sorted with qsort */
+    env_package *buffer = malloc(sizeof(env_package) * ut_ll_count(packages));
+    uint32_t i = 0;
+    it = ut_ll_iter(packages);
+    while (ut_iter_hasNext(&it)) {
+        env_package *ep = ut_iter_next(&it);
+        buffer[i ++] = *ep;
+        free(ep);
+    }
+
+    /* Sort array */
+    qsort(buffer, i, sizeof(env_package), env_package_compare);
+
+    for (i = 0; i < ut_ll_count(packages); i ++) {
+        env_package *package = &buffer[i];
+
+        if (list_filter) {
+            if (!ut_expr(list_filter, package->id)) {
+                continue;
+            }
+        }
+
+        bake_locate(config, package->id, bake_print_env(config, package));
+
+        free(buffer[i].id);
+    }
+
+    ut_ll_free(packages);
+    free(home_meta);
+    free(target_meta);
+    free(buffer);
 
     return 0;
 error:
@@ -654,7 +781,9 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "locate")) {
-            bake_locate(&config, path);
+            bake_locate(&config, path, NULL);
+        } else if (!strcmp(action, "list")) {
+            bake_list(&config);
         } else if (!strcmp(action, "export")) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
