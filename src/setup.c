@@ -83,7 +83,7 @@ int16_t bake_create_script(void)
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
     fprintf(f, "    export `$HOME/bake/bake env`\n");
-    fprintf(f, "    exec $HOME/bake/bake $@\n");
+    fprintf(f, "    exec $HOME/bake/bake \"$@\"\n");
     fprintf(f, "fi\n");
     fclose(f);
 
@@ -165,6 +165,9 @@ int16_t bake_setup(
         *last_elem = '\0';
         ut_chdir(dir);
     }
+
+    /* Temporary fix to ensure bake shell script is updated on upgrade */
+    local = false;
 
     char *cur_env = ut_envparse("~/bake");
     char *cur_dir = ut_strdup(ut_cwd());
