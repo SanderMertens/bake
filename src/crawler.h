@@ -84,11 +84,10 @@ uint32_t bake_crawler_count(
  *
  * @param _this A crawler object.
  * @param action Callback to invoke when project is found.
- * @param ctx Context passed to action.
  * @return non-zero if success, zero if interrupted.
  */
 int16_t bake_crawler_walk(
     bake_config *config,
-    bake_crawler *_this,
+    bake_crawler *crawler,
     const char *action_name,
     bake_crawler_cb action);

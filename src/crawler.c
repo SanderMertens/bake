@@ -344,7 +344,7 @@ int16_t bake_crawler_build_project(
         ut_log(
             "%s %s '%s' in '%s'\n",
             action_name, bake_project_kind_str(p->type), p->id, p->path);
-    } else if (p->language) {
+    } else if (p->language && strcmp(action_name, "foreach")) {
         ut_log(
             "#[grey]up to date#[normal] '%s'\n",
             p->id);

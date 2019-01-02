@@ -31,6 +31,7 @@ const char *cfg = "debug";
 const char *env = "default";
 const char *action = "build";
 const char *path = ".";
+bool discover = true;
 bool build = true;
 bool build_to_home = false;
 bool local_setup = false;
@@ -48,6 +49,7 @@ const char *publish_cmd = NULL;
 bool interactive = false;
 int run_argc = -1;
 const char **run_argv = NULL;
+const char *foreach_cmd = NULL;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -88,8 +90,8 @@ void bake_usage(void)
     printf("  --interactive                Rebuild project when files change (use with bake run)\n");
     printf("  -a,--args [arguments]        Pass arguments to application ran with bake run\n");
     printf("\n");
-    printf("  --trace                      Set verbosity to TRACE\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
+    printf("  --trace                      Set verbosity to TRACE\n");
     printf("\n");
     printf("Commands:\n");
     printf("  init [path]                  Initialize new bake project\n");
@@ -163,7 +165,7 @@ bake_project_type bake_parse_project_type(
     return 0;
 }
 
-bool bake_is_action(
+int16_t bake_init_action(
     const char *arg)
 {
     if (!strcmp(arg, "build") ||
@@ -174,23 +176,32 @@ bool bake_is_action(
         !strcmp(arg, "update") ||
         !strcmp(arg, "clone"))
     {
-        return true;
+        discover = true;
+        build = true;
+        return 0;
     }
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
         !strcmp(arg, "init") ||
         !strcmp(arg, "run") ||
-        !strcmp(arg, "export") ||
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
+        !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
+        discover = false;
         build = false;
-        return true;
-    } else {
-        return false;
+        return 0;
     }
+
+    if (!strcmp(arg, "foreach")) {
+        discover = true;
+        build = false;
+        return 0;
+    }
+
+    return -1;
 }
 
 int bake_parse_args(
@@ -203,7 +214,7 @@ int bake_parse_args(
 
     const char *arg = argv[i];
     if (arg && arg[0] != '-') {
-        if (bake_is_action(arg)) {
+        if (!bake_init_action(arg)) {
             action = arg;
             i ++;
             arg = argv[i];
@@ -243,7 +254,18 @@ int bake_parse_args(
                 return -1;
             }
         } else {
-            path = argv[i];
+            if (!strcmp(action, "foreach")) {
+                 if (!foreach_cmd) {
+                    foreach_cmd = argv[i];
+                } else if (!strcmp(path, ".")) {
+                    path = foreach_cmd;
+                    foreach_cmd = argv[i];
+                } else {
+                    path = argv[i];
+                }
+            } else {
+                path = argv[i];
+            }
         }
     }
 
@@ -257,7 +279,7 @@ int bake_parse_args(
     if (!strcmp(action, "install")) {
         if (ut_file_test(path) != 1) {
             action = "install_remote";
-            build = false;
+            discover = false;
         }
     }
 
@@ -284,6 +306,10 @@ int bake_parse_args(
         }
 
         publish_cmd = path;
+    }
+
+    else if (!strcmp(action, "foreach") && !foreach_cmd) {
+        foreach_cmd = path;
     }
 
     /* If artefact is manually specified, translate to platform specific name */
@@ -466,6 +492,22 @@ error:
     return -1;
 }
 
+int bake_foreach_action(
+    bake_config *config,
+    bake_crawler *crawler,
+    bake_project* project)
+{
+    int8_t ret = 0;
+    ut_setenv("BAKE_PROJECT_ID", project->id);
+    ut_chdir(project->fullpath);
+
+    char *cmd = ut_envparse("%s", foreach_cmd);
+
+    int result = ut_proc_cmd(cmd, &ret);
+    free(cmd);
+    return result || ret;
+}
+
 int main(int argc, const char *argv[]) {
     bake_config config = {};
 
@@ -505,8 +547,8 @@ int main(int argc, const char *argv[]) {
         ut_getenv("BAKE_HOME"),
         ut_getenv("BAKE_CONFIG"));
 
-    if (build) {
-        /* If build is true, first discover projects in provided path */
+    if (discover) {
+        /* If discover is true, first discover projects in provided path */
         ut_log_push("discovery");
         bake_crawler *crawler = NULL;
         bake_project *project = NULL;
@@ -527,9 +569,16 @@ int main(int argc, const char *argv[]) {
 
         /* If projects have been discovered, build them */
         if (crawler) {
-            ut_log_push("build");
-            ut_try(bake_build(&config, crawler, action), NULL);
-            ut_log_pop();
+            if (build) {
+                ut_log_push("build");
+                ut_try(bake_build(&config, crawler, action), NULL);
+                ut_log_pop();
+            } else {
+                if (!strcmp(action, "foreach")) {
+                    ut_try( bake_crawler_walk(
+                        &config, crawler, action, bake_foreach_action), NULL);
+                }
+            }
 
             bake_crawler_free(crawler);
         } else {
