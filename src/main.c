@@ -109,6 +109,8 @@ void bake_usage(void)
     printf("  upgrade                      Upgrade to new bake version\n");
     printf("  export <NAME>=|+=<VALUE>     Add variable to bake environment\n");
     printf("\n");
+    printf("  locate <package id>          Locate and diagnose a project in the bake environment\n");
+    printf("\n");
     printf("Examples:\n");
     printf("  bake                         Build all projects discovered in current directory\n");
     printf("  bake my_app                  Build all projects discovered in my_app directory\n");
@@ -187,6 +189,7 @@ int16_t bake_init_action(
         !strcmp(arg, "run") ||
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
+        !strcmp(arg, "locate") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
@@ -492,6 +495,58 @@ error:
     return -1;
 }
 
+int bake_locate(
+    bake_config *config,
+    const char *id)
+{
+    const char *bin = ut_locate(id, NULL, UT_LOCATE_BIN);
+    if (!bin) {
+        const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
+        if (!path) {
+            ut_log("#[normal]%s #[grey]=> #[red]not found#[normal]\n", id);
+        } else {
+            bake_project *project = bake_project_new(path, config);
+            if (!project) {
+                ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (invalid config)\n",
+                    id, path);
+                goto error;
+            } else {
+                if (project->language) {
+                    ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (missing binary)\n",
+                        id, path);
+                    bake_project_free(project);
+                    goto error;
+                } else {
+                    ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (config)\n",
+                        id, path);
+                    bake_project_free(project);
+                }
+            }
+        }
+    } else {
+        const char *lib = ut_locate(id, NULL, UT_LOCATE_LIB);
+        if (lib) {
+            ut_dl dl = ut_dl_open(bin);
+            if (!dl) {
+                ut_log("#[normal]%s #[grey]=> #[red]%s#[normal] (package)\n",
+                    id, bin);
+                goto error;
+            } else {
+                ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (package)\n",
+                    id, bin);
+                ut_dl_close(dl);
+            }
+        } else {
+            ut_log("#[normal]%s #[grey]=> #[green]%s#[normal] (application)\n",
+                id, bin);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 int bake_foreach_action(
     bake_config *config,
     bake_crawler *crawler,
@@ -598,6 +653,8 @@ int main(int argc, const char *argv[]) {
               bake_run(&config, path, interactive, run_argc, run_argv), NULL);
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
+        } else if (!strcmp(action, "locate")) {
+            bake_locate(&config, path);
         } else if (!strcmp(action, "export")) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
