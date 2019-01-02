@@ -346,7 +346,7 @@ char* bake_driver_get_string_attr_cb(
     }
 
     if (attr->kind == BAKE_STRING) {
-        return attr->is.string;
+        return attr->is.string ? attr->is.string : "";
     } else {
         project->error = true;
         ut_throw("attribute '%s' is not of type string", name);
@@ -364,6 +364,18 @@ void bake_driver_set_attr_string_cb(
     bake_config *config = ut_tls_get(BAKE_CONFIG_KEY);
 
     bake_project_set_attr_string(config, project, driver->id, name, value);
+}
+
+static
+void bake_driver_set_attr_bool_cb(
+    const char *name,
+    bool value)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    bake_config *config = ut_tls_get(BAKE_CONFIG_KEY);
+
+    bake_project_set_attr_bool(config, project, driver->id, name, value);
 }
 
 static
@@ -432,6 +444,7 @@ bake_driver_api bake_driver_api_impl = {
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,
     .get_attr_string = bake_driver_get_string_attr_cb,
+    .set_attr_bool = bake_driver_set_attr_bool_cb,
     .set_attr_string = bake_driver_set_attr_string_cb
 };
 

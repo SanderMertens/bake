@@ -88,10 +88,18 @@ bake_attr* bake_project_get_attr(
     const char *driver_id,
     const char *attr);
 
-/* Set attribute value */
+/* Set string attribute value */
 bake_attr* bake_project_set_attr_string(
     bake_config *config,
     bake_project *project,
     const char *driver_id,
     const char *attr,
     const char *value);
+
+/* Set bool attribute value */
+bake_attr* bake_project_set_attr_bool(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *attr,
+    bool value);

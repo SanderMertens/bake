@@ -208,6 +208,11 @@ struct bake_driver_api {
     void (*set_attr_string)(
         const char *name,
         const char *value);
+
+    /* Get a driver-specific attribute */
+    void (*set_attr_bool)(
+        const char *name,
+        bool value);
 };
 
 #endif

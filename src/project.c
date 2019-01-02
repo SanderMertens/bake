@@ -520,19 +520,19 @@ bake_attr* bake_project_get_attr(
     }
 }
 
-bake_attr* bake_project_set_attr_string(
+static
+bake_attr* bake_project_set_attr(
     bake_config *config,
     bake_project *project,
     const char *driver_id,
     const char *attr,
-    const char *value)
+    JSON_Value *value)
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
 
     if (driver) {
         ut_try( bake_attr_add(
-            config, project, project->id, driver->attributes, attr,
-            json_value_init_string(value)), NULL);
+          config, project, project->id, driver->attributes, attr, value), NULL);
 
         return bake_attr_get(driver->attributes, attr);
     } else {
@@ -542,6 +542,28 @@ bake_attr* bake_project_set_attr_string(
 
 error:
     return NULL;
+}
+
+bake_attr* bake_project_set_attr_string(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *attr,
+    const char *value)
+{
+    return bake_project_set_attr(
+        config, project, driver_id, attr, json_value_init_string(value));
+}
+
+bake_attr* bake_project_set_attr_bool(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *attr,
+    bool value)
+{
+    return bake_project_set_attr(
+        config, project, driver_id, attr, json_value_init_boolean(value));
 }
 
 int bake_project_load_drivers(
