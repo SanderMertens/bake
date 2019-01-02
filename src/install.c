@@ -184,9 +184,24 @@ error:
 
 int16_t bake_install_uninstall(
     bake_config *config,
-    bake_project *project)
+    const char *project_id)
 {
-    return bake_install_clear(config, project, true);
+    const char *project_dir = ut_locate(project_id, NULL, UT_LOCATE_PROJECT);
+    if (!project_dir) {
+        ut_throw("project '%s' not found", project_id);
+        goto error;
+    }
+
+    bake_project *project = bake_project_new(project_dir, config);
+    if (!project) {
+        goto error;
+    }
+
+    ut_try( bake_install_clear(config, project, true), NULL);
+
+    ut_log("#[grey]uninstalled #[normal]'%s'\n", project->id);
+error:
+    return -1;
 }
 
 int16_t bake_install_metadata(

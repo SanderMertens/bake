@@ -129,23 +129,3 @@ int bake_do_install(
 error:
     return -1;
 }
-
-int bake_do_uninstall(
-    bake_config *config,
-    bake_crawler *crawler,
-    bake_project *project)
-{
-    ut_try (bake_install_uninstall(config, project), NULL);
-
-    return 0;
-error:
-    return -1;
-}
-
-int bake_do_foreach(
-    bake_config *config,
-    bake_crawler *crawler,
-    bake_project *project)
-{
-    return 0;
-}

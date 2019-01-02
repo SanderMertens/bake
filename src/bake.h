@@ -75,17 +75,6 @@ int bake_do_install(
     bake_crawler *crawler,
     bake_project *p);
 
-/** Uninstall project from bake environment (config->target & config->home) */
-int bake_do_uninstall(
-    bake_config *config,
-    bake_crawler *crawler,
-    bake_project *p);
-
-/** Execute command for each discovered project */
-int bake_do_foreach(
-    bake_config *config,
-    bake_crawler *crawler,
-    bake_project *p);
 
 /* -- Run project -- */
 
@@ -142,7 +131,7 @@ int16_t bake_install_clear(
 /** Remove files from config->target for project */
 int16_t bake_install_uninstall(
     bake_config *config,
-    bake_project *project);
+    const char *project_id);
 
 
 /* -- Driver functions -- */

@@ -178,7 +178,6 @@ int16_t bake_init_action(
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
         !strcmp(arg, "install") ||
-        !strcmp(arg, "uninstall") ||
         !strcmp(arg, "update") ||
         !strcmp(arg, "clone"))
     {
@@ -191,6 +190,7 @@ int16_t bake_init_action(
         !strcmp(arg, "setup") ||
         !strcmp(arg, "init") ||
         !strcmp(arg, "run") ||
+        !strcmp(arg, "uninstall") ||
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
         !strcmp(arg, "locate") ||
@@ -326,6 +326,10 @@ int bake_parse_args(
         list_filter = path;
     }
 
+    else if (!strcmp(action, "uninstall") && path_set) {
+        id = path;
+    }
+
     /* If artefact is manually specified, translate to platform specific name */
     if (artefact) {
         if (type == BAKE_PACKAGE) {
@@ -398,8 +402,6 @@ int bake_build(
     else if (!strcmp(action, "clean")) cb = bake_do_clean;
     else if (!strcmp(action, "rebuild")) cb = bake_do_rebuild;
     else if (!strcmp(action, "install")) cb = bake_do_install;
-    else if (!strcmp(action, "uninstall")) cb = bake_do_uninstall;
-    else if (!strcmp(action, "foreach")) cb = bake_do_foreach;
     else {
         ut_error("unknown action '%s'", action);
         goto error;
@@ -780,6 +782,8 @@ int main(int argc, const char *argv[]) {
               bake_run(&config, path, interactive, run_argc, run_argv), NULL);
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
+        } else if (!strcmp(action, "uninstall")) {
+            ut_try (bake_install_uninstall(&config, id), NULL);
         } else if (!strcmp(action, "locate")) {
             bake_locate(&config, path, NULL);
         } else if (!strcmp(action, "list")) {
