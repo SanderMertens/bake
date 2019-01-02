@@ -1,16 +1,8 @@
-# driver-bake-c
+# bake-lang-c
 This is the C language plugin for the bake buildtool.
 
-## Installation
-This plugin is installed by default when installing bake. To install bake, run
-the following command:
-
-```
-curl https://corto.io/install-bake | sh
-```
-
 ## Project configuration
-The C plugin supports properties specific to C projects. These properties are specified in the "value" section of the `project.json` file. The following properties are made available by the C plugin:
+The C plugin supports properties specific to C projects. These properties are specified in the "lang.c" section of a `project.json` file. The following properties are made available by the C plugin:
 
 Property | Type | Description
 ---------|------|------------
@@ -26,3 +18,15 @@ static | bool | Create static library (packages only, default=false)
 c-standard | string | Specify C standard (default=c99)
 cpp-standard | string | Specify C++ standard (default=c++0x)
 export-symbols | bool | Export all library symbols (default=false)
+
+## Example
+
+```json
+{
+    "id": "my_lib",
+    "type": "package",
+    "lang.c": {
+        "export-symbols": true
+    }
+}
+```
