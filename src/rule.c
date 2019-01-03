@@ -123,12 +123,17 @@ bake_filelist* bake_node_eval_pattern(
         ut_dirstack ds = NULL;
         while (ut_iter_hasNext(&it)) {
             char *src = ut_iter_next(&it);
-
-            ut_try (
-                bake_filelist_add_pattern(
+            ut_try ( bake_filelist_add_pattern(
                     targets, src, ((bake_pattern*)n)->pattern), NULL);
-
         }
+
+        /* Add generated sources to list of files to compile */
+        it = bake_filelist_iter(p->generated_sources);
+        while (ut_iter_hasNext(&it)) {
+            bake_file *src = ut_iter_next(&it);
+            bake_filelist_add_file(targets, src->file_path);
+        }
+
     } else if (((bake_pattern*)n)->pattern) {
         /* If this is a regular pattern, match against project directory */
         targets = bake_filelist_new(p->path, ((bake_pattern*)n)->pattern);
@@ -338,6 +343,8 @@ int16_t bake_node_eval(
         bake_filelist *inputs = bake_filelist_new(p->path, NULL);
         ut_try (!inputs, NULL);
 
+        ut_log_push("in");
+
         /* Evaluate dependencies of node & collect its inputs */
         ut_iter it = ut_ll_iter(n->deps);
         while (ut_iter_hasNext(&it)) {
@@ -348,6 +355,8 @@ int16_t bake_node_eval(
             }
         }
 
+        ut_log_pop();
+
         /* Generate target files */
         if (n->kind == BAKE_RULE_RULE) {
             bake_rule *r = (bake_rule*)n;
@@ -356,9 +365,12 @@ int16_t bake_node_eval(
             if (r->target.kind == BAKE_RULE_TARGET_MAP) {
                 targets = bake_filelist_new(p->path, NULL);
                 ut_try (!targets, NULL);
+
+                ut_log_push("out");
                 ut_try (
                     bake_node_run_rule_map(driver, p, c, r, inputs, targets),
                     NULL);
+                ut_log_pop();
 
             /* When rule specifies a pattern, generate targets from pattern */
             } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN) {
@@ -370,6 +382,8 @@ int16_t bake_node_eval(
                     char *pattern = ut_strdup(r->target.is.pattern);
                     targets = bake_filelist_new(p->path, NULL);
 
+                    ut_log_push("out");
+
                     char *tok = strtok(pattern, ",");
                     while (tok) {
                         bake_node *targetNode = bake_node_find(driver, &tok[1]);
@@ -378,7 +392,7 @@ int16_t bake_node_eval(
                                 p->path, ((bake_pattern*)targetNode)->pattern);
                             if (!list || !bake_filelist_count(list)) {
                                 ut_trace(
-                                   "no targets matched by '%s', need to rebuild '%s'",
+                                   "#[grey]no targets matched by '%s', need to rebuild '%s'",
                                     tok,
                                     n->name);
                                 shouldBuild = true;
@@ -390,6 +404,8 @@ int16_t bake_node_eval(
                         tok = strtok(NULL, ",");
                     }
                     free(pattern);
+
+                    ut_log_pop();
                 }
 
                 if (!targets && !bake_filelist_count(inputs)) {

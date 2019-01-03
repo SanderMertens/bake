@@ -897,14 +897,10 @@ int16_t bake_project_generate(
         ut_tls_set(BAKE_DRIVER_KEY, driver->driver);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
-        bake_filelist *fl = bake_filelist_new(project->path, NULL);
-
-        if (bake_node_eval(driver->driver, node, project, config, fl, NULL)) {
-            ut_throw("failed to build rule 'GENERATED_SOURCES'");
+        if (bake_node_eval(driver->driver, node, project, config, NULL, NULL)) {
+            ut_throw("failed to build rule 'GENERATED-SOURCES'");
             goto error;
         }
-
-        bake_filelist_free(fl);
     }
 
     return 0;
@@ -1079,28 +1075,41 @@ int16_t bake_project_build_artefact(
     bake_config *config,
     bake_project *project,
     const char *artefact,
-    const char *artefact_path,
-    const char *rule_name)
+    const char *artefact_path)
 {
     bake_driver *driver = project->language_driver->driver;
-    bake_node *root = bake_node_find(driver, rule_name);
-    if (!root) {
-        ut_throw("rule '%s' not found in driver '%s'", rule_name, driver->id);
-        goto error;
+    bake_filelist *output = bake_filelist_new(NULL, NULL);
+
+    /* Collect generated source files from drivers */
+    ut_iter it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        bake_node *node = bake_node_find(driver->driver, "GENERATED-SOURCES");
+        if (node) {
+            bake_node_eval(driver->driver, node, project, config, NULL, output);
+        }
     }
+
+    /* Set generated_files list, so SOURCES can find it when its evaluated */
+    project->generated_sources = output;
 
     ut_try (ut_mkdir(artefact_path), NULL);
 
     ut_tls_set(BAKE_DRIVER_KEY, driver);
     ut_tls_set(BAKE_PROJECT_KEY, project);
 
-    /* Evaluate root node */
-    char *binaryPath = config->target_lib;
-    bake_filelist *artefact_fl = bake_filelist_new(NULL, NULL);
+    /* Lookup artefact node, which must be the top level node */
+    bake_node *root = bake_node_find(driver, "ARTEFACT");
+    if (!root) {
+        ut_throw("rule ARTEFACT not found in driver '%s'", driver->id);
+        goto error;
+    }
 
+    /* Evaluate artefact node */
+    bake_filelist *artefact_fl = bake_filelist_new(NULL, NULL);
     bake_filelist_add_file(artefact_fl, project->artefact_file);
     if (bake_node_eval(driver, root, project, config, artefact_fl, NULL)) {
-        ut_throw("failed to build rule '%s'", rule_name);
+        ut_throw("failed to build rule 'ARTEFACT'");
         goto error;
     }
     bake_filelist_free(artefact_fl);
@@ -1141,8 +1150,7 @@ int16_t bake_project_build(
         config,
         project,
         project->artefact,
-        project->artefact_path,
-        "ARTEFACT"))
+        project->artefact_path))
     {
         bake_project_link_cleanup(project->link);
         project->link = old_link;

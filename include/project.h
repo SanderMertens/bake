@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+typedef struct bake_filelist bake_filelist;
+
 typedef enum bake_project_type {
     BAKE_APPLICATION = 1,   /* Executable project in bake package store */
     BAKE_PACKAGE = 2,       /* Library project in bake package store */
@@ -96,16 +98,12 @@ struct bake_project {
     ut_ll dependents; /* projects that depend on this project */
     bool built;
 
+    /* filelist with generated sources (set before build) */
+    bake_filelist *generated_sources;
+
     /* Files to be cleaned other than objects and artefact (populated by
      * language binding) */
     ut_ll files_to_clean;
-
-    /* Interface for bake plugin */
-    bake_attr* (*get_attr)(const char *name);
-    char* (*get_attr_string)(const char *name);
-    bool (*get_attr_bool)(const char *name);
-    void (*add_build_dependency)(const char *file);
-    void (*clean)(const char *file);
 };
 
 #ifdef __cplusplus
