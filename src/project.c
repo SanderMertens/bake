@@ -88,7 +88,7 @@ int16_t bake_project_parse_value(
             ut_try (bake_json_set_array(&p->use, member, v), NULL);
             ut_try (bake_validate_dep_array(p->use), NULL);
         } else
-        if (!strcmp(member, "use_private")) {
+        if (!strcmp(member, "use_private") || !strcmp(member, "use-private")) {
             ut_try (bake_json_set_array(&p->use_private, member, v), NULL);
         } else
         if (!strcmp(member, "link")) {
@@ -100,7 +100,7 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "includes")) {
             ut_try (bake_json_set_array(&p->includes, member, v), NULL);
         } else
-        if (!strcmp(member, "keep_artefact")) {
+        if (!strcmp(member, "keep_artefact") || !strcmp(member, "keep-artefact")) {
             ut_try (bake_json_set_boolean(&p->keep_artefact, member, v), NULL);
         } else {
             ut_warning("unknown member '%s' in project.json of '%s'", member, p->id);
@@ -278,7 +278,7 @@ int16_t bake_project_load_dependee_config(
                 ut_try( bake_project_load_driver(project, member, obj), NULL);
             } else {
                 driver->attributes = bake_attrs_parse(
-                    config, project, project->id, obj, driver->attributes);
+                    config, project, project_id, obj, driver->attributes);
                 if (!driver->attributes) {
                     ut_throw("failed to parse dependee config for driver '%s'", member);
                     goto error;
@@ -317,6 +317,67 @@ int16_t bake_project_add_dependee_config(
     return 0;
 error:
     return -1;
+}
+
+static
+int16_t bake_project_init_language(
+    bake_config *config,
+    bake_project *project)
+{
+    if (!project->language) {
+        project->language = ut_strdup("c");
+    }
+
+    if (!project->version) {
+        project->version = ut_strdup("0.0.0");
+    }
+
+    if (project->language && !strcmp(project->language, "c++")) {
+        free(project->language);
+        project->language = ut_strdup("cpp");
+    }
+
+    if (project->language && !strcmp(project->language, "none")) {
+        free(project->language);
+        project->language = NULL;
+    }
+
+    if (project->language) {
+        char *driver_id = ut_asprintf("lang.%s", project->language);
+        ut_try( bake_project_load_driver(
+            project,
+            driver_id,
+            NULL),
+              "failed to load driver for language '%s'", project->language);
+        free(driver_id);
+
+        bake_project_driver *driver = ut_ll_get(project->drivers, 0);
+        project->language_driver = driver;
+
+        /* Initialize configuration for language driver */
+        project->language_driver->attributes = ut_ll_new();
+        ut_try(
+          bake_driver__init(project->language_driver->driver, config, project),
+          NULL);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+void bake_project_init_artefact(
+    bake_config *config,
+    bake_project *project)
+{
+    if (project->artefact) {
+        project->artefact_path = ut_asprintf(
+            "%s/bin/%s-%s", project->path, UT_PLATFORM_STRING,
+            config->configuration);
+
+        project->artefact_file = ut_asprintf(
+            "%s/%s", project->artefact_path, project->artefact);
+    }
 }
 
 /* -- Public API -- */
@@ -395,49 +456,11 @@ int16_t bake_project_init(
         ut_ll_append(project->includes, ut_strdup("include"));
     }
 
-    if (!project->language) {
-        project->language = ut_strdup("c");
-    }
+    ut_try (bake_project_init_language(config, project), NULL);
 
-    if (!project->version) {
-        project->version = ut_strdup("0.0.0");
-    }
-
-    if (project->language && !strcmp(project->language, "c++")) {
-        free(project->language);
-        project->language = ut_strdup("cpp");
-    }
-
-    if (project->language && !strcmp(project->language, "none")) {
-        free(project->language);
-        project->language = NULL;
-    }
-
-    if (project->language) {
-        char *driver_id = ut_asprintf("lang.%s", project->language);
-        ut_try( bake_project_load_driver(
-            project,
-            driver_id,
-            NULL),
-              "failed to load driver for language '%s'", project->language);
-        free(driver_id);
-
-        bake_project_driver *driver = ut_ll_get(project->drivers, 0);
-        project->language_driver = driver;
-
-        if (!project->artefact) {
-            project->artefact = bake_driver__artefact(
-                driver->driver, config, project);
-        }
-    }
-
-    project->artefact_path = ut_asprintf(
-        "%s/bin/%s-%s", project->path, UT_PLATFORM_STRING,
-        config->configuration);
-
+    /* Project artefact could have been provided manually on command line */
     if (project->artefact) {
-        project->artefact_file = ut_asprintf(
-            "%s/%s", project->artefact_path, project->artefact);
+        bake_project_init_artefact(config, project);
     }
 
     project->bin_path = ut_asprintf(
@@ -618,13 +641,12 @@ int bake_project_parse_driver_config(
             NULL);
     }
 
-    /* If project loaded a language driver, but did not provide a configuration,
-     * initialize it */
-    if (project->language_driver && !project->language_driver->attributes) {
-        project->language_driver->attributes = ut_ll_new();
-        ut_try(
-          bake_driver__init(project->language_driver->driver, config, project),
-          NULL);
+    /* Now that all information is parsed, we can load the artefact name */
+    if (project->language_driver && !project->artefact) {
+        project->artefact = bake_driver__artefact(
+            project->language_driver->driver, config, project);
+
+        bake_project_init_artefact(config, project);
     }
 
     return 0;
@@ -794,6 +816,7 @@ int16_t bake_project_generate(
             continue;
         }
 
+        ut_tls_set(BAKE_DRIVER_KEY, driver->driver);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
         bake_filelist *fl = bake_filelist_new(project->path, NULL);
@@ -997,6 +1020,7 @@ int16_t bake_project_build_artefact(
 
     ut_try (ut_mkdir(artefact_path), NULL);
 
+    ut_tls_set(BAKE_DRIVER_KEY, driver);
     ut_tls_set(BAKE_PROJECT_KEY, project);
 
     /* Evaluate root node */
