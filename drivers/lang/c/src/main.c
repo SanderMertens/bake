@@ -198,7 +198,12 @@ void compile_src(
         while (ut_iter_hasNext(&it)) {
             bake_attr *include = ut_iter_next(&it);
             char* file = include->is.string;
-            ut_strbuf_append(&cmd, " -I%s", file);
+
+            if (file[0] == '/') {
+                ut_strbuf_append(&cmd, " -I%s", file);
+            } else {
+                ut_strbuf_append(&cmd, " -I%s/%s", project->path, file);
+            }
         }
     }
 
@@ -388,7 +393,14 @@ void link_dynamic_binary(
 
     /* Link static library */
     bake_attr *static_lib_attr = driver->get_attr("static-lib");
+
     if (static_lib_attr) {
+        if (static_lib_attr->kind != BAKE_ARRAY) {
+            ut_error("attribute 'static-lib' is not of type array");
+            project->error = true;
+            return;
+        }
+
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
@@ -646,7 +658,7 @@ char* artefact_name(
     char *id = project->id_underscore;
 
     if (project->type == BAKE_PACKAGE) {
-        bool link_static = driver->get_attr_bool("static_artefact");
+        bool link_static = driver->get_attr_bool("static");
 
         if (link_static) {
             result = ut_asprintf("lib%s.a", id);
