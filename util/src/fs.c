@@ -516,7 +516,7 @@ ut_ll ut_opendir(const char *name) {
     if (dp != NULL) {
         result = ut_ll_new();
         while ((ep = readdir (dp))) {
-            if (*ep->d_name != '.') {
+            if (strcmp(ep->d_name, ".") && strcmp(ep->d_name, "..")) {
                 ut_ll_append(result, ut_strdup(ep->d_name));
             }
         }
@@ -547,7 +547,7 @@ bool ut_dir_hasNext(
     ut_iter *it)
 {
     struct dirent *ep = readdir(it->ctx);
-    while (ep && *ep->d_name == '.') {
+    while (ep && (!strcmp(ep->d_name, ".") || !strcmp(ep->d_name, ".."))) {
         ep = readdir(it->ctx);
     }
 
@@ -572,9 +572,14 @@ bool ut_dir_hasNextFilter(
     struct ut_dir_filteredIter *ctx = it->ctx;
     struct dirent *ep = NULL;
 
+    if (it->data && ctx->program->kind == 1) {
+        /* If program kind is 1, only one result can match */
+        return false;
+    }
+
     do {
         ep = readdir(ctx->files);
-    } while (ep && (*ep->d_name == '.' || !ut_expr_run(ctx->program, ep->d_name)));
+    } while (ep && !ut_expr_run(ctx->program, ep->d_name));
 
     if (ep) {
         it->data = ep->d_name;
@@ -615,11 +620,13 @@ void ut_dir_releaseRecursiveFilter(
 }
 
 static
-int16_t ut_dir_collectRecursive(
+int16_t ut_dir_collect(
     const char *name,
     ut_dirstack stack,
     ut_expr_program filter,
-    ut_ll files)
+    const char *offset,
+    ut_ll files,
+    bool recursive)
 {
     ut_iter it;
 
@@ -639,17 +646,26 @@ int16_t ut_dir_collectRecursive(
         char *file = ut_iter_next(&it);
 
         /* Add file to results if it matches filter */
-        char *path = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+        char *path;
+        if (offset) {
+            path = ut_asprintf("%s/%s/%s", ut_dirstack_wd(stack), offset, file);
+        } else {
+            path = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+        }
         ut_path_clean(path, path);
 
         if (ut_expr_run(filter, path)) {
             ut_ll_append(files, path);
         }
 
-        /* If directory, crawl */
+        if (!recursive) {
+            continue;
+        }
+
+        /* If directory, crawl recursively */
         char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), file);
         if (ut_isdir(fullpath)) {
-            if (ut_dir_collectRecursive(file, stack, filter, files)) {
+            if (ut_dir_collect(file, stack, filter, offset, files, true)) {
                 free(fullpath);
                 goto error;
             }
@@ -674,14 +690,56 @@ int16_t ut_dir_iter(
     const char *filter,
     ut_iter *it_out)
 {
-    if (!name) {
+    char *path = (char*)name;
+    char *offset = NULL;
+
+    if (!path) {
         ut_throw("invalid 'null' provided as directory name");
         goto error;
     }
 
-    if (!filter) {
+    if (filter) {
+        const char *ptr, *last_elem = filter;
+        char ch;
+
+        for (ptr = filter; (ch = *ptr); ptr ++) {
+            if (ut_expr_isOperator(ch)) {
+                break;
+            } else if (ch == '/') {
+                last_elem = ptr;
+                if (ptr[1] == '/') {
+                    break;
+                }
+            }
+        }
+
+        if (!ch) {
+            /* Filter only has path, no wildcards or recursive operators */
+            if (last_elem == filter) {
+                /* If there are no elements, filter matches single file */
+            } else {
+                /* If there are elements, append filter to path */
+                path = ut_asprintf("%s/%s", path, filter);
+                ut_path_clean(path, path);
+                filter = NULL;
+            }
+        } else {
+            if (last_elem == filter) {
+                /* Whole filter needs to be evaluated, no optimization */
+            } else {
+                /* Part of filter is path, strip it off and add to path */
+                uint32_t old_len = strlen(path);
+                path = ut_asprintf("%s/%s", path, filter);
+                path[strlen(path) - strlen(last_elem)] = '\0';
+                offset = &path[old_len] + 1;
+                filter = last_elem;
+            }
+        }
+    }
+
+    if (!filter && !offset) {
         ut_iter result = {
-            .ctx = opendir(name),
+            .ctx = opendir(path),
             .data = NULL,
             .hasNext = ut_dir_hasNext,
             .next = ut_dir_next,
@@ -689,7 +747,7 @@ int16_t ut_dir_iter(
         };
 
         if (!result.ctx) {
-            ut_throw("%s: %s", name, strerror(errno));
+            ut_throw("%s: %s", path, strerror(errno));
             goto error;
         }
 
@@ -697,39 +755,28 @@ int16_t ut_dir_iter(
     } else {
         ut_expr_program program = ut_expr_compile(filter, TRUE, TRUE);
         ut_iter result = UT_ITER_EMPTY;
+        ut_ll files = ut_ll_new();
 
         if (ut_expr_scope(program) == 2) {
-
-            ut_ll files = ut_ll_new();
-            if (ut_dir_collectRecursive(name, NULL, program, files)) {
+            if (ut_dir_collect(path, NULL, program, offset, files, true)) {
+                ut_throw("recursive dir_iter failed");
+                goto error;
+            }
+        } else {
+            if (ut_dir_collect(path, NULL, program, offset, files, false)) {
                 ut_throw("dir_iter failed");
                 goto error;
             }
-
-            result = ut_ll_iterAlloc(files);
-            result.data = files;
-            result.release = ut_dir_releaseRecursiveFilter;
-        } else {
-            struct ut_dir_filteredIter *ctx = malloc(sizeof(struct ut_dir_filteredIter));
-
-            ctx->files = opendir(name);
-            if (!ctx->files) {
-                free(ctx);
-                ut_throw("%s: %s", name, strerror(errno));
-                goto error;
-            }
-            ctx->program = program;
-            result = (ut_iter){
-                .ctx = ctx,
-                .data = NULL,
-                .hasNext = ut_dir_hasNextFilter,
-                .next = ut_dir_next,
-                .release = ut_dir_releaseFilter
-            };
         }
+
+        result = ut_ll_iterAlloc(files);
+        result.data = files;
+        result.release = ut_dir_releaseRecursiveFilter;
 
         *it_out = result;
     }
+
+    if (path != name) free(path);
 
     return 0;
 error:
