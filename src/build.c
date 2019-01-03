@@ -48,7 +48,7 @@ int bake_do_build(
     ut_log_pop();
 
     /* Step 6: invoke code generators, if any */
-    ut_log_push("generate_code");
+    ut_log_push("generate");
     ut_try (bake_project_generate(config, project), NULL);
     ut_log_pop();
 
@@ -64,9 +64,9 @@ int bake_do_build(
         ut_try (bake_install_prebuild(config, project), NULL);
     ut_log_pop();
 
-    /* Step 9: build generated projects, in case code generation created any */
-    ut_log_push("build_generated");
-    ut_try (bake_project_build_generated(config, project), NULL);
+    /* Step 9: prebuild step */
+    ut_log_push("prebuild");
+    ut_try (bake_project_prebuild(config, project), NULL);
     ut_log_pop();
 
     /* Step 10: build project */
@@ -75,7 +75,12 @@ int bake_do_build(
         ut_try (bake_project_build(config, project), NULL);
     ut_log_pop();
 
-    /* Step 11: install binary to environment */
+    /* Step 11: postbuild step */
+    ut_log_push("postbuild");
+    ut_try (bake_project_postbuild(config, project), NULL);
+    ut_log_pop();
+
+    /* Step 12: install binary to environment */
     ut_log_push("install_postbuild");
     if (project->public && project->artefact)
         ut_try (bake_install_postbuild(config, project), NULL);

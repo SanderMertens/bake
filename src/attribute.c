@@ -43,6 +43,12 @@ int16_t bake_project_func_locate(
     if (!package_id) {
         package_id = project->id;
     }
+
+    if (!argument) {
+        ut_throw("missing argument for locate function");
+        return -1;
+    }
+
     if (!strcmp(argument, "package")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_PROJECT);
     } else if (!strcmp(argument, "include")) {
@@ -78,11 +84,16 @@ int16_t bake_project_func_os(
     ut_strbuf *buffer,
     const char *argument)
 {
-    if (ut_os_match(argument)) {
-        ut_strbuf_appendstr(buffer, "1");
+    if (!argument) {
+        ut_strbuf_appendstr(buffer, UT_PLATFORM_STRING);
     } else {
-        ut_strbuf_appendstr(buffer, "0");
+        if (ut_os_match(argument)) {
+            ut_strbuf_appendstr(buffer, "1");
+        } else {
+            ut_strbuf_appendstr(buffer, "0");
+        }
     }
+
     return 0;
 }
 
@@ -135,10 +146,14 @@ int16_t bake_project_func_language(
 {
     const char *language = project->language;
 
-    if (bake_project_language_match(language, argument)) {
-        ut_strbuf_appendstr(buffer, "1");
+    if (!argument) {
+        ut_strbuf_appendstr(buffer, project->language);
     } else {
-        ut_strbuf_appendstr(buffer, "0");
+        if (bake_project_language_match(language, argument)) {
+            ut_strbuf_appendstr(buffer, "1");
+        } else {
+            ut_strbuf_appendstr(buffer, "0");
+        }
     }
 
     return 0;
@@ -178,12 +193,22 @@ char* bake_attr_replace(
     const char *func = input, *next = NULL;
     ut_strbuf output = UT_STRBUF_INIT;
     bool replaced = false;
+    bool indirect = false;
+    bool has_arg = false;
 
     while ((next = strchr(func, '$'))) {
         replaced = true;
+        indirect = false;
+        has_arg = false;
 
         /* Add everything up until next $ */
         ut_strbuf_appendstrn(&output, (char*)func, next - func);
+
+        /* If two subsequent $s, use dependee project instead of dependency */
+        if (next[1] == '$') {
+            next ++;
+            indirect = true;
+        }
 
         /* Check whether value is a function */
         if (next[1] == '{') {
@@ -219,23 +244,27 @@ char* bake_attr_replace(
                 for (ptr = start; ptr < end; ptr ++) {
                     if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
                         ut_throw("invalid function argument in '%s'", input);
-                        free (ut_strbuf_get(&output));
+                        ut_strbuf_reset(&output);
                         goto error;
                     }
                     arg_id[ptr - start] = *ptr;
                 }
                 arg_id[ptr - start] = '\0';
+
+                if (strlen(arg_id)) {
+                    has_arg = true;
+                }
             }
 
             if (bake_attr_func(
                 config,
                 project,
-                package_id,
+                indirect ? project->id : package_id,
                 &output,
                 func_id,
-                arg_id))
+                has_arg ? arg_id : NULL))
             {
-                free (ut_strbuf_get(&output));
+                ut_strbuf_reset(&output);
                 goto error;
             }
 
@@ -413,10 +442,8 @@ ut_ll bake_attr_parse_object(
 
         if (name[0] == '$') {
             /* If name contains function, parse it */
-            name = bake_attr_replace(
-                config, project, NULL, json_name);
+            name = bake_attr_replace(config, project, project_id, json_name);
             if (!name) {
-                printf("function error\n");
                 goto error;
             }
         }

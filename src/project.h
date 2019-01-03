@@ -57,8 +57,13 @@ int16_t bake_project_generate(
     bake_config *config,
     bake_project *project);
 
-/* Build generated projects (if any) */
-int16_t bake_project_build_generated(
+/* Prebuild step */
+int16_t bake_project_prebuild(
+    bake_config *config,
+    bake_project *project);
+
+/* Postbuild step */
+int16_t bake_project_postbuild(
     bake_config *config,
     bake_project *project);
 
@@ -103,3 +108,11 @@ bake_attr* bake_project_set_attr_bool(
     const char *driver_id,
     const char *attr,
     bool value);
+
+/* Add value to array attribute */
+bake_attr* bake_project_set_attr_array(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *attr,
+    const char *value);

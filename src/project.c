@@ -239,6 +239,76 @@ error:
 }
 
 static
+int16_t bake_project_load_dependee_object(
+    bake_config *config,
+    bake_project *project,
+    const char *project_id,
+    JSON_Object *jo)
+{
+    uint32_t i, count = json_object_get_count(jo);
+
+    for (i = 0; i < count; i ++) {
+        const char *expr = json_object_get_name(jo, i);
+
+        if (!strcmp(expr, "id") || !strcmp(expr, "type")) {
+            /* Ignore */
+            continue;
+        }
+
+        char *member = (char*)expr;
+        member = bake_attr_replace(config, project, project_id, expr);
+        if (!member) {
+            goto error;
+        }
+
+        if (!strcmp(member, "1")) {
+            JSON_Value *value = json_object_get_value_at(jo, i);
+            if (json_value_get_type(value) == JSONObject) {
+                JSON_Object *obj = json_value_get_object(value);
+                ut_try (!bake_project_load_dependee_object(
+                    config, project, project_id, obj), NULL);
+            } else {
+                ut_throw("JSON object expected for expression '%s'", expr);
+                goto error;
+            }
+        } else if (!strcmp(member, "0")) {
+            /* Ignore */
+        } else {
+            JSON_Value *value = json_object_get_value_at(jo, i);
+            JSON_Object *obj = json_value_get_object(value);
+
+            if (!strcmp(member, "value")) {
+                ut_try (
+                  bake_project_parse_value(config, project, project_id, obj),
+                  NULL);
+            } else {
+                bake_project_driver *driver = bake_project_get_driver(
+                    project, member);
+                if (!driver) {
+                    ut_try(
+                      bake_project_load_driver(project, member, obj), NULL);
+                } else {
+                    driver->attributes = bake_attrs_parse(
+                        config, project, project_id, obj, driver->attributes);
+                    if (!driver->attributes) {
+                        ut_throw(
+                            "failed to parse dependee config for driver '%s'",
+                            member);
+                        goto error;
+                    }
+                }
+            }
+        }
+
+        free(member);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
 int16_t bake_project_load_dependee_config(
     bake_config *config,
     bake_project *project,
@@ -257,35 +327,8 @@ int16_t bake_project_load_dependee_config(
         goto error;
     }
 
-    uint32_t i, count = json_object_get_count(jo);
-
-    for (i = 0; i < count; i ++) {
-        const char *member = json_object_get_name(jo, i);
-
-        if (!strcmp(member, "id") || !strcmp(member, "type")) {
-            ut_throw("dependee config cannot override '%s'", member);
-            goto error;
-        }
-
-        JSON_Value *value = json_object_get_value_at(jo, i);
-        JSON_Object *obj = json_value_get_object(value);
-
-        if (!strcmp(member, "value")) {
-            ut_try (bake_project_parse_value(config, project, project_id, obj), NULL);
-        } else {
-            bake_project_driver *driver = bake_project_get_driver(project, member);
-            if (!driver) {
-                ut_try( bake_project_load_driver(project, member, obj), NULL);
-            } else {
-                driver->attributes = bake_attrs_parse(
-                    config, project, project_id, obj, driver->attributes);
-                if (!driver->attributes) {
-                    ut_throw("failed to parse dependee config for driver '%s'", member);
-                    goto error;
-                }
-            }
-        }
-    }
+    ut_try( bake_project_load_dependee_object(config, project, project_id, jo),
+        NULL);
 
     return 0;
 error:
@@ -567,6 +610,41 @@ error:
     return NULL;
 }
 
+bake_attr* bake_project_set_attr_array(
+    bake_config *config,
+    bake_project *project,
+    const char *driver_id,
+    const char *name,
+    const char *value)
+{
+    bake_attr *attr = bake_project_get_attr(project, driver_id, name);
+
+    if (!attr) {
+        attr = ut_calloc(sizeof(bake_attr));
+        attr->name = ut_strdup(name);
+        attr->kind = BAKE_ARRAY;
+        attr->is.array = ut_ll_new();
+    }
+
+    if (attr->kind != BAKE_ARRAY) {
+        ut_throw("attribute '%s' is not of type array", name);
+        return NULL;
+    }
+
+    /* Check if value isn't already added */
+    ut_iter it = ut_ll_iter(attr->is.array);
+    while (ut_iter_hasNext(&it)) {
+        const char *elem = ut_iter_next(&it);
+        if (!strcmp(elem, value)) {
+            return attr;
+        }
+    }
+
+    ut_ll_append(attr->is.array, ut_strdup(value));
+
+    return attr;
+}
+
 bake_attr* bake_project_set_attr_string(
     bake_config *config,
     bake_project *project,
@@ -834,13 +912,6 @@ error:
     return -1;
 }
 
-int16_t bake_project_build_generated(
-    bake_config *config,
-    bake_project *project)
-{
-    return 0;
-}
-
 static
 int16_t bake_project_resolve_links(
     bake_config *config,
@@ -1083,6 +1154,42 @@ int16_t bake_project_build(
 
     /* Restore old list */
     project->link = old_link;
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_prebuild(
+    bake_config *config,
+    bake_project *project)
+{
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+            ut_try(
+              bake_driver__prebuild(driver->driver, config, project), NULL);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_project_postbuild(
+    bake_config *config,
+    bake_project *project)
+{
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+            ut_try(
+              bake_driver__postbuild(driver->driver, config, project), NULL);
+        }
+    }
 
     return 0;
 error:

@@ -180,6 +180,14 @@ struct bake_driver_api {
     void (*generate)(
         bake_driver_cb action);
 
+    /* Callback called before build */
+    void (*prebuild)(
+        bake_driver_cb action);
+
+    /* Callback called after build */
+    void (*postbuild)(
+        bake_driver_cb action);
+
     /* Callback for specifying files to clean */
     void (*clean)(
         bake_driver_cb action);
@@ -191,6 +199,10 @@ struct bake_driver_api {
     /* Execute a command */
     void (*exec)(
         const char *cmd);
+
+    /* Add dependency */
+    void (*use)(
+        const char *dependency);
 
     /* Get a driver-specific attribute */
     bake_attr* (*get_attr)(
@@ -213,6 +225,11 @@ struct bake_driver_api {
     void (*set_attr_bool)(
         const char *name,
         bool value);
+
+    /* Add string element to array */
+    void (*set_attr_array)(
+        const char *name,
+        const char *value);
 };
 
 #endif
