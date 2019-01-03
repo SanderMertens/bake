@@ -535,16 +535,11 @@ void init(
     bake_config *config,
     bake_project *project)
 {
-    bool cpp = is_cpp(project);
-
-    if (cpp) {
-        if (!driver->get_attr("cpp-standard")) {
-            driver->set_attr_string("cpp-standard", "c++0x");
-        }
-    } else {
-        if (!driver->get_attr("c-standard")) {
-            driver->set_attr_string("c-standard", "c99");
-        }
+    if (!driver->get_attr("cpp-standard")) {
+        driver->set_attr_string("cpp-standard", "c++0x");
+    }
+    if (!driver->get_attr("c-standard")) {
+        driver->set_attr_string("c-standard", "c99");
     }
 }
 
