@@ -737,6 +737,16 @@ int16_t ut_dir_iter(
         }
     }
 
+    if (ut_file_test(path) != 1) {
+        if (ut_file_test(name) == 1) {
+            *it_out = UT_ITER_EMPTY;
+            return 0;
+        } else {
+            ut_throw("directory '%s' does not exist", name);
+            goto error;
+        }
+    }
+
     if (!filter && !offset) {
         ut_iter result = {
             .ctx = opendir(path),
