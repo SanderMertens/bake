@@ -87,6 +87,7 @@ int ut_run(
 typedef enum ut_locate_kind {
     UT_LOCATE_ENV,     /* environment, for example: /usr/local */
     UT_LOCATE_LIB,     /* full path to library */
+    UT_LOCATE_STATIC,  /* full path to static library */
     UT_LOCATE_APP,     /* full path to application */
     UT_LOCATE_BIN,     /* full path to either library or application */
     UT_LOCATE_ETC,     /* full path to project etc directory */

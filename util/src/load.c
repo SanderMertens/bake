@@ -38,6 +38,7 @@ struct ut_loaded {
 
     char *env; /* Environment in which the package is installed */
     char *lib; /* Path to library (if available) */
+    char *static_lib; /* Path to static library (if available) */
     char *app; /* Path to executable (if available) */
     char *bin; /* Path to binary (if available) */
     char *etc; /* Path to project etc (if available) */
@@ -181,16 +182,6 @@ int ut_load_fromDl(
                 ut_throw("cortomain of '%s' returned %d", fileName, ret);
             }
             goto error;
-        }
-    } else {
-        char* ___ (*build)(void);
-
-        /* Lookup build function */
-        build = (char* ___ (*)(void))ut_dl_proc(dl, "ut_get_build");
-        if (build) {
-            ut_trace(
-                "library '%s' linked with corto but does not have a cortomain",
-                fileName);
         }
     }
 
@@ -383,6 +374,24 @@ int16_t ut_locate_binary(
         }
     }
 
+    /* Test for .a library */
+    if (ret == 0) {
+        bin = ut_asprintf("%s/lib/lib%s.a", loaded->env, pkg_underscore);
+        if ((ret = ut_file_test(bin)) == 1) {
+            /* Library found */
+            loaded->static_lib = bin;
+            loaded->bin = bin;
+        } else {
+            if (ret != 0) {
+                ut_throw("could not access file '%s'", bin);
+                free(bin);
+                goto error;
+            } else {
+                free(bin);
+            }
+        }
+    }
+
     /* Test for executable */
     if (ret == 0) {
         bin = ut_asprintf("%s/bin/%s", loaded->env, pkg_underscore);
@@ -482,11 +491,12 @@ const char* ut_locate(
             break;
         case UT_LOCATE_INCLUDE:
             if (!loaded->include) {
-                loaded->include = ut_asprintf("%s/include/%s", loaded->env, package);
+                loaded->include = ut_asprintf("%s/include/%s.dir", loaded->env, package);
             }
             result = loaded->include;
             break;
         case UT_LOCATE_LIB:
+        case UT_LOCATE_STATIC:
         case UT_LOCATE_APP:
         case UT_LOCATE_BIN:
             if (!loaded->tried_binary) {
@@ -495,6 +505,7 @@ const char* ut_locate(
                 }
             }
             if (kind == UT_LOCATE_LIB) result = loaded->lib;
+            if (kind == UT_LOCATE_STATIC) result = loaded->static_lib;
             if (kind == UT_LOCATE_APP) result = loaded->app;
             if (kind == UT_LOCATE_BIN) result = loaded->bin;
             break;
@@ -553,7 +564,7 @@ struct ut_fileHandler* ut_load_filehandler(
     /* If filehandler is not found, look it up in driver/ext */
     if (!h) {
         ut_id extPackage;
-        sprintf(extPackage, "driver/ext/%s", ext);
+        sprintf(extPackage, "driver.ext.%s", ext);
 
         ut_try(
             ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
