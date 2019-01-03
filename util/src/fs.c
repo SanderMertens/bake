@@ -646,9 +646,8 @@ int16_t ut_dir_collectRecursive(
             ut_ll_append(files, path);
         }
 
-
         /* If directory, crawl */
-        char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), path);
+        char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), file);
         if (ut_isdir(fullpath)) {
             if (ut_dir_collectRecursive(file, stack, filter, files)) {
                 free(fullpath);
