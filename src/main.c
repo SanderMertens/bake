@@ -446,6 +446,7 @@ int bake_init_project(
         char *project_path = ut_strdup(path);
 
         /* Replace '.' with '-' for path */
+        char *ptr = project_path, ch;
         for (; (ch = *ptr); ptr ++) {
             if (ch == '.') {
                 *ptr = '-';
