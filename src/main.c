@@ -47,7 +47,7 @@ const char *language = NULL;
 const char *export_expr = NULL;
 const char *publish_cmd = NULL;
 bool interactive = false;
-int run_argc = -1;
+int run_argc = 0;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
 const char *list_filter = NULL;
@@ -442,16 +442,28 @@ int bake_init_project(
     bake_config *config)
 {
     if (path && strcmp(path, ".")) {
-        ut_mkdir(path);
-        ut_chdir(path);
-    }
+        /* Project id was parsed as path */
+        char *project_path = ut_strdup(path);
 
-    if (ut_file_test("project.json") == 1) {
-        ut_throw("project already exists in '%s'", ut_cwd());
-        goto error;
-    }
+        /* Replace '.' with '-' for path */
+        for (; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                *ptr = '-';
+            }
+        }
 
-    if (!id) {
+        /* Create & move to new path */
+        ut_try( ut_mkdir(project_path), NULL);
+        ut_try( ut_chdir(project_path), NULL);
+        free(project_path);
+
+        /* Project id is provided path */
+        id = path;
+
+        /* When creating project from path, use current directory */
+        path = ".";
+    } else {
+        /* Best guess project id from current working directory */
         char *cwd = ut_cwd();
         char *last_elem = strrchr(cwd, '/');
         if (last_elem && last_elem[1]) {
@@ -460,9 +472,17 @@ int bake_init_project(
             id = cwd;
         }
 
+        /* The output of ut_cwd may change */
         id = ut_strdup(id);
     }
 
+    /* Test if a project already exists in the current working directory */
+    if (ut_file_test("project.json") == 1) {
+        ut_throw("project already exists in '%s'", ut_cwd());
+        goto error;
+    }
+
+    /* Create project from command line (and computed) options */
     bake_project *project = bake_project_from_cmdline(config);
     if (!project) {
         goto error;
@@ -473,7 +493,11 @@ int bake_init_project(
         project->language = ut_strdup("c");
     }
 
+    /* Setup all project files, include invoking driver */
     ut_try( bake_project_setup(config, project), NULL);
+
+    /* Install project metadata to bake env so it is discoverable by id */
+    ut_try (bake_install_metadata(config, project), NULL);
 
     return 0;
 error:
@@ -559,8 +583,14 @@ int bake_locate(
                 ut_dl_close(dl);
             }
         } else {
-            ut_log("A  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                id, env ? env : bin);
+            const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
+            if (lib_static) {
+                ut_log("S  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                    id, env ? env : bin);
+            } else {
+                ut_log("A  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                    id, env ? env : bin);
+            }
         }
     }
 
