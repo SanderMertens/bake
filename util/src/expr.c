@@ -50,6 +50,7 @@ int ut_exprValidate(
     ut_exprToken t = UT_EXPR_TOKEN_NONE, tprev = UT_EXPR_TOKEN_NONE;
     for (op = 0; op < data->size; op++) {
         t = data->ops[op].token;
+
         switch(t) {
         case UT_EXPR_TOKEN_AND:
             switch(tprev) {
@@ -266,6 +267,7 @@ int16_t ut_exprParseIntern(
                 ut_throw("scope operators not allowed");
                 goto error;
             }
+
             if (ptr[1] == '.') {
                 if ((op < 4) ||
                     ((data->ops[op - 2].token == UT_EXPR_TOKEN_PARENT) &&
@@ -308,6 +310,14 @@ int16_t ut_exprParseIntern(
         }
 
         if (!data->ops[op].start) {
+            if (data->ops[op].token == UT_EXPR_TOKEN_IDENTIFIER) {
+                if (op && data->ops[op - 1].token == UT_EXPR_TOKEN_THIS) {
+                    op --;
+                    start --;
+                    *start = '.';
+                    data->ops[op].token = UT_EXPR_TOKEN_IDENTIFIER;
+                }
+            }
             data->ops[op].start = start;
         }
         if (++op == (UT_EXPR_MAX_OP - 2)) {
@@ -455,7 +465,7 @@ bool ut_expr_runExpr(
         case UT_EXPR_TOKEN_IDENTIFIER:
         case UT_EXPR_TOKEN_FILTER: {
             const char *elem = (*elements)[0];
-            if (elem && (elem[0] != '.')) {
+            if (elem && strcmp(elem, ".")) {
                 result = !fnmatch(cur->start, (*elements)[0], 0);
             } else {
                 result = false;
