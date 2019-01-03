@@ -521,26 +521,21 @@ int bake_run(
             goto error;
         }
 
+        ut_try( bake_project_init(config, project), NULL);
+
+        ut_try( bake_project_parse_driver_config(config, project), NULL);
+
         app_id = project->id;
-        app_name = project->id_short;
+        app_name = project->artefact;
         is_package = project->type == BAKE_PACKAGE;
 
         /* If project is found, point to executable in project bin */
-        if (!is_package) {
-            app_bin = ut_asprintf(
-                "%s/bin/%s-%s/%s",
-                project_dir,
-                UT_PLATFORM_STRING,
-                config->configuration,
-                app_name);
-        } else {
-            app_bin = ut_asprintf(
-                "%s/bin/%s-%s/lib%s.so",
-                project_dir,
-                UT_PLATFORM_STRING,
-                config->configuration,
-                app_name);
-        }
+        app_bin = ut_asprintf(
+            "%s/bin/%s-%s/%s",
+            project_dir,
+            UT_PLATFORM_STRING,
+            config->configuration,
+            app_name);
     } else {
         /* If project directory is not found, locate the binary in the
          * package repository. This only allows for running the
