@@ -550,10 +550,6 @@ void clean(
     bake_config *config,
     bake_project *project)
 {
-    driver->remove("include/bake_config.h");
-
-    /* Keep this to remove file from previous version. Remove in next version */
-    driver->remove("include/prebaked.h");
 }
 
 /* Initialize directory with new project */
