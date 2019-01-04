@@ -295,8 +295,8 @@ ut_proc run_exec(
     if (!is_package) {
         ut_proc pid = ut_proc_run(exec, argv);
 
-        ut_log("#[grey][%u] run  #[normal]'%s' #[grey](%s)\n",
-            pid, app_id, exec);
+        ut_log("run   '%s' [%u] (%s)\n",
+            app_id, pid, exec);
 
         return pid;
     } else {
@@ -603,8 +603,8 @@ int bake_run(
             }
         }
 
-        ut_log("#[grey][%u] done #[normal]'%s' #[grey](%s)\n",
-            pid, app_id, app_bin);
+        ut_log("done  '%s' [%u] (%s)\n",
+            app_id, pid, app_bin);
     }
 
     return 0;

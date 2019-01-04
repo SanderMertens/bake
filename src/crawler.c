@@ -159,7 +159,7 @@ int16_t bake_crawler_crawl(
     if (ut_file_test(strarg("%s/project.json", fullpath))) {
         isProject = true;
 
-        bake_project *p = bake_project_new(fullpath, _this->cfg);
+        p = bake_project_new(fullpath, _this->cfg);
         if (!p) {
             goto error;
         }
@@ -207,7 +207,8 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, "bin") ||
                     !strcmp(file, "install") ||
                     !strcmp(file, "examples") ||
-                    !strcmp(file, ".bake_cache"))
+                    !strcmp(file, ".bake_cache") ||
+                    (p && bake_project_should_ignore(p, file)))
                 {
                     ut_debug("ignoring directory '%s'", file);
                     continue;
@@ -332,7 +333,7 @@ int16_t bake_crawler_build_project(
     ut_ll readyForBuild)
 {
     ut_ok(
-        "#[grey]begin %s %s of '%s' in '%s'",
+        "#[grey]begin %s of %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->type), p->id, p->path);
 
     if (action(config, _this, p)) {
@@ -342,11 +343,11 @@ int16_t bake_crawler_build_project(
 
     if (p->changed) {
         ut_log(
-            "%s %s '%s' in '%s'\n",
-            action_name, bake_project_kind_str(p->type), p->id, p->path);
+            "%s '%s' in '%s'\n",
+            action_name, p->id, p->path);
     } else if (p->language && strcmp(action_name, "foreach")) {
         ut_log(
-            "#[grey]up to date#[normal] '%s'\n",
+            "#[grey]ready '%s'\n",
             p->id);
     }
 
