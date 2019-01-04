@@ -536,13 +536,16 @@ error:
 int bake_locate(
     bake_config *config,
     const char *id,
-    const char *env)
+    const char *env,
+    bool test_lib,
+    bake_project_type *type_out)
 {
     const char *bin = ut_locate(id, NULL, UT_LOCATE_BIN);
     if (!bin) {
         const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
         if (!path) {
-            ut_log("#[normal]%s #[grey]=> #[red]not found#[normal]\n", id);
+            ut_log("?  #[normal]%s #[red]!not found!#[normal]\n", id);
+            goto error;
         } else {
             bake_project *project = bake_project_new(path, config);
             if (!project) {
@@ -555,10 +558,12 @@ int bake_locate(
                         ut_log(
                           "A  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
                           id, env ? env : path);
+                        goto error;
                     } else {
                         ut_log(
                           "P  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
                           id, env ? env : path);
+                        goto error;
                     }
                     bake_project_free(project);
                     goto error;
@@ -566,14 +571,19 @@ int bake_locate(
                     ut_log("C  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
                         id, env ? env : path);
                     bake_project_free(project);
+
+                    if (type_out) *type_out = BAKE_PACKAGE;
                 }
             }
         }
     } else {
         const char *lib = ut_locate(id, NULL, UT_LOCATE_LIB);
         if (lib) {
-            ut_dl dl = ut_dl_open(bin);
-            if (!dl) {
+            ut_dl dl = NULL;
+            if (test_lib) {
+                dl = ut_dl_open(bin);
+            }
+            if (test_lib && !dl) {
                 ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!load error!\n",
                     id, env ? env : bin);
                 ut_log("   #[grey]%s\n", ut_dl_error());
@@ -581,16 +591,19 @@ int bake_locate(
             } else {
                 ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
                     id, env ? env : bin);
-                ut_dl_close(dl);
+                if (dl) ut_dl_close(dl);
+                if (type_out) *type_out = BAKE_PACKAGE;
             }
         } else {
             const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
             if (lib_static) {
                 ut_log("S  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
                     id, env ? env : bin);
+                if (type_out) *type_out = BAKE_PACKAGE;
             } else {
                 ut_log("A  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
                     id, env ? env : bin);
+                if (type_out) *type_out = BAKE_APPLICATION;
             }
         }
     }
@@ -643,6 +656,9 @@ int bake_list(
 {
     ut_ll packages = ut_ll_new();
     ut_iter it;
+    bake_project_type type;
+
+    uint32_t total = 0, package_count = 0, app_count = 0, error_count = 0;
 
     /* Collect packages from BAKE_HOME */
     char *home_meta = ut_asprintf("%s/meta", config->home);
@@ -693,10 +709,29 @@ int bake_list(
             }
         }
 
-        bake_locate(config, package->id, bake_print_env(config, package));
+        if (!bake_locate(
+            config, package->id, bake_print_env(config, package), true, &type))
+        {
+            if (type == BAKE_APPLICATION) {
+                app_count ++;
+            } else {
+                package_count ++;
+            }
+        } else {
+            error_count ++;
+        }
 
         free(buffer[i].id);
     }
+
+    printf("\n");
+    if (error_count) {
+        ut_log("#[normal]applications: %d, packages: %d, #[red]errors:#[normal] %d\n",
+            app_count, package_count, error_count);
+    } else {
+        ut_log("#[normal]applications: %d, packages: %d\n", app_count, package_count);
+    }
+    printf("\n");
 
     ut_ll_free(packages);
     free(home_meta);
@@ -817,7 +852,7 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "uninstall")) {
             ut_try (bake_install_uninstall(&config, id), NULL);
         } else if (!strcmp(action, "locate")) {
-            bake_locate(&config, path, NULL);
+            bake_locate(&config, path, NULL, true, NULL);
         } else if (!strcmp(action, "list")) {
             bake_list(&config);
         } else if (!strcmp(action, "export")) {
