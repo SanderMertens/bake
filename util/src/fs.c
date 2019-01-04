@@ -684,7 +684,6 @@ stack_error:
     return -1;
 }
 
-
 int16_t ut_dir_iter(
     const char *name,
     const char *filter,

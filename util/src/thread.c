@@ -21,7 +21,6 @@
 
 #include "../include/util.h"
 
-
 ut_thread ut_thread_new(
     ut_thread_cb f,
     void* arg)
