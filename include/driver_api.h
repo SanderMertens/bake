@@ -204,6 +204,10 @@ struct bake_driver_api {
     void (*use)(
         const char *dependency);
 
+    /* Add dependency */
+    bool (*exists)(
+        const char *package);
+
     /* Add ignore path for project */
     void (*ignore_path)(
         const char *path);

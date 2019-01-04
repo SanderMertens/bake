@@ -453,6 +453,14 @@ void bake_driver_use_cb(
 }
 
 static
+bool bake_driver_exists_cb(
+    const char *package)
+{
+    return ut_locate(package, NULL, UT_LOCATE_PROJECT) != NULL;
+}
+
+
+static
 void bake_driver_ignore_path_cb(
     const char *path)
 {
@@ -508,6 +516,7 @@ bake_driver_api bake_driver_api_impl = {
     .remove = bake_driver_remove_cb,
     .exec = bake_driver_exec_cb,
     .use = bake_driver_use_cb,
+    .exists = bake_driver_exists_cb,
     .ignore_path = bake_driver_ignore_path_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,
