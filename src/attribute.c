@@ -300,7 +300,7 @@ bake_attr* bake_attr_parse_array(
     bake_attr *existing,
     JSON_Array *a)
 {
-    if (existing && existing->kind != BAKE_STRING) {
+    if (existing && existing->kind != BAKE_ARRAY) {
         ut_throw("attribute '%s' is not an array", existing->name);
         goto error;
     }
