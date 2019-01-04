@@ -131,7 +131,7 @@ int16_t bake_crawler_add(
 
     _this->count ++;
 
-    ut_trace("found project '%s'", p->id);
+    ut_trace("found project '%s' in '%s'", p->id, p->path);
 
     return 0;
 error:
@@ -191,13 +191,16 @@ int16_t bake_crawler_crawl(
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
 
+        if (file[0] == '.') {
+            continue;
+        }
+
         if (ut_isdir(strarg("%s/%s", fullpath, file))) {
 
             /* If this is a corto project, filter out directories that have
              * special meaning. */
             if (isProject) {
-                if (file[0] == '.' ||
-                    !strcmp(file, "src") ||
+                if (!strcmp(file, "src") ||
                     !strcmp(file, "include") ||
                     !strcmp(file, "config") ||
                     !strcmp(file, "data") ||
