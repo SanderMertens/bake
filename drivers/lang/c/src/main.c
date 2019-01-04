@@ -327,16 +327,16 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    ut_strbuf_append(&cmd, "%s -Wall -fno-stack-protector", cc(cpp));
+    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
 
     if (project->type == BAKE_PACKAGE) {
-        ut_strbuf_appendstr(&cmd, " --shared -fPIC");
-
         /* Set symbol visibility */
         if (!export_symbols && !is_darwin()) {
             ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
             hide_symbols = true;
         }
+
+        ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
 
         /* Fail when symbols are not found in library */
         if (!is_darwin()) {
@@ -373,23 +373,6 @@ void link_dynamic_binary(
 
     /* Add object files */
     ut_strbuf_append(&cmd, " %s", source);
-
-    /* Add BAKE_TARGET to library path */
-    if (ut_file_test(config->target_lib)) {
-        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
-    }
-
-    /* Add BAKE_HOME to library path if it's different */
-    if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " -L%s/lib", config->home);
-    }
-
-    /* Add libraries in 'link' attribute */
-    ut_iter it = ut_ll_iter(project->link);
-    while (ut_iter_hasNext(&it)) {
-        char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " -l%s", dep);
-    }
 
     /* Link static library */
     bake_attr *static_lib_attr = driver->get_attr("static-lib");
@@ -445,6 +428,23 @@ void link_dynamic_binary(
                 ut_ll_append(static_object_paths, obj_path);
             }
         }
+    }
+
+    /* Add BAKE_TARGET to library path */
+    if (ut_file_test(config->target_lib)) {
+        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
+    }
+
+    /* Add BAKE_HOME to library path if it's different */
+    if (strcmp(config->target, config->home)) {
+        ut_strbuf_append(&cmd, " -L%s/lib", config->home);
+    }
+
+    /* Add libraries in 'link' attribute */
+    ut_iter it = ut_ll_iter(project->link);
+    while (ut_iter_hasNext(&it)) {
+        char *dep = ut_iter_next(&it);
+        ut_strbuf_append(&cmd, " -l%s", dep);
     }
 
     /* Add project libpath */
