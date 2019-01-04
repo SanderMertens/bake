@@ -300,6 +300,11 @@ bake_attr* bake_attr_parse_array(
     bake_attr *existing,
     JSON_Array *a)
 {
+    if (existing && existing->kind != BAKE_STRING) {
+        ut_throw("attribute '%s' is not an array", existing->name);
+        goto error;
+    }
+
     uint32_t i, count = json_array_get_count(a);
     bake_attr *result = existing;
     if (!result) {
@@ -331,9 +336,19 @@ bake_attr* bake_attr_parse_string(
     bake_config *config,
     bake_project *project,
     const char *package_id,
+    bake_attr *attr,
     const char *str)
 {
-    bake_attr *result = ut_calloc(sizeof(bake_attr));
+    if (attr && attr->kind != BAKE_STRING) {
+        ut_throw("attribute '%s' is not a string", attr->name);
+        goto error;
+    }
+
+    if (attr && attr->is.string) {
+        free(attr->is.string);
+    }
+
+    bake_attr *result = attr ? attr : ut_calloc(sizeof(bake_attr));
     result->kind = BAKE_STRING;
 
     if (str) {
@@ -341,39 +356,55 @@ bake_attr* bake_attr_parse_string(
             config, project, package_id, str);
         if (!result->is.string) {
             free(result);
-            return NULL;
+            goto error;
         }
     } else {
         result->is.string = NULL;
     }
 
     return result;
+error:
+    return NULL;
 }
 
 /* Return NUMBER attribute */
 static
 bake_attr* bake_attr_parse_number(
+    bake_attr *attr,
     double v)
 {
-    bake_attr *result = ut_calloc(sizeof(bake_attr));
-    result->kind = BAKE_NUMBER;
+    if (attr && attr->kind != BAKE_NUMBER) {
+        ut_throw("attribute '%s' is not a number", attr->name);
+        goto error;
+    }
 
+    bake_attr *result = attr ? attr : ut_calloc(sizeof(bake_attr));
+    result->kind = BAKE_NUMBER;
     result->is.number = v;
 
     return result;
+error:
+    return NULL;
 }
 
 /* Return BOOLEAN attribute */
 static
 bake_attr* bake_attr_parse_bool(
+    bake_attr *attr,
     bool v)
 {
-    bake_attr *result = ut_calloc(sizeof(bake_attr));
-    result->kind = BAKE_BOOLEAN;
+    if (attr && attr->kind != BAKE_BOOLEAN) {
+        ut_throw("attribute '%s' is not a boolean", attr->name);
+        goto error;
+    }
 
+    bake_attr *result = attr ? attr : ut_calloc(sizeof(bake_attr));
+    result->kind = BAKE_BOOLEAN;
     result->is.boolean = v;
 
     return result;
+error:
+    return NULL;
 }
 
 /* Parse JSON value */
@@ -396,13 +427,13 @@ bake_attr* bake_attr_parse_value(
     case JSONNull:
     case JSONString:
         attr = bake_attr_parse_string(
-            config, project, package_id, json_value_get_string(v));
+            config, project, package_id, existing, json_value_get_string(v));
         break;
     case JSONNumber:
-        attr = bake_attr_parse_number(json_value_get_number(v));
+        attr = bake_attr_parse_number(existing, json_value_get_number(v));
         break;
     case JSONBoolean:
-        attr = bake_attr_parse_bool(json_value_get_boolean(v));
+        attr = bake_attr_parse_bool(existing, json_value_get_boolean(v));
         break;
     case JSONObject:
         /* Ignore objects- placeholder */

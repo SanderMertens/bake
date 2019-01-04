@@ -176,15 +176,20 @@ error:
 
 bake_file* bake_filelist_add_file(
     bake_filelist *fl,
+    const char *filepath,
     const char *file)
 {
     char *path;
     time_t lastmodified = 0;
 
+    if (!filepath) {
+        filepath = fl->path;
+    }
+
     if ((file && file[0] == '/') || (fl->path && !strcmp(fl->path, "."))) {
         path = ut_strdup(file);
     } else {
-        path = ut_asprintf("%s/%s", fl->path, file);
+        path = ut_asprintf("%s/%s", filepath, file);
     }
 
     if (ut_file_test(path) == 1) {
@@ -197,12 +202,12 @@ bake_file* bake_filelist_add_file(
         name ++;
     } else {
         free(path);
-        path = fl->path;
+        path = (char*)filepath;
         name = (char*)file;
     }
 
     bake_file *result = bake_filelist_add_intern(fl, path, name, lastmodified);
-    if (path != fl->path) free(path);
+    if (path != fl->path && path != filepath) free(path);
     return result;
 }
 

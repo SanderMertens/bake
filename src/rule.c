@@ -131,7 +131,7 @@ bake_filelist* bake_node_eval_pattern(
         it = bake_filelist_iter(p->generated_sources);
         while (ut_iter_hasNext(&it)) {
             bake_file *src = ut_iter_next(&it);
-            bake_filelist_add_file(targets, src->file_path);
+            bake_filelist_add_file(targets, src->path, src->name);
         }
 
     } else if (((bake_pattern*)n)->pattern) {
@@ -167,7 +167,7 @@ int16_t bake_node_run_rule_map(
             ut_throw("failed to map file '%s'", src->name);
             goto error;
         }
-        if (!(dst = bake_filelist_add_file(targets, map))) {
+        if (!(dst = bake_filelist_add_file(targets, NULL, map))) {
             ut_throw(NULL);
             goto error;
         }

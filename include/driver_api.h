@@ -204,6 +204,10 @@ struct bake_driver_api {
     void (*use)(
         const char *dependency);
 
+    /* Add ignore path for project */
+    void (*ignore_path)(
+        const char *path);
+
     /* Get a driver-specific attribute */
     bake_attr* (*get_attr)(
         const char *name);

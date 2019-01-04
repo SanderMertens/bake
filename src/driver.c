@@ -453,6 +453,24 @@ void bake_driver_use_cb(
 }
 
 static
+void bake_driver_ignore_path_cb(
+    const char *path)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+
+    /* Check if value isn't already added */
+    ut_iter it = ut_ll_iter(driver->ignore_paths);
+    while (ut_iter_hasNext(&it)) {
+        const char *elem = ut_iter_next(&it);
+        if (!strcmp(elem, path)) {
+            return;
+        }
+    }
+
+    ut_ll_append(driver->ignore_paths, ut_strdup(path));
+}
+
+static
 void bake_driver_remove_cb(
     const char *file)
 {
@@ -490,6 +508,7 @@ bake_driver_api bake_driver_api_impl = {
     .remove = bake_driver_remove_cb,
     .exec = bake_driver_exec_cb,
     .use = bake_driver_use_cb,
+    .ignore_path = bake_driver_ignore_path_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,
     .get_attr_string = bake_driver_get_string_attr_cb,
@@ -685,6 +704,7 @@ bake_driver* bake_driver_get_intern(
             driver->id = ut_strdup(id);
             driver->package_id = package_id;
             driver->nodes = ut_ll_new();
+            driver->ignore_paths = ut_ll_new();
         }
 
         /* Set driver object in tls so callbacks can retrieve the driver

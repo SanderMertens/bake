@@ -157,6 +157,7 @@ struct bake_driver {
     ut_dl dl;                     /* Shared object */
 
     ut_ll nodes;                  /* Dependency graph with rules & patterns */
+    ut_ll ignore_paths;           /* Project paths to ignore in discovery */
 
     int error;                    /* True if error occured */
 
@@ -254,7 +255,8 @@ ut_iter bake_filelist_iter(
 /** Manually add file to filelist */
 bake_file* bake_filelist_add_file(
     bake_filelist *fl,
-    const char *filename);
+    const char *filepath,
+    const char *file);
 
 /** Set pattern and path */
 int16_t bake_filelist_add_pattern(

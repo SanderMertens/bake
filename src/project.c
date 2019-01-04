@@ -1107,7 +1107,7 @@ int16_t bake_project_build_artefact(
 
     /* Evaluate artefact node */
     bake_filelist *artefact_fl = bake_filelist_new(NULL, NULL);
-    bake_filelist_add_file(artefact_fl, project->artefact_file);
+    bake_filelist_add_file(artefact_fl, NULL, project->artefact_file);
     if (bake_node_eval(driver, root, project, config, artefact_fl, NULL)) {
         ut_throw("failed to build rule 'ARTEFACT'");
         goto error;
@@ -1254,6 +1254,30 @@ int16_t bake_project_clean_current_platform(
     bake_project *project)
 {
     return bake_project_clean_intern(config, project, true);
+}
+
+int16_t bake_project_should_ignore(
+    bake_project *project,
+    const char *file)
+{
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+
+            if (driver->driver->ignore_paths) {
+                ut_iter path_it = ut_ll_iter(driver->driver->ignore_paths);
+                while (ut_iter_hasNext(&path_it)) {
+                    const char *path = ut_iter_next(&path_it);
+                    if (!strcmp(path, file)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 static

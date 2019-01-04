@@ -84,7 +84,7 @@ struct bake_project {
     /* Direct access to the parson JSON data */
     void *json;
 
-    /* Runtime status (managed by language binding) */
+    /* Runtime status (managed by driver) */
     bool error;
     bool freshly_baked;
     bool changed;

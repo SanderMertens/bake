@@ -87,6 +87,11 @@ int16_t bake_project_clean_current_platform(
     bake_config *config,
     bake_project *project);
 
+/* Initialize files for a new bake project */
+int16_t bake_project_should_ignore(
+    bake_project *project,
+    const char *file);
+
 /* Get driver specific attribute */
 bake_attr* bake_project_get_attr(
     bake_project *project,
