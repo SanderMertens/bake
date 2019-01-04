@@ -100,8 +100,8 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "includes")) {
             ut_try (bake_json_set_array(&p->includes, member, v), NULL);
         } else
-        if (!strcmp(member, "keep_artefact") || !strcmp(member, "keep-artefact")) {
-            ut_try (bake_json_set_boolean(&p->keep_artefact, member, v), NULL);
+        if (!strcmp(member, "keep_binary") || !strcmp(member, "keep-binary")) {
+            ut_try (bake_json_set_boolean(&p->keep_binary, member, v), NULL);
         } else {
             ut_warning("unknown member '%s' in project.json of '%s'", member, p->id);
         }
@@ -1127,6 +1127,13 @@ int16_t bake_project_build(
         return 0;
     }
 
+    /* If keep_binary is true and artefact exists, don't build even if inputs
+     * are newer. This feature lets users control manually when a project should
+     * be rebuilt, and is useful for projects that take a long time. */
+    if (project->keep_binary && ut_file_test(project->artefact_file) == 1) {
+        return 0;
+    }
+
     /* Resolve libraries in project link attribute */
     if (bake_project_resolve_links(config, project)) {
         goto error;
@@ -1219,11 +1226,15 @@ int16_t bake_project_clean_intern(
 
     ut_try( ut_rm(project->cache_path), NULL);
 
-    if (!project->keep_artefact) {
+    if (!project->keep_binary) {
         if (all_platforms) {
-            ut_try( ut_rm(project->bin_path), NULL);
+            if (project->bin_path) {
+                ut_try( ut_rm(project->bin_path), NULL);
+            }
         } else {
-            ut_try( ut_rm(project->artefact_path), NULL);
+            if (project->artefact_path) {
+                ut_try( ut_rm(project->artefact_path), NULL);
+            }
         }
     }
 
@@ -1253,7 +1264,7 @@ int16_t bake_project_clean_current_platform(
     bake_config *config,
     bake_project *project)
 {
-    return bake_project_clean_intern(config, project, true);
+    return bake_project_clean_intern(config, project, false);
 }
 
 int16_t bake_project_should_ignore(

@@ -21,29 +21,55 @@
 
 #include "bake.h"
 
-int bake_do_build(
+static
+int bake_do_build_intern(
     bake_config *config,
     bake_crawler *crawler,
-    bake_project *project)
+    bake_project *project,
+    bool rebuild)
 {
-    /* Step 2: export metadata to environment to make project discoverable */
-    ut_log_push("install_metadata");
+    /* Step 1: export metadata to environment to make project discoverable */
+    ut_log_push("install-metadata");
     if (project->public)
         ut_try (bake_install_metadata(config, project), NULL);
     ut_log_pop();
 
-    /* Step 3: parse driver configuration in project JSON */
-    ut_log_push("load_drivers");
+    /* Step 2: parse driver configuration in project JSON */
+    ut_log_push("load-drivers");
     ut_try (bake_project_parse_driver_config(config, project), NULL);
     ut_log_pop();
 
-    /* Step 4: parse dependee configuration */
-    ut_log_push("load_dependees");
+    /* Step 3: parse dependee configuration */
+    ut_log_push("load-dependees");
     ut_try (bake_project_parse_dependee_config(config, project), NULL);
     ut_log_pop();
 
+    /* Step 4: if rebuilding, clean project cache for current platform/config */
+    if (rebuild) {
+        ut_log_push("clean-cache");
+
+        ut_try( bake_project_clean_current_platform(config, project), NULL);
+
+        /* If project sets keep-binary to true, make sure to only rebuild when
+         * the user is explicitly rebuilding this project. That way, even when
+         * rebuilding a tree of projects, keep-binary projects won't get
+         * rebuilt. This feature is useful if a tree contains projects that take
+         * a long time to build, and for projects that want to version control
+         * binaries. */
+        if (project->keep_binary) {
+            /* Only clean if just one project was discovered */
+            if (bake_crawler_count(crawler) == 1) {
+
+                /* Only remove the artefact for the current platform */
+                ut_try( ut_rm(project->artefact_path), NULL);
+            }
+        }
+
+        ut_log_pop();
+    }
+
     /* Step 5: now that project config is fully loaded, check dependencies */
-    ut_log_push("validate_dependencies");
+    ut_log_push("validate-dependencies");
     ut_try (bake_project_check_dependencies(config, project), NULL);
     ut_log_pop();
 
@@ -59,7 +85,7 @@ int bake_do_build(
     ut_log_pop();
 
     /* Step 8: export project files to environment */
-    ut_log_push("install_prebuild");
+    ut_log_push("install-prebuild");
     if (project->public && project->type != BAKE_TOOL)
         ut_try (bake_install_prebuild(config, project), NULL);
     ut_log_pop();
@@ -81,7 +107,7 @@ int bake_do_build(
     ut_log_pop();
 
     /* Step 12: install binary to environment */
-    ut_log_push("install_postbuild");
+    ut_log_push("install-postbuild");
     if (project->public && project->artefact)
         ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
@@ -89,6 +115,14 @@ int bake_do_build(
     return 0;
 error:
     return -1;
+}
+
+int bake_do_build(
+    bake_config *config,
+    bake_crawler *crawler,
+    bake_project *project)
+{
+    return bake_do_build_intern(config, crawler, project, false);
 }
 
 int bake_do_clean(
@@ -104,13 +138,7 @@ int bake_do_rebuild(
     bake_crawler *crawler,
     bake_project *project)
 {
-    ut_try( bake_project_clean_current_platform(config, project), NULL);
-
-    ut_try( bake_do_build(config, crawler, project), NULL);
-
-    return 0;
-error:
-    return -1;
+    return bake_do_build_intern(config, crawler, project, true);
 }
 
 int bake_do_install(

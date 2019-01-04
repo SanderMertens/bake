@@ -271,8 +271,7 @@ void bake_crawler_free(
 uint32_t bake_crawler_count(
     bake_crawler *_this)
 {
-    return (_this->nodes ? ut_rb_count(_this->nodes) : 0) +
-        (_this->leafs ? ut_ll_count(_this->leafs) : 0);
+    return _this->count;
 }
 
 uint32_t bake_crawler_search(

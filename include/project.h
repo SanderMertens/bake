@@ -66,7 +66,7 @@ struct bake_project {
     ut_ll link;             /* All resolved dependencies package must link with */
     ut_ll sources;          /* Paths to source files */
     ut_ll includes;         /* Paths to include files */
-    bool keep_artefact;     /* Keep artefact when cleaning project */
+    bool keep_binary;     /* Keep artefact when cleaning project */
     char *dependee_json;    /* Build instructions for dependees */
 
     ut_ll drivers;          /* Drivers used to build this project */
