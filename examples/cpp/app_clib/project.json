@@ -1,0 +1,10 @@
+{
+    "id": "app_clib",
+    "type": "application",
+    "value": {
+        "language": "cpp"
+    },
+    "lang.cpp": {
+        "lib": ["m"]
+    }
+}
