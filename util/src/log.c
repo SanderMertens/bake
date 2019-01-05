@@ -257,6 +257,7 @@ void ut_backtrace(FILE* f) {
     void* buff[BACKTRACE_DEPTH];
     char** symbols;
 
+#ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -267,6 +268,9 @@ void ut_backtrace(FILE* f) {
     } else {
         fprintf(f, "obtaining backtrace failed.");
     }
+#else
+    fprintf(f, "backtrace unavailable");
+#endif
 }
 
 char* ut_backtraceString(void) {
@@ -278,6 +282,7 @@ char* ut_backtraceString(void) {
     result = malloc(10000);
     *result = '\0';
 
+#ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -292,6 +297,9 @@ char* ut_backtraceString(void) {
     } else {
         fprintf(stderr, "obtaining backtrace failed.");
     }
+#else
+    result = ut_strdup("backtrace unavailable");
+#endif
 
     return result;
 }

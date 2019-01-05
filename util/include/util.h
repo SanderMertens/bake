@@ -37,6 +37,9 @@
 #define UT_EXPORT
 #endif
 
+#ifndef __ANDROID__
+#define ENABLE_BACKTRACE
+#endif
 
 /* Standard C library */
 #include <alloca.h>
@@ -59,7 +62,9 @@
 #else
 #include <fnmatch.h>
 #include <inttypes.h>
+#ifdef ENABLE_BACKTRACE
 #include <execinfo.h>
+#endif
 #include <dlfcn.h>
 #include <sys/stat.h>
 #include <sys/types.h>
