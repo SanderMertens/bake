@@ -272,7 +272,7 @@ In some cases you will want to provide configuration options that are specific t
     "type": "application",
     "value": {
         "language": "c"
-    }
+    },
     "lang.c": {
         "lib": ["m"]
     }
@@ -289,7 +289,7 @@ If you want to build a C++ project, instead of using the `"lang.c"` attribute, y
     "type": "application",
     "value": {
         "language": "c++"
-    }
+    },
     "lang.cpp": {
         "lib": ["m"]
     }
