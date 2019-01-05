@@ -65,9 +65,9 @@ int16_t bake_create_script(void)
 
     fprintf(f, "build_bake() {\n");
     fprintf(f, "    if [ \"$UNAME\" = \"Linux\" ]; then\n");
-    fprintf(f, "        make -C build-linux\n");
+    fprintf(f, "        make -C build-Linux\n");
     fprintf(f, "    elif [ \"$UNAME\" = \"Darwin\" ]; then\n");
-    fprintf(f, "        make -C build-darwin\n");
+    fprintf(f, "        make -C build-Darwin\n");
     fprintf(f, "    fi\n");
     fprintf(f, "}\n\n");
 
