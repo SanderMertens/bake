@@ -249,20 +249,21 @@ We can now change the configuration of `my_app` into this:
 }
 ```
 
-### What does "lang.c" mean? When do I need to specify it? What is a driver?
-All of the code in bake that actually builds code is organized in bake "drivers". Drivers are shared libraries that bake loads when a project needs them. The most common used drivers are **language drivers**, which contain all the build instructions for a specific language, like C or C++. Bake automatically loads the language drivers based on the `"language"` attribute in your `project.json`, as is specified here:
+### What is a driver?
+All of the rules and instructions in bake that actually builds code is organized in bake "drivers". Drivers are shared libraries that bake loads when a project needs them. The most common used drivers are "language drivers", which contain all the build instructions for a specific language, like C or C++. Bake automatically loads the language drivers based on the `"language"` attribute in your `project.json`, as is specified here:
 
 ```json
 {
     "id": "my_app",
     "type": "application",
     "value": {
-        "language": c"
+        "language": "c"
     }
 }
 ```
 By default the language is set to "c", so if you do not specify a language, your project will build as a C project.
 
+### What does "lang.c" mean? When do I need to specify it? 
 In some cases you will want to provide configuration options that are specific to a language, like linking with C libraries on your system, or provide additional compiler flags. In that case, you have to tell bake that the configuration you are about to specify is for a specific driver. This is where "lang.c" comes in:
 
 ```json
