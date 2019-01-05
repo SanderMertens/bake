@@ -249,6 +249,12 @@ We can now change the configuration of `my_app` into this:
 }
 ```
 
+### Where can I find the configuration options for C and C++ projects?
+You can find language-specific configuration options in the README of the language driver projects:
+
+For C: https://github.com/SanderMertens/bake/tree/master/drivers/lang/c
+For C++: https://github.com/SanderMertens/bake/tree/master/drivers/lang/cpp
+
 ### What is a driver?
 All of the rules and instructions in bake that actually builds code is organized in bake "drivers". Drivers are shared libraries that bake loads when a project needs them. The most common used drivers are "language drivers", which contain all the build instructions for a specific language, like C or C++. Bake automatically loads the language drivers based on the `"language"` attribute in your `project.json`, as is specified here:
 
