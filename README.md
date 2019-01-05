@@ -216,7 +216,8 @@ This makes the project configuration platform-specific which is not ideal. To im
 }
 ```
 
-For big projects, all these different rules could complicate the `project.json` quite a bit. It would be even better to encapsulate this logic in a separate bake project:
+### I want to wrap a C library so I can use it as a bake dependency. How do I do this?
+It would be nice if we could wrap `libm.so` from the previous example in a bake `math` package, aso we don't have to repeat this configuration for every project. Bake lets us do this with the `"dependee"` attribute:
 
 ```json
 {
@@ -237,7 +238,7 @@ For big projects, all these different rules could complicate the `project.json` 
 
 This creates a new "math" package that you can now specify as regular bake dependency. The `"language": "none"` attribute lets bake know that there is no code to build, and this is a configuration-only project. The `dependee` attribute tells bake to not apply the settings inside the JSON object to the `math` project, but to the projects that depend on `math`.
 
-We can now change the configuration of `my_app` into this:
+We can now use the math package like this:
 
 ```json
 {
@@ -253,6 +254,7 @@ We can now change the configuration of `my_app` into this:
 You can find language-specific configuration options in the README of the language driver projects:
 
 For C: https://github.com/SanderMertens/bake/tree/master/drivers/lang/c
+
 For C++: https://github.com/SanderMertens/bake/tree/master/drivers/lang/cpp
 
 ### What is a driver?
