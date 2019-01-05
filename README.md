@@ -271,7 +271,7 @@ In some cases you will want to provide configuration options that are specific t
     "id": "my_app",
     "type": "application",
     "value": {
-        "language": c"
+        "language": "c"
     }
     "lang.c": {
         "lib": ["m"]
@@ -288,7 +288,7 @@ If you want to build a C++ project, instead of using the `"lang.c"` attribute, y
     "id": "my_app",
     "type": "application",
     "value": {
-        "language": c++"
+        "language": "c++"
     }
     "lang.cpp": {
         "lib": ["m"]
@@ -296,7 +296,7 @@ If you want to build a C++ project, instead of using the `"lang.c"` attribute, y
 }
 ```
 
-### For C++ projects, should I specify cpp or c++ for the language?
+### For C++ projects, should I specify cpp or c++ for the language attribute?
 You can use either.
 
 ### How can I see a list of the available drivers?
