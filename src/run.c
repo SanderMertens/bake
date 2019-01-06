@@ -319,8 +319,11 @@ int16_t run_interactive(
     int32_t rebuild = 0;
 
     while (true) {
-
         if (!retries || changed) {
+            if (changed) {
+                printf("\n");
+            }
+
             /* Build the project */
             build_project(project_dir);
             rebuild++;
@@ -339,8 +342,8 @@ int16_t run_interactive(
         /* Test whether the app exists, then start it */
         if (ut_file_test(app_bin)) {
             if (retries && !pid) {
-                ut_log("#[grey][%u] restarting #[normal]'%s' #[grey](%dx)\n",
-                    last_pid, app_id, retries);
+                ut_log("restart '%s' (%dx)\n",
+                    app_id, retries);
             }
 
             if (!pid) {
@@ -388,9 +391,9 @@ int16_t run_interactive(
             if ((retcode == 11) || (retcode == 6)) {
                 ut_error("segmentation fault, fix your code!");
             } else {
-                ut_log("#[grey][%u] done #[normal]'%s' #[grey](%s)\n",
-                    last_pid, app_id, app_bin);
-                ut_log("#[grey][%u] press Ctrl-C to exit or change files to restart\n",
+                ut_log("done  '%s' [%d] (%s)\n",
+                    app_id, last_pid, app_bin);
+                ut_log("#[grey]  press Ctrl-C to exit or change files to restart\n",
                     last_pid);
             }
 
