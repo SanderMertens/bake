@@ -539,6 +539,44 @@ error:
     return NULL;
 }
 
+void ut_locate_reset(
+    const char *package)
+{
+    struct ut_loaded *loaded = NULL;
+
+    ut_try ( ut_mutex_lock(&UT_LOAD_LOCK), NULL);
+
+    loaded = ut_loaded_find(package);
+    if (loaded) {
+        if (!loaded->loading && !loaded->library) {
+            free(loaded->env);
+            free(loaded->bin);
+            free(loaded->etc);
+            free(loaded->include);
+            free(loaded->project);
+
+            loaded->env = NULL;
+            loaded->lib = NULL;
+            loaded->static_lib = NULL;
+            loaded->app = NULL;
+            loaded->bin = NULL;
+            loaded->etc = NULL;
+            loaded->include = NULL;
+            loaded->project = NULL;
+
+            loaded->tried_binary = false;
+            loaded->tried_locating = false;
+            loaded->loaded = 0;
+        }
+    }
+
+    ut_try ( ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
+
+    return;
+error:
+    ut_raise();
+}
+
 static
 struct ut_fileHandler* ut_load_filehandler(
     const char *file)

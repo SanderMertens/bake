@@ -131,6 +131,28 @@ const char* ut_locate(
     ut_dl *dl_out,
     ut_locate_kind kind);
 
+/** Reset locate cache to force subsequent ut_locate calls to redo lookup.
+ * The ut_locate operation caches its results, so that subsequent calls can skip
+ * the relatively expensive operation of looking up a package. In some cases
+ * this can produce incorrect results, for example, if since the last ut_locate
+ * call a new project was created.
+ *
+ * This function resets the cache for the specified package, so that the
+ * subsequent call to ut_locate will do the lookup again.
+ *
+ * If the specified package was not looked up before, the operation will do
+ * nothing.
+ *
+ * If the package has been loaded as a library already, this operation will not
+ * reset the cache. This could corrupt the application, if symbols have been
+ * loaded from the library and are still in use.
+ *
+ * @param package The package identifier.
+ */
+UT_EXPORT
+void ut_locate_reset(
+    const char *package);
+
 /** Load a resource from a library.
  * The `ut_load_sym` function looks up a function or global variable from a
  * package. The function takes a logical package identifier which is internally
