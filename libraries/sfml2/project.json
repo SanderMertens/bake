@@ -1,0 +1,12 @@
+{
+    "id": "sfml2",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "dependee": {
+        "lang.$${language}": {
+            "lib": ["sfml-graphics","sfml-window","sfml-audio","sfml-network","sfml-system","stdc++","GL","X11"]
+        }
+    }
+}
