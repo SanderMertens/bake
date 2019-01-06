@@ -32,6 +32,7 @@ ut_log_verbosity ut_logv(
     unsigned int level,
     const char *fmt,
     va_list arg,
+    bool list_defined,
     FILE* f,
     bool overwrite);
 
@@ -1278,6 +1279,7 @@ ut_log_verbosity ut_logv(
     unsigned int level,
     const char *fmt,
     va_list arg,
+    bool list_defined,
     FILE* f,
     bool overwrite)
 {
@@ -1297,12 +1299,12 @@ ut_log_verbosity ut_logv(
 
         UT_UNUSED(level);
 
-        if (arg) {
+        if (list_defined) {
             va_copy(argcpy, arg); /* Make copy of arglist in
                                    * case vsnprintf needs to be called twice */
         }
 
-        if (arg) {
+        if (list_defined) {
             if ((n = (vsnprintf(buff, UT_MAX_LOG, fmt, arg) + 1)) >
                 UT_MAX_LOG)
             {
@@ -1419,6 +1421,7 @@ void _ut_log_pop(
         }
 
         if (strcmp(frame->initial.function, function)) {
+            va_list empty_list;
             ut_logv(
                 file,
                 line,
@@ -1427,7 +1430,8 @@ void _ut_log_pop(
                 0,
                 strarg("log_pop called in '%s' but matching log_push in '%s'",
                     function, frame->initial.function),
-                NULL,
+                empty_list,
+                false,
                 stderr,
                 false);
         }
@@ -1470,7 +1474,7 @@ void _ut_assertv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_ASSERT, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_ASSERT, 0, fmt, args, true, stderr, false);
     ut_backtrace(stderr);
     abort();
 }
@@ -1482,7 +1486,7 @@ void ut_criticalv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_CRITICAL, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_CRITICAL, 0, fmt, args, true, stderr, false);
     ut_backtrace(stderr);
     fflush(stderr);
     abort();
@@ -1495,7 +1499,7 @@ void ut_debugv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_DEBUG, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_DEBUG, 0, fmt, args, true, stderr, false);
 }
 
 void ut_tracev(
@@ -1505,7 +1509,7 @@ void ut_tracev(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_TRACE, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_TRACE, 0, fmt, args, true, stderr, false);
 }
 
 void ut_warningv(
@@ -1515,7 +1519,7 @@ void ut_warningv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_WARNING, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_WARNING, 0, fmt, args, true, stderr, false);
 }
 
 void ut_errorv(
@@ -1525,7 +1529,7 @@ void ut_errorv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_ERROR, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_ERROR, 0, fmt, args, true, stderr, false);
     if (UT_LOG_BACKTRACE || (ut_log_verbosityGet() == UT_DEBUG)) {
         ut_backtrace(stderr);
     }
@@ -1538,7 +1542,7 @@ void ut_okv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_OK, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_OK, 0, fmt, args, true, stderr, false);
 }
 
 void ut_infov(
@@ -1548,7 +1552,7 @@ void ut_infov(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_INFO, 0, fmt, args, stderr, false);
+    ut_logv(file, line, function, UT_INFO, 0, fmt, args, true, stderr, false);
 }
 
 void _ut_log_overwritev(
@@ -1559,7 +1563,7 @@ void _ut_log_overwritev(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, verbosity, 0, fmt, args, stderr, true);
+    ut_logv(file, line, function, verbosity, 0, fmt, args, true, stderr, true);
 }
 
 static
