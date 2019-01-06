@@ -150,7 +150,7 @@ int16_t bake_project_parse(
     char *file = ut_asprintf("%s/project.json", project->path);
 
     if (ut_file_test(file) == 1) {
-        JSON_Value *j = json_parse_file(file);
+        JSON_Value *j = json_parse_file_with_comments(file);
         if (!j) {
             ut_throw("failed to parse '%s'", file);
             goto error;
@@ -316,7 +316,7 @@ int16_t bake_project_load_dependee_config(
     const char *project_id,
     const char *file)
 {
-    JSON_Value *j = json_parse_file(file);
+    JSON_Value *j = json_parse_file_with_comments(file);
     if (!j) {
         ut_throw("failed to parse '%s'", file);
         goto error;

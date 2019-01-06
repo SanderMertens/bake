@@ -247,7 +247,7 @@ int16_t bake_publish(
     free(project->version);
     project->version = new_version;
 
-    JSON_Value *project_json = json_parse_file("project.json");
+    JSON_Value *project_json = json_parse_file_with_comments("project.json");
     if (!project_json) {
         ut_throw("failed to parse 'project.json'");
         goto error;

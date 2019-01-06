@@ -1,0 +1,11 @@
+// a project.json file with comments
+{
+    "id": "app_w_comments",
+    "type": "application",
+    "value": {
+        /* Project metadata */
+        "author": "John Doe",
+        "description": "A fitness tracker for boy bands",
+        "version": "0.0.0"
+    }
+}

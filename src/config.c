@@ -237,7 +237,7 @@ int16_t bake_config_load_file (
 {
     ut_ok("load configuration '%s'", file);
 
-    JSON_Value *json = json_parse_file(file);
+    JSON_Value *json = json_parse_file_with_comments(file);
     if (!json) {
         ut_throw("failed to parse bake configuration '%s'", file);
         goto error;
@@ -559,7 +559,7 @@ int16_t bake_config_export(
         fclose(f);
     }
 
-    JSON_Value *root = json_parse_file(bake_json);
+    JSON_Value *root = json_parse_file_with_comments(bake_json);
     if (!root) {
         ut_throw("failed to parse file '%s'", bake_json);
         goto error;
@@ -633,7 +633,7 @@ int16_t bake_config_unset(
         fclose(f);
     }
 
-    JSON_Value *root = json_parse_file(bake_json);
+    JSON_Value *root = json_parse_file_with_comments(bake_json);
     if (!root) {
         ut_throw("failed to parse file '%s'", bake_json);
         goto error;
