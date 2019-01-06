@@ -202,11 +202,15 @@ struct bake_driver_api {
 
     /* Add dependency */
     void (*use)(
-        const char *dependency);
+        const char *id);
 
-    /* Add dependency */
+    /* Does package exist */
     bool (*exists)(
-        const char *package);
+        const char *id);
+
+    /* Lookup package */
+    bake_project* (*lookup)(
+        const char *id);
 
     /* Add ignore path for project */
     void (*ignore_path)(

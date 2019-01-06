@@ -436,7 +436,7 @@ void bake_driver_exec_cb(
 
 static
 void bake_driver_use_cb(
-    const char *dependency)
+    const char *id)
 {
     bake_project *p = ut_tls_get(BAKE_PROJECT_KEY);
 
@@ -444,21 +444,42 @@ void bake_driver_use_cb(
     ut_iter it = ut_ll_iter(p->use);
     while (ut_iter_hasNext(&it)) {
         const char *elem = ut_iter_next(&it);
-        if (!strcmp(elem, dependency)) {
+        if (!strcmp(elem, id)) {
             return;
         }
     }
 
-    ut_ll_append(p->use, ut_strdup(dependency));
+    ut_ll_append(p->use, ut_strdup(id));
 }
 
 static
 bool bake_driver_exists_cb(
-    const char *package)
+    const char *id)
 {
-    return ut_locate(package, NULL, UT_LOCATE_PROJECT) != NULL;
+    return ut_locate(id, NULL, UT_LOCATE_PROJECT) != NULL;
 }
 
+/* Lookup package */
+bake_project* bake_driver_lookup_cb(
+    const char *id)
+{
+    bake_project *p = ut_tls_get(BAKE_PROJECT_KEY);
+    bake_config *config = ut_tls_get(BAKE_CONFIG_KEY);
+    bake_project *project = bake_crawler_get(id);
+
+    if (!project) {
+        const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
+        if (path) {
+            project = bake_project_new(path, config);
+            if (!project) {
+                ut_error("failed to load project '%s' from '%s'", id, path);
+                p->error = true;
+            }
+        }
+    }
+
+    return project;
+}
 
 static
 void bake_driver_ignore_path_cb(
@@ -517,6 +538,7 @@ bake_driver_api bake_driver_api_impl = {
     .exec = bake_driver_exec_cb,
     .use = bake_driver_use_cb,
     .exists = bake_driver_exists_cb,
+    .lookup = bake_driver_lookup_cb,
     .ignore_path = bake_driver_ignore_path_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,
@@ -532,10 +554,18 @@ char* bake_driver__artefact(
     bake_project *project)
 {
     if (driver->impl.artefact) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
-        return driver->impl.artefact(
+
+        char *result = driver->impl.artefact(
             &bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
+
+        return result;
     }
 
     return NULL;
@@ -548,10 +578,16 @@ char* bake_driver__link_to_lib(
     const char *link)
 {
     if (driver->impl.link_to_lib) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
-        return driver->impl.link_to_lib(
+
+        char *result = driver->impl.link_to_lib(
             &bake_driver_api_impl, config, project, link);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
     }
 
     return NULL;
@@ -563,10 +599,16 @@ int16_t bake_driver__clean(
     bake_project *project)
 {
     if (driver->impl.clean) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.clean(
             &bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
 
         if (project->error) {
             return -1;
@@ -582,9 +624,15 @@ int16_t bake_driver__setup(
     bake_project *project)
 {
     if (driver->impl.setup) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.setup(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
 
         if (project->error) {
             return -1;
@@ -605,9 +653,15 @@ int16_t bake_driver__init(
     bake_project *project)
 {
     if (driver->impl.init) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.init(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
 
         if (project->error) {
             return -1;
@@ -623,9 +677,16 @@ int16_t bake_driver__generate(
     bake_project *project)
 {
     if (driver->impl.generate) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.generate(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
+
         if (project->error) {
             return -1;
         }
@@ -640,9 +701,16 @@ int16_t bake_driver__prebuild(
     bake_project *project)
 {
     if (driver->impl.prebuild) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.prebuild(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
+
         if (project->error) {
             return -1;
         }
@@ -657,9 +725,16 @@ int16_t bake_driver__postbuild(
     bake_project *project)
 {
     if (driver->impl.postbuild) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
         driver->impl.postbuild(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
+
         if (project->error) {
             return -1;
         }
