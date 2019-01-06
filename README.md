@@ -216,7 +216,8 @@ This makes the project configuration platform-specific which is not ideal. To im
 }
 ```
 
-For big projects, all these different rules could complicate the `project.json` quite a bit. It would be even better to encapsulate this logic in a separate bake project:
+### I want to wrap a C library so I can use it as a bake dependency. How do I do this?
+It would be nice if we could wrap `libm.so` from the previous example in a bake `math` package, aso we don't have to repeat this configuration for every project. Bake lets us do this with the `"dependee"` attribute:
 
 ```json
 {
@@ -237,7 +238,7 @@ For big projects, all these different rules could complicate the `project.json` 
 
 This creates a new "math" package that you can now specify as regular bake dependency. The `"language": "none"` attribute lets bake know that there is no code to build, and this is a configuration-only project. The `dependee` attribute tells bake to not apply the settings inside the JSON object to the `math` project, but to the projects that depend on `math`.
 
-We can now change the configuration of `my_app` into this:
+We can now use the math package like this:
 
 ```json
 {
@@ -248,6 +249,88 @@ We can now change the configuration of `my_app` into this:
     }
 }
 ```
+
+### Where can I find the configuration options for C and C++ projects?
+You can find language-specific configuration options in the README of the language driver projects:
+
+For C: https://github.com/SanderMertens/bake/tree/master/drivers/lang/c
+
+For C++: https://github.com/SanderMertens/bake/tree/master/drivers/lang/cpp
+
+### What is a driver?
+All of the rules and instructions in bake that actually builds code is organized in bake "drivers". Drivers are shared libraries that bake loads when a project needs them. The most common used drivers are "language drivers", which contain all the build instructions for a specific language, like C or C++. Bake automatically loads the language drivers based on the `"language"` attribute in your `project.json`, as is specified here:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "value": {
+        "language": "c"
+    }
+}
+```
+By default the language is set to "c", so if you do not specify a language, your project will build as a C project.
+
+### What does "lang.c" mean? When do I need to specify it? 
+In some cases you will want to provide configuration options that are specific to a language, like linking with C libraries on your system, or provide additional compiler flags. In that case, you have to tell bake that the configuration you are about to specify is for a specific driver. This is where "lang.c" comes in:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "value": {
+        "language": "c"
+    },
+    "lang.c": {
+        "lib": ["m"]
+    }
+}
+```
+
+The `"lang.c"` member uniquely identifies the bake driver responsible for building C code, and bake will make all of the attributes inside the object (`"lib"`) available to the driver.
+
+If you want to build a C++ project, instead of using the `"lang.c"` attribute, you have to use the `"lang.cpp"` attribute, which identifies the C++ driver:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "value": {
+        "language": "c++"
+    },
+    "lang.cpp": {
+        "lib": ["m"]
+    }
+}
+```
+
+### For C++ projects, should I specify cpp or c++ for the language attribute?
+You can use either.
+
+### How can I see a list of the available drivers?
+The following command will show you a list of the available drivers:
+
+```
+bake list bake.*
+```
+
+Everything except for `bake.util` is a driver. If you just built bake for the first time, this will only show the `"lang.c"` and `"lang.cpp"` drivers.
+
+### Can I load more than one driver?
+Yes! You can load as many drivers as you want. If you want to add a driver, simply add it to your configuration like this:
+
+```json
+{
+    "id": "my_app",
+    "type": "application",
+    "my_custom_driver": { }
+}
+```
+
+### Are there any example drivers I can use as a template?
+Driver documentation is a bit lacking at the moment, but we will eventually address that. In the meantime, you can take a look at the C driver to see what a fully fletched driver looks like:
+
+https://github.com/SanderMertens/bake/tree/master/drivers/lang/c
 
 ### How do I install bake packages?
 Bake relies on git to store packages. To install a package, use the `bake clone` command with a GitHub repository identifier:
