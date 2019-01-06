@@ -31,8 +31,6 @@
 extern "C" {
 #endif
 
-typedef struct bake_filelist bake_filelist;
-
 typedef enum bake_project_type {
     BAKE_APPLICATION = 1,   /* Executable project in bake package store */
     BAKE_PACKAGE = 2,       /* Library project in bake package store */
@@ -100,7 +98,7 @@ struct bake_project {
     bool built;
 
     /* filelist with generated sources (set before build) */
-    bake_filelist *generated_sources;
+    void *generated_sources;
 
     /* Files to be cleaned other than objects and artefact (populated by
      * language binding) */
