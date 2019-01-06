@@ -209,6 +209,9 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers/lang/cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
+    ut_try(cmd("bake libraries"), NULL);
+    ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
+
     /*
 
      ______   ______   ______   __   __       ______   ______  ______
