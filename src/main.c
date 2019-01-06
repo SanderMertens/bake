@@ -367,33 +367,31 @@ error:
 }
 
 /* Discover all projects in a directory */
-bake_crawler* bake_discovery(
+int16_t bake_discovery(
     bake_config *config)
 {
-    bake_crawler *crawler = bake_crawler_new(config);
     uint32_t project_count = 0;
 
     if (!id) {
         /* Discover projects */
-        project_count = bake_crawler_search(crawler, path);
+        project_count = bake_crawler_search(config, path);
         if (!project_count) {
             ut_log("no projects found in '%s'\n", path);
         }
     } else {
         language = "none";
         bake_project *project = bake_project_from_cmdline(config);
-        ut_try(bake_crawler_add(crawler, project), NULL);
+        ut_try( bake_crawler_add(config, project), NULL);
     }
 
-    return crawler;
+    return 0;
 error:
-    return NULL;
+    return -1;
 }
 
 /* Build all discovered projects */
 int bake_build(
     bake_config *config,
-    bake_crawler *crawler,
     const char *action)
 {
     bake_crawler_cb cb;
@@ -408,7 +406,7 @@ int bake_build(
     }
 
     /* Walk projects in correct dependency order */
-    ut_try( bake_crawler_walk(config, crawler, action, cb), NULL);
+    ut_try( bake_crawler_walk(config, action, cb), NULL);
 
     return 0;
 error:
@@ -745,7 +743,6 @@ error:
 
 int bake_foreach_action(
     bake_config *config,
-    bake_crawler *crawler,
     bake_project* project)
 {
     int8_t ret = 0;
@@ -798,43 +795,39 @@ int main(int argc, const char *argv[]) {
         ut_getenv("BAKE_HOME"),
         ut_getenv("BAKE_CONFIG"));
 
+    /* Initialize crawler */
+    bake_crawler_init();
+
     if (discover) {
         /* If discover is true, first discover projects in provided path */
         ut_log_push("discovery");
-        bake_crawler *crawler = NULL;
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            crawler = bake_clone(&config, NULL, path);
+            ut_try( bake_clone(&config, path), NULL);
         } else if (!strcmp(action, "update")) {
-            crawler = bake_update(&config, NULL, path);
+            ut_try( bake_update(&config, path), NULL);
         }
 
-        if (crawler) {
+        uint32_t count = bake_crawler_count();
+        if (count) {
             action = "build";
         } else {
-            crawler = bake_discovery(&config);
+            ut_try( bake_discovery(&config), "discovery failed");
         }
 
         ut_log_pop();
 
         /* If projects have been discovered, build them */
-        if (crawler) {
-            if (build) {
-                ut_log_push("build");
-                ut_try(bake_build(&config, crawler, action), NULL);
-                ut_log_pop();
-            } else {
-                if (!strcmp(action, "foreach")) {
-                    ut_try( bake_crawler_walk(
-                        &config, crawler, action, bake_foreach_action), NULL);
-                }
-            }
-
-            bake_crawler_free(crawler);
+        if (build) {
+            ut_log_push("build");
+            ut_try(bake_build(&config, action), NULL);
+            ut_log_pop();
         } else {
-            ut_throw("discovery failed");
-            goto error;
+            if (!strcmp(action, "foreach")) {
+                ut_try( bake_crawler_walk(
+                    &config, action, bake_foreach_action), NULL);
+            }
         }
     } else {
         /* Actions that don't need project discovery */
@@ -870,6 +863,9 @@ int main(int argc, const char *argv[]) {
             goto error;
         }
     }
+
+    /* Cleanup crawler */
+    bake_crawler_free();
 
     ut_deinit();
     return 0;

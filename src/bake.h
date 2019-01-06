@@ -51,28 +51,34 @@ int16_t bake_config_unset(
 
 /* -- Build functions -- */
 
+/** Get project initialize for discovery phase */
+int bake_do_pre_discovery(
+    bake_config *config,
+    bake_project *project);
+
+/* Complete project configuration after all projects have been discovered */
+int bake_do_post_discovery(
+    bake_config *config,
+    bake_project *project);
+
 /** Build project */
 int bake_do_build(
     bake_config *config,
-    bake_crawler *crawler,
     bake_project *p);
 
 /** Clean project */
 int bake_do_clean(
     bake_config *config,
-    bake_crawler *crawler,
     bake_project *p);
 
 /** Rebuild project */
 int bake_do_rebuild(
     bake_config *config,
-    bake_crawler *crawler,
     bake_project *p);
 
 /** Install project files to bake environment (config->target) */
 int bake_do_install(
     bake_config *config,
-    bake_crawler *crawler,
     bake_project *p);
 
 
@@ -88,15 +94,13 @@ int bake_run(
 /* -- Git functions -- */
 
 /* Clone from remote repository */
-bake_crawler* bake_clone(
+int16_t bake_clone(
     bake_config *config,
-    bake_crawler *crawler,
     const char *url);
 
 /* Update from remote repository */
-bake_crawler* bake_update(
+int16_t bake_update(
     bake_config *config,
-    bake_crawler *crawler,
     const char *url);
 
 /* Publish new version for repository */

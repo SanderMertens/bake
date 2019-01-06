@@ -109,14 +109,13 @@ static
 int16_t bake_update_dependency_list(
     bake_config *config,
     const char *base_url,
-    bake_crawler *crawler,
     ut_ll dependencies)
 {
     ut_iter it = ut_ll_iter(dependencies);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
 
-        if (bake_crawler_has(crawler, dep)) {
+        if (bake_crawler_get(dep)) {
             continue;
         }
 
@@ -128,7 +127,7 @@ int16_t bake_update_dependency_list(
         }
 
         char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-        if (!bake_clone(config, crawler, url)) {
+        if (!bake_clone(config, url)) {
             ut_catch();
             const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
             if (!deppath) {
@@ -152,19 +151,17 @@ static
 int16_t bake_update_dependencies(
     bake_config *config,
     const char *base_url,
-    bake_crawler *crawler,
     bake_project *project)
 {
-    ut_try(bake_update_dependency_list(config, base_url, crawler, project->use), NULL);
-    ut_try(bake_update_dependency_list(config, base_url, crawler, project->use_private), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use_private), NULL);
     return 0;
 error:
     return -1;
 }
 
-bake_crawler* bake_update(
+int16_t bake_update(
     bake_config *config,
-    bake_crawler *crawler,
     const char *url)
 {
     char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
@@ -181,26 +178,22 @@ bake_crawler* bake_update(
     gitcmd = ut_asprintf("git -C %s clean -q -xdf", src_path);
     ut_try(cmd(gitcmd), NULL);
 
-    if (!crawler) {
-        crawler = bake_crawler_new(config);
-    }
     project = bake_project_new(src_path, config);
-    ut_try(bake_update_dependencies(config, base_url, crawler, project), NULL);
+    ut_try(bake_update_dependencies(config, base_url, project), NULL);
 
-    bake_crawler_add(crawler, project);
+    bake_crawler_add(config, project);
 
     free(full_url);
     free(base_url);
     free(src_path);
 
-    return crawler;
+    return 0;
 error:
-    return NULL;
+    return -1;
 }
 
-bake_crawler* bake_clone(
+int16_t bake_clone(
     bake_config *config,
-    bake_crawler *crawler,
     const char *url)
 {
     char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
@@ -211,29 +204,25 @@ bake_crawler* bake_clone(
         ut_trace("project '%s' already cloned, updating instead", name);
         free(full_url);
         free(src_path);
-        return bake_update(config, crawler, url);
+        return bake_update(config, url);
     } else {
         ut_log("clone '%s' into '%s'\n", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);
         ut_try (cmd(gitcmd), NULL);
     }
 
-    if (!crawler) {
-        crawler = bake_crawler_new(config);
-    }
-
     project = bake_project_new(src_path, config);
-    ut_try(bake_update_dependencies(config, base_url, crawler, project), NULL);
+    ut_try(bake_update_dependencies(config, base_url, project), NULL);
 
-    ut_try(bake_crawler_add(crawler, project), NULL);
+    ut_try(bake_crawler_add(config, project), NULL);
 
     free(full_url);
     free(base_url);
     free(src_path);
 
-    return crawler;
+    return 0;
 error:
-    return NULL;
+    return -1;
 }
 
 int16_t bake_publish(

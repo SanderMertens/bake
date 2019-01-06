@@ -41,6 +41,7 @@ typedef enum bake_project_type {
 
 /* Driver required by project with its configuration */
 typedef struct bake_project_driver {
+    const char *id;
     bake_driver *driver;
     void *json;
     ut_ll attributes;

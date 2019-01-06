@@ -23,22 +23,19 @@ typedef struct bake_crawler bake_crawler;
 
 typedef int (*bake_crawler_cb)(
     bake_config *config,
-    bake_crawler *_this,
     bake_project *project);
 
 /** Create a new crawler.
  *
  * @return New crawler object.
  */
-bake_crawler* bake_crawler_new(
-    bake_config *cfg);
+ void bake_crawler_init(void);
 
 /** Free crawler.
  *
  * @return New crawler object.
  */
-void bake_crawler_free(
-    bake_crawler *_this);
+void bake_crawler_free(void);
 
 /** Search a path for projects.
  *
@@ -47,7 +44,7 @@ void bake_crawler_free(
  * @return 0 if success, non-zero if failed.
  */
 uint32_t bake_crawler_search(
-    bake_crawler *_this,
+    bake_config *config,
     const char *path);
 
 /** Count number of projects found by searches.
@@ -55,8 +52,7 @@ uint32_t bake_crawler_search(
  * @param _this A crawler object.
  * @return Number of projects found.
  */
-uint32_t bake_crawler_count(
-    bake_crawler *_this);
+uint32_t bake_crawler_count(void);
 
 /** Manually add a project to the crawler.
  *
@@ -65,7 +61,7 @@ uint32_t bake_crawler_count(
  * @return 0 if success, non-zero if failed.
  */
  int16_t bake_crawler_add(
-     bake_crawler *_this,
+     bake_config *config,
      bake_project *project);
 
  /** Test if crawler has a project.
@@ -74,8 +70,7 @@ uint32_t bake_crawler_count(
   * @param id Id of project to check.
   * @return true if project has been added, false if not.
   */
-  bool bake_crawler_has(
-      bake_crawler *_this,
+  bake_project* bake_crawler_get(
       const char *id);
 
 /** Walk projects.
@@ -88,6 +83,5 @@ uint32_t bake_crawler_count(
  */
 int16_t bake_crawler_walk(
     bake_config *config,
-    bake_crawler *crawler,
     const char *action_name,
     bake_crawler_cb action);

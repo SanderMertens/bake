@@ -25,8 +25,9 @@ struct bake_crawler {
     ut_rb nodes; /* tree optimizes looking up dependencies */
     ut_ll leafs; /* projects that cannot act as dependencies */
     uint32_t count;
-    bake_config *cfg;
 };
+
+static bake_crawler *crawler;
 
 static
 int project_cmp(
@@ -39,16 +40,15 @@ int project_cmp(
 
 static
 void bake_crawler_addDependency(
-    bake_crawler *_this,
     bake_project *p,
     char *use)
 {
-    bake_project *dep = ut_rb_find(_this->nodes, use);
+    bake_project *dep = ut_rb_find(crawler->nodes, use);
     if (!dep) {
         /* Create placeholder */
         dep = bake_project_new(NULL, NULL);
         dep->id = ut_strdup(use);
-        ut_rb_set(_this->nodes, dep->id, dep);
+        ut_rb_set(crawler->nodes, dep->id, dep);
     }
 
     if (!dep->dependents) {
@@ -58,50 +58,79 @@ void bake_crawler_addDependency(
     ut_ll_append(dep->dependents, p);
 }
 
-bool bake_crawler_has(
-    bake_crawler *_this,
+bake_project* bake_crawler_get(
     const char *id)
 {
-    if (_this->nodes && ut_rb_find(_this->nodes, id) != NULL) {
-        return true;
-    } else {
-        return false;
+    bake_project *result = NULL;
+
+    if (crawler->nodes) {
+        result = ut_rb_find(crawler->nodes, id);
+        if (result && !result->path) {
+            /* Ignore placeholder projects */
+            result = NULL;
+        }
     }
+
+    if (!result && crawler->leafs) {
+        ut_iter it = ut_ll_iter(crawler->leafs);
+        while (ut_iter_hasNext(&it)) {
+            bake_project *project = ut_iter_next(&it);
+            if (!strcmp(project->id, id)) {
+                result = project;
+                break;
+            }
+        }
+    }
+
+    return result;
 }
 
 int16_t bake_crawler_add(
-    bake_crawler *_this,
+    bake_config *config,
     bake_project *p)
 {
-    if (!_this->nodes) _this->nodes = ut_rb_new(project_cmp, NULL);
+    if (!crawler->nodes) crawler->nodes = ut_rb_new(project_cmp, NULL);
 
-    /* Initialize project drivers before building dependency administration */
-    if (bake_project_load_drivers(p)) {
-        goto error;
-    }
+    ut_try (bake_do_pre_discovery(config, p), NULL);
 
     if (p->type == BAKE_PACKAGE && p->public) {
         bake_project *found;
-        if ((found = ut_rb_findOrSet(_this->nodes, p->id, p)) && found != p) {
+        if ((found = ut_rb_findOrSet(crawler->nodes, p->id, p)) && found != p) {
             if (found->path) {
                 ut_throw(
-                    "duplicate project '%s' found in '%s' (first found here: '%s')",
-                    p->id,
-                    found->path,
-                    p->path);
+                  "duplicate project '%s' found in '%s' (first found here: '%s')",
+                  p->id,
+                  found->path,
+                  p->path);
                 goto error;
             } else {
                 /* This is a placeholder. Replace it with the actual project. */
                 p->dependents = found->dependents;
                 found->dependents = NULL;
                 bake_project_free(found);
-                ut_rb_set(_this->nodes, p->id, p);
+                ut_rb_set(crawler->nodes, p->id, p);
             }
         }
     } else {
-        if (!_this->leafs) _this->leafs = ut_ll_new();
-        ut_ll_append(_this->leafs, p);
+        if (!crawler->leafs) crawler->leafs = ut_ll_new();
+        ut_ll_append(crawler->leafs, p);
     }
+
+    crawler->count ++;
+
+    ut_trace("discovered project '%s' in '%s'", p->id, p->path);
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_crawler_finalize_project(
+    bake_config *config,
+    bake_project *p)
+{
+    ut_try (bake_do_post_discovery(config, p), NULL);
 
     /* Add dependency information */
     p->unresolved_dependencies = ut_ll_count(p->use);
@@ -112,26 +141,49 @@ int16_t bake_crawler_add(
     ut_iter it = ut_ll_iter(p->use);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(_this, p, use);
+        bake_crawler_addDependency(p, use);
     }
 
     /* Add project to dependent lists of private dependencies */
     it = ut_ll_iter(p->use_private);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(_this, p, use);
+        bake_crawler_addDependency(p, use);
     }
 
     /* Add project to dependent lists of build dependencies */
     it = ut_ll_iter(p->use_build);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(_this, p, use);
+        bake_crawler_addDependency(p, use);
     }
 
-    _this->count ++;
+    ut_trace("initialized project '%s' in '%s'", p->id, p->path);
 
-    ut_trace("found project '%s' in '%s'", p->id, p->path);
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_crawler_finalize(
+    bake_config *config)
+{
+    ut_iter it = ut_rb_iter(crawler->nodes);
+    while (ut_iter_hasNext(&it)) {
+        bake_project *p = ut_iter_next(&it);
+        if (!p->path) {
+            continue;
+        }
+
+        ut_try(bake_crawler_finalize_project(config, p), NULL);
+    }
+
+    it = ut_ll_iter(crawler->leafs);
+    while (ut_iter_hasNext(&it)) {
+        bake_project *p = ut_iter_next(&it);
+        ut_try(bake_crawler_finalize_project(config, p), NULL);
+    }
 
     return 0;
 error:
@@ -140,7 +192,7 @@ error:
 
 static
 int16_t bake_crawler_crawl(
-    bake_crawler *_this,
+    bake_config *config,
     const char *wd,
     const char *path)
 {
@@ -159,12 +211,12 @@ int16_t bake_crawler_crawl(
     if (ut_file_test(strarg("%s/project.json", fullpath))) {
         isProject = true;
 
-        p = bake_project_new(fullpath, _this->cfg);
+        p = bake_project_new(fullpath, config);
         if (!p) {
             goto error;
         }
 
-        if (bake_crawler_add(_this, p)) {
+        if (bake_crawler_add(config, p)) {
             ut_warning("ignoring '%s' because of errors", fullpath);
         } else {
             if (ut_file_test("rakefile")) {
@@ -197,7 +249,7 @@ int16_t bake_crawler_crawl(
 
         if (ut_isdir(strarg("%s/%s", fullpath, file))) {
 
-            /* If this is a corto project, filter out directories that have
+            /* If this is a bake project, filter out directories that have
              * special meaning. */
             if (isProject) {
                 if (!strcmp(file, "src") ||
@@ -224,7 +276,7 @@ int16_t bake_crawler_crawl(
                 ut_debug("looking for projects in '%s'", file);
             }
 
-            if (bake_crawler_crawl(_this, fullpath, file)) {
+            if (bake_crawler_crawl(config, fullpath, file)) {
                 ut_iter_release(&it);
                 goto error;
             }
@@ -238,58 +290,53 @@ error:
     return -1;
 }
 
-bake_crawler* bake_crawler_new(
-    bake_config *cfg)
+void bake_crawler_init(void)
 {
-    bake_crawler *result = ut_calloc(sizeof(bake_crawler));
-    result->cfg = cfg;
-    return result;
+    crawler = ut_calloc(sizeof(bake_crawler));
 }
 
-void bake_crawler_free(
-    bake_crawler *_this)
+void bake_crawler_free(void)
 {
-    if (_this->nodes) {
-        ut_iter it = ut_rb_iter(_this->nodes);
+    if (crawler->nodes) {
+        ut_iter it = ut_rb_iter(crawler->nodes);
         while (ut_iter_hasNext(&it)) {
             bake_project *p = ut_iter_next(&it);
             bake_project_free(p);
         }
-        ut_rb_free(_this->nodes);
+        ut_rb_free(crawler->nodes);
     }
-    if (_this->leafs) {
-        ut_iter it = ut_ll_iter(_this->leafs);
+    if (crawler->leafs) {
+        ut_iter it = ut_ll_iter(crawler->leafs);
         while (ut_iter_hasNext(&it)) {
             bake_project *p = ut_iter_next(&it);
             bake_project_free(p);
         }
-        ut_ll_free(_this->leafs);
+        ut_ll_free(crawler->leafs);
     }
-    free (_this);
+    free (crawler);
 }
 
-uint32_t bake_crawler_count(
-    bake_crawler *_this)
+uint32_t bake_crawler_count(void)
 {
-    return _this->count;
+    return crawler->count;
 }
 
 uint32_t bake_crawler_search(
-    bake_crawler *_this,
+    bake_config *config,
     const char *path)
 {
     int ret = 0;
-    int count = bake_crawler_count(_this);
+    int count = bake_crawler_count();
 
     if (ut_file_test(path)) {
-        ret = bake_crawler_crawl(_this, ".", path);
+        ret = bake_crawler_crawl(config, ".", path);
     } else {
         ut_throw("path '%s' not found", path);
         goto error;
     }
 
     /* Only report how many new projects were found in path */
-    return bake_crawler_count(_this) - count;
+    return bake_crawler_count() - count;
 error:
     return -1;
 }
@@ -327,7 +374,6 @@ void bake_crawler_decrease_dependents(
 
 static
 int16_t bake_crawler_build_project(
-    bake_crawler *_this,
     bake_config *config,
     const char *action_name,
     bake_crawler_cb action,
@@ -338,7 +384,7 @@ int16_t bake_crawler_build_project(
         "#[grey]begin %s of %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->type), p->id, p->path);
 
-    if (action(config, _this, p)) {
+    if (action(config, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
         goto error;
     }
@@ -363,7 +409,6 @@ error:
 
 static
 void bake_crawler_collect_projects(
-    bake_crawler *_this,
     ut_iter *it,
     ut_ll readyForBuild)
 {
@@ -377,16 +422,18 @@ void bake_crawler_collect_projects(
 
 int16_t bake_crawler_walk(
     bake_config *config,
-    bake_crawler *_this,
     const char *action_name,
     bake_crawler_cb action)
 {
     ut_ll readyForBuild = ut_ll_new();
     uint32_t built = 0;
 
+    /* Initialize dependency administration */
+    ut_try( bake_crawler_finalize(config), NULL);
+
     /* Decrease unresolved dependencies for placeholder projects */
-    if (_this->nodes) {
-        ut_iter it = ut_rb_iter(_this->nodes);
+    if (crawler->nodes) {
+        ut_iter it = ut_rb_iter(crawler->nodes);
         while (ut_iter_hasNext(&it)) {
             bake_project *p = ut_iter_next(&it);
             if (!p->path) {
@@ -396,14 +443,14 @@ int16_t bake_crawler_walk(
     }
 
     /* Collect initial projects */
-    if (_this->nodes) {
-        ut_iter it = ut_rb_iter(_this->nodes);
-        bake_crawler_collect_projects(_this, &it, readyForBuild);
+    if (crawler->nodes) {
+        ut_iter it = ut_rb_iter(crawler->nodes);
+        bake_crawler_collect_projects(&it, readyForBuild);
     }
 
-    if (_this->leafs) {
-        ut_iter it = ut_ll_iter(_this->leafs);
-        bake_crawler_collect_projects(_this, &it, readyForBuild);
+    if (crawler->leafs) {
+        ut_iter it = ut_ll_iter(crawler->leafs);
+        bake_crawler_collect_projects(&it, readyForBuild);
     }
 
     /* Walk projects (when dependencies are resolved the list will populate) */
@@ -411,15 +458,15 @@ int16_t bake_crawler_walk(
     while ((p = ut_ll_takeFirst(readyForBuild))) {
         ut_try (
             bake_crawler_build_project(
-                _this, config, action_name, action, p, readyForBuild), NULL);
+                config, action_name, action, p, readyForBuild), NULL);
         built ++;
     }
 
     /* If there are still unbuilt projects there must be a cycle in the graph */
-    if (built != _this->count) {
+    if (built != crawler->count) {
         ut_throw(
             "project dependency graph contains cycles (%d built vs %d total)",
-            built, _this->count);
+            built, crawler->count);
         goto error;
     }
 
