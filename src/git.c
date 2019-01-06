@@ -273,10 +273,10 @@ int16_t bake_publish(
     ut_try( cmd(command), NULL);
     ut_log("#[green]OK #[normal]Committed version '%s'\n", project->version);
 
-    command = ut_asprintf("git tag -a V%s -m \"Version v%s\"",
+    command = ut_asprintf("git tag -a v%s -m \"Version v%s\"",
         project->version, project->version);
     ut_try( cmd(command), NULL);
-    ut_log("#[green]OK #[normal]Created tag 'V%s'\n", project->version);
+    ut_log("#[green]OK #[normal]Created tag 'v%s'\n", project->version);
 
     ut_log("#[green]OK #[normal]Published %s:%s\n", project->id, project->version);
 
