@@ -43,17 +43,19 @@ extern "C" {
 #elif defined(__APPLE__) && defined(__MACH__)
 #define UT_OS_OSX
 #else
-#warning "bake is not supported on non-unix or windows operating systems."
+#warning "Unsupported operating system"
 #endif
 
-#ifdef __i386__
-#define UT_CPU_STRING "x86"
-#elif __x86_64__
-#define UT_CPU_STRING "x64"
-#elif defined(__arm__) && defined(UT_CPU_32BIT)
-#define UT_CPU_STRING "arm"
-#elif defined(__arm__) && defined(UT_CPU_64BIT)
-#define UT_CPU_STRING "arm64"
+#ifdef __aarch64__
+#define UT_CPU_STRING  "arm64"
+#elif defined(__arm__)
+#define UT_CPU_STRING  "arm"
+#elif defined(__x86_64__)
+#define UT_CPU_STRING  "x64"
+#elif defined(__i386__)
+#define UT_CPU_STRING  "x86"
+#else
+#error "Unsupported CPU architecture"
 #endif
 
 #ifdef UT_OS_WINDOWS
