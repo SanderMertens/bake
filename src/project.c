@@ -223,6 +223,7 @@ int bake_project_load_driver(
         }
 
         project_driver = malloc(sizeof(bake_project_driver));
+        project_driver->id = driver->id;
         project_driver->driver = driver;
         project_driver->json = NULL;
         project_driver->attributes = NULL;
@@ -341,21 +342,26 @@ int16_t bake_project_add_dependee_config(
     bake_project *project,
     const char *dependency)
 {
+    ut_locate_reset(dependency);
+
     const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
-    if (!libpath) {
-        ut_throw("failed to locate path for dependency '%s'", dependency);
-        goto error;
-    }
+    if (libpath) {
+        /* Check if dependency has a dependee file with build instructions */
+        char *file = ut_asprintf("%s/dependee.json", libpath);
+        if (ut_file_test(file)) {
+            ut_try (
+              bake_project_load_dependee_config(config, project, dependency, file),
+              NULL);
+        }
 
-    /* Check if dependency has a dependee file with build instructions */
-    char *file = ut_asprintf("%s/dependee.json", libpath);
-    if (ut_file_test(file)) {
-        ut_try (
-          bake_project_load_dependee_config(config, project, dependency, file),
-          NULL);
+        free(file);
+    } else {
+        /* If dependency cannot be found at this time, it is either a missing
+         * dependency (in which case an error will be thrown) or it is a project
+         * that is yet to be generated. In the latter case, ignore it for the
+         * dependee configuration as project configuration needs to be stable at
+         * this stage for bake's dependency resolver to work correctly */
     }
-
-    free(file);
 
     return 0;
 error:
@@ -525,6 +531,35 @@ error:
     return -1;
 }
 
+static
+int bake_project_load_drivers(
+    bake_project *project)
+{
+    uint32_t i, count = json_object_get_count(project->json);
+    bool error = false;
+
+    for (i = 0; i < count; i ++) {
+        const char *member = json_object_get_name(project->json, i);
+
+        if (!strcmp(member, "id") || !strcmp(member, "type") ||
+            !strcmp(member, "value"))
+            continue;
+
+        JSON_Value *value = json_object_get_value_at(project->json, i);
+        JSON_Object *obj = json_value_get_object(value);
+
+        if (strcmp(member, "dependee")) {
+            ut_try( bake_project_load_driver(project, member, obj), NULL);
+        } else {
+            project->dependee_json = json_serialize_to_string(value);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 bake_project* bake_project_new(
     const char *path,
     bake_config *config)
@@ -546,6 +581,9 @@ bake_project* bake_project_new(
 
         ut_try( bake_project_init(config, result), NULL);
     }
+
+    /* Load drivers */
+    ut_try (bake_project_load_drivers(result), NULL);
 
     return result;
 error:
@@ -667,34 +705,6 @@ bake_attr* bake_project_set_attr_bool(
         config, project, driver_id, attr, json_value_init_boolean(value));
 }
 
-int bake_project_load_drivers(
-    bake_project *project)
-{
-    uint32_t i, count = json_object_get_count(project->json);
-    bool error = false;
-
-    for (i = 0; i < count; i ++) {
-        const char *member = json_object_get_name(project->json, i);
-
-        if (!strcmp(member, "id") || !strcmp(member, "type") ||
-            !strcmp(member, "value"))
-            continue;
-
-        JSON_Value *value = json_object_get_value_at(project->json, i);
-        JSON_Object *obj = json_value_get_object(value);
-
-        if (strcmp(member, "dependee")) {
-            ut_try( bake_project_load_driver(project, member, obj), NULL);
-        } else {
-            project->dependee_json = json_serialize_to_string(value);
-        }
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
 int bake_project_parse_driver_config(
     bake_config *config,
     bake_project *project)
@@ -713,10 +723,6 @@ int bake_project_parse_driver_config(
         if (!driver->attributes) {
             goto error;
         }
-
-        ut_try(
-            bake_driver__init(driver->driver, config, project),
-            NULL);
     }
 
     /* Now that all information is parsed, we can load the artefact name */
@@ -725,6 +731,25 @@ int bake_project_parse_driver_config(
             project->language_driver->driver, config, project);
 
         bake_project_init_artefact(config, project);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int bake_project_init_drivers(
+    bake_config *config,
+    bake_project *project)
+{
+    ut_iter it = ut_ll_iter(project->drivers);
+
+    /* Run driver initialization function */
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        ut_try(
+            bake_driver__init(driver->driver, config, project),
+            NULL);
     }
 
     return 0;
@@ -771,6 +796,7 @@ int16_t bake_check_dependency(
     uint32_t artefact_modified,
     bool private)
 {
+    ut_locate_reset(dependency);
     const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
     bool dep_has_lib = false;
 
@@ -894,13 +920,18 @@ int16_t bake_project_generate(
             continue;
         }
 
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
         ut_tls_set(BAKE_DRIVER_KEY, driver->driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
         if (bake_node_eval(driver->driver, node, project, config, NULL, NULL)) {
             ut_throw("failed to build rule 'GENERATED-SOURCES'");
             goto error;
         }
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
     }
 
     return 0;
@@ -1010,6 +1041,12 @@ int16_t bake_project_add_dependency(
     bake_project *p,
     const char *dep)
 {
+   /* Reset locate cache. It is possible that this dependency was looked up
+    * before when it did not exist yet, but since then has been created (which
+    * would have to be through a code generation process). */
+
+    ut_locate_reset(dep);
+
     const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
     if (!libpath) {
         ut_throw(
@@ -1095,7 +1132,9 @@ int16_t bake_project_build_artefact(
 
     ut_try (ut_mkdir(artefact_path), NULL);
 
+    bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
     ut_tls_set(BAKE_DRIVER_KEY, driver);
+    bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
     ut_tls_set(BAKE_PROJECT_KEY, project);
 
     /* Lookup artefact node, which must be the top level node */
@@ -1113,6 +1152,9 @@ int16_t bake_project_build_artefact(
         goto error;
     }
     bake_filelist_free(artefact_fl);
+
+    ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+    ut_tls_set(BAKE_PROJECT_KEY, old_project);
 
     return 0;
 error:

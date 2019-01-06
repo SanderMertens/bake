@@ -33,12 +33,13 @@ int16_t bake_project_init(
 void bake_project_free(
     bake_project *p);
 
-/* Load drivers for project */
-int bake_project_load_drivers(
-    bake_project *p);
-
 /* Parse configuration of drivers */
 int bake_project_parse_driver_config(
+    bake_config *config,
+    bake_project *project);
+
+/* Init driver */
+int bake_project_init_drivers(
     bake_config *config,
     bake_project *project);
 
