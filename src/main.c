@@ -375,6 +375,10 @@ int16_t bake_discovery(
     if (!id) {
         /* Discover projects */
         project_count = bake_crawler_search(config, path);
+        if (project_count == -1) {
+            goto error;
+        }
+        
         if (!project_count) {
             ut_log("no projects found in '%s'\n", path);
         }

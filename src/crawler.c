@@ -47,8 +47,10 @@ void bake_crawler_addDependency(
     if (!dep) {
         /* Create placeholder */
         dep = bake_project_new(NULL, NULL);
-        dep->id = ut_strdup(use);
-        ut_rb_set(crawler->nodes, dep->id, dep);
+        if (dep) {
+            dep->id = ut_strdup(use);
+            ut_rb_set(crawler->nodes, dep->id, dep);
+        }
     }
 
     if (!dep->dependents) {
@@ -171,7 +173,7 @@ int16_t bake_crawler_finalize(
 {
     /* Collect projects in list before finalizing. Finalization step may mutate
      * the tree, and cannot mutate tree while walking over it. */
-    ut_ll projects = ut_ll_new();
+    ut_ll projects = ut_ll_new();    
     ut_iter it = ut_rb_iter(crawler->nodes);
     while (ut_iter_hasNext(&it)) {
         bake_project *p = ut_iter_next(&it);
