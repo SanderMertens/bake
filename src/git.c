@@ -179,6 +179,11 @@ int16_t bake_update(
     ut_try(cmd(gitcmd), NULL);
 
     project = bake_project_new(src_path, config);
+    if (!project) {
+        ut_throw("repository '%s' is not a valid bake project", full_url);
+        goto error;
+    }
+
     ut_try(bake_update_dependencies(config, base_url, project), NULL);
 
     bake_crawler_add(config, project);
@@ -212,8 +217,12 @@ int16_t bake_clone(
     }
 
     project = bake_project_new(src_path, config);
-    ut_try(bake_update_dependencies(config, base_url, project), NULL);
+    if (!project) {
+        ut_throw("repository '%s' is not a valid bake project", full_url);
+        goto error;
+    }
 
+    ut_try(bake_update_dependencies(config, base_url, project), NULL);
     ut_try(bake_crawler_add(config, project), NULL);
 
     free(full_url);
