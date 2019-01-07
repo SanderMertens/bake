@@ -169,6 +169,9 @@ static
 int16_t bake_crawler_finalize(
     bake_config *config)
 {
+    /* Collect projects in list before finalizing. Finalization step may mutate
+     * the tree, and cannot mutate tree while walking over it. */
+    ut_ll projects = ut_ll_new();
     ut_iter it = ut_rb_iter(crawler->nodes);
     while (ut_iter_hasNext(&it)) {
         bake_project *p = ut_iter_next(&it);
@@ -176,8 +179,17 @@ int16_t bake_crawler_finalize(
             continue;
         }
 
+        ut_ll_append(projects, p);
+    }
+
+    /* Now finalize projects */
+    it = ut_ll_iter(projects);
+    while (ut_iter_hasNext(&it)) {
+        bake_project *p = ut_iter_next(&it);
         ut_try(bake_crawler_finalize_project(config, p), NULL);
     }
+
+    ut_ll_free(projects);
 
     it = ut_ll_iter(crawler->leafs);
     while (ut_iter_hasNext(&it)) {
@@ -363,6 +375,7 @@ void bake_crawler_decrease_dependents(
         while (ut_iter_hasNext(&dep_it)) {
             bake_project *dependent = ut_iter_next(&dep_it);
             dependent->unresolved_dependencies --;
+
             if (!dependent->unresolved_dependencies) {
                 if (readyForBuild) {
                     ut_ll_append(readyForBuild, dependent);
@@ -414,6 +427,7 @@ void bake_crawler_collect_projects(
 {
     while (ut_iter_hasNext(it)) {
         bake_project *p = ut_iter_next(it);
+
         if (p->path && !p->unresolved_dependencies) {
             ut_ll_append(readyForBuild, p);
         }
