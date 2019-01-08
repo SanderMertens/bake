@@ -35,6 +35,8 @@ bool discover = true;
 bool build = true;
 bool build_to_home = false;
 bool local_setup = false;
+bool strict = false;
+bool optimize = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -80,6 +82,8 @@ void bake_usage(void)
     printf("  --cfg <configuration>        Specify configuration id\n");
     printf("  --env <environment>          Specify environment id\n");
     printf("  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET\n");
+    printf("  --strict                     Manually enable strict compiler options\n");
+    printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
     printf("  --type <package|application> Manually specify a project type (default = \"application\")\n");
@@ -237,6 +241,8 @@ int bake_parse_args(
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
             ARG(0, "build-to-home", build_to_home = true; i ++);
+            ARG(0, "strict", strict = true; i ++);
+            ARG(0, "optimize", optimize = true; i ++);
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
             ARG('v', "verbosity", bake_set_verbosity(argv[i + 1]); i ++);
@@ -378,7 +384,7 @@ int16_t bake_discovery(
         if (project_count == -1) {
             goto error;
         }
-        
+
         if (!project_count) {
             ut_log("no projects found in '%s'\n", path);
         }
@@ -761,7 +767,7 @@ int bake_foreach_action(
 }
 
 int main(int argc, const char *argv[]) {
-    bake_config config = {};
+    bake_config config = {0};
 
     srand (time(NULL));
 
@@ -792,6 +798,13 @@ int main(int argc, const char *argv[]) {
     ut_log_push("config");
     ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
     ut_log_pop();
+
+    if (strict) {
+        config.strict = true;
+    }
+    if (optimize) {
+        config.optimizations = true;
+    }
 
     /* Initialize package loader */
     ut_load_init(
