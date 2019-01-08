@@ -50,7 +50,7 @@ static ut_ll ut_log_handlers;
  * a mutex. Libraries should not invoke functions that touch these, and an
  * application should set them during startup. */
 static ut_log_verbosity UT_LOG_LEVEL = UT_INFO;
-static int UT_LOG_DEPTH = INT_MAX;
+static unsigned int UT_LOG_DEPTH = INT_MAX;
 static bool UT_LOG_PROFILE = false;
 static ut_log_exceptionAction UT_LOG_EXCEPTION_ACTION = 0;
 static char *UT_LOG_FMT_APPLICATION;
@@ -970,7 +970,6 @@ char* ut_getLastInfo(void) {
 
 static
 void ut_raise_codeframe(
-    ut_log_frame *frame,
     ut_log_codeframe *codeframe,
     bool first,
     const char *log_fmt,
@@ -1021,18 +1020,18 @@ bool ut_raise_intern(
     const char *prefix)
 {
     if (!data->viewed && data->exceptionCount && UT_LOG_LEVEL <= UT_ERROR) {
-        int category, function, count = 0, total = data->exceptionCount;
+        unsigned int category, function, count = 0, total = data->exceptionCount;
 
         for (category = 0; category < data->exceptionCount; category ++) {
             ut_log_frame *frame = &data->exceptionFrames[category];
             for (function = 0; function < frame->sp; function ++) {
                 ut_log_codeframe *codeframe = &frame->frames[function];
-                ut_raise_codeframe(frame, codeframe, !count, log_fmt, prefix);
+                ut_raise_codeframe(codeframe, !count, log_fmt, prefix);
                 count ++;
             }
 
             if (category != data->exceptionCount - 1) {
-                ut_raise_codeframe(frame, &frame->initial, !count, log_fmt, prefix);
+                ut_raise_codeframe(&frame->initial, !count, log_fmt, prefix);
                 count ++;
             }
 
@@ -1080,7 +1079,7 @@ void ut_frame_free(
     ut_log_frame *frame)
 {
     char *str;
-    int i;
+    unsigned int i;
     for (i = 0; i < frame->sp; i ++) {
         ut_log_codeframe *codeframe = &frame->frames[i];
         if ((str = codeframe->error)) free(str);
@@ -1098,7 +1097,7 @@ void ut_lasterrorFree(
     ut_log_tlsData* data = tls;
     if (data) {
         ut_raise_intern(data, true, UT_LOG_FMT_CURRENT, NULL);
-        int i;
+        unsigned int i;
         for (i = 0; i < data->sp; i ++) {
             ut_frame_free(&data->frames[i]);
         }
@@ -1115,7 +1114,6 @@ void ut_lasterrorFree(
 
 static
 void ut_log_setError(
-    char *category,
     char const *file,
     unsigned int line,
     char const *function,
@@ -1142,7 +1140,7 @@ void ut_log_setError(
         data->stack_marker = (void*)&stack_marker;
 
         /* Copy all current frames to exception cache in reverse order */
-        int i;
+        unsigned int i;
         for (i = 1; i <= data->sp; i ++) {
             data->exceptionFrames[i - 1] = data->frames[data->sp - i];
             data->exceptionFrames[i - 1].category = ut_strdup(data->frames[data->sp - i].category);
@@ -1586,7 +1584,7 @@ void ut_throwv_intern(
         err = ut_vasprintf(fmt, args);
     }
 
-    ut_log_setError(categories, file, line, function, err, raiseUnreported);
+    ut_log_setError(file, line, function, err, raiseUnreported);
 
     if (fmt && ((ut_log_verbosityGet() <= UT_DEBUG) || UT_APP_STATUS)) {
         if (UT_APP_STATUS == 1) {
@@ -1828,7 +1826,7 @@ bool ut_catch(void)
 {
     /* Clear exception */
     ut_log_tlsData *data = ut_getThreadData();
-    int i;
+    unsigned int i;
     if (data->exceptionCount) {
         for (i = 0; i < data->exceptionCount; i ++) {
             ut_log_frame *frame = &data->exceptionFrames[i];

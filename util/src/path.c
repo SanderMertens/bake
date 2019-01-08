@@ -189,7 +189,7 @@ void ut_path_combine(
 }
 
 static
-const char tochar(
+char tochar(
     const char *to,
     const char *ptr,
     int len)

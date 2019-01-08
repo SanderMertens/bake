@@ -187,7 +187,7 @@ int ut_cp_file(
         goto error_CloseFiles;
     }
 
-    size_t fileSize = ftell(sourceFile);
+    int fileSize = ftell(sourceFile);
     if (fileSize == -1) {
         ut_throw("cannot get size from '%s': %s", src, strerror(errno));
         goto error_CloseFiles;
@@ -197,13 +197,13 @@ int ut_cp_file(
 
     char *buffer = malloc(fileSize);
 
-    size_t n;
+    int n;
     if ((n = fread(buffer, 1, fileSize, sourceFile)) != fileSize) {
         ut_throw("cannot read '%s': %s", src, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
 
-    if (fwrite(buffer, 1, fileSize, destinationFile) != fileSize) {
+    if (fwrite(buffer, 1, fileSize, destinationFile) != (size_t)fileSize) {
         ut_throw("cannot write to '%s': %s", fullDst, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
@@ -566,43 +566,10 @@ void* ut_dir_next(
 }
 
 static
-bool ut_dir_hasNextFilter(
-    ut_iter *it)
-{
-    struct ut_dir_filteredIter *ctx = it->ctx;
-    struct dirent *ep = NULL;
-
-    if (it->data && ctx->program->kind == 1) {
-        /* If program kind is 1, only one result can match */
-        return false;
-    }
-
-    do {
-        ep = readdir(ctx->files);
-    } while (ep && !ut_expr_run(ctx->program, ep->d_name));
-
-    if (ep) {
-        it->data = ep->d_name;
-    }
-
-    return ep ? true : false;
-}
-
-static
 void ut_dir_release(
     ut_iter *it)
 {
     closedir(it->ctx);
-}
-
-static
-void ut_dir_releaseFilter(
-    ut_iter *it)
-{
-    struct ut_dir_filteredIter *ctx = it->ctx;
-    closedir(ctx->files);
-    ut_expr_free(ctx->program);
-    free(ctx);
 }
 
 static

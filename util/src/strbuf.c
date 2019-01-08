@@ -257,8 +257,9 @@ bool ut_strbuf_appendstrn(
     const char* str,
     uint32_t len)
 {
+    va_list args;
     return ut_strbuf_append_intern(
-        b, str, len, false, NULL
+        b, str, len, false, args
     );
 }
 
@@ -286,8 +287,9 @@ bool ut_strbuf_appendstr(
     ut_strbuf *b,
     const char* str)
 {
+    va_list args;
     return ut_strbuf_append_intern(
-        b, str, -1, false, NULL
+        b, str, -1, false, args
     );
 }
 

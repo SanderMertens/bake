@@ -310,7 +310,7 @@ void* ut_ll_remove_at(ut_ll list, uint32_t index) {
     prev = 0;
     node = list->first;
 
-    int i;
+    unsigned int i;
     for (i = 0; node && i <= index; i ++) {
         if (i == index) {
             result = node->data;

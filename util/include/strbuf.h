@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define UT_STRBUF_INIT (ut_strbuf){NULL, 0, 0}
+#define UT_STRBUF_INIT (ut_strbuf){0}
 #define UT_STRBUF_ELEMENT_SIZE (511)
 
 /* A buffer builds up a list of elements which individually can be up to N bytes

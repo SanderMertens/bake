@@ -215,7 +215,6 @@ error:
 static
 int ut_load_library(
     char* fileName,
-    bool validated,
     ut_dl *dl_out,
     int argc,
     char* argv[])
@@ -256,7 +255,7 @@ int ut_load_libraryAction(
     void *data)
 {
     UT_UNUSED(data);
-    return ut_load_library(file, FALSE, NULL, argc, argv);
+    return ut_load_library(file, NULL, argc, argv);
 }
 
 static
@@ -914,6 +913,10 @@ int ut_load_register(
     void* userData)
 {
     struct ut_fileHandler* h;
+
+    if (ext[0] == '.') {
+        ext ++;
+    }
 
     /* Check if extension is already registered */
     ut_try(
