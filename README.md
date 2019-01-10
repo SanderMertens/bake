@@ -1,10 +1,10 @@
 # bake
-The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated, this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, so lets try to make it as easy and painless as possible.
+The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated, this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, so let's try to make it as easy and painless as possible.
 
-To that end, bake is a build tool, build system, package manager and environment manager in one. Bake's goal is to automate the process of building code as much as possible, especially when having lots of projects that depend on each other. For now, bake focuses on building C/C++ code.
+To that end, bake is a build tool, build system, package manager and environment manager in one. Bake automates building code, especially for highly interdependent projects. Currently, Bake's focus is C/C++.
 
 Bake's main features are:
-- discover all projects in current directory & build them in right order
+- discover all projects in current directory & build them in the correct order
 - automatically include header files from dependencies
 - use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
 - programmable C API for interacting with package management
@@ -21,7 +21,6 @@ Bake depends on git for its package management features, and does _not_ have a s
 * [Legal stuff](#legal-stuff)
 
 ## Installation
-[instructions on how to install bake]
 
 Install bake using the following commands:
 
@@ -38,10 +37,9 @@ After you've installed bake once, you can upgrade to the latest version with:
 bake upgrade
 ```
 
-We will add support for package managers like brew in the future. Bake is currently only supported on Linux and macOS.
+We will add support for package managers like brew in the future. Bake is currently only supported on Linux and MacOS.
 
 ## Getting started
-[useful tips for new bake users]
 
 The following commands are useful for getting started with bake. Also, check out the `bake --help` command, which lists all the options and commands available in the bake tool.
 
@@ -90,19 +88,19 @@ bake --cfg release
 ```
 
 ### Clone & build a project from git
-This command builds a project and its dependencies directly from a git repository:
+Build a project and its dependencies directly from a git repository using this command:
 
 ```demo
 bake clone https://github.com/SanderMertens/example
 ```
 
 ### Export an environment variable to the bake environment
-Bake can manage environment variables that must be set during the build. To export an environment variable to the bake environment, do:
+Bake can manage environment variables that must be set during the build. To export an environment variable to the bake environment, use this command:
 
 ```demo
 bake export VAR=value
 ```
-Alternatively, if you want to add a path to an environment variable like `PATH` or `LD_LIBRARY_PATH`, do:
+Alternatively, if you want to add a path to an environment variable like `PATH` or `LD_LIBRARY_PATH`, use this:
 
 ```demo
 bake export PATH+=/my/path
@@ -110,7 +108,7 @@ bake export PATH+=/my/path
 
 These variables are stored in a configuration file called `bake.json` in the root of the bake environment, which by default is `$HOME/bake`.
 
-To export the bake environment to a terminal, do:
+To export the bake environment to a terminal, use:
 ```
 export `bake env`
 ```
@@ -1007,11 +1005,9 @@ Each plugin must have a `bakemain` entrypoint. This function is called when the
 plugin is loaded, and must specify the rules and patterns.
 
 ## Authors
-[who built bake]
 
 - Sander Mertens - Initial work
 
 ## Legal stuff
-[bake licensing]
 
 Bake is licensed under the GPL3.0 license.
