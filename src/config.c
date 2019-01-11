@@ -402,16 +402,6 @@ int16_t bake_config_load(
     bool build_to_home)
 {
     /* Use default configuration and environment */
-    *cfg_out = (bake_config){
-        .environment = env_id,
-        .configuration = cfg_id,
-        .symbols = true,
-        .debug = true,
-        .optimizations = false,
-        .coverage = false,
-        .strict = false
-    };
-
     cfg_out->env_variables = ut_ll_new();
     cfg_out->env_values = ut_ll_new();
 

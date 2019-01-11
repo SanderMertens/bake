@@ -471,6 +471,7 @@ int bake_init_project(
 
         /* When creating project from path, use current directory */
         path = ".";
+        
     } else {
         /* Best guess project id from current working directory */
         char *cwd = ut_cwd();
@@ -767,7 +768,22 @@ int bake_foreach_action(
 }
 
 int main(int argc, const char *argv[]) {
-    bake_config config = {0};
+    if (ut_getenv("BAKE_CONFIG")) {
+        cfg = ut_getenv("BAKE_CONFIG");
+    }
+    if (ut_getenv("BAKE_ENVIRONMENT")) {
+        env = ut_getenv("BAKE_ENVIRONMENT");
+    }
+
+    bake_config config = {
+        .configuration = cfg,
+        .environment = env,
+        .symbols = true,
+        .debug = true,
+        .optimizations = false,
+        .coverage = false,
+        .strict = false
+    };
 
     srand (time(NULL));
 
@@ -795,16 +811,16 @@ int main(int argc, const char *argv[]) {
         return 0;
     }
 
-    ut_log_push("config");
-    ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
-    ut_log_pop();
-
     if (strict) {
         config.strict = true;
     }
     if (optimize) {
         config.optimizations = true;
     }
+
+    ut_log_push("config");
+    ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
+    ut_log_pop();
 
     /* Initialize package loader */
     ut_load_init(
