@@ -57,21 +57,21 @@ bool ut_os_match(
         !stricmp(os, "x86-64") ||
         !stricmp(os, "x86_64"))
 
-#elif defined(__arm__) && defined(UT_CPU_32BIT)
-        !stricmp(os, UT_OS_STRING "-arm") ||
-        !stricmp(os, UT_OS_STRING "-arm7l") ||
-        !stricmp(os, "arm-" UT_OS_STRING) ||
-        !stricmp(os, "arm7l-" UT_OS_STRING) ||
-        !stricmp(os, "arm") ||
-        !stricmp(os, "arm7l"))
-
-#elif defined(__arm__) && defined(UT_CPU_64BIT)
+#elif defined(__aarch64__)
         !stricmp(os, UT_OS_STRING "-arm8") ||
         !stricmp(os, UT_OS_STRING "-arm64") ||
         !stricmp(os, "arm64-" UT_OS_STRING) ||
         !stricmp(os, "arm8-" UT_OS_STRING)
         !stricmp(os, "arm64") ||
         !stricmp(os, "arm8"))
+        
+#elif defined(__arm__)
+        !stricmp(os, UT_OS_STRING "-arm") ||
+        !stricmp(os, UT_OS_STRING "-arm7l") ||
+        !stricmp(os, "arm-" UT_OS_STRING) ||
+        !stricmp(os, "arm7l-" UT_OS_STRING) ||
+        !stricmp(os, "arm") ||
+        !stricmp(os, "arm7l"))
 #endif
     {
         return true;
