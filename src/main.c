@@ -471,7 +471,7 @@ int bake_init_project(
 
         /* When creating project from path, use current directory */
         path = ".";
-        
+
     } else {
         /* Best guess project id from current working directory */
         char *cwd = ut_cwd();

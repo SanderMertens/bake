@@ -39,9 +39,15 @@ int16_t cmd(
 
 int16_t bake_create_script(void)
 {
-    FILE *f = fopen ("/tmp/bake", "w");
+    char *script_path = ut_envparse("$HOME/bake/bakes.sh");
+    if (!script_path) {
+        ut_error("missing $HOME environment variable");
+        goto error;
+    }
+
+    FILE *f = fopen (script_path, "w");
     if (!f) {
-        ut_error("cannot open '/tmp/bake': %s", strerror(errno));
+        ut_error("cannot open '%s': %s", script_path, strerror(errno));
         goto error;
     }
 
@@ -88,18 +94,29 @@ int16_t bake_create_script(void)
     fclose(f);
 
     /* Make executable for everyone */
-    if (ut_setperm("/tmp/bake", 0755)) {
+    if (ut_setperm(script_path, 0755)) {
         ut_raise();
-        ut_log("failed to set permissions of bake script\n");
+        ut_log("failed to set permissions of %s script\n", script_path);
     }
 
     /* Copy file to global location, may ask for password */
     ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
-    ut_try( cmd("sudo cp /tmp/bake " GLOBAL_PATH "/bake"),
-      "Failed to instal bake script. If you do not have the privileges to install to\n"
-      GLOBAL_PATH ", you can install bake just to your home directory by doing:\n"
-      "   bake setup --local-setup\n");
-    ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
+
+    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, GLOBAL_PATH);
+
+    if(cmd(cp_cmd)) {
+        printf("\n");
+        ut_warning(
+            "Failed to instal bake script to %s. Setup will continue, but\n"
+            "      before you can use bake, you now first need to run:\n"
+            "        export $(~/bake/bake env)\n", GLOBAL_PATH
+        );
+    } else {
+        ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
+    }
+
+    free(script_path);
+    free(cp_cmd);
 
     return 0;
 error:
@@ -192,7 +209,8 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
 
     if (!local) {
-        ut_try(bake_create_script(), "failed to create global bake script");
+        ut_try(bake_create_script(),
+          "failed to create global bake script");
     }
 
     ut_try(ut_cp("./bake", "~/bake/bake"),
