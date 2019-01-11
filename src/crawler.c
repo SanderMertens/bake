@@ -173,7 +173,7 @@ int16_t bake_crawler_finalize(
 {
     /* Collect projects in list before finalizing. Finalization step may mutate
      * the tree, and cannot mutate tree while walking over it. */
-    ut_ll projects = ut_ll_new();    
+    ut_ll projects = ut_ll_new();
     ut_iter it = ut_rb_iter(crawler->nodes);
     while (ut_iter_hasNext(&it)) {
         bake_project *p = ut_iter_next(&it);
@@ -339,11 +339,10 @@ uint32_t bake_crawler_search(
     bake_config *config,
     const char *path)
 {
-    int ret = 0;
     int count = bake_crawler_count();
 
     if (ut_file_test(path)) {
-        ret = bake_crawler_crawl(config, ".", path);
+        ut_try( bake_crawler_crawl(config, ".", path), NULL);
     } else {
         ut_throw("path '%s' not found", path);
         goto error;

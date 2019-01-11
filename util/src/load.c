@@ -784,7 +784,12 @@ void* ut_load_sym(
             }
         }
         if (!*dl_out) {
-            ut_throw(NULL);
+            char *err = (char*)ut_dl_error();
+            if (err) {
+                ut_throw("failed to load library '%s': %s", lib, err);
+            } else {
+                ut_throw("failed to locate binary for package '%s'", package);
+            }
             goto error;
         }
     }
