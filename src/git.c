@@ -126,19 +126,20 @@ int16_t bake_update_dependency_list(
             }
         }
 
-        char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-        if (!bake_clone(config, url)) {
-            ut_catch();
-            const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
-            if (!deppath) {
+        const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
+        if (deppath) {
+            ut_log("found dependency '%s' locally in '%s'\n", dep, deppath);
+        } else {
+            char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
+            if (bake_clone(config, url)) {
+                ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
-            } else {
-                ut_log("found dependency '%s' locally in '%s'\n", dep, deppath);
             }
+            free(url);
         }
-        free(url);
+
         free(dep_tmp);
     }
 
@@ -222,8 +223,8 @@ int16_t bake_clone(
         goto error;
     }
 
-    ut_try(bake_update_dependencies(config, base_url, project), NULL);
-    ut_try(bake_crawler_add(config, project), NULL);
+    ut_try( bake_update_dependencies(config, base_url, project), NULL);
+    ut_try( bake_crawler_add(config, project), NULL);
 
     free(full_url);
     free(base_url);
