@@ -132,7 +132,7 @@ void bake_usage(void)
 
 void bake_version(void)
 {
-    printf("bake version 2.0 (%s %s %s)\n",
+    printf("bake version 2.1.1 (%s %s %s)\n",
         UT_PLATFORM_STRING,
         __DATE__,
         __TIME__);
