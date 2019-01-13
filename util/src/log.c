@@ -254,11 +254,12 @@ void ut_printBacktrace(FILE* f, int nEntries, char** symbols) {
 }
 
 void ut_backtrace(FILE* f) {
+#ifndef _WIN32
     int nEntries;
     void* buff[BACKTRACE_DEPTH];
     char** symbols;
 
-#ifdef ENABLE_BACKTRACE
+    #ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -269,8 +270,32 @@ void ut_backtrace(FILE* f) {
     } else {
         fprintf(f, "obtaining backtrace failed.");
     }
+    #endif
 #else
-    fprintf(f, "backtrace unavailable");
+    void *stack[TRACE_MAX_STACK_FRAMES];
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+    WORD numberOfFrames = CaptureStackBackTrace(0, TRACE_MAX_STACK_FRAMES, stack, NULL);
+    SYMBOL_INFO *symbol = (SYMBOL_INFO *)malloc(sizeof(SYMBOL_INFO) + (TRACE_MAX_FUNCTION_NAME_LENGTH - 1) * sizeof(TCHAR));
+    symbol->MaxNameLen = TRACE_MAX_FUNCTION_NAME_LENGTH;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    DWORD displacement;
+    IMAGEHLP_LINE64 *line = (IMAGEHLP_LINE64 *)malloc(sizeof(IMAGEHLP_LINE64));
+    line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    for (int i = 0; i < numberOfFrames; i++)
+    {
+        DWORD64 address = (DWORD64)(stack[i]);
+        SymFromAddr(process, address, NULL, symbol);
+        if (SymGetLineFromAddr64(process, address, &displacement, line))
+        {
+            fprintf(f, "\tat %s in %s: line: %lu: address: 0x%0X\n", symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+        }
+        else
+        {
+            fprintf(f, "\tSymGetLineFromAddr64 returned error code %lu.\n", GetLastError());
+            fprintf(f, "\tat %s, address 0x%0X.\n", symbol->Name, symbol->Address);
+        }
+    }
 #endif
 }
 
@@ -283,7 +308,8 @@ char* ut_backtraceString(void) {
     result = malloc(10000);
     *result = '\0';
 
-#ifdef ENABLE_BACKTRACE
+#ifndef _WIN32
+    #ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -298,8 +324,35 @@ char* ut_backtraceString(void) {
     } else {
         fprintf(stderr, "obtaining backtrace failed.");
     }
-#else
+    #else
     result = ut_strdup("backtrace unavailable");
+    #endif
+#else
+    void *stack[TRACE_MAX_STACK_FRAMES];
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+    WORD numberOfFrames = CaptureStackBackTrace(0, TRACE_MAX_STACK_FRAMES, stack, NULL);
+    SYMBOL_INFO *symbol = (SYMBOL_INFO *)malloc(sizeof(SYMBOL_INFO) + (TRACE_MAX_FUNCTION_NAME_LENGTH - 1) * sizeof(TCHAR));
+    symbol->MaxNameLen = TRACE_MAX_FUNCTION_NAME_LENGTH;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    DWORD displacement;
+    IMAGEHLP_LINE64 *line = (IMAGEHLP_LINE64 *)malloc(sizeof(IMAGEHLP_LINE64));
+    line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    for (int i = 0; i < numberOfFrames; i++)
+    {
+        DWORD64 address = (DWORD64)(stack[i]);
+        SymFromAddr(process, address, NULL, symbol);
+        if (SymGetLineFromAddr64(process, address, &displacement, line))
+        {
+            sprintf(result, "%s \tat %s in %s: line: %lu: address: 0x%0X\n", result, symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+        }
+        else
+        {
+            sprintf(result, "%s \tSymGetLineFromAddr64 returned error code %lu.\n", result, GetLastError());
+            sprintf(result, "%s \tat %s, address 0x%0X.\n", result, symbol->Name, symbol->Address);
+        }
+    }
+    strcat(result, "\n");
 #endif
 
     return result;
@@ -336,7 +389,11 @@ char* ut_log_categoryIndent(
 
     while (categories[i] && (!count || i < count)) {
         i ++;
+#ifndef _WIN32
         ut_strbuf_append(&buff, "%s|#[reset] ", color);
+#else
+		ut_strbuf_append(&buff, "");
+#endif
     }
 
     return ut_strbuf_get(&buff);
@@ -350,7 +407,9 @@ char* ut_log_categoryString(
     ut_strbuf buff = UT_STRBUF_INIT;
 
     if (categories) {
+#ifndef _WIN32
         ut_strbuf_appendstr(&buff, "#[grey]");
+#endif
         while (categories[i]) {
             ut_strbuf_append(&buff, "%s", categories[i]);
             i ++;
@@ -358,7 +417,9 @@ char* ut_log_categoryString(
                 ut_strbuf_appendstr(&buff, ".");
             }
         }
+#ifndef _WIN32
         ut_strbuf_appendstr(&buff, "#[reset]");
+#endif
     }
 
     if (!i) {
@@ -534,8 +595,12 @@ void ut_logprint_kind(
     if (kind != UT_LOG) {
         ut_strbuf_append(
             buf,
+#ifndef _WIN32
             "%s%s%*s#[reset]",
             color,
+#else
+            "%s%*s",
+#endif
             levelstr,
             levelspace - strlen(levelstr),
             "");
@@ -569,7 +634,9 @@ void ut_logprint_deltaTime(
     ut_log_tlsData *data,
     bool printCategory)
 {
+#ifndef _WIN32
     ut_strbuf_appendstr(buf, "#[grey]");
+#endif
     if (UT_LOG_PROFILE) {
         ut_strbuf_appendstr(buf, " --------");
     } else {
@@ -586,7 +653,9 @@ void ut_logprint_deltaTime(
             ut_strbuf_appendstr(buf, " --------");
         }
     }
+#ifndef _WIN32
     ut_strbuf_appendstr(buf, "#[reset]");
+#endif
 }
 
 static
@@ -691,7 +760,11 @@ int ut_logprint_line(
     bool fixedWidth)
 {
     if (line) {
+#ifndef _WIN32
         ut_strbuf_append(buf, "#[bold]%u#[reset]", line);
+#else
+        ut_strbuf_append(buf, "%u", line);
+#endif
         if (fixedWidth) {
             int len = 4 - (floor(log10(line)) + 1);
             if (len) {
@@ -710,7 +783,11 @@ int ut_logprint_function(
     char const *function)
 {
     if (function) {
+#ifndef _WIN32
         ut_strbuf_append(buf, "#[cyan]%s#[reset]", function);
+#else
+        ut_strbuf_append(buf, "%s", function);
+#endif
         return 1;
     } else {
         return 0;
@@ -731,7 +808,11 @@ int ut_logprint_proc(
         "grey",
     };
     ut_proc id = ut_proc();
+#ifndef _WIN32
     ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[id % 6], id);
+#else
+    ut_strbuf_append(buf, "%u", id);
+#endif
     return 1;
 }
 
@@ -884,7 +965,11 @@ void ut_logprint(
             case 'l': ret = ut_logprint_line(cur, line, !ut_log_shouldEmbedCategories); break;
             case 'r': ret = ut_logprint_function(cur, function); break;
             case 'm': ret = ut_logprint_msg(cur, msg); break;
+#ifndef _WIN32
             case 'a': ut_strbuf_append(cur, "#[cyan]%s#[reset]", ut_log_appName); break;
+#else
+            case 'a': ut_strbuf_append(cur, "%s", ut_log_appName); break;
+#endif
             case 'A': ret = ut_logprint_proc(cur); break;
             case 'V': if (only_warn) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
             case 'F': if (only_warn) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
@@ -943,7 +1028,11 @@ void ut_logprint(
     char *str = ut_strbuf_get(&buf);
 
     if (str) {
+#ifndef _WIN32
         char *colorized = ut_log_colorize(str);
+#else
+		char *colorized = strdup(str);
+#endif
         if (breakAtCategory) {
             fprintf(f, "%s", colorized);
         } else {
@@ -1945,8 +2034,11 @@ void ut_log(char *fmt, ...) {
     va_start(arglist, fmt);
     formatted = ut_vasprintf(fmt, arglist);
     va_end(arglist);
-
-    colorized = ut_log_colorize(formatted);
+#ifdef _WIN32
+	colorized = ut_strdup(formatted);
+#else
+	colorized = ut_log_colorize(formatted);
+#endif
     len = printlen(colorized);
     fprintf(stderr, "%s", colorized);
 
