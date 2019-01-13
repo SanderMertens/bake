@@ -21,6 +21,7 @@
 
  #include "../include/util.h"
 
+#ifndef _WIN32
 int stricmp(const char *str1, const char *str2) {
     const char *ptr1, *ptr2;
     char ch1, ch2;
@@ -67,6 +68,7 @@ int strnicmp(const char *str1, int length, const char *str2) {
 
     return tolower(*ptr1) - tolower(*ptr2);
 }
+#endif // !_WIN32
 
 int idcmp(const char *str1, const char *str2) {
     const char *ptr1, *ptr2;
