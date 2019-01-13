@@ -22,6 +22,7 @@
 #include "../include/util.h"
 
 void ut_sleep(unsigned int sec, unsigned int nanosec) {
+#ifndef _WIN32
     struct timespec sleepTime;
 
     sleepTime.tv_sec = sec;
@@ -29,6 +30,9 @@ void ut_sleep(unsigned int sec, unsigned int nanosec) {
     if (nanosleep(&sleepTime, NULL)) {
         ut_error("nanosleep failed: %s", strerror(errno));
     }
+#else
+	Sleep(sec + nanosec/1000000);
+#endif
 }
 
 void timespec_gettime(struct timespec* time) {
@@ -40,6 +44,8 @@ void timespec_gettime(struct timespec* time) {
     mach_port_deallocate(mach_task_self(), cclock);
     time->tv_sec = mts.tv_sec;
     time->tv_nsec = mts.tv_nsec;
+#elif _WIN32
+	timespec_get(&time, TIME_UTC);
 #else
     clock_gettime(CLOCK_REALTIME, time);
 #endif
