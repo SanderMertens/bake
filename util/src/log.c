@@ -229,7 +229,7 @@ void ut_err_notifyCallkback(
             ut_strbuf buff = UT_STRBUF_INIT;
             int32_t i;
             for (i = 0; categories[i]; i++) {
-                if (i) ut_strbuf_appendstr(&buff, "/");
+                if (i) ut_strbuf_appendstr(&buff, PATH_SEPARATOR);
                 ut_strbuf_appendstr(&buff, categories[i]);
             }
             char *str = ut_strbuf_get(&buff);
@@ -647,7 +647,7 @@ char const* ut_log_stripFunctionName(
         char const *ptr;
         char ch;
         for (ptr = file; (ch = *ptr); ptr++) {
-            if (ch == '.' || ch == '/') {
+            if (ch == '.' || ch == PATH_SEPARATOR_C) {
                 file = ptr + 1;
             } else {
                 break;

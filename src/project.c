@@ -147,7 +147,7 @@ int16_t bake_project_parse(
     bake_config *config,
     bake_project *project)
 {
-    char *file = ut_asprintf("%s/project.json", project->path);
+    char *file = ut_asprintf("%s%cproject.json", project->path, PATH_SEPARATOR_C);
 
     if (ut_file_test(file) == 1) {
         JSON_Value *j = json_parse_file_with_comments(file);
@@ -421,11 +421,11 @@ void bake_project_init_artefact(
 {
     if (project->artefact) {
         project->artefact_path = ut_asprintf(
-            "%s/bin/%s-%s", project->path, UT_PLATFORM_STRING,
+            "%s%cbin%c%s-%s", project->path, PATH_SEPARATOR_C, PATH_SEPARATOR_C, UT_PLATFORM_STRING,
             config->configuration);
 
         project->artefact_file = ut_asprintf(
-            "%s/%s", project->artefact_path, project->artefact);
+            "%s%c%s", project->artefact_path, PATH_SEPARATOR_C, project->artefact);
     }
 }
 
@@ -513,15 +513,15 @@ int16_t bake_project_init(
     }
 
     project->bin_path = ut_asprintf(
-        "%s/bin", project->path);
+        "%s%cbin", project->path, PATH_SEPARATOR_C);
 
     project->cache_path = ut_asprintf(
-        "%s/.bake_cache", project->path);
+        "%s%c.bake_cache", project->path, PATH_SEPARATOR_C);
 
-    if (project->path[0] == '/') {
+    if (project->path[0] == PATH_SEPARATOR_C) {
         project->fullpath = ut_strdup(project->path);
     } else if (strcmp(project->path, ".")) {
-        project->fullpath = ut_asprintf("%s/%s", ut_cwd(), project->path);
+        project->fullpath = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, project->path);
     } else {
         project->fullpath = ut_strdup(ut_cwd());
     }
@@ -576,8 +576,8 @@ bake_project* bake_project_new(
     if (path) {
         ut_try (
             bake_project_parse(config, result),
-            "failed to parse '%s/project.json'",
-            path);
+            "failed to parse '%s%cproject.json'",
+            path, PATH_SEPARATOR_C);
 
         ut_try( bake_project_init(config, result), NULL);
     }
@@ -996,7 +996,7 @@ ut_ll bake_project_copy_libs(
     while (ut_iter_hasNext(&it)) {
         char *link = ut_iter_next(&it);
 
-        char *link_lib = strrchr(link, '/');
+        char *link_lib = strrchr(link, PATH_SEPARATOR_C);
         if (!link_lib) {
             link_lib = link;
         } else {
@@ -1007,8 +1007,8 @@ ut_ll bake_project_copy_libs(
             link_lib += 3;
         }
 
-        char *target_link = ut_asprintf("%s/lib%s_%s",
-            path, p->id_underscore, link_lib);
+        char *target_link = ut_asprintf("%s%clib%s_%s",
+            path, PATH_SEPARATOR_C, p->id_underscore, link_lib);
 
         /* Copy to path */
         if (ut_cp(link, target_link)) {
@@ -1059,7 +1059,7 @@ int16_t bake_project_add_dependency(
         char *dep_lib = ut_strdup(dep);
         char *ptr, ch;
         for (ptr = dep_lib; (ch = *ptr); ptr ++) {
-            if (ch == '/' || ch == '.') {
+            if (ch == PATH_SEPARATOR_C || ch == '.') {
                 ptr[0] = '_';
             }
         }
@@ -1284,7 +1284,7 @@ int16_t bake_project_clean_intern(
         ut_iter it = ut_ll_iter(project->files_to_clean);
         while (ut_iter_hasNext(&it)) {
             char *file = ut_iter_next(&it);
-            ut_try(ut_rm(strarg("%s/%s", project->path, file)), NULL);
+            ut_try(ut_rm(strarg("%s%c%s", project->path, PATH_SEPARATOR_C, file)), NULL);
         }
     }
 

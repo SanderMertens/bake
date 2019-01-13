@@ -85,7 +85,7 @@ int16_t bake_parse_repo_url(
           url);
     }
 
-    char *src_path = ut_envparse("$BAKE_HOME/src/%s", name);
+    char *src_path = ut_envparse("$BAKE_HOME%csrc%c%s", PATH_SEPARATOR_C, PATH_SEPARATOR_C, name);
 
     char *last_elem = strrchr(full_url, '/');
     char *base_url = NULL;

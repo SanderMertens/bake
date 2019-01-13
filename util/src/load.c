@@ -76,13 +76,13 @@ struct ut_loaded* ut_loaded_find(
         ut_iter iter = ut_ll_iter(loadedAdmin);
         struct ut_loaded *lib;
         const char *nameptr = name;
-        if (nameptr[0] == '/') nameptr ++;
+        if (nameptr[0] == PATH_SEPARATOR_C) nameptr ++;
         if (nameptr[0] == '.') nameptr ++;
 
         while (ut_iter_hasNext(&iter)) {
             lib = ut_iter_next(&iter);
             const char *idptr = lib->id;
-            if (idptr[0] == '/') idptr ++;
+            if (idptr[0] == PATH_SEPARATOR_C) idptr ++;
             if (idptr[0] == '.') idptr ++;
             if (!idcmp(nameptr, idptr)) {
                 return lib;
@@ -266,8 +266,7 @@ int16_t ut_test_package(
 {
     int16_t result = 0;
     char *path;
-
-    path = ut_asprintf("%s/meta/%s/project.json", env, package);
+    path = ut_asprintf("%s%cmeta%c%s%cproject.json", env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package, PATH_SEPARATOR_C);
 
     if ((result = ut_file_test(path)) == 1) {
         ut_debug("found '%s'", path);
@@ -330,7 +329,7 @@ int16_t ut_locate_binary(
     char *pkg_underscore = ut_strdup(id);
     char *ptr, ch;
     for (ptr = pkg_underscore; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
+        if (ch == PATH_SEPARATOR_C || ch == '.') {
             *ptr = '_';
         }
     }
@@ -357,7 +356,7 @@ int16_t ut_locate_binary(
 
     /* Test for .so library */
     if (ret == 0) {
-        bin = ut_asprintf("%s/lib/lib%s.so", loaded->env, pkg_underscore);
+        bin = ut_asprintf("%s%clib%clib%s.so", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, pkg_underscore);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->lib = bin;
@@ -393,7 +392,7 @@ int16_t ut_locate_binary(
 
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s/bin/%s", loaded->env, pkg_underscore);
+        bin = ut_asprintf("%s%cbin%c%s", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, pkg_underscore);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             loaded->app = bin;
@@ -464,7 +463,7 @@ const char* ut_locate(
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
         ut_strset(&loaded->env, env);
-        loaded->project = ut_asprintf("%s/meta/%s", env, package);
+        loaded->project = ut_asprintf("%s%cmeta%c%s", env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
     }
 
     /* If loaded hasn't been loaded by now, package isn't found */
@@ -484,13 +483,13 @@ const char* ut_locate(
             break;
         case UT_LOCATE_ETC:
             if (!loaded->etc) {
-                loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
+                loaded->etc = ut_asprintf("%s%cetc%c%s", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
             }
             result = loaded->etc;
             break;
         case UT_LOCATE_INCLUDE:
             if (!loaded->include) {
-                loaded->include = ut_asprintf("%s/include/%s.dir", loaded->env, package);
+                loaded->include = ut_asprintf("%s%cinclude%c%s.dir", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
             }
             result = loaded->include;
             break;
@@ -601,7 +600,7 @@ struct ut_fileHandler* ut_load_filehandler(
     /* If filehandler is not found, look it up in driver/ext */
     if (!h) {
         ut_id extPackage;
-        sprintf(extPackage, "driver.ext.%s", ext);
+        sprintf(extPackage, "driver%cext%c%s", PATH_SEPARATOR_C, PATH_SEPARATOR_C, ext);
 
         ut_try(
             ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
@@ -622,8 +621,8 @@ struct ut_fileHandler* ut_load_filehandler(
         h = ut_lookupExt(ext);
         if (!h) {
             ut_throw(
-                "package 'driver/ext/%s' loaded but extension is not registered",
-                ext);
+                "package 'driver%cext%c%s' loaded but extension is not registered",
+                PATH_SEPARATOR_C, PATH_SEPARATOR_C, ext);
             ut_try(
                 ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
             goto error;
@@ -967,11 +966,11 @@ int16_t ut_load_init(
     if (!target) {
         UT_LOAD_TARGET_PATH = ut_strdup(cwd);
     } else {
-        UT_LOAD_TARGET_PATH = ut_asprintf("%s/%s-%s",
-          target, UT_PLATFORM_STRING, config);
+        UT_LOAD_TARGET_PATH = ut_asprintf("%s%c%s-%s",
+          target, PATH_SEPARATOR_C, UT_PLATFORM_STRING, config);
 
         UT_LOAD_TARGET_META_PATH =
-            ut_asprintf("%s/meta", UT_LOAD_TARGET_PATH);
+            ut_asprintf("%s%cmeta", UT_LOAD_TARGET_PATH, PATH_SEPARATOR_C);
     }
 
     if (!home) {
@@ -980,7 +979,7 @@ int16_t ut_load_init(
         UT_LOAD_HOME_PATH = ut_asprintf("%s", home);
 
         UT_LOAD_HOME_META_PATH =
-            ut_asprintf("%s/meta", UT_LOAD_HOME_PATH);
+            ut_asprintf("%s%cmeta", UT_LOAD_HOME_PATH, PATH_SEPARATOR_C);
     }
 
     if (strcmp(UT_LOAD_TARGET_PATH, UT_LOAD_HOME_PATH)) {

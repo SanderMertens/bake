@@ -124,7 +124,7 @@ int16_t bake_build_make_project(
       "failed to build '%s'", id);
     ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
-    char *bin_path = ut_asprintf("%s/bin/%s-debug", path, UT_PLATFORM_STRING);
+    char *bin_path = ut_asprintf("%s%cbin%c%s-debug", path, PATH_SEPARATOR_C, PATH_SEPARATOR_C, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
 
     /* On macOS, remove rpath that premake automatically adds */
@@ -137,8 +137,8 @@ int16_t bake_build_make_project(
     */
 
     ut_try (ut_rename(
-      strarg("%s/lib%s" UT_OS_LIB_EXT, path, artefact),
-      strarg("%s/lib%s" UT_OS_LIB_EXT, bin_path, artefact)),
+      strarg("%s" PATH_SEPARATOR "lib%s" UT_OS_LIB_EXT, path, artefact),
+      strarg("%s" PATH_SEPARATOR "lib%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
 
     free(bin_path);
@@ -160,7 +160,7 @@ int16_t bake_setup(
     bool local)
 {
     char *dir = ut_strdup(bake_cmd);
-    char *last_elem = strrchr(dir, '/');
+    char *last_elem = strrchr(dir, PATH_SEPARATOR_C);
     if (last_elem) {
         *last_elem = '\0';
         ut_chdir(dir);

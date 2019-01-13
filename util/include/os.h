@@ -75,6 +75,14 @@ extern "C" {
 
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING
 
+#if defined(_WIN32) 
+#define PATH_SEPARATOR "\\"
+#define PATH_SEPARATOR_C '\\'
+#else 
+#define PATH_SEPARATOR "/"
+#define PATH_SEPARATOR_C '/'
+#endif 
+
 /* Get hostname of current machine */
 UT_EXPORT
 char* ut_hostname(void);

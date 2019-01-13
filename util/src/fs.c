@@ -88,13 +88,13 @@ int ut_mkdir(const char *fmt, ...) {
             char *prefix = ut_strdup(name);
             char *ptr = &prefix[strlen(prefix)-1], ch;
             while ((ch = *ptr) && (ptr >= prefix)) {
-                if (ch == '/') {
+                if (ch == PATH_SEPARATOR_C) {
                     *ptr = '\0';
                     break;
                 }
                 ptr--;
             }
-            if (ch == '/') {
+            if (ch == PATH_SEPARATOR_C) {
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
                     if (!mkdir(name, 0755)) {
@@ -140,9 +140,9 @@ int ut_cp_file(
     bool exists = ut_file_test(dst);
 
     if (exists && ut_isdir(dst) && !ut_isdir(src)) {
-        const char *base = strrchr(src, '/');
+        const char *base = strrchr(src, PATH_SEPARATOR_C);
         if (!base) base = src; else base = base + 1;
-        fullDst = ut_asprintf("%s/%s", dst, base);
+        fullDst = ut_asprintf("%s%c%s", dst, PATH_SEPARATOR_C, base);
         exists = ut_file_test(fullDst);
     }
 
@@ -254,7 +254,7 @@ int16_t ut_cp_dir(
         char *file = ut_iter_next(&it);
 
         if (ut_isdir(file)) {
-            char *dstdir = ut_asprintf("%s/%s", dst, file);
+            char *dstdir = ut_asprintf("%s%c%s", dst, PATH_SEPARATOR_C, file);
             if (ut_cp_dir(file, dstdir)) {
                 goto error;
             }
@@ -346,8 +346,8 @@ int ut_symlink(
     const char *newname)
 {
     char *fullname = NULL;
-    if (oldname[0] != '/') {
-        fullname = ut_asprintf("%s/%s", ut_cwd(), oldname);
+    if (oldname[0] != PATH_SEPARATOR_C) {
+        fullname = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, oldname);
         ut_path_clean(fullname, fullname);
     } else {
         /* Safe- the variable will not be modified if it's equal to newname */
@@ -615,9 +615,9 @@ int16_t ut_dir_collect(
         /* Add file to results if it matches filter */
         char *path;
         if (offset) {
-            path = ut_asprintf("%s/%s/%s", ut_dirstack_wd(stack), offset, file);
+            path = ut_asprintf("%s%c%s%c%s", ut_dirstack_wd(stack),PATH_SEPARATOR_C, offset,PATH_SEPARATOR_C, file);
         } else {
-            path = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+            path = ut_asprintf("%s%c%s", ut_dirstack_wd(stack),PATH_SEPARATOR_C, file);
         }
         ut_path_clean(path, path);
 
@@ -630,7 +630,7 @@ int16_t ut_dir_collect(
         }
 
         /* If directory, crawl recursively */
-        char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), file);
+        char *fullpath = ut_asprintf("%s%c%s", ut_ll_last(stack),PATH_SEPARATOR_C, file);
         if (ut_isdir(fullpath)) {
             if (ut_dir_collect(file, stack, filter, offset, files, true)) {
                 free(fullpath);
@@ -671,9 +671,9 @@ int16_t ut_dir_iter(
         for (ptr = filter; (ch = *ptr); ptr ++) {
             if (ut_expr_isOperator(ch)) {
                 break;
-            } else if (ch == '/') {
+            } else if (ch == PATH_SEPARATOR_C) {
                 last_elem = ptr;
-                if (ptr[1] == '/') {
+                if (ptr[1] == PATH_SEPARATOR_C) {
                     break;
                 }
             }
@@ -685,7 +685,7 @@ int16_t ut_dir_iter(
                 /* If there are no elements, filter matches single file */
             } else {
                 /* If there are elements, append filter to path */
-                path = ut_asprintf("%s/%s", path, filter);
+                path = ut_asprintf("%s%c%s", path, PATH_SEPARATOR_C, filter);
                 ut_path_clean(path, path);
                 filter = NULL;
             }
@@ -695,7 +695,7 @@ int16_t ut_dir_iter(
             } else {
                 /* Part of filter is path, strip it off and add to path */
                 uint32_t old_len = strlen(path);
-                path = ut_asprintf("%s/%s", path, filter);
+                path = ut_asprintf("%s%c%s", path, PATH_SEPARATOR_C, filter);
                 path[strlen(path) - strlen(last_elem)] = '\0';
                 offset = &path[old_len] + 1;
                 filter = last_elem;
@@ -780,7 +780,7 @@ ut_dirstack ut_dirstack_push(
         stack = ut_ll_new();
         ut_ll_append(stack, ut_strdup(dir));
     } else {
-        ut_ll_append(stack, ut_asprintf("%s/%s", ut_ll_last(stack), dir));
+        ut_ll_append(stack, ut_asprintf("%s%c%s", ut_ll_last(stack), PATH_SEPARATOR_C, dir));
     }
 
     return stack;
@@ -805,7 +805,7 @@ const char* ut_dirstack_wd(
         return ".";
     } else {
         last += first_len;
-        if (last[0] == '/') {
+        if (last[0] == PATH_SEPARATOR_C) {
             last ++;
         }
 

@@ -173,7 +173,7 @@ ut_ll gather_files(
         char *file = ut_iter_next(&it);
         if (filter_file(file)) {
             ut_fileMonitor *m = monitor_new(
-                strarg("%s/%s", project_dir, file), app_bin);
+                strarg("%s%c%s", project_dir, PATH_SEPARATOR_C, file), app_bin);
             ut_ll_append(result, m);
         }
     }
@@ -276,7 +276,7 @@ int build_project(
         ut_throw("failed to build '%s'", path);
 
         /* Ensure that the binary folder is gone */
-        ut_rm(strarg("%s/bin", path));
+        ut_rm(strarg("%s%cbin", path, PATH_SEPARATOR_C));
         goto error;
     }
 
@@ -420,7 +420,7 @@ bool is_valid_project(
     /* Test if directory exists */
     if (ut_file_test(project) && ut_isdir(project)) {
         /* Test if specified directory has project.json */
-        if (ut_file_test(strarg("%s/project.json", project))) {
+        if (ut_file_test(strarg("%s%cproject.json", project, PATH_SEPARATOR_C))) {
             /* Valid bake project found */
             return true;
         }
@@ -433,7 +433,7 @@ static
 char *name_from_id(
     const char *id)
 {
-    if (id[0] == '/') {
+    if (id[0] == PATH_SEPARATOR_C) {
         id ++;
     }
 
@@ -493,7 +493,7 @@ int bake_run(
 
             /* Check if the package repository contains a link back to the
              * location of the project. */
-            char *source_file = ut_asprintf("%s/source.txt", package_path);
+            char *source_file = ut_asprintf("%s%csource.txt", package_path, PATH_SEPARATOR_C);
             if (ut_file_test(source_file)) {
                 project_dir = ut_file_load(source_file);
                 str_strip(project_dir); /* Remove trailing whitespace */
@@ -534,10 +534,10 @@ int bake_run(
 
         /* If project is found, point to executable in project bin */
         app_bin = ut_asprintf(
-            "%s/bin/%s-%s/%s",
-            project_dir,
+            "%s%cbin%c%s-%s%c%s",
+            project_dir, PATH_SEPARATOR_C, PATH_SEPARATOR_C,
             UT_PLATFORM_STRING,
-            config->configuration,
+            config->configuration, PATH_SEPARATOR_C,
             app_name);
     } else {
         /* If project directory is not found, locate the binary in the

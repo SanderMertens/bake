@@ -321,12 +321,12 @@ ut_ll bake_config_find_files(
 
     char *path_parsed = ut_envparse(path);
 
-    if (path_parsed[0] == '/') {
+    if (path_parsed[0] == PATH_SEPARATOR_C) {
         /* Absolute path */
         cur_path = strdup(path_parsed);
     } else {
         /* Relative path */
-        cur_path = ut_asprintf("%s/%s", ut_cwd(), path_parsed);
+        cur_path = ut_asprintf("%s%s%s", ut_cwd(), PATH_SEPARATOR, path_parsed);
         ut_path_clean(cur_path, cur_path);
     }
 
@@ -335,10 +335,10 @@ ut_ll bake_config_find_files(
     /* Check for a bake in the current path */
     char *elem = NULL;
     do {
-        char *file = ut_asprintf("%s/bake", cur_path);
+        char *file = ut_asprintf("%s%sbake", cur_path, PATH_SEPARATOR);
         if (ut_file_test(file) == 1) {
             if (ut_isdir(file)) {
-                char *cfg = ut_asprintf("%s/bake.json", file);
+                char *cfg = ut_asprintf("%s%sbake.json", file, PATH_SEPARATOR);
                 if (ut_file_test(cfg) == 1) {
                     if (!config_files) config_files = ut_ll_new();
                     ut_ll_append(config_files, cfg);
@@ -354,7 +354,7 @@ ut_ll bake_config_find_files(
         }
 
 
-        file = ut_asprintf("%s/bake.json", cur_path);
+        file = ut_asprintf("%s%sbake.json", cur_path, PATH_SEPARATOR);
         if (ut_file_test(file) == 1) {
             if (!config_files) config_files = ut_ll_new();
             ut_ll_append(config_files, file);
@@ -364,7 +364,7 @@ ut_ll bake_config_find_files(
         }
 
         /* Strip last directory from path */
-        elem = strrchr(cur_path, '/');
+        elem = strrchr(cur_path, PATH_SEPARATOR_C);
         if (elem) {
             *elem = '\0';
         }
@@ -379,7 +379,7 @@ ut_ll bake_config_find_config(void)
     ut_ll config_files = NULL;
 
     if (ut_getenv("BAKE_HOME")) {
-        char *file = ut_asprintf("%s/bake.json", ut_getenv("BAKE_HOME"));
+        char *file = ut_asprintf("%s%sbake.json", ut_getenv("BAKE_HOME"), PATH_SEPARATOR);
         if (ut_file_test(file) == 1) {
             config_files = ut_ll_new();
             ut_ll_append(config_files, file);
@@ -480,23 +480,31 @@ int16_t bake_config_load(
     cfg_out->configuration = ut_strdup(cfg_id);
     if (!build_to_home) {
         cfg_out->target = ut_asprintf(
-            "%s/%s-%s", ut_getenv("BAKE_TARGET"),
+            "%s%c%s-%s", ut_getenv("BAKE_TARGET"), PATH_SEPARATOR_C,
             UT_PLATFORM_STRING, cfg_out->configuration);
     } else {
         cfg_out->target = ut_strdup(ut_getenv("BAKE_HOME"));
     }
 
     cfg_out->home = ut_strdup(ut_getenv("BAKE_HOME"));
-    cfg_out->home_lib = ut_asprintf("%s/lib", cfg_out->home);
-    cfg_out->home_bin = ut_asprintf("%s/bin", cfg_out->home);
-    cfg_out->target_lib = ut_asprintf("%s/lib", cfg_out->target);
-    cfg_out->target_bin = ut_asprintf("%s/bin", cfg_out->target);
+    cfg_out->home_lib = ut_asprintf("%s%clib", cfg_out->home, PATH_SEPARATOR_C);
+    cfg_out->home_bin = ut_asprintf("%s%cbin", cfg_out->home, PATH_SEPARATOR_C);
+    cfg_out->target_lib = ut_asprintf("%s%clib", cfg_out->target, PATH_SEPARATOR_C);
+    cfg_out->target_bin = ut_asprintf("%s%cbin", cfg_out->target, PATH_SEPARATOR_C);
 
+#ifndef _WIN32
     /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
     bake_config_appendEnv("PATH", strarg("~/bake:%s:%s", cfg_out->target_bin, cfg_out->home_bin));
     bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
     bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
     bake_config_appendEnv("CLASSPATH", strarg(".:%s/java", cfg_out->target));
+#else
+    /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
+    bake_config_appendEnv("PATH", strarg("%s\\bake;%s;%s", ut_getenv("USERPROFILE"), cfg_out->target_bin, cfg_out->home_bin));
+    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".;%s;%s", cfg_out->target_lib, cfg_out->home_lib));
+    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".;%s;%s", cfg_out->target_lib, cfg_out->home_lib));
+    bake_config_appendEnv("CLASSPATH", strarg(".;%s%cjava", cfg_out->target, PATH_SEPARATOR_C));
+#endif
 
     if (ut_log_verbosityGet() <= UT_OK) {
         ut_log_push("environment");

@@ -70,10 +70,10 @@ bake_file* bake_filelist_add_intern(
     bfile->name = ut_strdup(filename);
     bfile->path = ut_strdup(path);
 
-    if (filename[0] == '/') {
+    if (filename[0] == PATH_SEPARATOR_C) {
         bfile->file_path = ut_strdup(filename);
     } else {
-        bfile->file_path = ut_asprintf("%s/%s", path, filename);
+        bfile->file_path = ut_asprintf("%s%s%s", path, PATH_SEPARATOR,  filename);
     }
     bfile->timestamp = timestamp;
 
@@ -186,17 +186,17 @@ bake_file* bake_filelist_add_file(
         filepath = fl->path;
     }
 
-    if ((file && file[0] == '/') || (fl->path && !strcmp(fl->path, "."))) {
+    if ((file && file[0] == PATH_SEPARATOR_C) || (fl->path && !strcmp(fl->path, "."))) {
         path = ut_strdup(file);
     } else {
-        path = ut_asprintf("%s/%s", filepath, file);
+        path = ut_asprintf("%s%c%s", filepath,PATH_SEPARATOR_C, file);
     }
 
     if (ut_file_test(path) == 1) {
         lastmodified = ut_lastmodified(path);
     }
 
-    char *name = strrchr(path, '/');
+    char *name = strrchr(path, PATH_SEPARATOR_C);
     if (name) {
         *name = '\0';
         name ++;
@@ -218,7 +218,7 @@ int16_t bake_filelist_add_pattern(
 {
     char *search_path = (char*)path;
     if (fl->path) {
-        search_path = ut_asprintf("%s/%s", fl->path, path);
+        search_path = ut_asprintf("%s%c%s", fl->path,PATH_SEPARATOR_C, path);
     }
     int16_t result = bake_filelist_populate(fl, search_path, pattern);
     if (search_path != path) free(search_path);

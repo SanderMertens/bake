@@ -474,7 +474,7 @@ int bake_init_project(
     } else {
         /* Best guess project id from current working directory */
         char *cwd = ut_cwd();
-        char *last_elem = strrchr(cwd, '/');
+        char *last_elem = strrchr(cwd, PATH_SEPARATOR_C);
         if (last_elem && last_elem[1]) {
             id = last_elem + 1;
         } else {

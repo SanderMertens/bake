@@ -78,7 +78,7 @@ int16_t ut_expand_path(
     ut_strbuf *output,
     const char *path)
 {
-    char *sep = strrchr(path, '/');
+    char *sep = strrchr(path, PATH_SEPARATOR_C);
     char *wildcard = NULL;
     if (sep) {
         wildcard = strchr(sep, '*');
@@ -108,7 +108,7 @@ int16_t ut_expand_path(
                 ut_strbuf_appendstrn(output, " ", 1);
             }
             if (strcmp(dir, ".")) {
-                ut_strbuf_append(output, "%s/%s", dir, file);
+                ut_strbuf_append(output, "%s%c%s", dir, PATH_SEPARATOR_C, file);
             } else {
                 ut_strbuf_append(output, "%s", file);
             }
