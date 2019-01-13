@@ -463,7 +463,7 @@ const char* ut_locate(
 
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
-        strset(&loaded->env, env);
+        ut_strset(&loaded->env, env);
         loaded->project = ut_asprintf("%s/meta/%s", env, package);
     }
 

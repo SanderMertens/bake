@@ -304,7 +304,7 @@ size_t stresc(char *out, size_t n, char delimiter, const char *in) {
     return written;
 }
 
-void strset(char **out, const char *str) {
+void ut_strset(char **out, const char *str) {
     if (*out) {
         free(*out);
     }

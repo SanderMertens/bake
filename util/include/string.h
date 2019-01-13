@@ -147,7 +147,7 @@ size_t stresc(
  * @param str Input string.
  */
 UT_EXPORT
-void strset(
+void ut_strset(
     char **out,
     const char *str);
 
