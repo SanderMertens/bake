@@ -466,7 +466,11 @@ bool ut_expr_runExpr(
         case UT_EXPR_TOKEN_FILTER: {
             const char *elem = (*elements)[0];
             if (elem && strcmp(elem, ".")) {
+#ifndef _WIN32
                 result = !fnmatch(cur->start, (*elements)[0], 0);
+#else
+                result = PathMatchSpecA((*elements)[0], cur->start);
+#endif
             } else {
                 result = false;
                 done = true;
