@@ -171,7 +171,11 @@ char* ut_venvparse(
                     }
                     env_has_separator = false;
                 } else if (!strcmp(token_str, "~")) {
+#ifdef _WIN32
+                    if (ut_append_var(&path, env_has_separator, "USERPROFILE")) {
+#else
                     if (ut_append_var(&path, env_has_separator, "HOME")) {
+#endif
                         free(token_str);
                         goto error;
                     }
