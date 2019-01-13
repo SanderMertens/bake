@@ -61,10 +61,10 @@ bool ut_os_match(
         !stricmp(os, UT_OS_STRING "-arm8") ||
         !stricmp(os, UT_OS_STRING "-arm64") ||
         !stricmp(os, "arm64-" UT_OS_STRING) ||
-        !stricmp(os, "arm8-" UT_OS_STRING)
+        !stricmp(os, "arm8-" UT_OS_STRING) ||
         !stricmp(os, "arm64") ||
         !stricmp(os, "arm8"))
-        
+
 #elif defined(__arm__)
         !stricmp(os, UT_OS_STRING "-arm") ||
         !stricmp(os, UT_OS_STRING "-arm7l") ||
