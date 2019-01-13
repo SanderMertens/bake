@@ -218,7 +218,7 @@ int16_t bake_filelist_add_pattern(
 {
     char *search_path = (char*)path;
     if (fl->path) {
-        search_path = ut_asprintf("%s%c%s", fl->path,PATH_SEPARATOR_C, path);
+        search_path = ut_asprintf("%s%c%s", fl->path, PATH_SEPARATOR_C, path);
     }
     int16_t result = bake_filelist_populate(fl, search_path, pattern);
     if (search_path != path) free(search_path);

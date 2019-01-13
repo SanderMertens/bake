@@ -283,7 +283,7 @@ char* ut_file_path(char* file, char* buffer) {
     strcpy(buffer, file);
     i = strlen(buffer);
     while (i >= 0) {
-        if ((buffer[i] == '/') || (buffer[i] == '\\')) {
+        if (buffer[i] == PATH_SEPARATOR_C) {
             buffer[i] = '\0';
             break;
         }

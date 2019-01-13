@@ -669,8 +669,8 @@ int bake_list(
     uint32_t total = 0, package_count = 0, app_count = 0, error_count = 0;
 
     /* Collect packages from BAKE_HOME */
-    char *home_meta = ut_asprintf("%s/meta", config->home);
-    ut_try( ut_dir_iter(home_meta, "/*", &it), NULL);
+    char *home_meta = ut_asprintf("%s%cmeta", config->home, PATH_SEPARATOR_C);
+    ut_try( ut_dir_iter(home_meta, PATH_SEPARATOR "*", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *id = ut_iter_next(&it);
         env_package *ep = ut_calloc(sizeof(env_package));
@@ -680,8 +680,8 @@ int bake_list(
     }
 
     /* Collect packages from BAKE_TARGET */
-    char *target_meta = ut_asprintf("%s/meta", config->target);
-    ut_try( ut_dir_iter(target_meta, "/*", &it), NULL);
+    char *target_meta = ut_asprintf("%s%cmeta", config->target, PATH_SEPARATOR_C);
+    ut_try( ut_dir_iter(target_meta, PATH_SEPARATOR "*", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *id = ut_iter_next(&it);
 

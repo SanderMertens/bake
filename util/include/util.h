@@ -42,7 +42,11 @@
 #endif
 
 /* Standard C library */
+#if defined(_WIN32)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -57,7 +61,7 @@
 #include <time.h>
 
 /* OS-specific headers */
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32)
 #include <windows.h>
 #else
 #include <fnmatch.h>

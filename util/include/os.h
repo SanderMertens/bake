@@ -36,7 +36,7 @@ extern "C" {
 #warning "bake is not supported on platforms which are neither 32- nor 64-bit."
 #endif
 
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32)
 #define UT_OS_WINDOWS
 #elif defined(__linux__)
 #define UT_OS_LINUX
