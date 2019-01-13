@@ -21,6 +21,12 @@
 
 #include "../include/util.h"
 
+#ifdef _WIN32
+#ifndef S_ISDIR
+#define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+#endif
+#endif
+
 int ut_touch(const char *file) {
     FILE* touch = NULL;
 
@@ -77,8 +83,11 @@ int ut_mkdir(const char *fmt, ...) {
     }
 
     ut_trace("#[cyan]mkdir %s", name);
-
+#ifndef _WIN32
     if (mkdir(name, 0755)) {
+#else
+    if (_mkdir(name)) {
+#endif
         i_errno = errno;
 
         /* If error is ENOENT an element in the prefix of the name
@@ -97,7 +106,11 @@ int ut_mkdir(const char *fmt, ...) {
             if (ch == PATH_SEPARATOR_C) {
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
+#ifndef _WIN32
                     if (!mkdir(name, 0755)) {
+#else
+                    if (!_mkdir(name)) {
+#endif
                         i_errno = 0;
                     } else {
                         i_errno = errno;
@@ -354,6 +367,7 @@ int ut_symlink(
         fullname = (char*)oldname;
     }
 
+#ifndef _WIN32
     ut_trace("#[cyan]symlink %s %s", newname, fullname);
 
     if (symlink(fullname, newname)) {
@@ -389,7 +403,11 @@ int ut_symlink(
             }
         }
     }
-
+#else
+    ut_trace("symlink %s %s", newname, fullname);
+	DWORD dwFlags = 0;
+	CreateSymbolicLinkA(newname, fullname, dwFlags);
+#endif
     if (fullname != oldname) free(fullname);
     return 0;
 error:
@@ -402,11 +420,19 @@ int16_t ut_setperm(
     const char *name,
     int perm)
 {
+#ifndef _WIN32
     ut_trace("#[cyan]setperm %s %d", name, perm);
     if (chmod(name, perm)) {
         ut_throw("chmod: %s", strerror(errno));
         return -1;
     }
+#else
+    ut_trace("setperm %s %d", name, perm);
+    if (_chmod(name, perm)) {
+        ut_throw("chmod: %s", strerror(errno));
+        return -1;
+    }
+#endif
     return 0;
 }
 
@@ -414,12 +440,21 @@ int16_t ut_getperm(
     const char *name,
     int *perm_out)
 {
+#ifdef _WIN32
+	struct _stat st;
+
+    if (_stat(name, &st) < 0) {
+        ut_throw("getperm: %s", strerror(errno));
+        return -1;
+    }
+#else
     struct stat st;
 
     if (stat(name, &st) < 0) {
         ut_throw("getperm: %s", strerror(errno));
         return -1;
     }
+#endif
 
     *perm_out = st.st_mode;
 
@@ -502,11 +537,17 @@ error:
 
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
-    return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
+#ifndef _WIN32
+	return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
+#else
+	BOOL status = RemoveDirectory(name);
+	return status;
+#endif
 }
 
 /* Read the contents of a directory */
 ut_ll ut_opendir(const char *name) {
+#ifndef _WIN32
     DIR *dp;
     struct dirent *ep;
     ut_ll result = NULL;
@@ -526,6 +567,32 @@ ut_ll ut_opendir(const char *name) {
     }
 
     return result;
+#else
+	WIN32_FIND_DATA ffd;
+	TCHAR szDir[MAX_PATH];
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	ut_ll result = NULL;
+
+	strcpy_s(szDir, MAX_PATH, name);
+	strcat_s(szDir, MAX_PATH, TEXT("\\*"));
+	if( PathFileExistsA(name) )
+		result = ut_ll_new();
+	else
+		ut_throw("%s: %s", name, ut_dl_error());
+
+	hFind = FindFirstFile(szDir, &ffd);
+	if(INVALID_HANDLE_VALUE != hFind)
+	{
+		do
+		{
+			ut_ll_append(result, ut_strdup(ffd.cFileName));
+		} while (FindNextFile(hFind, &ffd) != 0);
+		FindClose(hFind);
+	}
+	else
+		ut_throw("%s: %s", name, ut_dl_error());
+	return result;
+#endif
 }
 
 void ut_closedir(ut_ll dir) {
@@ -546,6 +613,7 @@ static
 bool ut_dir_hasNext(
     ut_iter *it)
 {
+#ifndef _WIN32
     struct dirent *ep = readdir(it->ctx);
     while (ep && (!strcmp(ep->d_name, ".") || !strcmp(ep->d_name, ".."))) {
         ep = readdir(it->ctx);
@@ -556,6 +624,10 @@ bool ut_dir_hasNext(
     }
 
     return ep ? true : false;
+#else
+        // TODO: update implimentation
+	return true;
+#endif
 }
 
 static
@@ -569,7 +641,9 @@ static
 void ut_dir_release(
     ut_iter *it)
 {
+#ifndef _WIN32
     closedir(it->ctx);
+#endif
 }
 
 static
@@ -615,9 +689,9 @@ int16_t ut_dir_collect(
         /* Add file to results if it matches filter */
         char *path;
         if (offset) {
-            path = ut_asprintf("%s%c%s%c%s", ut_dirstack_wd(stack),PATH_SEPARATOR_C, offset,PATH_SEPARATOR_C, file);
+            path = ut_asprintf("%s%c%s%c%s", ut_dirstack_wd(stack), PATH_SEPARATOR_C, offset, PATH_SEPARATOR_C, file);
         } else {
-            path = ut_asprintf("%s%c%s", ut_dirstack_wd(stack),PATH_SEPARATOR_C, file);
+            path = ut_asprintf("%s%c%s", ut_dirstack_wd(stack), PATH_SEPARATOR_C, file);
         }
         ut_path_clean(path, path);
 
@@ -630,7 +704,7 @@ int16_t ut_dir_collect(
         }
 
         /* If directory, crawl recursively */
-        char *fullpath = ut_asprintf("%s%c%s", ut_ll_last(stack),PATH_SEPARATOR_C, file);
+        char *fullpath = ut_asprintf("%s%c%s", ut_ll_last(stack), PATH_SEPARATOR_C, file);
         if (ut_isdir(fullpath)) {
             if (ut_dir_collect(file, stack, filter, offset, files, true)) {
                 free(fullpath);

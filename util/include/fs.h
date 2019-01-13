@@ -27,6 +27,11 @@
 #ifndef UT_FS_H
 #define UT_FS_H
 
+#ifdef _WIN32
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
