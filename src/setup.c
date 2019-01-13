@@ -137,8 +137,8 @@ int16_t bake_build_make_project(
     */
 
     ut_try (ut_rename(
-      strarg("%s" PATH_SEPARATOR "lib%s" UT_OS_LIB_EXT, path, artefact),
-      strarg("%s" PATH_SEPARATOR "lib%s" UT_OS_LIB_EXT, bin_path, artefact)),
+      strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
+      strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
 
     free(bin_path);

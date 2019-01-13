@@ -339,7 +339,7 @@ int bake_parse_args(
     /* If artefact is manually specified, translate to platform specific name */
     if (artefact) {
         if (type == BAKE_PACKAGE) {
-            artefact = ut_asprintf("lib%s" UT_OS_LIB_EXT, artefact);
+            artefact = ut_asprintf(LIB_PREFIX "%s" UT_OS_LIB_EXT, artefact);
         }
     }
 

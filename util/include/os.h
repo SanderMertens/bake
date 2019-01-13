@@ -78,9 +78,11 @@ extern "C" {
 #if defined(_WIN32) 
 #define PATH_SEPARATOR "\\"
 #define PATH_SEPARATOR_C '\\'
+#define LIB_PREFIX ""
 #else 
 #define PATH_SEPARATOR "/"
 #define PATH_SEPARATOR_C '/'
+#define LIB_PREFIX "lib"
 #endif 
 
 /* Get hostname of current machine */

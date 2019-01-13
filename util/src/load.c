@@ -356,7 +356,7 @@ int16_t ut_locate_binary(
 
     /* Test for .so library */
     if (ret == 0) {
-        bin = ut_asprintf("%s%clib%clib%s.so", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, pkg_underscore);
+        bin = ut_asprintf("%s%clib%c%s%s.so", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, LIB_PREFIX, pkg_underscore);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->lib = bin;
