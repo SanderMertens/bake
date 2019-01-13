@@ -108,6 +108,7 @@ int16_t ut_file_test(
     va_end(arglist);
 
     if (file) {
+#ifndef _WIN32
         errno = 0;
         exists = fopen(file, "rb");
         if (exists) {
@@ -118,6 +119,10 @@ int16_t ut_file_test(
         } else {
             errno = 0;
         }
+#else
+        DWORD dwAttrib = GetFileAttributes(file);
+        exists = (dwAttrib != INVALID_FILE_ATTRIBUTES);
+#endif
     }
 
     free(file);
