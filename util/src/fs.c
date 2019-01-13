@@ -53,7 +53,7 @@ char* ut_cwd(void) {
 }
 
 int ut_mkdir(const char *fmt, ...) {
-    int _errno = 0;
+    int i_errno = 0;
 
     va_list args;
     va_start(args, fmt);
@@ -79,7 +79,7 @@ int ut_mkdir(const char *fmt, ...) {
     ut_trace("#[cyan]mkdir %s", name);
 
     if (mkdir(name, 0755)) {
-        _errno = errno;
+        i_errno = errno;
 
         /* If error is ENOENT an element in the prefix of the name
          * doesn't exist. Recursively create pathname, and retry. */
@@ -98,9 +98,9 @@ int ut_mkdir(const char *fmt, ...) {
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
                     if (!mkdir(name, 0755)) {
-                        _errno = 0;
+                        i_errno = 0;
                     } else {
-                        _errno = errno;
+                        i_errno = errno;
                     }
                 } else {
                     goto error;
@@ -113,7 +113,7 @@ int ut_mkdir(const char *fmt, ...) {
 
         /* Post condition for function is that directory exists so don't
          * report an error if it already did. */
-        if (_errno && (_errno != EEXIST)) {
+        if (i_errno && (i_errno != EEXIST)) {
             goto error;
         }
     }
