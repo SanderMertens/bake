@@ -32,13 +32,22 @@ int16_t ut_setenv(const char *varname, const char *value, ...) {
             goto error;
         }
         va_end(arglist);
+#ifndef _WIN32
         if (setenv(varname, buff, 1)) {
             ut_throw("failed to set variable '%s'", varname);
             goto error;
         }
+#else
+        if(_putenv_s(varname, buff)) {
+            ut_throw("failed to set variable '%s'", varname);
+            goto error;
+        }
+#endif
         free(buff);
     } else {
+#ifndef _WIN32
         unsetenv(varname);
+#endif
     }
     return 0;
 error:
@@ -63,7 +72,11 @@ int16_t ut_append_var(
 
     if (strlen(val)) {
         if (separator) {
+#ifdef _WIN32
+            ut_strbuf_appendstr(output, ";");
+#else
             ut_strbuf_appendstr(output, ":");
+#endif
         }
         ut_strbuf_appendstr(output, val);
     }
