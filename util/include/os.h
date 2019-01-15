@@ -46,13 +46,13 @@ extern "C" {
 #warning "Unsupported operating system"
 #endif
 
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define UT_CPU_STRING  "arm64"
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(_M_ARM)
 #define UT_CPU_STRING  "arm"
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(_M_X64)
 #define UT_CPU_STRING  "x64"
-#elif defined(__i386__)
+#elif defined(__i386__) || defined(_M_IX86)
 #define UT_CPU_STRING  "x86"
 #else
 #error "Unsupported CPU architecture"
