@@ -36,8 +36,11 @@ typedef struct ut_sem_s* ut_sem;
 
 
 /* -- Thread management -- */
-
+#ifdef _WIN32
+typedef HANDLE ut_thread;
+#else
 typedef unsigned long int ut_thread;
+#endif
 typedef void* (*ut_thread_cb)(void*);
 
 /** Create new thread.

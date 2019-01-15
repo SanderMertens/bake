@@ -311,7 +311,11 @@ const char* ut_appname();
 #include "time.h"
 #include "dl.h"
 #include "fs.h"
+#ifdef _WIN32
+#include "win_thread.h"
+#else
 #include "posix_thread.h"
+#endif
 #include "thread.h"
 #include "file.h"
 #include "env.h"
