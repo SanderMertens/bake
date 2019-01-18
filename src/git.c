@@ -173,27 +173,20 @@ int16_t bake_update_dependency_list(
             bake_crawler_add(config, dep_project);
             ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
         } else {
-            const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
-            if (deppath) {
-                if (ut_locate(dep, NULL, UT_LOCATE_BIN)) {
-                    ut_log("found dependency '%s' locally in '%s'\n", dep, deppath);
-                } else {
-                    ut_log(
-        "found project '%s' but no source or binary. Attempting to reclone.\n");
-                    deppath = NULL;
-                }
+            if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
+                ut_log(
+                  "found '%s' but cloning anyway because source is missing\n",
+                  dep);
             }
 
-            if (!deppath) {
-                char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-                if (bake_clone(config, url)) {
-                    ut_catch();
-                    ut_throw(
-                        "cannot find repository '%s' in '%s'", dep_tmp, base_url);
-                    goto error;
-                }
-                free(url);
+            char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
+            if (bake_clone(config, url)) {
+                ut_catch();
+                ut_throw(
+                    "cannot find repository '%s' in '%s'", dep_tmp, base_url);
+                goto error;
             }
+            free(url);
         }
 
         free(dep_tmp);
