@@ -163,7 +163,9 @@ int16_t bake_update_dependency_list(
         } else {
             /* If source is a project under development, just build it */
             src = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
-            ut_log("found '%s' in '%s' (in dev tree, not pulling)\n", dep, src);
+            if (src) {
+                ut_log("found '%s' in '%s' (in dev tree, not pulling)\n", dep, src);
+            }
         }
 
         if (src) {
