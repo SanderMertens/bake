@@ -682,18 +682,22 @@ int bake_list(
 
     /* Collect packages from BAKE_TARGET */
     char *target_meta = ut_asprintf("%s/meta", config->target);
-    ut_try( ut_dir_iter(target_meta, "/*", &it), NULL);
-    while (ut_iter_hasNext(&it)) {
-        char *id = ut_iter_next(&it);
+    if (ut_file_test(target_meta) == 1) {
+        ut_try( ut_dir_iter(target_meta, "/*", &it), NULL);
+        while (ut_iter_hasNext(&it)) {
+            char *id = ut_iter_next(&it);
 
-        env_package *ep = ut_ll_find(packages, env_package_find, id);
-        if (!ep) {
-            ep = ut_calloc(sizeof(env_package));
-            ep->id = ut_strdup(id);
-            ut_ll_append(packages, ep);
+            env_package *ep = ut_ll_find(packages, env_package_find, id);
+            if (!ep) {
+                ep = ut_calloc(sizeof(env_package));
+                ep->id = ut_strdup(id);
+                ut_ll_append(packages, ep);
+            }
+
+            ep->in_target = true;
         }
-
-        ep->in_target = true;
+    } else {
+        ut_trace("no bake target environment detected");
     }
 
     /* Copy packages to array so they can be sorted with qsort */
