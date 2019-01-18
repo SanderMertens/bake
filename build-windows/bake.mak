@@ -64,6 +64,7 @@ BAKE_SOURCE= ..\src\attribute.c \
 			..\src\main.c \
 			..\src\project.c \
 			..\src\rule.c \
+			..\src\run.c \
 			..\src\setup.c \
 
 UTIL_SOURCE= ..\util\src\dl_win.c \
