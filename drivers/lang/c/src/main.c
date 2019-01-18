@@ -1,5 +1,5 @@
 
-#include <bake>
+#include <bake.h>
 
 #define OBJ_DIR ".bake_cache/obj"
 
@@ -15,9 +15,13 @@ char* src_to_obj(
 {
     const char *cfg = config->configuration;
     char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
-    sprintf(result, OBJ_DIR "/%s-%s/%s", UT_PLATFORM_STRING, cfg, in);
+    sprintf(result, OBJ_DIR "%c%s-%s%c%s", PATH_SEPARATOR_C, UT_PLATFORM_STRING, cfg, PATH_SEPARATOR_C, in);
     char *ext = strrchr(result, '.');
+#ifdef _WIN32
+    strcpy(ext + 1, "obj");
+#else
     strcpy(ext + 1, "o");
+#endif
     return result;
 }
 
@@ -64,6 +68,15 @@ bool is_darwin(void)
     return true;
 }
 
+static
+bool is_windows(void)
+{
+    if (strcmp(UT_OS_STRING, "windows")) {
+        return false;
+    }
+    return true;
+}
+
 /* Is language C++ */
 static
 bool is_cpp(
@@ -94,6 +107,8 @@ const char *cc(
                 cc = "gcc";
             return cc;
         }
+    } else if(is_windows()) {
+        return "cl.exe";
     } else {
         if (is_cpp) {
             if (!cxx)
@@ -245,7 +260,7 @@ const char* lib_map(
 {
     /* On darwin, librt does not exist */
     if (!strcmp(lib, "rt")) {
-        if (is_darwin()) {
+        if (is_darwin() || is_windows()) {
             return NULL;
         }
     }
