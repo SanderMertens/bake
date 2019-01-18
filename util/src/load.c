@@ -505,7 +505,7 @@ const char* ut_locate(
 
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
-        strset(&loaded->env, env);
+        ut_strset(&loaded->env, env);
         loaded->project = ut_asprintf("%s%cmeta%c%s", env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
         loaded->repo = ut_strdup(package);
         char *ptr, ch;

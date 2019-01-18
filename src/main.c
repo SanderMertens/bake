@@ -682,9 +682,10 @@ int bake_list(
 
     /* Collect packages from BAKE_TARGET */
     char *target_meta = ut_asprintf("%s%cmeta", config->target, PATH_SEPARATOR_C);
-    ut_try( ut_dir_iter(target_meta, PATH_SEPARATOR "*", &it), NULL);
-    while (ut_iter_hasNext(&it)) {
-        char *id = ut_iter_next(&it);
+    if (ut_file_test(target_meta) == 1) {
+        ut_try( ut_dir_iter(target_meta, PATH_SEPARATOR "*", &it), NULL);
+        while (ut_iter_hasNext(&it)) {
+            char *id = ut_iter_next(&it);
 
             env_package *ep = ut_ll_find(packages, env_package_find, id);
             if (!ep) {
