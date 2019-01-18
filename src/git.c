@@ -22,6 +22,12 @@
 #include "bake.h"
 
 static
+int16_t bake_update_dependencies(
+    bake_config *config,
+    const char *base_url,
+    bake_project *project);
+
+static
 int16_t cmd(
    char *cmd)
 {
@@ -33,6 +39,23 @@ int16_t cmd(
     }
 
     return 0;
+}
+
+static
+int16_t git_pull(
+    const char *src_path)
+{
+    char *
+    gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
+    ut_try(cmd(gitcmd), NULL);
+    gitcmd = ut_asprintf("git -C %s reset -q --hard origin/master", src_path);
+    ut_try(cmd(gitcmd), NULL);
+    gitcmd = ut_asprintf("git -C %s clean -q -xdf", src_path);
+    ut_try(cmd(gitcmd), NULL);
+
+    return 0;
+error:
+    return -1;
 }
 
 static
@@ -115,7 +138,13 @@ int16_t bake_update_dependency_list(
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
 
+        if (!strcmp(dep, "bake.util")) {
+            /* Skip bootstrapped bake.util dependency */
+            continue;
+        }
+
         if (bake_crawler_get(dep)) {
+            ut_debug("dependency '%s' already added to crawler, skipping", dep);
             continue;
         }
 
@@ -126,19 +155,40 @@ int16_t bake_update_dependency_list(
             }
         }
 
-        char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-        if (!bake_clone(config, url)) {
-            ut_catch();
-            const char *deppath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
-            if (!deppath) {
+        const char *src = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        if (src) {
+            /* If source is in bake environment, pull latest version */
+            ut_log("pull '%s' in '%s'\n", dep, src);
+            git_pull(src);
+        } else {
+            /* If source is a project under development, just build it */
+            src = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
+            if (src) {
+                ut_log("found '%s' in '%s' (in dev tree, not pulling)\n", dep, src);
+            }
+        }
+
+        if (src) {
+            bake_project *dep_project = bake_project_new(src, config);
+            bake_crawler_add(config, dep_project);
+            ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
+        } else {
+            if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
+                ut_log(
+                  "found '%s' but cloning anyway because source is missing\n",
+                  dep);
+            }
+
+            char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
+            if (bake_clone(config, url)) {
+                ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
-            } else {
-                ut_log("found dependency '%s' locally in '%s'\n", dep, deppath);
             }
+            free(url);
         }
-        free(url);
+
         free(dep_tmp);
     }
 
@@ -170,13 +220,7 @@ int16_t bake_update(
 
     ut_log("update '%s' in '%s'\n", full_url, src_path);
 
-    char *
-    gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
-    ut_try(cmd(gitcmd), NULL);
-    gitcmd = ut_asprintf("git -C %s reset -q --hard origin/master", src_path);
-    ut_try(cmd(gitcmd), NULL);
-    gitcmd = ut_asprintf("git -C %s clean -q -xdf", src_path);
-    ut_try(cmd(gitcmd), NULL);
+    git_pull(src_path);
 
     project = bake_project_new(src_path, config);
     if (!project) {
@@ -222,8 +266,8 @@ int16_t bake_clone(
         goto error;
     }
 
-    ut_try(bake_update_dependencies(config, base_url, project), NULL);
-    ut_try(bake_crawler_add(config, project), NULL);
+    ut_try( bake_update_dependencies(config, base_url, project), NULL);
+    ut_try( bake_crawler_add(config, project), NULL);
 
     free(full_url);
     free(base_url);

@@ -42,10 +42,14 @@ struct ut_loaded {
     char *app; /* Path to executable (if available) */
     char *bin; /* Path to binary (if available) */
     char *etc; /* Path to project etc (if available) */
+    char *src; /* Path to project source (if available) */
+    char *dev; /* Path to project in development (if available) */
     char *include; /* Path to project include (if available) */
     char *project; /* Path to project lib. Always available if valid project */
-    bool tried_binary; /* Set to true if already tried loading the bin path */
-    bool tried_locating; /* Set to true if already tried locating package */
+    char *repo; /* Repository name (replace . with -) */
+    bool tried_binary; /* Set to true if tried loading the bin path */
+    bool tried_locating; /* Set to true if tried locating package */
+    bool tried_src; /* Set to true if tried locating source */
 
     /* Members used by package loader to indicate current loading status */
     ut_thread loading; /* current thread loading package */
@@ -418,6 +422,45 @@ error:
     return -1;
 }
 
+static
+int16_t ut_locate_src(
+    const char *id,
+    struct ut_loaded *loaded)
+{
+    if (loaded->tried_src) {
+        return 0;
+    }
+
+    char *src = ut_asprintf("%s/src/%s", UT_LOAD_HOME_PATH, loaded->repo);
+    if (ut_file_test(src) == 1) {
+        loaded->src = src;
+    } else {
+        ut_trace("sources for '%s' not found in '%s'", id, src);
+        free(src);
+    }
+
+    src = ut_asprintf("%s/source.txt", loaded->project);
+    if (ut_file_test(src) == 1) {
+        char *path = ut_file_load(src);
+
+        /* Trim newline */
+        size_t len = strlen(path);
+        if (path[len - 1] == '\n') {
+            path[len - 1] = '\0';
+        }
+
+        if (ut_file_test(path) == 1) {
+            loaded->dev = path;
+        } else {
+            free(path);
+        }
+    }
+
+    loaded->tried_src = true;
+
+    return 0;
+}
+
 const char* ut_locate(
     const char* package,
     ut_dl *dl_out,
@@ -462,8 +505,15 @@ const char* ut_locate(
 
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
-        ut_strset(&loaded->env, env);
+        strset(&loaded->env, env);
         loaded->project = ut_asprintf("%s%cmeta%c%s", env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
+        loaded->repo = ut_strdup(package);
+        char *ptr, ch;
+        for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                *ptr = '-';
+            }
+        }
     }
 
     /* If loaded hasn't been loaded by now, package isn't found */
@@ -492,6 +542,18 @@ const char* ut_locate(
                 loaded->include = ut_asprintf("%s%cinclude%c%s.dir", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, package);
             }
             result = loaded->include;
+            break;
+        case UT_LOCATE_SOURCE:
+            if (!loaded->src) {
+                ut_try (ut_locate_src(package, loaded), NULL);
+            }
+            result = loaded->src;
+            break;
+        case UT_LOCATE_DEVSRC:
+            if (!loaded->dev) {
+                ut_try (ut_locate_src(package, loaded), NULL);
+            }
+            result = loaded->dev;
             break;
         case UT_LOCATE_LIB:
         case UT_LOCATE_STATIC:
@@ -783,7 +845,12 @@ void* ut_load_sym(
             }
         }
         if (!*dl_out) {
-            ut_throw(NULL);
+            char *err = (char*)ut_dl_error();
+            if (err) {
+                ut_throw("failed to load library '%s': %s", lib, err);
+            } else {
+                ut_throw("failed to locate binary for package '%s'", package);
+            }
             goto error;
         }
     }

@@ -194,7 +194,7 @@ void* ut_file_next(
 
     while (!feof(it->ctx)) {
         char c = fgetc(it->ctx);
-        if (c == '\n' || c == EOF) {
+        if (c == '\n' || c == (char)EOF) {
             break;
         }
 

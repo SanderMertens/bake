@@ -92,7 +92,9 @@ typedef enum ut_locate_kind {
     UT_LOCATE_BIN,     /* full path to either library or application */
     UT_LOCATE_ETC,     /* full path to project etc directory */
     UT_LOCATE_INCLUDE, /* full path to project include directory */
-    UT_LOCATE_PROJECT  /* full path to project directory */
+    UT_LOCATE_PROJECT, /* full path to project directory */
+    UT_LOCATE_SOURCE,  /* full path to project source */
+    UT_LOCATE_DEVSRC   /* full path to project development source */
 } ut_locate_kind;
 
 /** Find project locations in the package hierarchy.
