@@ -91,6 +91,10 @@ int16_t bake_crawler_add(
     bake_config *config,
     bake_project *p)
 {
+    if (!p) {
+        return 0;
+    }
+
     if (!crawler->nodes) crawler->nodes = ut_rb_new(project_cmp, NULL);
 
     ut_try (bake_do_pre_discovery(config, p), NULL);

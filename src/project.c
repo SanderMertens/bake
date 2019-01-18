@@ -578,7 +578,7 @@ bake_project* bake_project_new(
             bake_project_parse(config, result),
             "failed to parse '%s/project.json'",
             path);
-
+            
         ut_try( bake_project_init(config, result), NULL);
     }
 
