@@ -398,9 +398,15 @@ int16_t bake_crawler_build_project(
     bake_project *p,
     ut_ll readyForBuild)
 {
+#ifndef _WIN32
     ut_ok(
         "#[grey]begin %s of %s '%s' in '%s'",
         action_name, bake_project_kind_str(p->type), p->id, p->path);
+#else
+    ut_ok(
+        "begin %s of %s '%s' in '%s'",
+        action_name, bake_project_kind_str(p->type), p->id, p->path);
+#endif
 
     if (action(config, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
@@ -413,7 +419,11 @@ int16_t bake_crawler_build_project(
             action_name, p->id, p->path);
     } else if (p->language && strcmp(action_name, "foreach")) {
         ut_log(
+#ifndef _WIN32
             "#[grey]ready '%s'\n",
+#else
+            "ready '%s'\n",
+#endif
             p->id);
     }
 

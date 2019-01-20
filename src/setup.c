@@ -133,7 +133,11 @@ int16_t bake_build_make_project(
       path, id);
     ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
+#ifndef _WIN32
     ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
+#else
+    ut_log("OK   install include files for '%s'\n", id);
+#endif
 
     ut_log("...  build '%s'", id);
     fflush(stdout);
@@ -164,7 +168,11 @@ int16_t bake_build_make_project(
       "bake install %s --id %s --artefact %s --build-to-home --package",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
+#ifndef _WIN32
     ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
+#else
+    ut_log("OK   install '%s' to %%BAKE_HOME%%\n", id);
+#endif
     free(install_cmd);
 
     return 0;

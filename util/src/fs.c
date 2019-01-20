@@ -82,10 +82,11 @@ int ut_mkdir(const char *fmt, ...) {
         return 0;
     }
 
-    ut_trace("#[cyan]mkdir %s", name);
 #ifndef _WIN32
+    ut_trace("#[cyan]mkdir %s", name);
     if (mkdir(name, 0755)) {
 #else
+    ut_trace("mkdir %s", name);
     if (_mkdir(name)) {
 #endif
         i_errno = errno;
@@ -315,7 +316,11 @@ int16_t ut_cp(
         result = ut_cp_file(src_parsed, dst_parsed);
     }
 
+#ifndef _WIN32
     ut_trace("#[cyan]cp %s %s", src, dst);
+#else
+    ut_trace("cp %s %s", src, dst);
+#endif
 
     free(src_parsed);
     free(dst_parsed);
@@ -499,7 +504,11 @@ int ut_rm(const char *name) {
     if (remove(name)) {
         if (errno != ENOENT) {
             if (ut_isdir(name)) {
+#ifndef _WIN32
                 ut_trace("#[cyan]rm %s (D)", name);
+#else
+                ut_trace("#[cyan]rm %s (D)", name);
+#endif
                 return ut_rmtree(name);
             } else {
                 result = -1;
@@ -511,7 +520,11 @@ int ut_rm(const char *name) {
     }
 
     if (!result) {
+#ifndef _WIN32
         ut_trace("#[cyan]rm %s", name);
+#else
+        ut_trace("rm %s", name);
+#endif
     }
 
     return result;
