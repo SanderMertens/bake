@@ -288,12 +288,12 @@ void ut_backtrace(FILE* f) {
         SymFromAddr(process, address, NULL, symbol);
         if (SymGetLineFromAddr64(process, address, &displacement, line))
         {
-            fprintf(f, "\tat %s in %s: line: %lu: address: 0x%0X\n", symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+            fprintf(f, "\tat %s in %s: line: %lu: address: 0x%I64X\n", symbol->Name, line->FileName, line->LineNumber, symbol->Address);
         }
         else
         {
             fprintf(f, "\tSymGetLineFromAddr64 returned error code %lu.\n", GetLastError());
-            fprintf(f, "\tat %s, address 0x%0X.\n", symbol->Name, symbol->Address);
+            fprintf(f, "\tat %s, address 0x%I64X.\n", symbol->Name, symbol->Address);
         }
     }
 #endif
@@ -344,12 +344,12 @@ char* ut_backtraceString(void) {
         SymFromAddr(process, address, NULL, symbol);
         if (SymGetLineFromAddr64(process, address, &displacement, line))
         {
-            sprintf(result, "%s \tat %s in %s: line: %lu: address: 0x%0X\n", result, symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+            sprintf(result, "%s \tat %s in %s: line: %lu: address: 0x%I64X\n", result, symbol->Name, line->FileName, line->LineNumber, symbol->Address);
         }
         else
         {
             sprintf(result, "%s \tSymGetLineFromAddr64 returned error code %lu.\n", result, GetLastError());
-            sprintf(result, "%s \tat %s, address 0x%0X.\n", result, symbol->Name, symbol->Address);
+            sprintf(result, "%s \tat %s, address 0x%I64X.\n", result, symbol->Name, symbol->Address);
         }
     }
     strcat(result, "\n");
