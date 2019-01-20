@@ -24,3 +24,10 @@ workspace "bake_util"
     configuration "release"
       defines { "UT_IMPL", "NDEBUG" }
       optimize "On"
+
+    filter { "system:macosx", "action:gmake"}
+      toolset "clang"
+      links { "dl", "pthread" }
+
+    filter { "system:linux", "action:gmake"}
+      links { "rt", "dl", "pthread", "m" }
