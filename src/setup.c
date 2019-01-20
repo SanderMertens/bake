@@ -21,7 +21,11 @@
 
 #include "bake.h"
 
+#ifndef _WIN32
 #define GLOBAL_PATH "/usr/local/bin"
+#else
+#define GLOBAL_PATH "C:\\Windows\\system32"
+#endif
 
 static
 int16_t cmd(
@@ -37,7 +41,75 @@ int16_t cmd(
     return 0;
 }
 
-int16_t bake_create_script(void)
+int16_t bake_create_script_windows(void)
+{
+    char *script_path = ut_envparse("$USERPROFILE\\bake\\bake.bat");
+    if (!script_path) {
+        ut_error("missing $USERPROFILE environment variable");
+        goto error;
+    }
+
+    FILE *f = fopen(script_path, "wb");
+
+    if (!f) {
+        ut_error("cannot open '%s': %s", script_path, strerror(errno));
+        goto error;
+    }
+
+    fprintf(f, "IF [%%1] == [upgrade] (\n");
+    fprintf(f, "    mkdir %%USERPROFILE%%\\bake\\src\n");
+    fprintf(f, "    cd %%USERPROFILE%%\\bake\\src\n\n");
+
+    fprintf(f, "    IF NOT EXIST \"bake\" (\n");
+    fprintf(f, "        echo \"Cloning bake repository...\"\n");
+    fprintf(f, "        git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
+    fprintf(f, "        cd \"bake\"\n");
+    fprintf(f, "    ) else (\n");
+    fprintf(f, "        cd \"bake\"\n");
+    fprintf(f, "        echo \"Reset bake repository...\"\n");
+    fprintf(f, "        git fetch -q origin\n");
+    fprintf(f, "        git reset -q --hard origin/master\n");
+    fprintf(f, "        git clean -q -xdf\n");
+    fprintf(f, "    )\n");
+    fprintf(f, "\n\n");
+    fprintf(f, "    cd build-windows\\\n");
+    fprintf(f, "    nmake /f bake.mak\n");
+    fprintf(f, "\n\n");
+
+    fprintf(f, "    bake.exe setup --local-setup\n");
+    fprintf(f, "\n\n");
+    fprintf(f, ") ELSE (\n");
+    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\bake.exe %%*\n");
+    fprintf(f, ")\n\n");
+
+    fclose(f);
+
+    /* Copy file to global location, may ask for password */
+    ut_log("ATTENTION copying script to '" GLOBAL_PATH "', setup may request password\n");
+
+    char *cp_cmd = ut_asprintf("copy /Y %s %s\\bake.bat", script_path, GLOBAL_PATH);
+
+    if (cmd(cp_cmd)) {
+        printf("\n");
+        ut_warning(
+            "Failed to instal bake script to %s. Setup will continue, but\n"
+            "      before you can use bake, you now first need to run:\n"
+            "         %%USERPROFILE%%\\bake\\bake.exe env\n", GLOBAL_PATH
+        );
+    }
+    else {
+        ut_log("OK   install bake script to '" GLOBAL_PATH "'\n");
+    }
+
+    free(script_path);
+    free(cp_cmd);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_create_script_unixlike(void)
 {
     char *script_path = ut_envparse("$HOME/bake/bakes.sh");
     if (!script_path) {
@@ -122,6 +194,13 @@ int16_t bake_create_script(void)
 error:
     return -1;
 }
+int16_t bake_create_script(void)
+{
+    if (ut_os_match("windows"))
+        return bake_create_script_windows();
+    else
+        return bake_create_script_unixlike();
+}
 
 int16_t bake_build_make_project(
     const char *path,
@@ -141,9 +220,19 @@ int16_t bake_build_make_project(
 
     ut_log("...  build '%s'", id);
     fflush(stdout);
+#ifdef _WIN32
+
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char *driver_path = ut_asprintf("%s%c%s\\build-%s", ut_cwd(), PATH_SEPARATOR_C, path, UT_OS_STRING);
+    ut_try(cmd(strarg("\"\"%s\" x64 && cd \"%s\" && " UT_MAKE_TOOL " /NOLOGO /F Makefile clean all\"", tool, driver_path)),
+      "failed to build '%s'", id);
+
+    ut_log("OK   build '%s'\n", id);
+#else
     ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
       "failed to build '%s'", id);
     ut_log("#[green]OK#[reset]   build '%s'\n", id);
+#endif
 
     char *bin_path = ut_asprintf("%s%cbin%c%s-debug", path, PATH_SEPARATOR_C, PATH_SEPARATOR_C, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
@@ -180,7 +269,7 @@ error:
     return -1;
 }
 
-int16_t bake_setup(
+int16_t bake_setup_unixlike(
     const char *bake_cmd,
     bool local)
 {
@@ -263,4 +352,101 @@ int16_t bake_setup(
     return 0;
 error:
     return -1;
+}
+
+int16_t bake_setup_windows(
+    const char *bake_cmd,
+    bool local)
+{
+    char *dir = ut_strdup(bake_cmd);
+    char *last_elem = strrchr(dir, PATH_SEPARATOR_C);
+
+    if (last_elem) {
+        *last_elem = '\0';
+        ut_chdir(dir);
+    }
+
+    /* Temporary fix to ensure bake shell script is updated on upgrade */
+    local = false;
+
+    char *cur_env = ut_envparse("~\\bake");
+    char *cur_dir = ut_strdup(ut_cwd());
+
+    if (!strcmp(cur_env, cur_dir)) {
+        char *tmp_dir = ut_envparse("~\\bake_temp");
+        char *target_dir = ut_envparse("~\\bake\\src\\bake");
+        ut_try(ut_rm(tmp_dir), NULL);
+        ut_try(ut_rename(cur_dir, tmp_dir), NULL);
+        ut_try(ut_mkdir("~\\bake\\src"), NULL);
+        ut_try(ut_rename(tmp_dir, target_dir), NULL);
+        ut_try(ut_chdir(target_dir), NULL);
+        free(target_dir);
+        free(tmp_dir);
+    }
+
+    free(cur_dir);
+
+    ut_try(ut_mkdir(cur_env), NULL);
+    free(cur_env);
+
+    ut_log("Bake setup, installing to %%BAKE_HOME%% ('%s')\n", ut_getenv("BAKE_HOME"));
+
+    if (!local) {
+        ut_try(bake_create_script(), 
+             "failed to create global bake script");
+    }
+    
+    ut_try(ut_cp(".\\bake.exe", "~\\bake\\bake.exe"),
+        "failed to copy bake executable to user bake environment");
+
+    ut_log("OK   copy bake executable to %%BAKE_HOME%%\n");
+
+    ut_try(cmd("bake.exe install --id bake --includes include --build-to-home"),
+        "failed to install bake include files");
+    ut_log("OK   install bake include files to %%BAKE_HOME%%\n");
+
+    ut_try(bake_build_make_project("util", "bake.util", "bake_util"), NULL);
+
+    ut_try(bake_build_make_project("drivers\\lang\\c", "bake.lang.c", "bake_lang_c"), NULL);
+
+    ut_try(bake_build_make_project("drivers\\lang\\cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
+
+    ut_try(cmd("bake.exe libraries --build-to-home"), NULL);
+    ut_log("OK   Installed library configuration packages\n");
+
+    /*
+
+     ______   ______   ______   __   __       ______   ______  ______
+    /\  __ \ /\  ___\ /\  ___\ /\ \ /\ \     /\  __ \ /\  == \/\__  _\
+    \ \  __ \\ \___  \\ \ \____\ \ \\ \ \    \ \  __ \\ \  __<\/_/\ \/
+     \ \_\ \_\\/\_____\\ \_____\\ \_\\ \_\    \ \_\ \_\\ \_\ \_\ \ \_\
+      \/_/\/_/ \/_____/ \/_____/ \/_/ \/_/     \/_/\/_/ \/_/ /_/  \/_/
+
+     */
+
+    ut_log(
+        "\n"
+        "    ___      ___      ___      ___ \n"
+        "   /\\  \\    /\\  \\    /\\__\\    /\\  \\ \n"
+        "  /  \\  \\  /  \\  \\  / / _/_  /  \\  \\ \n"
+        " /  \\ \\__\\/  \\ \\__\\/  -\"\\__\\/  \\ \\__\\ \n"
+        " \\ \\  /  /\\/\\  /  /\\; ;-\",-\"\\ \\ \\/  / \n"
+        "  \\  /  /   / /  /  | |  |   \\ \\/  / \n"
+        "   \\/__/    \\/__/    \\|__|    \\/__/ \n\n");
+
+    printf("\n       Installation complete \n\n");
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_setup(
+    const char *bake_cmd,
+    bool local)
+{
+    if (ut_os_match("windows"))
+        return bake_setup_windows(bake_cmd, local);
+    else
+        return bake_setup_unixlike(bake_cmd, local);
 }
