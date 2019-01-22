@@ -37,13 +37,14 @@ void ut_dl_close(ut_dl dl) {
 
 /* Lookup symbol in dynamic library */
 void* ut_dl_sym(ut_dl dl, const char* sym) {
-    return NULL;
+    FARPROC a = GetProcAddress(dl, sym);
+    return (void *)a;
 }
 
 /* Lookup procedure in dynamic library */
 void*(*ut_dl_proc(ut_dl dl, const char* proc))(void) {
     FARPROC a = GetProcAddress(dl, proc);
-    return a;
+    return (void*)a;
 }
 
 /* Lookup last error */
