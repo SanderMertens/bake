@@ -358,9 +358,9 @@ int16_t ut_locate_binary(
     }
 #endif
 
-    /* Test for .so library */
+    /* Test for .so library ( or .dll on windows ) */
     if (ret == 0) {
-        bin = ut_asprintf("%s%clib%c%s%s.so", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, LIB_PREFIX, pkg_underscore);
+        bin = ut_asprintf("%s%clib%c%s%s%s", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, LIB_PREFIX, pkg_underscore, UT_OS_LIB_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->lib = bin;
@@ -394,9 +394,10 @@ int16_t ut_locate_binary(
         }
     }
 
+
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s%cbin%c%s", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, pkg_underscore);
+        bin = ut_asprintf("%s%cbin%c%s%s", loaded->env, PATH_SEPARATOR_C, PATH_SEPARATOR_C, pkg_underscore, UT_OS_BIN_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             loaded->app = bin;
@@ -431,7 +432,7 @@ int16_t ut_locate_src(
         return 0;
     }
 
-    char *src = ut_asprintf("%s/src/%s", UT_LOAD_HOME_PATH, loaded->repo);
+    char *src = ut_asprintf("%s%csrc%c%s", UT_LOAD_HOME_PATH, PATH_SEPARATOR_C, PATH_SEPARATOR_C, loaded->repo);
     if (ut_file_test(src) == 1) {
         loaded->src = src;
     } else {
@@ -439,7 +440,7 @@ int16_t ut_locate_src(
         free(src);
     }
 
-    src = ut_asprintf("%s/source.txt", loaded->project);
+    src = ut_asprintf("%s%csource.txt", loaded->project, PATH_SEPARATOR_C);
     if (ut_file_test(src) == 1) {
         char *path = ut_file_load(src);
 
@@ -810,7 +811,11 @@ recursive:
             if (lib->loading) {
                 ut_strbuf_append(
                     &detail,
+#ifndef _WIN32
                     "    - #[cyan]%s#[normal] #[magenta]=>#[normal] #[white]%s\n",
+#else
+                    "    - %s => %s\n",
+#endif
                     lib->id, lib->bin ? lib->bin : "");
             }
         }
