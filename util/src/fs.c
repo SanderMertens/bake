@@ -446,7 +446,7 @@ int16_t ut_getperm(
     int *perm_out)
 {
 #ifdef _WIN32
-	struct _stat st;
+    struct _stat st;
 
     if (_stat(name, &st) < 0) {
         ut_throw("getperm: %s", strerror(errno));
@@ -551,10 +551,10 @@ error:
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
 #ifndef _WIN32
-	return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
+    return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
 #else
-	BOOL status = RemoveDirectory(name);
-	return status;
+    BOOL status = RemoveDirectory(name);
+    return status;
 #endif
 }
 
@@ -581,32 +581,60 @@ ut_ll ut_opendir(const char *name) {
 
     return result;
 #else
-	WIN32_FIND_DATA ffd;
-	TCHAR szDir[MAX_PATH];
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	ut_ll result = NULL;
+    WIN32_FIND_DATA ffd;
+    TCHAR szDir[MAX_PATH];
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+    ut_ll result = NULL;
 
-	strcpy_s(szDir, MAX_PATH, name);
-	strcat_s(szDir, MAX_PATH, TEXT("\\*"));
-	if( PathFileExistsA(name) )
-		result = ut_ll_new();
-	else
-		ut_throw("%s: %s", name, ut_dl_error());
+    strcpy_s(szDir, MAX_PATH, name);
+    strcat_s(szDir, MAX_PATH, TEXT("\\*"));
+    if( PathFileExistsA(name) )
+        result = ut_ll_new();
+    else
+        ut_throw("%s: %s", name, ut_dl_error());
 
-	hFind = FindFirstFile(szDir, &ffd);
-	if(INVALID_HANDLE_VALUE != hFind)
-	{
-		do
-		{
-			ut_ll_append(result, ut_strdup(ffd.cFileName));
-		} while (FindNextFile(hFind, &ffd) != 0);
-		FindClose(hFind);
-	}
-	else
-		ut_throw("%s: %s", name, ut_dl_error());
-	return result;
+    hFind = FindFirstFile(szDir, &ffd);
+    if(INVALID_HANDLE_VALUE != hFind)
+    {
+        do
+        {
+            ut_ll_append(result, strdup(ffd.cFileName));
+        } while (FindNextFile(hFind, &ffd));
+        FindClose(hFind);
+    }
+    else
+        ut_throw("%s: %s", name, ut_dl_error());
+    return result;
 #endif
 }
+
+#ifdef _WIN32
+ut_dirent* opendir(const char *name)
+{
+    WIN32_FIND_DATA ffd;
+    TCHAR szDir[MAX_PATH];
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    strcpy_s(szDir, MAX_PATH, name);
+    strcat_s(szDir, MAX_PATH, TEXT("\\*"));
+    ut_dirent* ep = NULL;
+    if (PathFileExistsA(name))
+        ep = (ut_dirent*)malloc(sizeof(ut_dirent));
+    else
+        ut_throw("%s: %s", name, ut_dl_error());
+
+    hFind = FindFirstFile(szDir, &ffd);
+    if (INVALID_HANDLE_VALUE != hFind)
+    {
+        ep->hFind = hFind;
+        sprintf(ep->cFileName, "%s", ffd.cFileName);
+    }
+    else
+        ut_throw("%s: %s", name, ut_dl_error());
+    return ep;
+}
+
+#endif
 
 void ut_closedir(ut_ll dir) {
     ut_iter iter = ut_ll_iter(dir);
@@ -638,8 +666,22 @@ bool ut_dir_hasNext(
 
     return ep ? true : false;
 #else
-        // TODO: update implimentation
-	return true;
+    ut_dirent* ep = (ut_dirent*)it->ctx;
+    if (!ep)
+        return false;
+
+    WIN32_FIND_DATA ffd;
+    if (ep->hFind != INVALID_HANDLE_VALUE)
+    {
+        while (FindNextFile(ep->hFind, &ffd))
+        {
+            if (*ffd.cFileName == '.')
+                continue;
+            it->data = ut_strdup(ffd.cFileName);
+            return true;
+        }
+    }
+    return false;
 #endif
 }
 
@@ -656,6 +698,9 @@ void ut_dir_release(
 {
 #ifndef _WIN32
     closedir(it->ctx);
+#else
+    ut_dirent* ep = (ut_dirent*)it->ctx;
+    FindClose(ep->hFind);
 #endif
 }
 

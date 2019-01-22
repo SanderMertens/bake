@@ -36,6 +36,15 @@
 extern "C" {
 #endif
 
+#ifndef _WIN32
+    typedef struct dirent * ut_dirent;
+#else
+    typedef struct win_dirent_tag {
+        HANDLE hFind;
+        TCHAR cFileName[MAX_PATH];
+    } ut_dirent;
+#endif
+
 /** Create a directory.
  * The function creates any directories in the provided name that do not yet
  * exist, as if the Linux command "mkdir -p" is specified. If the directory
