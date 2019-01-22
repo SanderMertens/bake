@@ -667,13 +667,21 @@ char* artefact_name(
         bool link_static = driver->get_attr_bool("static");
 
         if (link_static) {
+#ifndef _WIN32
             result = ut_asprintf("lib%s.a", id);
+#else
+            result = ut_asprintf("%s.lib", id);
+#endif
         } else {
+#ifndef _WIN32
             if (is_dylib(driver, project)) {
                 result = ut_asprintf("lib%s.dylib", id);
             } else {
                 result = ut_asprintf("lib%s.so", id);
             }
+#else
+            result = ut_asprintf("%s.dll", id);
+#endif
         }
     } else {
         result = ut_strdup(id);
@@ -875,7 +883,7 @@ void generate(
 }
 
 /* -- Rules */
-int bakemain(bake_driver_api *driver) {
+UT_EXPORT int bakemain(bake_driver_api *driver) {
 
     ut_init("driver/bake/c");
 
