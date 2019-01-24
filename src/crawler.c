@@ -265,7 +265,7 @@ int16_t bake_crawler_crawl(
             continue;
         }
 
-        if (ut_isdir(strarg("%s/%s", fullpath, file))) {
+        if (ut_isdir(strarg("%s%c%s", fullpath, PATH_SEPARATOR_C, file))) {
 
             /* If this is a bake project, filter out directories that have
              * special meaning. */

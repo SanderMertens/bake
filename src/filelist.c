@@ -73,7 +73,7 @@ bake_file* bake_filelist_add_intern(
     if (filename[0] == PATH_SEPARATOR_C) {
         bfile->file_path = ut_strdup(filename);
     } else {
-        bfile->file_path = ut_asprintf("%s%s%s", path, PATH_SEPARATOR,  filename);
+        bfile->file_path = ut_asprintf("%s%c%s", path, PATH_SEPARATOR_C,  filename);
     }
     bfile->timestamp = timestamp;
 
@@ -104,7 +104,7 @@ int16_t bake_filelist_populate(
 
     while (ut_iter_hasNext(&it)) {
         const char *file = ut_iter_next(&it);
-        char *file_path = ut_asprintf("%s/%s", path, file);
+        char *file_path = ut_asprintf("%s%c%s", path, PATH_SEPARATOR_C, file);
 
         time_t last_modified = ut_lastmodified(file_path);
         if (last_modified == -1) {

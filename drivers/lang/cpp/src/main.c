@@ -17,7 +17,7 @@ void setup_project(
     ut_mkdir("include");
 
     /* Create main source file */
-    char *source_filename = ut_asprintf("src/main.cpp");
+    char *source_filename = ut_asprintf("src%cmain.cpp", PATH_SEPARATOR_C);
     FILE *f = fopen(source_filename, "w");
 
     fprintf(f,

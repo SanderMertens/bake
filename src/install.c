@@ -199,7 +199,11 @@ int16_t bake_install_uninstall(
 
     ut_try( bake_install_clear(config, project, true), NULL);
 
+#ifndef _WIN32
     ut_log("#[grey]uninstalled #[normal]'%s'\n", project->id);
+#else
+    ut_log("uninstalled '%s'\n", project->id);
+#endif
 error:
     return -1;
 }

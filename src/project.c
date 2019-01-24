@@ -347,7 +347,7 @@ int16_t bake_project_add_dependee_config(
     const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
     if (libpath) {
         /* Check if dependency has a dependee file with build instructions */
-        char *file = ut_asprintf("%s/dependee.json", libpath);
+        char *file = ut_asprintf("%s%cdependee.json", libpath, PATH_SEPARATOR_C);
         if (ut_file_test(file)) {
             ut_try (
               bake_project_load_dependee_config(config, project, dependency, file),
@@ -1003,9 +1003,11 @@ ut_ll bake_project_copy_libs(
             link_lib ++;
         }
 
+#ifndef _WIN32
         if (!strncmp(link_lib, "lib", 3)) {
             link_lib += 3;
         }
+#endif
 
         char *target_link = ut_asprintf("%s%clib%s_%s",
             path, PATH_SEPARATOR_C, p->id_underscore, link_lib);
