@@ -9,21 +9,44 @@ config=debug
 SILENT = @
 !ENDIF
 
+!IFNDEF BAKE_HOME
+BAKE_HOME = $(USERPROFILE)\bake
+!ENDIF
+
 .PHONY: clean prebuild prelink
 
 !IF "$(config)" == "debug"
 TARGETDIR = ..
 TARGET = $(TARGETDIR)\bake_lang_c.dll
 OBJDIR = ..\.bake_cache\debug
-DEFINES = -DBAKE_IMPL -DUT_IMPL -DDEBUG  $(DEFINES)
-INCLUDES = /I.. /I"..\..\..\.." /I"..\..\..\..\include" $(INCLUDES)
+DEFINES = /DDEBUG /DUT_IMPL $(DEFINES)
+INCLUDES = /I.. /I"$(BAKE_HOME)\include" $(INCLUDES)
 FORCE_INCLUDE =
-ALL_CPPFLAGS = $(CPPFLAGS) /nologo $(DEFINES) $(INCLUDES) $(ALL_CPPFLAGS)
+ALL_CPPFLAGS = $(CPPFLAGS) /nologo /Od /MP $(DEFINES) $(INCLUDES) $(ALL_CPPFLAGS)
 ALL_CFLAGS   = $(CFLAGS) $(ALL_CPPFLAGS) $(ALL_CFLAGS)
 ALL_CXXFLAGS = $(CXXFLAGS) $(ALL_CPPFLAGS) -D_XOPEN_SOURCE=600 $(ALL_CXXFLAGS)
 ALL_RESFLAGS = $(RESFLAGS) $(DEFINES) $(INCLUDES) $(ALL_RESFLAGS)
-LIBS = bake_util.lib $(LIBS) /LIBPATH:..\..\..\..\util
-ALL_LDFLAGS = $(LDFLAGS) $(LIBS)
+LIBS = bake_util.lib $(LIBS)
+ALL_LDFLAGS = $(LDFLAGS)  /LIBPATH:..\..\..\..\util $(LIBS)
+LINKCMD = $(LINK) /NOLOGO /DLL /OUT:$@ $(OBJECTS) $(ALL_LDFLAGS)
+all: prebuild prelink $(TARGET)
+	@:
+
+!ENDIF
+
+!IF "$(config)" == "release"
+TARGETDIR = ..
+TARGET = $(TARGETDIR)\bake_lang_c.dll
+OBJDIR = ..\.bake_cache\release
+DEFINES = /DUT_IMPL $(DEFINES)
+INCLUDES = /I.. /I"$(BAKE_HOME)\include" $(INCLUDES)
+FORCE_INCLUDE =
+ALL_CPPFLAGS = $(CPPFLAGS) /nologo /Ox /GL /MP $(DEFINES) $(INCLUDES) $(ALL_CPPFLAGS)
+ALL_CFLAGS   = $(CFLAGS) $(ALL_CPPFLAGS) $(ALL_CFLAGS)
+ALL_CXXFLAGS = $(CXXFLAGS) $(ALL_CPPFLAGS) -D_XOPEN_SOURCE=600 $(ALL_CXXFLAGS)
+ALL_RESFLAGS = $(RESFLAGS) $(DEFINES) $(INCLUDES) $(ALL_RESFLAGS)
+LIBS = bake_util.lib $(LIBS)
+ALL_LDFLAGS = $(LDFLAGS)  /LIBPATH:..\..\..\..\util $(LIBS)
 LINKCMD = $(LINK) /NOLOGO /DLL /OUT:$@ $(OBJECTS) $(ALL_LDFLAGS)
 all: prebuild prelink $(TARGET)
 	@:
