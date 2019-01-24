@@ -424,7 +424,7 @@ int ut_symlink(
     }
 #else
     // Check if relative path
-    if (oldname[0] == '.' || oldname[0] == PATH_SEPARATOR_C) {
+    if (oldname[0] == '.' || oldname[1] != ':') {
         fullname = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, oldname);
         ut_path_clean(fullname, fullname);
     }
