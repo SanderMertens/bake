@@ -59,7 +59,7 @@ void setup_project(
     fclose(f);
 }
 
-int bakemain(bake_driver_api *driver) {
+UT_EXPORT int bakemain(bake_driver_api *driver) {
 
     driver->import("lang.c");
 
