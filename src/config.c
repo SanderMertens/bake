@@ -448,7 +448,9 @@ int16_t bake_config_load(
     bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id);
     bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING);
     bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"));
-    bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", NULL);
+    if (!ut_os_match("windows")) {
+        bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", NULL);
+    }
     bake_config_add_var(cfg_out, "CLASSPATH", NULL);
     if (ut_os_match("darwin")) {
         bake_config_add_var(cfg_out, "DYLD_LIBRARY_PATH", NULL);
@@ -457,7 +459,9 @@ int16_t bake_config_load(
     /* Ensure that these environment variables are set, so no errors are thrown
      * when they are referenced by the configuration */
     if (!ut_getenv("PATH"))            ut_setenv("PATH", "");
-    if (!ut_getenv("LD_LIBRARY_PATH")) ut_setenv("LD_LIBRARY_PATH", "");
+    if (!ut_os_match("windows")) {
+        if (!ut_getenv("LD_LIBRARY_PATH")) ut_setenv("LD_LIBRARY_PATH", "");
+    }
     if (!ut_getenv("CLASSPATH"))       ut_setenv("CLASSPATH", "");
     if (ut_os_match("darwin")) {
         if (!ut_getenv("DYLD_LIBRARY_PATH")) ut_setenv("DYLD_LIBRARY_PATH", "");
@@ -489,10 +493,9 @@ int16_t bake_config_load(
     bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
     bake_config_appendEnv("CLASSPATH", strarg(".:%s/java", cfg_out->target));
 #else
-    /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
-    bake_config_appendEnv("PATH", strarg("%s\\bake;%s;%s", ut_getenv("USERPROFILE"), cfg_out->target_bin, cfg_out->home_bin));
-    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".;%s;%s", cfg_out->target_lib, cfg_out->home_lib));
-    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".;%s;%s", cfg_out->target_lib, cfg_out->home_lib));
+    /* Append bake environment to PATH. LIBRARY_PATH and CLASSPATH */
+    bake_config_appendEnv("PATH", strarg("%s\\bake;%s;%s;%s;%s", ut_getenv("USERPROFILE"), cfg_out->target_bin, cfg_out->home_bin, 
+                                                                cfg_out->target_lib, cfg_out->home_lib));
     bake_config_appendEnv("CLASSPATH", strarg(".;%s%cjava", cfg_out->target, PATH_SEPARATOR_C));
 #endif
 
