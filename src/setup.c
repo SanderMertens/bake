@@ -56,6 +56,7 @@ int16_t bake_create_script_windows(void)
         goto error;
     }
 
+    fprintf(f, "@ECHO OFF\n\n");
     fprintf(f, "IF [%%1] == [upgrade] (\n");
     fprintf(f, "    mkdir %%USERPROFILE%%\\bake\\src\n");
     fprintf(f, "    cd %%USERPROFILE%%\\bake\\src\n\n");
@@ -411,9 +412,10 @@ int16_t bake_setup_windows(
 
     ut_try(bake_build_make_project("drivers\\lang\\cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
+#ifndef _WIN32
     ut_try(cmd("bake.exe libraries --build-to-home"), NULL);
     ut_log("OK   Installed library configuration packages\n");
-
+#endif
     /*
 
      ______   ______   ______   __   __       ______   ______  ______
