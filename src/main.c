@@ -434,7 +434,11 @@ int bake_env(
         ut_iter it = ut_ll_iter(config->env_variables);
         while (ut_iter_hasNext(&it)) {
             char *var = ut_iter_next(&it);
+#ifndef _WIN32
             ut_strbuf_append(&buff, "%s=%s\n", var, ut_getenv(var));
+#else
+            ut_strbuf_append(&buff, "set %s=%s\n", var, ut_getenv(var));
+#endif
         }
     }
 
