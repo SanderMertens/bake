@@ -24,7 +24,7 @@
 
 ut_proc ut_proc_run(
     const char* exec,
-    char *argv[])
+    const char *argv[])
 {
     char *cmdline = ut_strdup(exec);
     int count = 0;
@@ -53,7 +53,7 @@ ut_proc ut_proc_run(
 
 ut_proc ut_proc_runRedirect(
     const char* exec,
-    char *argv[],
+    const char *argv[],
     FILE *in,
     FILE *out,
     FILE *err)
