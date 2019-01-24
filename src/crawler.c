@@ -236,19 +236,6 @@ int16_t bake_crawler_crawl(
 
         if (bake_crawler_add(config, p)) {
             ut_warning("ignoring '%s' because of errors", fullpath);
-        } else {
-            if (ut_file_test("rakefile")) {
-                ut_warning(
-                    "path '%s' contains redundant rakefile",
-                    fullpath);
-            }
-        }
-    } else {
-        if (ut_file_test("rakefile")) {
-            ut_warning(
-                "path '%s' contains rake-based project, skipping",
-                fullpath);
-            goto skip;
         }
     }
 
@@ -290,6 +277,11 @@ int16_t bake_crawler_crawl(
                 ut_debug("looking for projects in '%s'", file);
 
                 /* TODO: ignore generated directories */
+
+            /* Never try to build bake with bake, in case it is found in the source tree */
+            } else if (!strcmp(file, "bake")) {
+                ut_debug("ignoring directory 'bake'");
+                continue;
             } else {
                 ut_debug("looking for projects in '%s'", file);
             }
