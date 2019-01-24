@@ -21,12 +21,6 @@
 
 #include "../include/util.h"
 
-#ifdef _WIN32
-#ifndef S_ISDIR
-#define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
-#endif
-#endif
-
 int ut_touch(const char *file) {
     FILE* touch = NULL;
 
@@ -222,10 +216,12 @@ int ut_cp_file(
         goto error_CloseFiles_FreeBuffer;
     }
 
+#ifndef _WIN32
     if (ut_setperm(fullDst, perm)) {
         ut_throw("failed to set permissions of '%s'", fullDst);
         goto error;
     }
+#endif
 
     if (fullDst != dst) free(fullDst);
     free(buffer);
@@ -335,6 +331,7 @@ bool ut_checklink(
     const char *link,
     const char *file)
 {
+#ifndef _WIN32
     char buf[512];
     char *ptr = buf;
     int length = strlen(file);
@@ -356,6 +353,23 @@ bool ut_checklink(
     return true;
 nomatch:
     if (ptr != buf) free(ptr);
+#else
+    DWORD dwAttrib = GetFileAttributes(link);
+    bool is_symlink = ( dwAttrib & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
+    if (!is_symlink)
+        return false;
+    HANDLE hFile = CreateFile(link, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return false;
+    TCHAR tartget_path[MAX_PATH];
+    DWORD dwRet;
+    int length = strlen(file);
+
+    dwRet = GetFinalPathNameByHandle(hFile, tartget_path, MAX_PATH, 0);
+    CloseHandle(hFile);
+    if (!strncmp(file, tartget_path + 4, length))
+        return true;
+#endif
     return false;
 }
 
@@ -364,6 +378,7 @@ int ut_symlink(
     const char *newname)
 {
     char *fullname = NULL;
+#ifndef _WIN32
     if (oldname[0] != PATH_SEPARATOR_C) {
         fullname = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, oldname);
         ut_path_clean(fullname, fullname);
@@ -372,7 +387,6 @@ int ut_symlink(
         fullname = (char*)oldname;
     }
 
-#ifndef _WIN32
     ut_trace("#[cyan]symlink %s %s", newname, fullname);
 
     if (symlink(fullname, newname)) {
@@ -409,9 +423,53 @@ int ut_symlink(
         }
     }
 #else
-    ut_trace("symlink %s %s", newname, fullname);
-	DWORD dwFlags = 0;
-	CreateSymbolicLinkA(newname, fullname, dwFlags);
+    // Check if relative path
+    if (oldname[0] == '.' || oldname[0] == PATH_SEPARATOR_C) {
+        fullname = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, oldname);
+        ut_path_clean(fullname, fullname);
+    }
+    else {
+        /* Safe- the variable will not be modified if it's equal to newname */
+        fullname = (char*)oldname;
+    }
+    DWORD dwFlags = 0;
+    if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
+        DWORD last_error = GetLastError();
+        if (last_error == ERROR_PATH_NOT_FOUND) {
+            /* If error is ERROR_PATH_NOT_FOUND, try creating directory */
+            char *dir = ut_path_dirname(newname);
+            DWORD old_errno = last_error;
+
+            if (dir[0] && !ut_mkdir(dir)) {
+                /* Retry */
+                if (ut_symlink(fullname, newname)) {
+                    goto error;
+                }
+            }
+            else {
+                ut_throw("%s: %s", newname, ut_dl_error());
+            }
+            free(dir);
+
+        }
+        else if (last_error == ERROR_ALREADY_EXISTS) {
+            if (!ut_checklink(newname, fullname)) {
+
+                /* If a file with specified name already exists, remove existing file */
+                if (ut_rm(newname)) {
+                    goto error;
+                }
+
+                /* Retry */
+                if (ut_symlink(fullname, newname)) {
+                    goto error;
+                }
+            }
+            else {
+                /* Existing file is a link that points to the same location */
+            }
+        }
+    }
 #endif
     if (fullname != oldname) free(fullname);
     return 0;
@@ -467,14 +525,24 @@ int16_t ut_getperm(
 }
 
 bool ut_isdir(const char *path) {
+#ifdef _WIN32
+    return PathIsDirectoryA(path);
+#else
     struct stat buff;
     if (stat(path, &buff) < 0) {
         return 0;
     }
     return S_ISDIR(buff.st_mode) ? true : false;
+#endif
 }
 
 int ut_rename(const char *oldName, const char *newName) {
+
+#ifdef _WIN32
+    if (!_access_s(newName, 0))
+        ut_rm(newName);
+#endif
+
     if (rename(oldName, newName)) {
         ut_throw("failed to move %s %s: %s",
             oldName, newName, strerror(errno));
@@ -501,14 +569,11 @@ int ut_rm(const char *name) {
      * on any platform, even the ones that do not support links (as opposed to
      * checking if the file is a link first).
      */
+#ifndef _WIN32
     if (remove(name)) {
         if (errno != ENOENT) {
             if (ut_isdir(name)) {
-#ifndef _WIN32
                 ut_trace("#[cyan]rm %s (D)", name);
-#else
-                ut_trace("#[cyan]rm %s (D)", name);
-#endif
                 return ut_rmtree(name);
             } else {
                 result = -1;
@@ -520,13 +585,35 @@ int ut_rm(const char *name) {
     }
 
     if (!result) {
-#ifndef _WIN32
         ut_trace("#[cyan]rm %s", name);
-#else
-        ut_trace("rm %s", name);
-#endif
     }
 
+#else
+    if (ut_isdir(name)) {
+        ut_trace("rm %s (D)", name);
+        return ut_rmtree(name);
+    }
+    if (!DeleteFile(name)) {
+        DWORD last_error = GetLastError();
+        if (errno != ENOENT) {
+            if (ut_isdir(name)) {
+                ut_trace("rm %s (D)", name);
+                return ut_rmtree(name);
+            }
+            else {
+                result = -1;
+                ut_throw(strerror(errno));
+            }
+        }
+        else {
+            /* Don't care if file doesn't exist */
+        }
+    }
+
+    if (!result) {
+        ut_trace("rm %s", name);
+    }
+#endif
     return result;
 }
 
@@ -553,8 +640,15 @@ int ut_rmtree(const char *name) {
 #ifndef _WIN32
     return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
 #else
-    BOOL status = RemoveDirectory(name);
-    return status;
+    SHFILEOPSTRUCT fileOp = { 0 };
+    fileOp.wFunc = FO_DELETE;
+    fileOp.pFrom = name;
+    fileOp.pTo = "";
+    fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR |
+        FOF_MULTIDESTFILES | FOF_SILENT;
+    fileOp.lpszProgressTitle = "";
+    int result = SHFileOperation(&fileOp);
+    return result;
 #endif
 }
 
@@ -609,6 +703,7 @@ ut_ll ut_opendir(const char *name) {
 }
 
 #ifdef _WIN32
+/* opendir is POSIX function which is not available on windows platform */
 ut_dirent* opendir(const char *name)
 {
     WIN32_FIND_DATA ffd;
