@@ -45,7 +45,7 @@ void timespec_gettime(struct timespec* time) {
     time->tv_sec = mts.tv_sec;
     time->tv_nsec = mts.tv_nsec;
 #elif _WIN32
-	timespec_get(&time, TIME_UTC);
+    timespec_get(time, TIME_UTC);
 #else
     clock_gettime(CLOCK_REALTIME, time);
 #endif
