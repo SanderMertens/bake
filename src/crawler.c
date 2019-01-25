@@ -231,11 +231,11 @@ int16_t bake_crawler_crawl(
 
         p = bake_project_new(fullpath, config);
         if (!p) {
-            goto error;
-        }
-
-        if (bake_crawler_add(config, p)) {
             ut_warning("ignoring '%s' because of errors", fullpath);
+        } else {
+            if (bake_crawler_add(config, p)) {
+                ut_warning("ignoring '%s' because of errors", fullpath);
+            }
         }
     }
 

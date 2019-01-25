@@ -115,6 +115,8 @@ bake_filelist* bake_node_eval_pattern(
 
     if (n->name && !stricmp(n->name, "SOURCES")) {
         targets = bake_filelist_new(p->path, NULL); /* Create empty list */
+        ut_try (!targets, NULL);
+
         isSources = true;
 
         /* If this is the special SOURCES rule, apply the pattern to
@@ -137,6 +139,7 @@ bake_filelist* bake_node_eval_pattern(
     } else if (((bake_pattern*)n)->pattern) {
         /* If this is a regular pattern, match against project directory */
         targets = bake_filelist_new(p->path, ((bake_pattern*)n)->pattern);
+        ut_try (!targets, NULL);
     }
 
     if (!targets) {
@@ -381,6 +384,7 @@ int16_t bake_node_eval(
                 } else {
                     char *pattern = ut_strdup(r->target.is.pattern);
                     targets = bake_filelist_new(p->path, NULL);
+                    ut_try (!targets, NULL);
 
                     ut_log_push("out");
 
@@ -390,7 +394,9 @@ int16_t bake_node_eval(
                         if (!targetNode->cond || targetNode->cond(&bake_driver_api_impl, c, p)) {
                             bake_filelist *list = bake_filelist_new(
                                 p->path, ((bake_pattern*)targetNode)->pattern);
-                            if (!list || !bake_filelist_count(list)) {
+                            ut_try (!targets, NULL);
+
+                            if (!bake_filelist_count(list)) {
                                 ut_trace(
                                    "#[grey]no targets matched by '%s', need to rebuild '%s'",
                                     tok,
@@ -415,6 +421,7 @@ int16_t bake_node_eval(
 
                 if (!targets) {
                     targets = bake_filelist_new(p->path, NULL);
+                    ut_try (!targets, NULL);
                 }
 
                 ut_try (bake_node_run_rule_pattern(
