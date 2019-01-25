@@ -1404,6 +1404,19 @@ char* bake_random_description(void) {
     return strdup(buffer);
 }
 
+int16_t ut_project_git_init()
+{
+    int8_t ret;
+    char *cmd = ut_asprintf("git init");
+    int sig = ut_proc_cmd(cmd, &ret);
+    if (sig || ret) {
+        ut_throw("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
+        free(cmd);
+        return -1;
+    }
+    free(cmd);
+    return 0;
+}
 
 int16_t bake_project_setup(
     bake_config *config,
@@ -1413,9 +1426,7 @@ int16_t bake_project_setup(
 
     char *description = bake_random_description();
 
-    ut_try(!
-        ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
-        "failed to initialize git repository");
+    ut_try(ut_project_git_init(), "failed to initialize git repository");
 
     /* Create project.json */
     FILE *f = fopen("project.json", "w");
