@@ -471,7 +471,7 @@ const char* ut_locate(
     const char *env = NULL;
     struct ut_loaded *loaded = NULL;
 
-    if (!package[0]) {
+    if (!package || !package[0]) {
         ut_throw("invalid package identifier");
         goto error;
     }

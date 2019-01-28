@@ -109,7 +109,7 @@ void bake_usage(void)
     printf("  uninstall [project id]       Remove project from bake environment\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
     printf("  update [project id]          Update an installed package or application\n");
-    printf("  foreach <cmd>                Run command for each discovered project\n")
+    printf("  foreach <cmd>                Run command for each discovered project\n");
     printf("\n");
     printf("  env                          Echo bake environment\n");
     printf("  upgrade                      Upgrade to new bake version\n");
