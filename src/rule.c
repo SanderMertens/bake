@@ -184,7 +184,7 @@ int16_t bake_node_run_rule_map(
             /* Invoke action */
             char *srcPath = src->name;
             if (src->path) {
-                srcPath = ut_asprintf("%s/%s", src->path, src->name);
+                srcPath = ut_asprintf("%s%c%s", src->path, PATH_SEPARATOR_C, src->name);
             }
             r->action(&bake_driver_api_impl, c, p, srcPath, dst->file_path);
             if (srcPath != src->name) {

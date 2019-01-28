@@ -101,6 +101,10 @@ const char *cc(
     const char *cxx = ut_getenv("CXX");
     const char *cc = ut_getenv("CC");
 
+    if (is_windows()) {
+        return "cl.exe";
+    }
+
     if (!is_darwin()) {
         if (is_cpp) {
             if (!cxx)
@@ -111,8 +115,6 @@ const char *cc(
                 cc = "gcc";
             return cc;
         }
-    } else if(is_windows()) {
-        return "cl.exe";
     } else {
         if (is_cpp) {
             if (!cxx)
@@ -143,8 +145,12 @@ void compile_src_windows(
         cpp = true;
     }
 
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    /* Start VC env */
+    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+
     /* In obscure cases with static libs, stack protector can cause trouble */
-    ut_strbuf_append(&cmd, "%s /Wall", cc(cpp));
+    ut_strbuf_append(&cmd, " %s /Wall", cc(cpp));
 
     /* Set standard for C or C++ */
     if (cpp) {
@@ -217,11 +223,8 @@ void compile_src_windows(
         while (ut_iter_hasNext(&it)) {
             bake_attr *include = ut_iter_next(&it);
             char* file = include->is.string;
-#ifndef _WIN32
+
             if (file[0] == '/' || file[0] == '$') {
-#else
-            if (file[0] == '$') {
-#endif
                 ut_strbuf_append(&cmd, " /I%s", file);
             } else {
                 ut_strbuf_append(&cmd, " /I%s\\%s", project->path, file);
@@ -241,10 +244,14 @@ void compile_src_windows(
     ut_strbuf_append(&cmd, " /I%s", project->path);
 
     /* Add source file and object file */
-    ut_strbuf_append(&cmd, " /c %s /Fo %s", source, target);
+    ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
 
     /* Execute command */
+#ifndef _WIN32
     char *cmdstr = ut_strbuf_get(&cmd);
+#else
+    char *cmdstr = ut_asprintf("\"%s\"",ut_strbuf_get(&cmd));
+#endif
     driver->exec(cmdstr);
     free(cmdstr);
 }
@@ -483,7 +490,7 @@ void link_dynamic_binary_linux(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
+    ut_strbuf_append(&cmd, " %s -Wall -fPIC", cc(cpp));
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
@@ -666,7 +673,11 @@ void link_dynamic_binary_windows(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    ut_strbuf_append(&cmd, "%s /Wall", cc(cpp));
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    /* Start VC env */
+    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+
+    ut_strbuf_append(&cmd, "link.exe");
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
@@ -677,14 +688,6 @@ void link_dynamic_binary_windows(
 
         ut_strbuf_appendstr(&cmd, " /DYNAMICBASE:NO /NXCOMPAT:NO /GS- /DLL");
 
-    }
-
-    /* Set optimizations */
-    if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " /Ox");
-    }
-    else {
-        ut_strbuf_appendstr(&cmd, " /Od");
     }
 
     /* When strict, warnings are errors */
@@ -971,7 +974,7 @@ char* artefact_name(
 #endif
         }
     } else {
-        result = ut_strdup(id);
+        result = ut_asprintf("%s%s", id, UT_OS_BIN_EXT);
     }
 
     return result;
