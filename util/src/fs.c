@@ -589,25 +589,19 @@ int ut_rm(const char *name) {
     }
 
 #else
-    if (ut_isdir(name)) {
-        ut_trace("rm %s (D)", name);
-        return ut_rmtree(name);
+    if (PathFileExistsA(name))
+    {
+        if (ut_isdir(name)) {
+            ut_trace("rm %s (D)", name);
+            return ut_rmtree(name);
+        }
+        if (!DeleteFile(name)) {
+            result = -1;
+            ut_throw(ut_dl_error());
+        }
     }
-    if (!DeleteFile(name)) {
-        DWORD last_error = GetLastError();
-        if (errno != ENOENT) {
-            if (ut_isdir(name)) {
-                ut_trace("rm %s (D)", name);
-                return ut_rmtree(name);
-            }
-            else {
-                result = -1;
-                ut_throw(strerror(errno));
-            }
-        }
-        else {
-            /* Don't care if file doesn't exist */
-        }
+    else {
+        /* Don't care if file doesn't exist */
     }
 
     if (!result) {
@@ -640,14 +634,25 @@ int ut_rmtree(const char *name) {
 #ifndef _WIN32
     return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
 #else
+    char *fullname;
+    if (strlen(name) > 1 && name[0] == '.' && name[1] == PATH_SEPARATOR_C)
+        fullname = ut_asprintf("%s%c%s\0", ut_cwd(), PATH_SEPARATOR_C, name+2);
+    else
+        fullname = ut_asprintf("%s\0", name);
     SHFILEOPSTRUCT fileOp = { 0 };
+    ZeroMemory(&fileOp, sizeof(SHFILEOPSTRUCT));
     fileOp.wFunc = FO_DELETE;
-    fileOp.pFrom = name;
-    fileOp.pTo = "";
+    fileOp.pFrom = ut_asprintf("%s\0", name);
+    fileOp.pTo = "\0";
     fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR |
         FOF_MULTIDESTFILES | FOF_SILENT;
     fileOp.lpszProgressTitle = "";
     int result = SHFileOperation(&fileOp);
+    if (result == ERROR_FILE_NOT_FOUND || result == ERROR_PATH_NOT_FOUND)
+        return 0;
+    if (result)
+        ut_throw("%d: %s", result, fullname);
+    free(fullname);
     return result;
 #endif
 }
