@@ -50,6 +50,7 @@ const char *export_expr = NULL;
 const char *publish_cmd = NULL;
 bool interactive = false;
 int run_argc = 0;
+bool clean_missing = false;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
 const char *list_filter = NULL;
@@ -92,8 +93,9 @@ void bake_usage(void)
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
     printf("  --includes <include path>    Manually specify an include path for project\n");
     printf("\n");
-    printf("  --interactive                Rebuild project when files change (use with bake run)\n");
-    printf("  -a,--args [arguments]        Pass arguments to application ran with bake run\n");
+    printf("  --interactive                Rebuild project when files change (use w/run)\n");
+    printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
+    printf("  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -257,6 +259,7 @@ int bake_parse_args(
 
             ARG(0, "local-setup", local_setup = true; i ++);
             ARG(0, "interactive", interactive = true; i ++);
+            ARG(0, "missing", clean_missing = true; i ++);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
@@ -548,7 +551,8 @@ int bake_locate(
     const char *id,
     const char *env,
     bool test_lib,
-    bake_project_type *type_out)
+    bake_project_type *type_out,
+    bool clean_missing)
 {
     const char *bin = ut_locate(id, NULL, UT_LOCATE_BIN);
     if (!bin) {
@@ -578,8 +582,10 @@ int bake_locate(
                     bake_project_free(project);
                     goto error;
                 } else {
-                    ut_log("C  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                        id, env ? env : path);
+                    if (!clean_missing) {
+                        ut_log("C  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                            id, env ? env : path);
+                    }
                     bake_project_free(project);
 
                     if (type_out) *type_out = BAKE_PACKAGE;
@@ -596,15 +602,17 @@ int bake_locate(
             if (test_lib && !dl) {
                 ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!load error!\n",
                     id, env ? env : bin);
-                ut_log("   #[grey]%s\n", ut_dl_error());
+                ut_log("   %s\n", ut_dl_error());
                 goto error;
             } else {
-                ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                    id, env ? env : bin);
+                if (!clean_missing) {
+                    ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
+                        id, env ? env : bin);
+                }
                 if (dl) ut_dl_close(dl);
                 if (type_out) *type_out = BAKE_PACKAGE;
             }
-        } else {
+        } else if (!clean_missing) {
             const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
             if (lib_static) {
                 ut_log("S  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
@@ -620,6 +628,10 @@ int bake_locate(
 
     return 0;
 error:
+    if (clean_missing) {
+        ut_log("#[grey]uninstall '%s'#[normal]\n", id);
+        bake_install_uninstall(config, id);
+    }
     return -1;
 }
 
@@ -662,7 +674,8 @@ char* bake_print_env(
 }
 
 int bake_list(
-    bake_config *config)
+    bake_config *config,
+    bool clean_missing)
 {
     ut_ll packages = ut_ll_new();
     ut_iter it;
@@ -724,7 +737,8 @@ int bake_list(
         }
 
         if (!bake_locate(
-            config, package->id, bake_print_env(config, package), true, &type))
+            config, package->id, bake_print_env(config, package), true, &type,
+            clean_missing))
         {
             if (type == BAKE_APPLICATION) {
                 app_count ++;
@@ -881,11 +895,15 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "uninstall")) {
-            ut_try (bake_install_uninstall(&config, id), NULL);
+            if (!clean_missing) {
+                ut_try (bake_install_uninstall(&config, id), NULL);
+            } else {
+                ut_try (bake_list(&config, true), NULL);
+            }
         } else if (!strcmp(action, "locate")) {
-            bake_locate(&config, path, NULL, true, NULL);
+            bake_locate(&config, path, NULL, true, NULL, false);
         } else if (!strcmp(action, "list")) {
-            bake_list(&config);
+            bake_list(&config, false);
         } else if (!strcmp(action, "export")) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
