@@ -1,7 +1,7 @@
 
 #include <bake>
 
-#define OBJ_DIR ".bake_cache/obj"
+#define OBJ_DIR ".bake_cache\\obj"
 
 /* -- Mappings -- */
 
@@ -15,9 +15,9 @@ char* src_to_obj(
 {
     const char *cfg = config->configuration;
     char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
-    sprintf(result, OBJ_DIR "/%s-%s/%s", UT_PLATFORM_STRING, cfg, in);
+    sprintf(result, OBJ_DIR "\\%s-%s\\%s", UT_PLATFORM_STRING, cfg, in);
     char *ext = strrchr(result, '.');
-    strcpy(ext + 1, "o");
+    strcpy(ext + 1, "obj");
     return result;
 }
 
@@ -54,16 +54,6 @@ void generate_deps(
 {
 }
 
-/* Is current OS Darwin */
-static
-bool is_darwin(void)
-{
-    if (strcmp(UT_OS_STRING, "darwin")) {
-        return false;
-    }
-    return true;
-}
-
 /* Is language C++ */
 static
 bool is_cpp(
@@ -84,30 +74,17 @@ const char *cc(
     const char *cxx = ut_getenv("CXX");
     const char *cc = ut_getenv("CC");
 
-    if (!is_darwin()) {
-        if (is_cpp) {
-            if (!cxx)
-                cxx = "g++";
-            return cxx;
-        } else {
-            if (!cc)
-                cc = "gcc";
-            return cc;
-        }
+    if (is_cpp) {
+        if (!cxx)
+            cxx = "cl.exe";
+        return cxx;
     } else {
-        if (is_cpp) {
-            if (!cxx)
-                cxx = "clang++";
-            return cxx;
-        } else {
-            if (!cc)
-                cc = "gcc";
-            return cc;
-        }
+        if (!cc)
+            cc = "cl.exe";
+        return cc;
     }
 }
-
-/* Compile source file */
+/* Compile source file for Windows platform using MSVC*/
 static
 void compile_src(
     bake_driver_api *driver,
@@ -125,48 +102,47 @@ void compile_src(
         cpp = true;
     }
 
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    /* Start VC env */
+    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+
     /* In obscure cases with static libs, stack protector can cause trouble */
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC -fno-stack-protector", cc(cpp));
+    ut_strbuf_append(&cmd, " %s /Wall", cc(cpp));
 
     /* Set standard for C or C++ */
     if (cpp) {
-        ut_strbuf_append(&cmd, " -std=%s",
+        ut_strbuf_append(&cmd, " /std:%s",
             driver->get_attr_string("cpp-standard"));
     } else {
-        ut_strbuf_append(&cmd, " -std=%s -D_XOPEN_SOURCE=600",
+        ut_strbuf_append(&cmd, " /std:%s -D_XOPEN_SOURCE=600",
             driver->get_attr_string("c-standard"));
     }
 
     /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " -DBAKE_PROJECT_ID=\"%s\"", project->id);
+    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
 
     /* This macro is only set for source files of this project, and can be used
      * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id_underscore);
+    char *building_macro = ut_asprintf(" /D%s_IMPL", project->id_underscore);
     strupper(building_macro);
     ut_strbuf_appendstr(&cmd, building_macro);
     free(building_macro);
 
-    /* Include symbols */
-    if (config->symbols) {
-        ut_strbuf_appendstr(&cmd, " -g");
-    }
-
     /* Enable debugging code */
     if (!config->debug) {
-        ut_strbuf_appendstr(&cmd, " -DNDEBUG");
+        ut_strbuf_appendstr(&cmd, " /DNDEBUG");
     }
 
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        ut_strbuf_appendstr(&cmd, " /Ox /GL");
     } else {
-        ut_strbuf_appendstr(&cmd, " -O0");
+        ut_strbuf_appendstr(&cmd, " /Od");
     }
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " -Werror -Wextra -pedantic");
+        ut_strbuf_appendstr(&cmd, " /WX");
     }
 
     if (!cpp) {
@@ -200,29 +176,29 @@ void compile_src(
             char* file = include->is.string;
 
             if (file[0] == '/' || file[0] == '$') {
-                ut_strbuf_append(&cmd, " -I%s", file);
+                ut_strbuf_append(&cmd, " /I%s", file);
             } else {
-                ut_strbuf_append(&cmd, " -I%s/%s", project->path, file);
+                ut_strbuf_append(&cmd, " /I%s\\%s", project->path, file);
             }
         }
     }
 
     /* Add BAKE_TARGET to include path */
-    ut_strbuf_append(&cmd, " -I %s/include", config->target);
+    ut_strbuf_append(&cmd, " /I %s\\include", config->target);
 
     /* Add BAKE_HOME to include path if it's different from BAKE_TARGET */
     if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " -I %s/include", config->home);
+        ut_strbuf_append(&cmd, " /I %s\\include", config->home);
     }
 
     /* Add project root to include path */
-    ut_strbuf_append(&cmd, " -I%s", project->path);
+    ut_strbuf_append(&cmd, " /I%s", project->path);
 
     /* Add source file and object file */
-    ut_strbuf_append(&cmd, " -c %s -o %s", source, target);
+    ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
 
     /* Execute command */
-    char *cmdstr = ut_strbuf_get(&cmd);
+    char *cmdstr = ut_asprintf("\"%s\"",ut_strbuf_get(&cmd));
     driver->exec(cmdstr);
     free(cmdstr);
 }
@@ -237,22 +213,6 @@ void obj_deps(
 {
 }
 
-/* A better mechanism is needed to abstract away from the difference between
- * Linux-ish systems. */
-static
-const char* lib_map(
-    const char *lib)
-{
-    /* On darwin, librt does not exist */
-    if (!strcmp(lib, "rt")) {
-        if (is_darwin()) {
-            return NULL;
-        }
-    }
-
-    return lib;
-}
-
 /* Find a static library from a logical name */
 static
 char* find_static_lib(
@@ -264,7 +224,7 @@ char* find_static_lib(
     int ret;
 
     /* Find static library in environment libpath */
-    char *file = ut_asprintf("%s/lib%s.a", config->target_lib, lib);
+    char *file = ut_asprintf("%s\\%s.lib", config->target_lib, lib);
     if ((ret = ut_file_test(file)) == 1) {
         return file;
     } else if (ret != 0) {
@@ -281,7 +241,7 @@ char* find_static_lib(
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib_attr = ut_iter_next(&it);
-            file = ut_asprintf("%s/lib%s.a", lib_attr->is.string, lib);
+            file = ut_asprintf("%s\\%s.lib", lib_attr->is.string, lib);
 
             if ((ret = ut_file_test(file)) == 1) {
                 return file;
@@ -298,20 +258,7 @@ char* find_static_lib(
     return NULL;
 }
 
-/* Is binary a dylib */
-static
-bool is_dylib(
-    bake_driver_api *driver,
-    bake_project *project)
-{
-    if (is_darwin() && project->type == BAKE_PACKAGE) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-/* Link a binary */
+/* Link a binary for Windows platforms*/
 static
 void link_dynamic_binary(
     bake_driver_api *driver,
@@ -327,38 +274,34 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    /* Start VC env */
+    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+
+    ut_strbuf_append(&cmd, "link.exe");
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
-        if (!export_symbols && !is_darwin()) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
+        // On Windows this is control inside code, this flag will have no effect at this point
+        if (!export_symbols) {
             hide_symbols = true;
         }
 
-        ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
+        ut_strbuf_appendstr(&cmd, " /DYNAMICBASE:NO /NXCOMPAT:NO /GS- /DLL");
 
-        /* Fail when symbols are not found in library */
-        if (!is_darwin()) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
-        }
     }
 
-    /* Set optimizations */
-    if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3");
-    } else {
-        ut_strbuf_appendstr(&cmd, " -O0");
+    /* Include symbols */
+    if (config->symbols) {
+        char *pdb_file = strdup(config->target_lib);
+        char *ext = strrchr(pdb_file, '.');
+        strcpy(ext + 1, "pdb");
+        ut_strbuf_append(&cmd, " /Zi /Fd \"%s\"", pdb_file);
     }
 
     /* When strict, warnings are errors */
     if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " -Werror -pedantic");
-    }
-
-    /* Create a dylib when on MacOS */
-    if (is_dylib(driver, project)) {
-        ut_strbuf_appendstr(&cmd, " -dynamiclib");
+        ut_strbuf_appendstr(&cmd, " /WX");
     }
 
     /* Compiler flags provided to linker step */
@@ -387,64 +330,25 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-
-            if (!hide_symbols) {
-                ut_strbuf_append(&cmd, " -l%s", lib->is.string);
-            } else {
-                /* If hiding symbols and linking with static library, unpack
-                 * library objects to temp directory. If the library would be
-                 * linked as-is, symbols would be exported, even though
-                 * fvisibility is set to hidden */
-                char *static_lib = find_static_lib(
-                    driver, project, config, lib->is.string);
-                if (!static_lib) {
-                    continue;
-                }
-
-                /* Unpack objects in static lib to temporary directory */
-                char *cwd = strdup(ut_cwd());
-                char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, UT_PLATFORM_STRING, config->configuration);
-                char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
-
-                /* The ar command doesn't have an option to output files to a
-                 * specific directory, so have to use chdir. This will be an
-                 * issue for multithreaded builds. */
-                ut_mkdir(obj_path);
-                ut_chdir(obj_path);
-                driver->exec(unpack_cmd);
-                free(unpack_cmd);
-                free(static_lib);
-                ut_chdir(cwd);
-                free(cwd);
-                ut_strbuf_append(&cmd, " %s/*", obj_path);
-
-                if (!static_object_paths) {
-                    static_object_paths = ut_ll_new();
-                }
-
-                /* Add path with object files to static_object_paths. These will
-                 * be cleaned up after the compile command */
-                ut_ll_append(static_object_paths, obj_path);
-            }
+            ut_strbuf_append(&cmd, " %s", lib->is.string);
         }
     }
 
     /* Add BAKE_TARGET to library path */
     if (ut_file_test(config->target_lib)) {
-        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
+        ut_strbuf_append(&cmd, " /LIBPATH:%s", config->target_lib);
     }
 
     /* Add BAKE_HOME to library path if it's different */
     if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " -L%s/lib", config->home);
+        ut_strbuf_append(&cmd, " /LIBPATH:%s\\lib", config->home);
     }
 
     /* Add libraries in 'link' attribute */
     ut_iter it = ut_ll_iter(project->link);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " -l%s", dep);
+        ut_strbuf_append(&cmd, " %s", dep);
     }
 
     /* Add project libpath */
@@ -453,12 +357,7 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(libpath_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " -L%s", lib->is.string);
-
-            if (is_darwin()) {
-                ut_strbuf_append(
-                    &cmd, " -Xlinker -rpath -Xlinker %s", lib->is.string);
-            }
+            ut_strbuf_append(&cmd, " /LIBPATH:%s", lib->is.string);
         }
     }
 
@@ -468,15 +367,12 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            const char *mapped = lib_map(lib->is.string);
-            if (mapped) {
-                ut_strbuf_append(&cmd, " -l%s", mapped);
-            }
+            ut_strbuf_append(&cmd, " %s", lib);
         }
     }
 
     /* Specify output */
-    ut_strbuf_append(&cmd, " -o %s", target);
+    ut_strbuf_append(&cmd, " /OUT:%s", target);
 
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
@@ -569,7 +465,7 @@ void setup_project(
     ut_mkdir("include");
 
     /* Create main source file */
-    char *source_filename = ut_asprintf("src/main.c");
+    char *source_filename = ut_asprintf("src\\main.c");
     FILE *f = fopen(source_filename, "w");
     if (!f) {
         ut_error("failed to open '%s'", source_filename);
@@ -600,7 +496,7 @@ void setup_project(
     }
 
     /* Create main header file */
-    char *header_filename = ut_asprintf("include/%s.h", short_id);
+    char *header_filename = ut_asprintf("include\\%s.h", short_id);
     f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open '%s'", header_filename);
@@ -652,16 +548,12 @@ char* artefact_name(
         bool link_static = driver->get_attr_bool("static");
 
         if (link_static) {
-            result = ut_asprintf("lib%s.a", id);
+            result = ut_asprintf("%s.lib", id);
         } else {
-            if (is_dylib(driver, project)) {
-                result = ut_asprintf("lib%s.dylib", id);
-            } else {
-                result = ut_asprintf("lib%s.so", id);
-            }
+            result = ut_asprintf("%s.dll", id);
         }
     } else {
-        result = ut_strdup(id);
+        result = ut_asprintf("%s.exe", id);
     }
 
     return result;
@@ -684,14 +576,14 @@ char *link_to_lib(
 
     /* If not found, check if provided name has an extension */
     char *ext = strrchr(name, '.');
-    if (ext && !strchr(name, '/')) {
+    if (ext && !strchr(name, PATH_SEPARATOR_C)) {
         /* Hardcoded filename was provided but not found */
         return NULL;
     }
 
-    /* Try finding a library called lib*.so or lib*.dylib (OSX only) */
+    /* Try finding a library called lib*.so or lib*.dylib (OSX only) or *.lib (Windwos only) */
     char *full_path = strdup(name);
-    char *lib_name = strrchr(full_path, '/');
+    char *lib_name = strrchr(full_path, PATH_SEPARATOR_C);
     if (lib_name) {
         lib_name[0] = '\0';
         lib_name ++;
@@ -700,46 +592,18 @@ char *link_to_lib(
         full_path = NULL;
     }
 
-    /* Try .so */
+    /* Try .so or .lib or .dylib */
     if (full_path) {
-        char *so = ut_asprintf("%s/lib%s.so", full_path, lib_name);
+        // fullpath[\|/][lib]lib_name[.so|.dylib|.lib]
+        char *so = ut_asprintf("%s%c" LIB_PREFIX "%s" UT_OS_LIB_EXT, full_path, PATH_SEPARATOR_C, lib_name);
         if (ut_file_test(so)) {
             result = so;
         }
     } else {
-        char *so = ut_asprintf("lib%s.so", lib_name);
+        // [lib]lib_name[.so|.dylib|.lib]
+        char *so = ut_asprintf(LIB_PREFIX "%s" UT_OS_LIB_EXT, lib_name);
         if (ut_file_test(so)) {
             result = so;
-        }
-    }
-
-    /* Try .dylib */
-    if (!result && !strcmp(UT_OS_STRING, "darwin")) {
-        if (full_path) {
-            char *dylib = ut_asprintf("%s/lib%s.dylib", full_path, lib_name);
-            if (ut_file_test(dylib)) {
-                result = dylib;
-            }
-        } else {
-            char *dylib = ut_asprintf("lib%s.dylib", lib_name);
-            if (ut_file_test(dylib)) {
-                result = dylib;
-            }
-        }
-    }
-
-    /* Try .a */
-    if (!result) {
-        if (full_path) {
-            char *a = ut_asprintf("%s/lib%s.a", full_path, lib_name);
-            if (ut_file_test(a)) {
-                result = a;
-            }
-        } else {
-            char *a = ut_asprintf("lib%s.a", lib_name);
-            if (ut_file_test(a)) {
-                result = a;
-            }
         }
     }
 
@@ -765,10 +629,10 @@ void add_dependency_includes(
         char *project_id = ut_iter_next(&it);
 
         bool include_found = false;
-        char *file = ut_asprintf("%s/include/%s", config->home, project_id);
+        char *file = ut_asprintf("%s\\include\\%s", config->home, project_id);
         if (ut_file_test(file) != 1) {
             free(file);
-            file = ut_asprintf("%s/include/%s", config->target, project_id);
+            file = ut_asprintf("%s\\include\\%s", config->target, project_id);
             if (ut_file_test(file) == 1) {
                 include_found = true;
             }
@@ -802,11 +666,11 @@ void generate(
     strupper(id_upper);
 
     /* Ensure include directory exists */
-    ut_mkdir("%s/include", project->path);
+    ut_mkdir("%s%cinclude", project->path, PATH_SEPARATOR_C);
 
     /* Create main header file */
     char *header_filename = ut_asprintf(
-        "%s/include/bake_config.h", project->path);
+        "%s%cinclude%cbake_config.h", project->path, PATH_SEPARATOR_C, PATH_SEPARATOR_C);
     FILE *f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open file '%s'", header_filename);
@@ -860,8 +724,9 @@ void generate(
 }
 
 /* -- Rules */
-int bakemain(bake_driver_api *driver) {
+UT_EXPORT int bakemain(bake_driver_api *driver) {
 
+    printf("******** bakemain start\n");
     ut_init("driver/bake/c");
 
     /* Create pattern that matches source files */
@@ -898,5 +763,6 @@ int bakemain(bake_driver_api *driver) {
     /* Callback for setting up a project */
     driver->setup(setup_project);
 
+    printf("******** bakemain end\n");
     return 0;
 }
