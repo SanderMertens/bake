@@ -125,9 +125,10 @@ void bake_usage(void)
     printf("Examples:\n");
     printf("  bake                         Build all projects discovered in current directory\n");
     printf("  bake my_app                  Build all projects discovered in my_app directory\n");
-    printf("  bake new                     Initialize new application project in current directory\n");
-    printf("  bake new my_app              Initialize new application project in directory my_app\n");
-    printf("  bake new my_lib --package    Initialize new package project in directory my_lib\n");
+    printf("  bake new                     Create new application project in current directory\n");
+    printf("  bake new my_app              Create new application project in directory my_app\n");
+    printf("  bake new my_lib --package    Create new package project in directory my_lib\n");
+    printf("  bake new game -t sdl2.basic  Create new project from the sdl2.basic template\n")
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
     printf("  bake info foo.bar            Show information about package foo.bar\n");
