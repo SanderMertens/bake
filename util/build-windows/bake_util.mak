@@ -53,7 +53,8 @@ CPP_SOURCE= ..\src\dl_win.c \
 			..\src\env.c \
 			..\src\expr.c \
 			..\src\file.c \
-			..\src\fs.c \
+			..\src\fs_win.c \
+			..\src\fs_common.c \
 			..\src\iter.c \
 			..\src\jsw_rbtree.c \
 			..\src\ll.c \

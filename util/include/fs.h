@@ -263,6 +263,19 @@ UT_EXPORT
 time_t ut_lastmodified(
     const char *name);
 
+#ifdef _WIN32
+ut_dirent* opendir(const char *name);
+#endif
+
+bool ut_dir_hasNext(
+    ut_iter *it);
+
+void* ut_dir_next(
+    ut_iter *it);
+
+void ut_dir_release(
+    ut_iter *it);
+
 #ifdef __cplusplus
 }
 #endif

@@ -69,7 +69,8 @@ UTIL_SOURCE= ..\util\src\dl_win.c \
 			..\util\src\env.c \
 			..\util\src\expr.c \
 			..\util\src\file.c \
-			..\util\src\fs.c \
+			..\util\src\fs_win.c \
+			..\util\src\fs_common.c \
 			..\util\src\iter.c \
 			..\util\src\jsw_rbtree.c \
 			..\util\src\ll.c \

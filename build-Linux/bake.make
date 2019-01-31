@@ -84,6 +84,7 @@ OBJECTS := \
 	$(OBJDIR)/expr.o \
 	$(OBJDIR)/file.o \
 	$(OBJDIR)/fs.o \
+	$(OBJDIR)/fs_common.o \
 	$(OBJDIR)/iter.o \
 	$(OBJDIR)/jsw_rbtree.o \
 	$(OBJDIR)/ll.o \
