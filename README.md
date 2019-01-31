@@ -487,10 +487,10 @@ keep_binary | bool | Do not clean binary files when doing bake clean. When a bin
 The `cflags` attribute is specified inside the `lang.c` property. This is because `cflags` is a property specific to the C driver. For documentation on which properties are valid for which drivers, see the driver documentation.
 
 ### Template Functions
-Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Template functions take the following form:
+Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Additionally, template functions can be used to parameterize bake template projects. Template functions take the following form:
 
 ```
-${function_name parameter}
+${function_name argument}
 ```
 
 They are used like this:
@@ -507,10 +507,12 @@ They are used like this:
 
 The following functions are currently supported:
 
-Function | Type | Description
+Function | Description
 ---------|------|------
-locate | string | Locate various project paths in the bake environment
-target | bool | Match a target platform
+locate | Locate project paths in the bake environment
+os | Match or return operating system
+language | Match or return target language
+id | Return project identifier
 
 The next sections are detailed description of the supported functions:
 
@@ -527,18 +529,18 @@ app | The package executable (empty if a library)
 bin | The package binary
 env | The package environment
 
-#### target
-The target function can be used to build configurations that use different settings for different platforms. The following example demonstrates how it can be used:
+#### os
+The `os` function can be used to specify platform-specific settings, or use the platform string in a path. The following example demonstrates how it can be used:
 
 ```json
 {
-    "${target linux}": {
+    "${os linux}": {
         "include": ["includes/linux"]
     }
 }
 ```
 
-The function can match both operating system and architecture. The following expressions are all valid:
+The `os` function can match both operating system and architecture. The following expressions are all valid:
 
 - x86-linux
 - darwin
@@ -548,21 +550,74 @@ The function can match both operating system and architecture. The following exp
 
 For a full description of the expressions that are supported, see the documentation of `ut_os_match`.
 
-The target function may be nested:
+The `os` function may be nested:
 
 ```json
 {
-    "${target linux}": {
+    "${os linux}": {
         "include": ["includes/linux"],
-        "${target x86_64}": {
+        "${os x86_64}": {
             "lib": ["mylib64"]
         },
-        "${target x86}": {
+        "${os x86}": {
             "lib": ["mylib32"]
         }
     }
 }
 ```
+
+If no argument is provided to `os`, it will return the current architecture in the following format:
+
+```
+arch-os
+```
+
+This format is consistent with the platform-specific bin path under which bake stores project binaries (like `bin/x86-linux`).
+
+#### language
+The `language` function matches or returns the language of the project. 
+
+When an argument is provided, it is matched against the current language:
+```json
+{
+    "${language c}": { 
+        "lib": ["my_c_lib"]
+    },
+    "${language cpp}": {
+        "lib": ["my_cpp_lib"]
+    }
+}
+```
+The function accepts both `cpp` and `c++` for C++ projects.
+
+When the argument is ommitted, the current language is returned. This is particularly effective in combination with the `dependee` attribute, when dependees can be implemented in different languages:
+
+```json
+{
+    "dependee": {
+        "lang.${language}": {
+
+        }
+    }
+}
+```
+
+#### id
+The `id` function returns the current project id in various formats. When the function is used without arguments, it returns the project id as it appears in the `project.json` file:
+
+```
+${id}
+```
+
+To obtain the id in other formats, the following arguments can be passed to the `id` functions:
+
+Parameter | Description | Example
+----------|-------------
+no parameter | | foo.bar
+short | Last element of an id | bar
+upper | Upper case, replace '.' with '_'. Used for macro's | FOO_BAR
+dash | Replace '.' with '-'. Used for repository names | foo-bar
+underscore | Replace '.' with '_'. Used for variable names | foo_bar
 
 ### Installing Miscellaneous Files
 Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:

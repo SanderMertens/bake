@@ -44,6 +44,7 @@ bake_project_type type = BAKE_APPLICATION;
 const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
+const char *template = NULL;
 
 /* Command specific parameters */
 const char *export_expr = NULL;
@@ -87,7 +88,7 @@ void bake_usage(void)
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
-    printf("  --type <package|application> Manually specify a project type (default = \"application\")\n");
+    printf("  --type <package|template>    Manually specify a project type (default = \"application\")\n");
     printf("  --package                    Manually set the project type to package\n");
     printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
@@ -95,14 +96,15 @@ void bake_usage(void)
     printf("\n");
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
+    printf("  --template [id]              Specify template for new project\n");
     printf("  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
     printf("\n");
     printf("Commands:\n");
-    printf("  init [path]                  Initialize new bake project\n");
-    printf("  run [path|project id]         Build & run project\n");
+    printf("  new [path]                   Initialize new bake project\n");
+    printf("  run [path|project id]        Build & run project\n");
     printf("  build [path]                 Build a project (default command)\n");
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
@@ -123,9 +125,9 @@ void bake_usage(void)
     printf("Examples:\n");
     printf("  bake                         Build all projects discovered in current directory\n");
     printf("  bake my_app                  Build all projects discovered in my_app directory\n");
-    printf("  bake init                    Initialize new application project in current directory\n");
-    printf("  bake init my_app             Initialize new application project in directory my_app\n");
-    printf("  bake init my_lib --package   Initialize new package project in directory my_lib\n");
+    printf("  bake new                     Initialize new application project in current directory\n");
+    printf("  bake new my_app              Initialize new application project in directory my_app\n");
+    printf("  bake new my_lib --package    Initialize new package project in directory my_lib\n");
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
     printf("  bake locate foo.bar          Locate package foo.bar\n");
@@ -174,6 +176,7 @@ bake_project_type bake_parse_project_type(
     if (!strcmp(type, "application")) return BAKE_APPLICATION;
     if (!strcmp(type, "package")) return BAKE_PACKAGE;
     if (!strcmp(type, "tool")) return BAKE_TOOL;
+    if (!strcmp(type, "template")) return BAKE_TEMPLATE;
     ut_throw("'%s' is not a valid project kind", type);
     return 0;
 }
@@ -195,7 +198,7 @@ int16_t bake_init_action(
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
-        !strcmp(arg, "init") ||
+        !strcmp(arg, "new") ||
         !strcmp(arg, "run") ||
         !strcmp(arg, "uninstall") ||
         !strcmp(arg, "upgrade") ||
@@ -253,6 +256,7 @@ int bake_parse_args(
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
+            ARG(0, "template", template = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
@@ -508,7 +512,11 @@ int bake_init_project(
     }
 
     /* Setup all project files, include invoking driver */
-    ut_try( bake_project_setup(config, project), NULL);
+    if (template) {
+        ut_try( bake_project_setup_w_template(config, project, template), NULL);
+    } else {
+        ut_try( bake_project_setup(config, project), NULL);
+    }
 
     /* Install project metadata to bake env so it is discoverable by id */
     ut_try (bake_install_metadata(config, project), NULL);
@@ -866,19 +874,22 @@ int main(int argc, const char *argv[]) {
             action = "build";
         } else {
             ut_try( bake_discovery(&config), "discovery failed");
+            count = bake_crawler_count();
         }
 
         ut_log_pop();
 
         /* If projects have been discovered, build them */
-        if (build) {
-            ut_log_push("build");
-            ut_try(bake_build(&config, action), NULL);
-            ut_log_pop();
-        } else {
-            if (!strcmp(action, "foreach")) {
-                ut_try( bake_crawler_walk(
-                    &config, action, bake_foreach_action), NULL);
+        if (count) {
+            if (build) {
+                ut_log_push("build");
+                ut_try(bake_build(&config, action), NULL);
+                ut_log_pop();
+            } else {
+                if (!strcmp(action, "foreach")) {
+                    ut_try( bake_crawler_walk(
+                        &config, action, bake_foreach_action), NULL);
+                }
             }
         }
     } else {
@@ -887,7 +898,7 @@ int main(int argc, const char *argv[]) {
             ut_try( bake_env(&config), NULL);
         } else if (!strcmp(action, "setup")) {
             ut_try (bake_setup(argv[0], local_setup), NULL);
-        } else if (!strcmp(action, "init")) {
+        } else if (!strcmp(action, "new")) {
             ut_try (bake_init_project(&config), NULL);
         } else if (!strcmp(action, "run")) {
             ut_try (

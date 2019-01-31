@@ -126,6 +126,8 @@ int16_t bake_project_set(
         p->type = BAKE_PACKAGE;
     } else if (!strcmp(type, "tool")) {
         p->type = BAKE_TOOL;
+    } else if (!strcmp(type, "template")) {
+        p->type = BAKE_TEMPLATE;
     } else if (!strcmp(type, "executable")) {
         p->type = BAKE_APPLICATION;
         ut_warning("'executable' is deprecated, use 'application' instead for '%s'", p->id);
@@ -578,7 +580,7 @@ bake_project* bake_project_new(
             bake_project_parse(config, result),
             "failed to parse '%s/project.json'",
             path);
-            
+
         ut_try( bake_project_init(config, result), NULL);
     }
 
@@ -1402,6 +1404,18 @@ char* bake_random_description(void) {
     return strdup(buffer);
 }
 
+const char* bake_project_type_str(
+    bake_project_type type)
+{
+    switch (type) {
+    case BAKE_APPLICATION: return "application";
+    case BAKE_PACKAGE: return "package";
+    case BAKE_TOOL: return "tool";
+    case BAKE_TEMPLATE: return "template";
+    }
+    return "???";
+}
+
 
 int16_t bake_project_setup(
     bake_config *config,
@@ -1428,11 +1442,7 @@ int16_t bake_project_setup(
         "        \"repository\": null,\n"
         "        \"license\": null",
             project->id,
-            project->type == BAKE_PACKAGE
-                ? "package"
-                : project->type == BAKE_APPLICATION
-                    ? "application"
-                    : "tool",
+            bake_project_type_str(project->type),
             description);
     if (strcmp(project->language, "c")) {
         fprintf(f,
@@ -1457,6 +1467,149 @@ int16_t bake_project_setup(
             ? "application"
             : "package",
         project->id);
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_project_file_from_template(
+    bake_config *config,
+    bake_project *project,
+    const char *src_file,
+    const char *dst_file)
+{
+    char *src_content = ut_file_load(src_file);
+    if (!src_content) {
+        ut_throw("failed to load file '%s'", src_file);
+        goto error;
+    }
+
+    FILE *dst = fopen(dst_file, "w");
+    if (!dst) {
+        ut_throw("failed to open file '%s' for writing", dst_file);
+        goto error;
+    }
+
+    char *dst_content = bake_attr_replace(
+            config, project, project->id, src_content);
+
+    fprintf(dst, "%s", dst_content);
+    fclose(dst);
+
+    free(dst_content);
+    free(src_content);
+
+    return 0;
+error:
+    return -1;
+}
+
+static const char *template_file[] = {
+    "Makefile"
+};
+
+static const char *template_ext[] = {
+    "", "c", "cpp", "h", "hpp", "html", "js", "css", "json", "md", "sh", "bat",
+    "lua", "python", "java", "cs", "make"
+};
+
+static
+bool bake_is_template_file(
+    const char *file)
+{
+    int i;
+    for (i = 0; i < sizeof(template_file) / sizeof(char*); i ++) {
+        if (!strcmp(template_file[i], file)) {
+            return true;
+        }
+    }
+
+    char *ext = strrchr(file, '.');
+
+    if (!ext) {
+        ext = "";
+    } else {
+        ext ++;
+    }
+
+    for (i = 0; i < sizeof(template_ext) / sizeof(char*); i ++) {
+        if (!strcmp(template_ext[i], ext)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int16_t bake_project_setup_w_template(
+    bake_config *config,
+    bake_project *project,
+    const char *template_id)
+{
+    const char *template_path = ut_locate(
+            template_id, NULL, UT_LOCATE_TEMPLATE);
+    if (!template_path) {
+        ut_throw("template '%s' not found", template_id);
+        goto error;
+    }
+
+    ut_iter it;
+    ut_try( ut_dir_iter(template_path, "//", &it), NULL);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        if (file[0] == '.') {
+            continue;
+        }
+
+        if (!strcmp(file, "project.json")) {
+            continue;
+        }
+
+        char *src_path = ut_asprintf("%s/%s", template_path, file);
+        char *dst_path = ut_asprintf("%s/%s", project->path, file);
+
+        if (!ut_isdir(src_path)) {
+            if (bake_is_template_file(file)) {
+                ut_try( bake_project_file_from_template(
+                    config, project, src_path, dst_path),
+                    NULL);
+            } else {
+                ut_try( ut_cp(src_path, dst_path), NULL);
+            }
+        } else {
+            ut_try( ut_mkdir(dst_path), NULL);
+        }
+
+        free(dst_path);
+        free(src_path);
+    }
+
+    /* Load JSON from template, tailor to project */
+    char *template_json = ut_asprintf("%s/project.json", template_path);
+    JSON_Value *value = json_parse_file_with_comments(template_json);
+    if (!value) {
+        ut_throw("failed to load project.json of template '%s", template_id);
+        goto error;
+    }
+
+    /* Tailor JSON to use project specific settings */
+    JSON_Object *root = json_value_get_object(value);
+    if (!root) {
+        ut_throw("expected JSON in project.json of template '%s'", template_id);
+        goto error;
+    }
+
+    /* Overwrite the name and type of the JSON */
+    json_object_set_string(root, "id", project->id);
+    json_object_set_string(root, "type", bake_project_type_str(project->type));
+
+    /* Write to project.json of project */
+    char *project_json = ut_asprintf("%s/project.json", project->path);
+    json_serialize_to_file_pretty(value, project_json);
+    free(project_json);
 
     return 0;
 error:

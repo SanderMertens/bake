@@ -45,6 +45,7 @@ struct ut_loaded {
     char *src; /* Path to project source (if available) */
     char *dev; /* Path to project in development (if available) */
     char *include; /* Path to project include (if available) */
+    char *template; /* Path to template */
     char *project; /* Path to project lib. Always available if valid project */
     char *repo; /* Repository name (replace . with -) */
     bool tried_binary; /* Set to true if tried loading the bin path */
@@ -499,6 +500,16 @@ const char* ut_locate(
     if (!loaded) {
         loaded = ut_loaded_add(package);
         loaded->loading = 0; /* locate is not going to load package */
+
+        /* Regardless of whether package has been located in environment, test
+         * if the package identifier is also a template */
+        char *template_path = ut_asprintf(
+            "%s/templates/%s", UT_LOAD_HOME_PATH, package);
+        if (ut_file_test(template_path) == 1) {
+            loaded->template = template_path;
+        } else {
+            free(template_path);
+        }
     }
 
     /* Only try to locate packages once */
@@ -517,60 +528,57 @@ const char* ut_locate(
         }
     }
 
-    /* If loaded hasn't been loaded by now, package isn't found */
-    if (!loaded->env) {
-        ut_trace("could not locate '%s'", package);
-        goto error;
-    }
-
     /* If env has been found, derive location */
-    if (env) {
-        switch(kind) {
-        case UT_LOCATE_ENV:
-            result = loaded->env; /* always set */
-            break;
-        case UT_LOCATE_PROJECT:
-            result = loaded->project; /* always set */
-            break;
-        case UT_LOCATE_ETC:
-            if (!loaded->etc) {
-                loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
-            }
-            result = loaded->etc;
-            break;
-        case UT_LOCATE_INCLUDE:
-            if (!loaded->include) {
+    switch(kind) {
+    case UT_LOCATE_ENV:
+        result = loaded->env; /* always set */
+        break;
+    case UT_LOCATE_PROJECT:
+        result = loaded->project; /* always set */
+        break;
+    case UT_LOCATE_ETC:
+        if (!loaded->etc) {
+            loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
+        }
+        result = loaded->etc;
+        break;
+    case UT_LOCATE_INCLUDE:
+        if (!loaded->include) {
+            if (loaded->etc) {
                 loaded->include = ut_asprintf("%s/include/%s.dir", loaded->env, package);
             }
-            result = loaded->include;
-            break;
-        case UT_LOCATE_SOURCE:
-            if (!loaded->src) {
-                ut_try (ut_locate_src(package, loaded), NULL);
-            }
-            result = loaded->src;
-            break;
-        case UT_LOCATE_DEVSRC:
-            if (!loaded->dev) {
-                ut_try (ut_locate_src(package, loaded), NULL);
-            }
-            result = loaded->dev;
-            break;
-        case UT_LOCATE_LIB:
-        case UT_LOCATE_STATIC:
-        case UT_LOCATE_APP:
-        case UT_LOCATE_BIN:
-            if (!loaded->tried_binary) {
-                if (ut_locate_binary(package, loaded)) {
-                    goto error;
-                }
-            }
-            if (kind == UT_LOCATE_LIB) result = loaded->lib;
-            if (kind == UT_LOCATE_STATIC) result = loaded->static_lib;
-            if (kind == UT_LOCATE_APP) result = loaded->app;
-            if (kind == UT_LOCATE_BIN) result = loaded->bin;
-            break;
         }
+        result = loaded->include;
+        break;
+    case UT_LOCATE_TEMPLATE:
+        result = loaded->template;
+        break;
+    case UT_LOCATE_SOURCE:
+        if (!loaded->src) {
+            ut_try (ut_locate_src(package, loaded), NULL);
+        }
+        result = loaded->src;
+        break;
+    case UT_LOCATE_DEVSRC:
+        if (!loaded->dev) {
+            ut_try (ut_locate_src(package, loaded), NULL);
+        }
+        result = loaded->dev;
+        break;
+    case UT_LOCATE_LIB:
+    case UT_LOCATE_STATIC:
+    case UT_LOCATE_APP:
+    case UT_LOCATE_BIN:
+        if (!loaded->tried_binary) {
+            if (ut_locate_binary(package, loaded)) {
+                goto error;
+            }
+        }
+        if (kind == UT_LOCATE_LIB) result = loaded->lib;
+        if (kind == UT_LOCATE_STATIC) result = loaded->static_lib;
+        if (kind == UT_LOCATE_APP) result = loaded->app;
+        if (kind == UT_LOCATE_BIN) result = loaded->bin;
+        break;
     }
 
     /* If locating a library, library is requested and lookup is successful,
@@ -587,6 +595,13 @@ const char* ut_locate(
         *dl_out = loaded->library;
     } else if (dl_out) {
         /* Library was not found */
+    }
+
+
+    /* If loaded hasn't been loaded by now, package isn't found */
+    if (!result) {
+        ut_trace("could not locate '%s'", package);
+        goto error;
     }
 
     ut_try (
