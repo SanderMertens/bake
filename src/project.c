@@ -1463,6 +1463,8 @@ static
 int16_t bake_project_create_project_json(
     bake_project *project)
 {
+    char *description = bake_random_description();
+
     /* Create project.json */
     FILE *f = fopen("project.json", "w");
     if (!f) {
@@ -1527,8 +1529,6 @@ int16_t bake_project_setup(
     bake_project *project)
 {
     bake_driver *driver = project->language_driver->driver;
-
-    char *description = bake_random_description();
 
     ut_try(!
         ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
@@ -1630,6 +1630,60 @@ bool bake_is_template_file(
     return false;
 }
 
+static
+char *bake_project_template_filename(
+    bake_config *config,
+    bake_project *project,
+    char *file)
+{
+    char *real = strrchr(file, '/');
+    if (!real) {
+        real = file;
+    } else {
+        real ++;
+    }
+
+    if (real[0] == '_' && real[1] == '_') {
+        char *ext = strrchr(real, '.');
+        char *path = NULL;
+
+        if (!ext) {
+            ext = "";
+        }
+
+        if (real != file) {
+            path = ut_strdup(file);
+            char *last_elem = strrchr(path, '/');
+            last_elem[1] = '\0';
+        } else {
+            path = "";
+        }
+
+        real += 2; /* Strip __ */
+
+        char *tmp = ut_asprintf("%s${%s%s", path, real, ext);
+        char *ptr, ch;
+        for (ptr = tmp; (ch = *ptr); ptr ++) {
+            if (ch == '_') {
+                ptr[0] = ' ';
+            }
+            if (ch == '.') {
+                ptr[0] = '}';
+                strcpy(ptr + 1, ext);
+                break;
+            }
+        }
+        
+        real = bake_attr_replace(config, project, project->id, tmp);
+        free(tmp);
+
+    } else {
+        real = file;
+    }
+
+    return real;
+}
+
 /* Setup a new project from a template */
 int16_t bake_project_setup_w_template(
     bake_config *config,
@@ -1656,11 +1710,19 @@ int16_t bake_project_setup_w_template(
             continue;
         }
 
+        bool is_template = bake_is_template_file(file);
         char *src_path = ut_asprintf("%s/%s", template_path, file);
-        char *dst_path = ut_asprintf("%s/%s", project->path, file);
+
+        char *real = file;
+        
+        if (is_template) {
+            real = bake_project_template_filename(config, project, file);
+        }
+
+        char *dst_path = ut_asprintf("%s/%s", project->path, real);
 
         if (!ut_isdir(src_path)) {
-            if (bake_is_template_file(file)) {
+            if (is_template) {
                 ut_try( bake_project_file_from_template(
                     config, project, src_path, dst_path),
                     NULL);
