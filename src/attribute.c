@@ -139,10 +139,10 @@ bool bake_project_language_match(
  * the current language system, or false if it doesn't. */
 static
 int16_t bake_project_func_language(
-  bake_project *project,
-  const char *package_id,
-  ut_strbuf *buffer,
-  const char *argument)
+    bake_project *project,
+    const char *package_id,
+    ut_strbuf *buffer,
+    const char *argument)
 {
     const char *language = project->language;
 
@@ -154,6 +154,57 @@ int16_t bake_project_func_language(
         } else {
             ut_strbuf_appendstr(buffer, "0");
         }
+    }
+
+    return 0;
+}
+
+static
+int16_t bake_project_func_id(
+    bake_project *project,
+    const char *package_id,
+    ut_strbuf *buffer,
+    const char *argument)
+{
+    if (!argument) {
+        ut_strbuf_appendstr(buffer, package_id);
+    } else if (!strcmp(argument, "short")) {
+        const char *short_id = strrchr(package_id, '.');
+        if (!short_id) {
+            short_id = package_id;
+        } else {
+            short_id ++;
+        }
+        ut_strbuf_appendstr(buffer, short_id);
+    } else if (!strcmp(argument, "upper")) {
+        char *upper = ut_strdup(package_id);
+        char *ptr, ch;
+        for (ptr = upper; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                ptr[0] = '_';
+            } else {
+                ptr[0] = toupper(ch);
+            }
+        }
+        ut_strbuf_appendstr(buffer, upper);
+    } else if (!strcmp(argument, "dash")) {
+        char *dash = ut_strdup(package_id);
+        char *ptr, ch;
+        for (ptr = dash; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                ptr[0] = '-';
+            }
+        }
+        ut_strbuf_appendstr(buffer, dash);
+    } else if (!strcmp(argument, "underscore")) {
+        char *underscore = ut_strdup(package_id);
+        char *ptr, ch;
+        for (ptr = underscore; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                ptr[0] = '_';
+            }
+        }
+        ut_strbuf_appendstr(buffer, underscore);
     }
 
     return 0;
@@ -175,6 +226,8 @@ int16_t bake_attr_func(
         return bake_project_func_os(project, package_id, buffer, argument);
     } else if (!strcmp(function, "language") || !strcmp(function, "lang")) {
         return bake_project_func_language(project, package_id, buffer, argument);
+    } else if (!strcmp(function, "id")) {
+        return bake_project_func_id(project, package_id, buffer, argument);
     } else {
         ut_throw("unknown function '%s'", function);
         return -1;
@@ -214,10 +267,11 @@ char* bake_attr_replace(
         if (next[1] == '{') {
             /* Find end of function identifier */
             const char *start = &next[2], *end = strchr(next, ' ');
-            const char *func_end = strchr(end ? end : start, '}');
-            if (!end) {
+            const char *func_end = strchr(next, '}');
+            if (!end || func_end < end) {
                 end = func_end;
             }
+
             if (!end) {
                 ut_throw("no matching '}' in '%s'", input);
                 free (ut_strbuf_get(&output));
@@ -230,7 +284,7 @@ char* bake_attr_replace(
             for (ptr = start; ptr < end; ptr ++) {
                 if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
                     ut_throw("invalid function identifier in '%s'", input);
-                    free (ut_strbuf_get(&output));
+                    ut_strbuf_reset(&output);
                     goto error;
                 }
                 func_id[ptr - start] = *ptr;
