@@ -47,7 +47,7 @@ The following commands are useful for getting started with bake. Also, check out
 To create and run a new bake application project called `my_app`, run the following commands:
 
 ```demo
-bake init my_app
+bake new my_app
 bake run my_app
 ```
 
@@ -998,23 +998,27 @@ Options:
   --cfg <configuration>        Specify configuration id
   --env <environment>          Specify environment id
   --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET
+  --strict                     Manually enable strict compiler options
+  --optimize                   Manually enable compiler optimizations
 
   --id <project id>            Manually specify a project id
-  --type <package|application> Manually specify a project type (default = "application")
+  --type <package|template>    Manually specify a project type (default = "application")
   --package                    Manually set the project type to package
   --language <language>        Manually specify a language for project (default = "c")
   --artefact <binary>          Manually specify a binary file for project
   --includes <include path>    Manually specify an include path for project
 
-  --interactive                Rebuild project when files change (use with bake run)
-  -a,--args [arguments]        Pass arguments to application ran with bake run
+  --interactive                Rebuild project when files change (use w/run)
+  -a,--args [arguments]        Pass arguments to application (use w/run)
+  -t,--template [id]            Specify template for new project
+  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)
 
-  --trace                      Set verbosity to TRACE
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
+  --trace                      Set verbosity to TRACE
 
 Commands:
-  init [path]                  Initialize new bake project
-  run [path|project id]         Build & run project
+  new [path]                   Initialize new bake project
+  run [path|project id]        Build & run project
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
@@ -1023,19 +1027,25 @@ Commands:
   uninstall [project id]       Remove project from bake environment
   clone <git url>              Clone and build git repository and dependencies
   update [project id]          Update an installed package or application
+  foreach <cmd>                Run command for each discovered project
 
   env                          Echo bake environment
   upgrade                      Upgrade to new bake version
   export <NAME>=|+=<VALUE>     Add variable to bake environment
 
+  info <package id>            Display info on a project in the bake environment
+  list [filter]                List packages in bake environment
+
 Examples:
   bake                         Build all projects discovered in current directory
   bake my_app                  Build all projects discovered in my_app directory
-  bake init                    Initialize new application project in current directory
-  bake init my_app             Initialize new application project in directory my_app
-  bake init my_lib --package   Initialize new package project in directory my_lib
+  bake new                     Initialize new application project in current directory
+  bake new my_app              Initialize new application project in directory my_app
+  bake new my_lib --package    Initialize new package project in directory my_lib
   bake run my_app -a hello     Run my_app project, pass 'hello' as argument
   bake publish major           Increase major project version, create git tag
+  bake info foo.bar            Show information about package foo.bar
+  bake list foo.*              List all packages that start with foo.
 
 ### Writing Plugins
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
