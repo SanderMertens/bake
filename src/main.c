@@ -119,7 +119,7 @@ void bake_usage(void)
     printf("  upgrade                      Upgrade to new bake version\n");
     printf("  export <NAME>=|+=<VALUE>     Add variable to bake environment\n");
     printf("\n");
-    printf("  locate <package id>          Locate and diagnose a project in the bake environment\n");
+    printf("  info <package id>            Display info on a project in the bake environment\n");
     printf("  list [filter]                List packages in bake environment\n");
     printf("\n");
     printf("Examples:\n");
@@ -130,7 +130,7 @@ void bake_usage(void)
     printf("  bake new my_lib --package    Initialize new package project in directory my_lib\n");
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
-    printf("  bake locate foo.bar          Locate package foo.bar\n");
+    printf("  bake info foo.bar            Show information about package foo.bar\n");
     printf("  bake list foo.*              List all packages that start with foo.\n");
     printf("\n");
 }
@@ -203,7 +203,7 @@ int16_t bake_init_action(
         !strcmp(arg, "uninstall") ||
         !strcmp(arg, "upgrade") ||
         !strcmp(arg, "publish") ||
-        !strcmp(arg, "locate") ||
+        !strcmp(arg, "info") ||
         !strcmp(arg, "list") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
@@ -554,7 +554,7 @@ error:
     return -1;
 }
 
-int bake_locate(
+int bake_info(
     bake_config *config,
     const char *id,
     const char *env,
@@ -744,7 +744,7 @@ int bake_list(
             }
         }
 
-        if (!bake_locate(
+        if (!bake_info(
             config, package->id, bake_print_env(config, package), true, &type,
             clean_missing))
         {
@@ -911,8 +911,8 @@ int main(int argc, const char *argv[]) {
             } else {
                 ut_try (bake_list(&config, true), NULL);
             }
-        } else if (!strcmp(action, "locate")) {
-            bake_locate(&config, path, NULL, true, NULL, false);
+        } else if (!strcmp(action, "info")) {
+            bake_info(&config, path, NULL, true, NULL, false);
         } else if (!strcmp(action, "list")) {
             bake_list(&config, false);
         } else if (!strcmp(action, "export")) {
