@@ -96,7 +96,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
-    printf("  --template [id]              Specify template for new project\n");
+    printf("  -t,--template [id]           Specify template for new project\n");
     printf("  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
@@ -256,7 +256,7 @@ int bake_parse_args(
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
-            ARG(0, "template", template = argv[i + 1]; i ++);
+            ARG('t', "template", template = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
