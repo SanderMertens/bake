@@ -1043,6 +1043,7 @@ Examples:
   bake new my_app              Initialize new application project in directory my_app
   bake new my_lib --package    Initialize new package project in directory my_lib
   bake run my_app -a hello     Run my_app project, pass 'hello' as argument
+  bake new game -t sdl2.basic  Create new project from the sdl2.basic template
   bake publish major           Increase major project version, create git tag
   bake info foo.bar            Show information about package foo.bar
   bake list foo.*              List all packages that start with foo.
