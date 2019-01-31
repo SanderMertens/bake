@@ -320,13 +320,16 @@ ut_ll bake_config_find_files(
     char *cur_path = path;
 
     char *path_parsed = ut_envparse(path);
-
+#ifndef _WIN32
     if (path_parsed[0] == PATH_SEPARATOR_C) {
+#else
+    if (strlen(path_parsed) > 1 && path_parsed[1] == ':') {
+#endif
         /* Absolute path */
         cur_path = strdup(path_parsed);
     } else {
         /* Relative path */
-        cur_path = ut_asprintf("%s%s%s", ut_cwd(), PATH_SEPARATOR, path_parsed);
+        cur_path = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, path_parsed);
         ut_path_clean(cur_path, cur_path);
     }
 
@@ -335,10 +338,10 @@ ut_ll bake_config_find_files(
     /* Check for a bake in the current path */
     char *elem = NULL;
     do {
-        char *file = ut_asprintf("%s%sbake", cur_path, PATH_SEPARATOR);
+        char *file = ut_asprintf("%s%cbake%s", cur_path, PATH_SEPARATOR_C, UT_OS_BIN_EXT);
         if (ut_file_test(file) == 1) {
             if (ut_isdir(file)) {
-                char *cfg = ut_asprintf("%s%sbake.json", file, PATH_SEPARATOR);
+                char *cfg = ut_asprintf("%s%cbake.json", file, PATH_SEPARATOR_C);
                 if (ut_file_test(cfg) == 1) {
                     if (!config_files) config_files = ut_ll_new();
                     ut_ll_append(config_files, cfg);
@@ -354,7 +357,7 @@ ut_ll bake_config_find_files(
         }
 
 
-        file = ut_asprintf("%s%sbake.json", cur_path, PATH_SEPARATOR);
+        file = ut_asprintf("%s%cbake.json", cur_path, PATH_SEPARATOR_C);
         if (ut_file_test(file) == 1) {
             if (!config_files) config_files = ut_ll_new();
             ut_ll_append(config_files, file);
@@ -379,7 +382,7 @@ ut_ll bake_config_find_config(void)
     ut_ll config_files = NULL;
 
     if (ut_getenv("BAKE_HOME")) {
-        char *file = ut_asprintf("%s%sbake.json", ut_getenv("BAKE_HOME"), PATH_SEPARATOR);
+        char *file = ut_asprintf("%s%cbake.json", ut_getenv("BAKE_HOME"), PATH_SEPARATOR_C);
         if (ut_file_test(file) == 1) {
             config_files = ut_ll_new();
             ut_ll_append(config_files, file);
@@ -423,7 +426,11 @@ int16_t bake_config_load(
 
     /* Set BAKE_HOME to a default value if the config didn't specify it */
     if (!ut_getenv("BAKE_HOME")) {
+#ifndef _WIN32
         char *bake_home = ut_envparse("~/bake");
+#else
+        char *bake_home = ut_envparse("~\\bake");
+#endif
         if (!bake_home) {
             ut_throw(NULL);
             goto error;
