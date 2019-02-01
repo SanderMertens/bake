@@ -220,7 +220,7 @@ int16_t bake_build_make_project(
     fflush(stdout);
 
 #ifdef _WIN32
-    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat";
     char *driver_path = ut_asprintf("%s%c%s\\build-%s", ut_cwd(), PATH_SEPARATOR_C, path, UT_OS_STRING);
     ut_try(cmd(strarg("\"\"%s\" x64 && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", tool, driver_path)),
       "failed to build '%s'", id);

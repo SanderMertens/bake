@@ -102,7 +102,7 @@ void compile_src(
         cpp = true;
     }
 
-    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat";
     /* Start VC env */
     ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
 
@@ -274,7 +274,7 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat";
     /* Start VC env */
     ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
 
