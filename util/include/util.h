@@ -205,6 +205,7 @@ extern "C" {
 
 
 /* Color constants */
+#ifndef _WIN32
 #define UT_BLACK   "\033[1;30m"
 #define UT_RED     "\033[0;31m"
 #define UT_GREEN   "\033[0;32m"
@@ -216,6 +217,19 @@ extern "C" {
 #define UT_GREY    "\033[0;37m"
 #define UT_NORMAL  "\033[0;49m"
 #define UT_BOLD    "\033[1;49m"
+#else
+#define UT_BLACK   ""
+#define UT_RED     ""
+#define UT_GREEN   ""
+#define UT_YELLOW  ""
+#define UT_BLUE    ""
+#define UT_MAGENTA ""
+#define UT_CYAN    ""
+#define UT_WHITE   ""
+#define UT_GREY    ""
+#define UT_NORMAL  ""
+#define UT_BOLD    ""
+#endif
 
 #define UT_FUNCTION __func__
 

@@ -317,11 +317,7 @@ int16_t ut_cp(
         result = ut_cp_file(src_parsed, dst_parsed);
     }
 
-#ifndef _WIN32
     ut_trace("#[cyan]cp %s %s", src, dst);
-#else
-    ut_trace("cp %s %s", src, dst);
-#endif
 
     free(src_parsed);
     free(dst_parsed);

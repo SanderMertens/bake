@@ -86,7 +86,7 @@ int16_t bake_create_script_windows(void)
     fclose(f);
 
     /* Copy file to global location, may ask for password */
-    ut_log("ATTENTION copying script to '" GLOBAL_PATH "', setup may request password\n");
+    ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
 
     char *cp_cmd = ut_asprintf("copy /Y %s %s\\bake.bat", script_path, GLOBAL_PATH);
 
@@ -99,7 +99,7 @@ int16_t bake_create_script_windows(void)
         );
     }
     else {
-        ut_log("OK   install bake script to '" GLOBAL_PATH "'\n");
+        ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
     }
 
     free(script_path);
@@ -195,6 +195,7 @@ int16_t bake_create_script_unixlike(void)
 error:
     return -1;
 }
+
 int16_t bake_create_script(void)
 {
     if (ut_os_match("windows"))
@@ -213,27 +214,21 @@ int16_t bake_build_make_project(
       path, id);
     ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
-#ifndef _WIN32
     ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
-#else
-    ut_log("OK   install include files for '%s'\n", id);
-#endif
 
     ut_log("...  build '%s'", id);
     fflush(stdout);
-#ifdef _WIN32
 
+#ifdef _WIN32
     char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional\\VC\\Auxiliary\\Build\\vcvarsall.bat";
     char *driver_path = ut_asprintf("%s%c%s\\build-%s", ut_cwd(), PATH_SEPARATOR_C, path, UT_OS_STRING);
     ut_try(cmd(strarg("\"\"%s\" x64 && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", tool, driver_path)),
       "failed to build '%s'", id);
-
-    ut_log("OK   build '%s'\n", id);
 #else
     ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
       "failed to build '%s'", id);
-    ut_log("#[green]OK#[reset]   build '%s'\n", id);
 #endif
+    ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
     char *bin_path = ut_asprintf("%s%cbin%c%s-debug", path, PATH_SEPARATOR_C, PATH_SEPARATOR_C, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
@@ -261,7 +256,7 @@ int16_t bake_build_make_project(
 #ifndef _WIN32
     ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
 #else
-    ut_log("OK   install '%s' to %%BAKE_HOME%%\n", id);
+    ut_log("#[green]OK#[reset]   install '%s' to %%BAKE_HOME%%\n", id);
 #endif
     free(install_cmd);
 
@@ -400,11 +395,11 @@ int16_t bake_setup_windows(
     ut_try(ut_cp(".\\bake.exe", "~\\bake\\bake.exe"),
         "failed to copy bake executable to user bake environment");
 
-    ut_log("OK   copy bake executable to %%BAKE_HOME%%\n");
+    ut_log("#[green]OK#[reset]   copy bake executable to %%BAKE_HOME%%\n");
 
     ut_try(cmd("bake.exe install --id bake --includes include --build-to-home"),
         "failed to install bake include files");
-    ut_log("OK   install bake include files to %%BAKE_HOME%%\n");
+    ut_log("#[green]OK#[reset]   install bake include files to %%BAKE_HOME%%\n");
 
     ut_try(bake_build_make_project("util", "bake.util", "bake_util"), NULL);
 
@@ -414,7 +409,7 @@ int16_t bake_setup_windows(
 
 #ifndef _WIN32
     ut_try(cmd("bake.exe libraries --build-to-home"), NULL);
-    ut_log("OK   Installed library configuration packages\n");
+    ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
 #endif
     /*
 
@@ -427,14 +422,14 @@ int16_t bake_setup_windows(
      */
 
     ut_log(
-        "\n"
-        "    ___      ___      ___      ___ \n"
-        "   /\\  \\    /\\  \\    /\\__\\    /\\  \\ \n"
-        "  /  \\  \\  /  \\  \\  / / _/_  /  \\  \\ \n"
-        " /  \\ \\__\\/  \\ \\__\\/  -\"\\__\\/  \\ \\__\\ \n"
-        " \\ \\  /  /\\/\\  /  /\\; ;-\",-\"\\ \\ \\/  / \n"
-        "  \\  /  /   / /  /  | |  |   \\ \\/  / \n"
-        "   \\/__/    \\/__/    \\|__|    \\/__/ \n\n");
+        "#[white]\n"
+        "#[normal]    #[cyan]___      ___      ___      ___ \n"
+        "#[normal]   /\\#[cyan]  \\    #[normal]/\\#[cyan]  \\    #[normal]/\\#[cyan]__\\    #[normal]/\\  #[cyan]\\ \n"
+        "#[normal]  /  \\#[cyan]  \\  #[normal]/  \\#[cyan]  \\  #[normal]/ / #[cyan]_/_  #[normal]/  \\  #[cyan]\\ \n"
+        "#[normal] /  \\ \\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\#[normal]/  -\"\\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\ \n"
+        "#[normal] \\ \\  /#[cyan]  /#[normal]\\/\\  /#[cyan]  /#[normal]\\; ;-\"#[cyan],-\"#[normal]\\ \\ \\/  #[cyan]/ \n"
+        "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
+        "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
 
     printf("\n       Installation complete \n\n");
 

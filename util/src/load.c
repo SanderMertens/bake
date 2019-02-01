@@ -811,11 +811,7 @@ recursive:
             if (lib->loading) {
                 ut_strbuf_append(
                     &detail,
-#ifndef _WIN32
                     "    - #[cyan]%s#[normal] #[magenta]=>#[normal] #[white]%s\n",
-#else
-                    "    - %s => %s\n",
-#endif
                     lib->id, lib->bin ? lib->bin : "");
             }
         }

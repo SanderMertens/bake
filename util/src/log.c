@@ -389,11 +389,7 @@ char* ut_log_categoryIndent(
 
     while (categories[i] && (!count || i < count)) {
         i ++;
-#ifndef _WIN32
         ut_strbuf_append(&buff, "%s|#[reset] ", color);
-#else
-        ut_strbuf_append(&buff, "");
-#endif
     }
 
     return ut_strbuf_get(&buff);
@@ -407,9 +403,7 @@ char* ut_log_categoryString(
     ut_strbuf buff = UT_STRBUF_INIT;
 
     if (categories) {
-#ifndef _WIN32
         ut_strbuf_appendstr(&buff, "#[grey]");
-#endif
         while (categories[i]) {
             ut_strbuf_append(&buff, "%s", categories[i]);
             i ++;
@@ -417,9 +411,7 @@ char* ut_log_categoryString(
                 ut_strbuf_appendstr(&buff, ".");
             }
         }
-#ifndef _WIN32
         ut_strbuf_appendstr(&buff, "#[reset]");
-#endif
     }
 
     if (!i) {
@@ -595,12 +587,8 @@ void ut_logprint_kind(
     if (kind != UT_LOG) {
         ut_strbuf_append(
             buf,
-#ifndef _WIN32
             "%s%s%*s#[reset]",
             color,
-#else
-            "%s%*s",
-#endif
             levelstr,
             levelspace - strlen(levelstr),
             "");
@@ -634,9 +622,7 @@ void ut_logprint_deltaTime(
     ut_log_tlsData *data,
     bool printCategory)
 {
-#ifndef _WIN32
     ut_strbuf_appendstr(buf, "#[grey]");
-#endif
     if (UT_LOG_PROFILE) {
         ut_strbuf_appendstr(buf, " --------");
     } else {
@@ -653,9 +639,7 @@ void ut_logprint_deltaTime(
             ut_strbuf_appendstr(buf, " --------");
         }
     }
-#ifndef _WIN32
     ut_strbuf_appendstr(buf, "#[reset]");
-#endif
 }
 
 static
@@ -669,25 +653,13 @@ bool ut_logprint_sumTime(
         struct timespec delta = timespec_sub(now, frame->lastTime);
         if (!delta.tv_sec && delta.tv_nsec < 50000) {
             if (UT_LOG_PROFILE) {
-#ifndef _WIN32
                 ut_strbuf_appendstr(buf, "#[grey] -------- #[reset]");
-#else
-                ut_strbuf_appendstr(buf, " -------- ");
-#endif
             }
             return false;
         }
-#ifndef _WIN32
         ut_strbuf_append(buf, " #[green]%.2d.%.5d#[reset]", delta.tv_sec, delta.tv_nsec / 10000);
-#else
-        ut_strbuf_append(buf, " %.2d.%.5d", delta.tv_sec, delta.tv_nsec / 10000);
-#endif
     } else {
-#ifndef _WIN32
         ut_strbuf_appendstr(buf, "#[grey] --------#[reset]");
-#else
-        ut_strbuf_appendstr(buf, " --------");
-#endif
     }
     return true;
 }
@@ -749,26 +721,14 @@ int ut_logprint_file(
     file = ut_log_stripFunctionName(file);
     if (file) {
         if (!fixedWidth) {
-#ifndef _WIN32
             ut_strbuf_append(buf, "#[bold]%s#[reset]", file);
-#else
-            ut_strbuf_append(buf, "%s", file);
-#endif
         } else {
             int len = strlen(file);
             if (len > (UT_LOG_FILE_LEN)) {
                 file += len - UT_LOG_FILE_LEN + 2;
-#ifndef _WIN32
                 ut_strbuf_append(buf, "#[bold]..%*s#[reset]", UT_LOG_FILE_LEN - 2, file);
-#else
-                ut_strbuf_append(buf, "..%*s", UT_LOG_FILE_LEN - 2, file);
-#endif
             } else {
-#ifndef _WIN32
                 ut_strbuf_append(buf, "#[bold]%*s#[reset]", UT_LOG_FILE_LEN, file);
-#else
-                ut_strbuf_append(buf, "%*s", UT_LOG_FILE_LEN, file);
-#endif
             }
         }
         return 1;
@@ -784,11 +744,7 @@ int ut_logprint_line(
     bool fixedWidth)
 {
     if (line) {
-#ifndef _WIN32
         ut_strbuf_append(buf, "#[bold]%u#[reset]", line);
-#else
-        ut_strbuf_append(buf, "%u", line);
-#endif
         if (fixedWidth) {
             int len = 4 - (floor(log10(line)) + 1);
             if (len) {
@@ -807,11 +763,7 @@ int ut_logprint_function(
     char const *function)
 {
     if (function) {
-#ifndef _WIN32
         ut_strbuf_append(buf, "#[cyan]%s#[reset]", function);
-#else
-        ut_strbuf_append(buf, "%s", function);
-#endif
         return 1;
     } else {
         return 0;
@@ -835,7 +787,8 @@ int ut_logprint_proc(
 #ifndef _WIN32
     ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[id % 6], id);
 #else
-    ut_strbuf_append(buf, "%u", id);
+    int _id = (int)id;
+    ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[_id % 6], _id);
 #endif
     return 1;
 }
@@ -960,22 +913,14 @@ void ut_logprint(
                                 ut_logprint(
                                     f, log_fmt, kind, categories, file, line, function, NULL, i + 1, computeSum);
                                 ut_log(
-#ifndef _WIN32
                                     "%s#[grey]├> %s#[reset]\n",
-#else
-                                    "%s├> %s\n",
-#endif
                                     indent,
                                     data->categories[i]);
                             } else {
                                 ut_logprint(
                                     f, log_fmt, kind, categories, file, line, function, NULL, i + 1, computeSum);
                                 ut_log(
-#ifndef _WIN32
                                     "#[grey]%s#[reset]\n",
-#else
-                                    "%s\n",
-#endif
                                     data->categories[i]);
                             }
                             data->frames[i].printed = true;
@@ -997,11 +942,7 @@ void ut_logprint(
             case 'l': ret = ut_logprint_line(cur, line, !ut_log_shouldEmbedCategories); break;
             case 'r': ret = ut_logprint_function(cur, function); break;
             case 'm': ret = ut_logprint_msg(cur, msg); break;
-#ifndef _WIN32
             case 'a': ut_strbuf_append(cur, "#[cyan]%s#[reset]", ut_log_appName); break;
-#else
-            case 'a': ut_strbuf_append(cur, "%s", ut_log_appName); break;
-#endif
             case 'A': ret = ut_logprint_proc(cur); break;
             case 'V': if (only_warn) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
             case 'F': if (only_warn) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
@@ -1060,11 +1001,8 @@ void ut_logprint(
     char *str = ut_strbuf_get(&buf);
 
     if (str) {
-#ifndef _WIN32
         char *colorized = ut_log_colorize(str);
-#else
-        char *colorized = strdup(str);
-#endif
+
         if (breakAtCategory) {
             fprintf(f, "%s", colorized);
         } else {
@@ -1574,11 +1512,7 @@ void _ut_log_pop(
                 ut_logprint(
                     stderr, UT_LOG_FMT_CURRENT, UT_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
                 ut_log(
-#ifndef _WIN32
                     "%s#[grey]+#[reset]\n", indent ? indent : "");
-#else
-                    "%s+\n", indent ? indent : "");
-#endif
                 if (indent) free(indent);
             }
         }
@@ -2070,11 +2004,8 @@ void ut_log(char *fmt, ...) {
     va_start(arglist, fmt);
     formatted = ut_vasprintf(fmt, arglist);
     va_end(arglist);
-#ifdef _WIN32
-    colorized = ut_strdup(formatted);
-#else
+
     colorized = ut_log_colorize(formatted);
-#endif
     len = printlen(colorized);
     fprintf(stderr, "%s", colorized);
 

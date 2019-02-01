@@ -324,24 +324,14 @@ int16_t bake_publish(
 
     command = ut_asprintf("git commit -m \"Published version %s\"", project->version);
     ut_try( cmd(command), NULL);
-#ifndef _WIN32
     ut_log("#[green]OK #[normal]Committed version '%s'\n", project->version);
-#else
-    ut_log("OK Committed version '%s'\n", project->version);
-#endif
 
     command = ut_asprintf("git tag -a v%s -m \"Version v%s\"",
         project->version, project->version);
     ut_try( cmd(command), NULL);
-#ifndef _WIN32
     ut_log("#[green]OK #[normal]Created tag 'v%s'\n", project->version);
 
     ut_log("#[green]OK #[normal]Published %s:%s\n", project->id, project->version);
-#else
-    ut_log("OK Created tag 'v%s'\n", project->version);
-
-    ut_log("OK Published %s:%s\n", project->id, project->version);
-#endif
 
     return 0;
 error:
