@@ -8,3 +8,5 @@ build_script:
     cd build-windows\
 
     nmake /f bake.mak
+test_script:
+- cmd: bake.exe setup
