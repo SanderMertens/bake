@@ -230,6 +230,10 @@ int16_t bake_setup(
     ut_try(cmd("bake libraries --build-to-home"), NULL);
     ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
 
+    ut_try(cmd("bake templates"), NULL);
+    ut_log("#[green]OK#[reset]   Installed templates packages\n");
+
+
     /*
 
      ______   ______   ______   __   __       ______   ______  ______

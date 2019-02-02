@@ -391,7 +391,7 @@ int16_t bake_crawler_build_project(
         ut_log(
             "%s '%s' in '%s'\n",
             action_name, p->id, p->path);
-    } else if (p->language && strcmp(action_name, "foreach")) {
+    } else if (p->language && strcmp(action_name, "foreach") && p->type != BAKE_TEMPLATE) {
         ut_log(
             "#[grey]ready '%s'\n",
             p->id);

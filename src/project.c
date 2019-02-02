@@ -1547,7 +1547,8 @@ int16_t bake_project_setup(
         goto error;
     }
 
-    ut_log("Created new %s with id '%s'\n",
+    ut_log("Created new %s %s with id '%s'\n",
+        project->language, 
         project->type == BAKE_APPLICATION
             ? "application"
             : "package",
@@ -1770,6 +1771,18 @@ int16_t bake_project_setup_w_template(
     free(project_json);
 
     ut_try( bake_project_create_gitignore(project), NULL);
+
+    ut_log("Created new %s %s with id '%s' from template '%s'\n\n",
+        project->language, 
+        project->type == BAKE_APPLICATION
+            ? "application"
+            : "package",
+        project->id,
+        template_id,
+        project->language);
+
+    ut_log("To run the project, do:\n");
+    ut_log("  bake run %s\n", project->id);
 
     free(template_path);
     return 0;
