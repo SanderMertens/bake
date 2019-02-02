@@ -359,6 +359,27 @@ error:
     return -1;
 }
 
+int16_t bake_install_template(
+    bake_config *cfg,
+    bake_project *project)
+{
+    char *template_root = ut_asprintf("%s/templates", cfg->home);
+    ut_try( ut_mkdir(template_root), NULL);
+
+    char *template_path = ut_asprintf("%s/%s/%s", 
+        template_root, project->id, project->language);
+
+    ut_try( ut_rm(template_path), NULL);
+    ut_try( ut_symlink(project->path, template_path), NULL);
+
+    free(template_path);
+    free(template_root);
+
+    return 0;
+error:
+    return -1;
+}
+
 static
 int16_t bake_post_install_bin(
     bake_config *config,

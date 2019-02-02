@@ -1,6 +1,7 @@
-*bake_cache*
-*/bin*
-bin/*
+.bake_cache
+.vscode
+bin
 .DS_Store
 *.so
 *.dylib
+bake

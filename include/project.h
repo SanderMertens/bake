@@ -34,7 +34,8 @@ extern "C" {
 typedef enum bake_project_type {
     BAKE_APPLICATION = 1,   /* Executable project in bake package store */
     BAKE_PACKAGE = 2,       /* Library project in bake package store */
-    BAKE_TOOL = 3           /* Executable project accessible globally */
+    BAKE_TOOL = 3,          /* Executable project accessible globally */
+    BAKE_TEMPLATE = 4       /* Template project */
 } bake_project_type;
 
 /* Driver required by project with its configuration */

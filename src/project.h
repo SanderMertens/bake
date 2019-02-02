@@ -83,6 +83,12 @@ int16_t bake_project_setup(
     bake_config *config,
     bake_project *project);
 
+/* Initialize files for a new bake project from template */
+int16_t bake_project_setup_w_template(
+    bake_config *config,
+    bake_project *project,
+    const char *template_id);    
+
 /* Only clean current platform (used by rebuild) */
 int16_t bake_project_clean_current_platform(
     bake_config *config,
@@ -122,3 +128,7 @@ bake_attr* bake_project_set_attr_array(
     const char *driver_id,
     const char *attr,
     const char *value);
+
+/* Transform project type to string */
+const char* bake_project_type_str(
+    bake_project_type type);

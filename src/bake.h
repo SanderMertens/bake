@@ -109,6 +109,13 @@ int16_t bake_publish(
     bake_project *project,
     const char *publish_cmd);
 
+/* -- Template functions -- */
+
+/* Install template */
+int16_t bake_install_template(
+    bake_config *cfg,
+    bake_project *project);
+
 /* -- Install functions -- */
 
 /** Copy project.json & other meta files to config->target */

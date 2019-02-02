@@ -351,18 +351,6 @@ error:
 }
 
 static
-const char* bake_project_kind_str(
-    bake_project_type kind)
-{
-    switch(kind) {
-    case BAKE_TOOL: return "tool";
-    case BAKE_PACKAGE: return "package";
-    case BAKE_APPLICATION: return "application";
-    }
-    return "???";
-}
-
-static
 void bake_crawler_decrease_dependents(
     bake_project *p,
     ut_ll readyForBuild)
@@ -392,7 +380,7 @@ int16_t bake_crawler_build_project(
 {
     ut_ok(
         "#[grey]begin %s of %s '%s' in '%s'",
-        action_name, bake_project_kind_str(p->type), p->id, p->path);
+        action_name, bake_project_type_str(p->type), p->id, p->path);
 
     if (action(config, p)) {
         ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
@@ -403,7 +391,7 @@ int16_t bake_crawler_build_project(
         ut_log(
             "%s '%s' in '%s'\n",
             action_name, p->id, p->path);
-    } else if (p->language && strcmp(action_name, "foreach")) {
+    } else if (p->language && strcmp(action_name, "foreach") && p->type != BAKE_TEMPLATE) {
         ut_log(
             "#[grey]ready '%s'\n",
             p->id);

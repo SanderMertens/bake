@@ -25,6 +25,7 @@ extern ut_tls BAKE_DRIVER_KEY;
 extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
 
+/* Validate dependencies in use array */
 static
 int16_t bake_validate_dep_array(
     ut_ll array)
@@ -46,6 +47,7 @@ int16_t bake_validate_dep_array(
     return 0;
 }
 
+/* Parse JSON bake attributes in "value" member */
 static
 int16_t bake_project_parse_value(
     bake_config *config,
@@ -112,6 +114,7 @@ error:
     return -1;
 }
 
+/* Set top-level attributes of project (id, type) */
 static
 int16_t bake_project_set(
     bake_project *p,
@@ -126,6 +129,8 @@ int16_t bake_project_set(
         p->type = BAKE_PACKAGE;
     } else if (!strcmp(type, "tool")) {
         p->type = BAKE_TOOL;
+    } else if (!strcmp(type, "template")) {
+        p->type = BAKE_TEMPLATE;
     } else if (!strcmp(type, "executable")) {
         p->type = BAKE_APPLICATION;
         ut_warning("'executable' is deprecated, use 'application' instead for '%s'", p->id);
@@ -142,6 +147,7 @@ error:
     return -1;
 }
 
+/* Parse project.json  */
 static
 int16_t bake_project_parse(
     bake_config *config,
@@ -191,6 +197,7 @@ error:
     return -1;
 }
 
+/* Find driver for project */
 static
 bake_project_driver* bake_project_get_driver(
     bake_project *project,
@@ -207,6 +214,7 @@ bake_project_driver* bake_project_get_driver(
     return NULL;
 }
 
+/* Load driver with JSON configuration */
 static
 int bake_project_load_driver(
     bake_project *project,
@@ -239,6 +247,7 @@ error:
     return -1;
 }
 
+/* Parse dependee configuration JSON object */
 static
 int16_t bake_project_load_dependee_object(
     bake_config *config,
@@ -309,6 +318,7 @@ error:
     return -1;
 }
 
+/* Load dependee configuration for dependency */
 static
 int16_t bake_project_load_dependee_config(
     bake_config *config,
@@ -336,6 +346,7 @@ error:
     return -1;
 }
 
+/* Add dependee configuration to project configuration (if exists) */
 static
 int16_t bake_project_add_dependee_config(
     bake_config *config,
@@ -368,6 +379,7 @@ error:
     return -1;
 }
 
+/* Initialize language attribute and language driver */
 static
 int16_t bake_project_init_language(
     bake_config *config,
@@ -415,6 +427,7 @@ error:
     return -1;
 }
 
+/* Initialize artefact name */
 void bake_project_init_artefact(
     bake_config *config,
     bake_project *project)
@@ -429,8 +442,10 @@ void bake_project_init_artefact(
     }
 }
 
+
 /* -- Public API -- */
 
+/* Initialize automatically derived project attributes */
 int16_t bake_project_init(
     bake_config *config,
     bake_project *project)
@@ -531,6 +546,7 @@ error:
     return -1;
 }
 
+/* Load all drivers for project */
 static
 int bake_project_load_drivers(
     bake_project *project)
@@ -560,6 +576,7 @@ error:
     return -1;
 }
 
+/* Create new project from path */
 bake_project* bake_project_new(
     const char *path,
     bake_config *config)
@@ -578,7 +595,7 @@ bake_project* bake_project_new(
             bake_project_parse(config, result),
             "failed to parse '%s/project.json'",
             path);
-            
+
         ut_try( bake_project_init(config, result), NULL);
     }
 
@@ -590,6 +607,7 @@ error:
     return NULL;
 }
 
+/* Free project resources */
 void bake_project_free(
     bake_project *project)
 {
@@ -611,6 +629,7 @@ void bake_project_free(
     free(project->id_dash);
 }
 
+/* Get attribute of project */
 bake_attr* bake_project_get_attr(
     bake_project *project,
     const char *driver_id,
@@ -624,6 +643,7 @@ bake_attr* bake_project_get_attr(
     }
 }
 
+/* Set attribute for project-specific driver configuration */
 static
 bake_attr* bake_project_set_attr(
     bake_config *config,
@@ -648,6 +668,7 @@ error:
     return NULL;
 }
 
+/* Set array attribute for project-specific driver configuration */
 bake_attr* bake_project_set_attr_array(
     bake_config *config,
     bake_project *project,
@@ -683,6 +704,7 @@ bake_attr* bake_project_set_attr_array(
     return attr;
 }
 
+/* Set string attribute for project-specific driver configuration */
 bake_attr* bake_project_set_attr_string(
     bake_config *config,
     bake_project *project,
@@ -694,6 +716,7 @@ bake_attr* bake_project_set_attr_string(
         config, project, driver_id, attr, json_value_init_string(value));
 }
 
+/* Set bool attribute for project-specific driver configuration */
 bake_attr* bake_project_set_attr_bool(
     bake_config *config,
     bake_project *project,
@@ -705,6 +728,7 @@ bake_attr* bake_project_set_attr_bool(
         config, project, driver_id, attr, json_value_init_boolean(value));
 }
 
+/* Parse driver configuration (build cached list of attributes) */
 int bake_project_parse_driver_config(
     bake_config *config,
     bake_project *project)
@@ -738,6 +762,7 @@ error:
     return -1;
 }
 
+/* Initialize drivers for project */
 int bake_project_init_drivers(
     bake_config *config,
     bake_project *project)
@@ -757,6 +782,7 @@ error:
     return -1;
 }
 
+/* Walk over all dependees, add dependee configuration */
 int16_t bake_project_parse_dependee_config(
     bake_config *config,
     bake_project *project)
@@ -788,6 +814,7 @@ error:
     return -1;
 }
 
+/* Check project dependency */
 static
 int16_t bake_check_dependency(
     bake_config *config,
@@ -850,6 +877,7 @@ error:
     return -1;
 }
 
+/* Check project dependencies */
 int16_t bake_project_check_dependencies(
     bake_config *config,
     bake_project *project)
@@ -900,6 +928,7 @@ error:
     return -1;
 }
 
+/* Generate build step */
 int16_t bake_project_generate(
     bake_config *config,
     bake_project *project)
@@ -939,6 +968,7 @@ error:
     return -1;
 }
 
+/* Resolve actual library paths for dependees */
 static
 int16_t bake_project_resolve_links(
     bake_config *config,
@@ -973,6 +1003,7 @@ error:
     return -1;
 }
 
+/* Cleanup resources */
 static
 void bake_project_link_cleanup(
     ut_ll link)
@@ -985,6 +1016,7 @@ void bake_project_link_cleanup(
     ut_ll_free(link);
 }
 
+/* Copy libraries in link to bake environment */
 static
 ut_ll bake_project_copy_libs(
     bake_project *p,
@@ -1036,6 +1068,7 @@ error:
     return NULL;
 }
 
+/* Add dependency to project */
 static
 int16_t bake_project_add_dependency(
     bake_project *p,
@@ -1076,6 +1109,7 @@ error:
     return -1;
 }
 
+/* Add dependencies to project */
 static
 int16_t bake_project_add_dependencies(
     bake_project *p)
@@ -1107,6 +1141,7 @@ error:
     return -1;
 }
 
+/* Build artefact step */
 static
 int16_t bake_project_build_artefact(
     bake_config *config,
@@ -1161,6 +1196,7 @@ error:
     return -1;
 }
 
+/* Build build step */
 int16_t bake_project_build(
     bake_config *config,
     bake_project *project)
@@ -1217,6 +1253,7 @@ error:
     return -1;
 }
 
+/* Prebuild build step */
 int16_t bake_project_prebuild(
     bake_config *config,
     bake_project *project)
@@ -1235,6 +1272,7 @@ error:
     return -1;
 }
 
+/* Postbuild build step */
 int16_t bake_project_postbuild(
     bake_config *config,
     bake_project *project)
@@ -1253,6 +1291,7 @@ error:
     return -1;
 }
 
+/* Clean project, for all platforms or only the current platform */
 int16_t bake_project_clean_intern(
     bake_config *config,
     bake_project *project,
@@ -1295,6 +1334,7 @@ error:
     return -1;
 }
 
+/* Clean build step */
 int16_t bake_project_clean(
     bake_config *config,
     bake_project *project)
@@ -1302,6 +1342,7 @@ int16_t bake_project_clean(
     return bake_project_clean_intern(config, project, true);
 }
 
+/* Only clean current platform */
 int16_t bake_project_clean_current_platform(
     bake_config *config,
     bake_project *project)
@@ -1309,6 +1350,7 @@ int16_t bake_project_clean_current_platform(
     return bake_project_clean_intern(config, project, false);
 }
 
+/* Evaluate path against should_ignore paths of driver */
 int16_t bake_project_should_ignore(
     bake_project *project,
     const char *file)
@@ -1333,6 +1375,7 @@ int16_t bake_project_should_ignore(
     return false;
 }
 
+/* Generate random project description for when creating a new project */
 static
 char* bake_random_description(void) {
     char buffer[256];
@@ -1402,21 +1445,33 @@ char* bake_random_description(void) {
     return strdup(buffer);
 }
 
+/* Convert project type into string */
+const char* bake_project_type_str(
+    bake_project_type type)
+{
+    switch (type) {
+    case BAKE_APPLICATION: return "application";
+    case BAKE_PACKAGE: return "package";
+    case BAKE_TOOL: return "tool";
+    case BAKE_TEMPLATE: return "template";
+    }
+    return "???";
+}
 
-int16_t bake_project_setup(
-    bake_config *config,
+/* Create project.json file for new project */
+static
+int16_t bake_project_create_project_json(
     bake_project *project)
 {
-    bake_driver *driver = project->language_driver->driver;
-
     char *description = bake_random_description();
-
-    ut_try(!
-        ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
-        "failed to initialize git repository");
 
     /* Create project.json */
     FILE *f = fopen("project.json", "w");
+    if (!f) {
+        ut_throw("failed to open 'project.json");
+        goto error;
+    }
+
     fprintf(f,
         "{\n"
         "    \"id\": \"%s\",\n"
@@ -1428,20 +1483,60 @@ int16_t bake_project_setup(
         "        \"repository\": null,\n"
         "        \"license\": null",
             project->id,
-            project->type == BAKE_PACKAGE
-                ? "package"
-                : project->type == BAKE_APPLICATION
-                    ? "application"
-                    : "tool",
+            bake_project_type_str(project->type),
             description);
+
     if (strcmp(project->language, "c")) {
         fprintf(f,
-        ",\n        \"language\": \"%s\"",
-            project->language);
+        ",\n        \"language\": \"%s\"", project->language);
     }
+
     fprintf(f, "\n    }\n}\n");
 
     fclose(f);
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Create .gitignore file for new project */
+static
+int16_t bake_project_create_gitignore(
+    bake_project *project)
+{
+    FILE *f = fopen(".gitignore", "w");
+    if (!f) {
+        ut_throw("failed to open '.gitignore'");
+        goto error;
+    }
+
+    fprintf(f, ".bake_cache");
+    fprintf(f, ".DS_Store");
+    fprintf(f, ".vscode");
+    fprintf(f, "bin");
+
+    fclose(f);
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Setup a new project */
+int16_t bake_project_setup(
+    bake_config *config,
+    bake_project *project)
+{
+    bake_driver *driver = project->language_driver->driver;
+
+    ut_try(!
+        ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
+        "failed to initialize git repository");
+
+    ut_try( bake_project_create_project_json(project), NULL);
+
+    ut_try( bake_project_create_gitignore(project), NULL);
 
     if (driver) {
         ut_try( bake_driver__setup(driver, config, project), NULL);
@@ -1452,7 +1547,8 @@ int16_t bake_project_setup(
         goto error;
     }
 
-    ut_log("Created new %s with id '%s'\n",
+    ut_log("Created new %s %s with id '%s'\n",
+        project->language, 
         project->type == BAKE_APPLICATION
             ? "application"
             : "package",
@@ -1460,5 +1556,237 @@ int16_t bake_project_setup(
 
     return 0;
 error:
+    return -1;
+}
+
+/* Copy file from template to new project, do template substitutions */
+static
+int16_t bake_project_file_from_template(
+    bake_config *config,
+    bake_project *project,
+    const char *src_file,
+    const char *dst_file)
+{
+    char *src_content = ut_file_load(src_file);
+    if (!src_content) {
+        ut_throw("failed to load file '%s'", src_file);
+        goto error;
+    }
+
+    FILE *dst = fopen(dst_file, "w");
+    if (!dst) {
+        ut_throw("failed to open file '%s' for writing", dst_file);
+        goto error;
+    }
+
+    char *dst_content = bake_attr_replace(
+            config, project, project->id, src_content);
+
+    fprintf(dst, "%s", dst_content);
+    fclose(dst);
+
+    free(dst_content);
+    free(src_content);
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Determine whether file is a file that needs substitution */
+static const char *template_file[] = {
+    "Makefile"
+};
+
+static const char *template_ext[] = {
+    "", "c", "cpp", "h", "hpp", "html", "js", "css", "json", "md", "sh", "bat",
+    "lua", "python", "java", "cs", "make"
+};
+
+static
+bool bake_is_template_file(
+    const char *file)
+{
+    int i;
+    for (i = 0; i < sizeof(template_file) / sizeof(char*); i ++) {
+        if (!strcmp(template_file[i], file)) {
+            return true;
+        }
+    }
+
+    char *ext = strrchr(file, '.');
+
+    if (!ext) {
+        ext = "";
+    } else {
+        ext ++;
+    }
+
+    for (i = 0; i < sizeof(template_ext) / sizeof(char*); i ++) {
+        if (!strcmp(template_ext[i], ext)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static
+char *bake_project_template_filename(
+    bake_config *config,
+    bake_project *project,
+    char *file)
+{
+    ut_strbuf buf = UT_STRBUF_INIT;
+
+    char *ptr, ch;
+    bool in_expr = false;
+
+    for (ptr = file; (ch = *ptr); ptr ++) {
+        if (ch == '_' && ptr[1] == '_') {
+            if (!in_expr) {
+                ut_strbuf_appendstr(&buf, "${");
+                ptr ++;
+                in_expr = true;
+            } else {
+                ut_strbuf_appendstr(&buf, "}");
+                ptr ++;
+                in_expr = false;
+            }
+        }
+
+        else if (ch == '.' && in_expr) {
+            ut_strbuf_appendstr(&buf, "}.");
+            in_expr = false;
+        }
+
+        else if (ch == '_' && in_expr) {
+            ut_strbuf_appendstr(&buf, " ");
+        }
+
+        else {
+            ut_strbuf_appendstrn(&buf, &ch, 1);
+        }
+    }
+
+    char *expr = ut_strbuf_get(&buf);
+    if (!expr) {
+        ut_throw("failed to parse file '%s'", file);
+    }
+
+    char *result = bake_attr_replace(config, project, project->id, expr);
+
+    if (!result) {
+        ut_throw("failed to parse file '%s' (%s)", file, expr);
+    }
+
+    free(expr);
+
+    return result;
+}
+
+/* Setup a new project from a template */
+int16_t bake_project_setup_w_template(
+    bake_config *config,
+    bake_project *project,
+    const char *template_id)
+{
+    char *template_path = NULL;
+    const char *template_root = ut_locate(
+            template_id, NULL, UT_LOCATE_TEMPLATE);
+    if (!template_root) {
+        ut_throw("template '%s' not found", template_id);
+        goto error;
+    }
+
+    template_path = ut_asprintf("%s/%s", template_root, project->language);
+    if (ut_file_test(template_path) != 1) {
+        ut_throw("template '%s' not available for language '%s'",
+            template_id, project->language);
+        goto error;
+    }
+
+    ut_iter it;
+    ut_try( ut_dir_iter(template_path, "//", &it), NULL);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        if (file[0] == '.') {
+            continue;
+        }
+
+        if (!strcmp(file, "project.json")) {
+            continue;
+        }
+
+        bool is_template = bake_is_template_file(file);
+        char *src_path = ut_asprintf("%s/%s", template_path, file);
+
+        char *real = file;
+        
+        if (is_template) {
+            real = bake_project_template_filename(config, project, file);
+        }
+
+        char *dst_path = ut_asprintf("%s/%s", project->path, real);
+
+        if (!ut_isdir(src_path)) {
+            if (is_template) {
+                ut_try( bake_project_file_from_template(
+                    config, project, src_path, dst_path),
+                    NULL);
+            } else {
+                ut_try( ut_cp(src_path, dst_path), NULL);
+            }
+        } else {
+            ut_try( ut_mkdir(dst_path), NULL);
+        }
+
+        free(dst_path);
+        free(src_path);
+    }
+
+    /* Load JSON from template, tailor to project */
+    char *template_json = ut_asprintf("%s/project.json", template_path);
+    JSON_Value *value = json_parse_file_with_comments(template_json);
+    if (!value) {
+        ut_throw("failed to load project.json of template '%s", template_id);
+        goto error;
+    }
+
+    /* Tailor JSON to use project specific settings */
+    JSON_Object *root = json_value_get_object(value);
+    if (!root) {
+        ut_throw("expected JSON in project.json of template '%s'", template_id);
+        goto error;
+    }
+
+    /* Overwrite the name and type of the JSON */
+    json_object_set_string(root, "id", project->id);
+    json_object_set_string(root, "type", bake_project_type_str(project->type));
+
+    /* Write to project.json of project */
+    char *project_json = ut_asprintf("%s/project.json", project->path);
+    json_serialize_to_file_pretty(value, project_json);
+    free(project_json);
+
+    ut_try( bake_project_create_gitignore(project), NULL);
+
+    ut_log("Created new %s %s with id '%s' from template '%s'\n\n",
+        project->language, 
+        project->type == BAKE_APPLICATION
+            ? "application"
+            : "package",
+        project->id,
+        template_id,
+        project->language);
+
+    ut_log("To run the project, do:\n");
+    ut_log("  bake run %s\n", project->id);
+
+    free(template_path);
+    return 0;
+error:
+    free(template_path);
     return -1;
 }

@@ -47,7 +47,7 @@ The following commands are useful for getting started with bake. Also, check out
 To create and run a new bake application project called `my_app`, run the following commands:
 
 ```demo
-bake init my_app
+bake new my_app
 bake run my_app
 ```
 
@@ -487,10 +487,10 @@ keep_binary | bool | Do not clean binary files when doing bake clean. When a bin
 The `cflags` attribute is specified inside the `lang.c` property. This is because `cflags` is a property specific to the C driver. For documentation on which properties are valid for which drivers, see the driver documentation.
 
 ### Template Functions
-Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Template functions take the following form:
+Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Additionally, template functions can be used to parameterize bake template projects. Template functions take the following form:
 
 ```
-${function_name parameter}
+${function_name argument}
 ```
 
 They are used like this:
@@ -507,10 +507,12 @@ They are used like this:
 
 The following functions are currently supported:
 
-Function | Type | Description
+Function | Description
 ---------|------|------
-locate | string | Locate various project paths in the bake environment
-target | bool | Match a target platform
+locate | Locate project paths in the bake environment
+os | Match or return operating system
+language | Match or return target language
+id | Return project identifier
 
 The next sections are detailed description of the supported functions:
 
@@ -527,18 +529,18 @@ app | The package executable (empty if a library)
 bin | The package binary
 env | The package environment
 
-#### target
-The target function can be used to build configurations that use different settings for different platforms. The following example demonstrates how it can be used:
+#### os
+The `os` function can be used to specify platform-specific settings, or use the platform string in a path. The following example demonstrates how it can be used:
 
 ```json
 {
-    "${target linux}": {
+    "${os linux}": {
         "include": ["includes/linux"]
     }
 }
 ```
 
-The function can match both operating system and architecture. The following expressions are all valid:
+The `os` function can match both operating system and architecture. The following expressions are all valid:
 
 - x86-linux
 - darwin
@@ -548,21 +550,74 @@ The function can match both operating system and architecture. The following exp
 
 For a full description of the expressions that are supported, see the documentation of `ut_os_match`.
 
-The target function may be nested:
+The `os` function may be nested:
 
 ```json
 {
-    "${target linux}": {
+    "${os linux}": {
         "include": ["includes/linux"],
-        "${target x86_64}": {
+        "${os x86_64}": {
             "lib": ["mylib64"]
         },
-        "${target x86}": {
+        "${os x86}": {
             "lib": ["mylib32"]
         }
     }
 }
 ```
+
+If no argument is provided to `os`, it will return the current architecture in the following format:
+
+```
+arch-os
+```
+
+This format is consistent with the platform-specific bin path under which bake stores project binaries (like `bin/x86-linux`).
+
+#### language
+The `language` function matches or returns the language of the project. 
+
+When an argument is provided, it is matched against the current language:
+```json
+{
+    "${language c}": { 
+        "lib": ["my_c_lib"]
+    },
+    "${language cpp}": {
+        "lib": ["my_cpp_lib"]
+    }
+}
+```
+The function accepts both `cpp` and `c++` for C++ projects.
+
+When the argument is ommitted, the current language is returned. This is particularly effective in combination with the `dependee` attribute, when dependees can be implemented in different languages:
+
+```json
+{
+    "dependee": {
+        "lang.${language}": {
+
+        }
+    }
+}
+```
+
+#### id
+The `id` function returns the current project id in various formats. When the function is used without arguments, it returns the project id as it appears in the `project.json` file:
+
+```
+${id}
+```
+
+To obtain the id in other formats, the following arguments can be passed to the `id` functions:
+
+Parameter | Description | Example
+----------|-------------
+no parameter | | foo.bar
+short | Last element of an id | bar
+upper | Upper case, replace '.' with '_'. Used for macro's | FOO_BAR
+dash | Replace '.' with '-'. Used for repository names | foo-bar
+underscore | Replace '.' with '_'. Used for variable names | foo_bar
 
 ### Installing Miscellaneous Files
 Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
@@ -943,23 +998,27 @@ Options:
   --cfg <configuration>        Specify configuration id
   --env <environment>          Specify environment id
   --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET
+  --strict                     Manually enable strict compiler options
+  --optimize                   Manually enable compiler optimizations
 
   --id <project id>            Manually specify a project id
-  --type <package|application> Manually specify a project type (default = "application")
+  --type <package|template>    Manually specify a project type (default = "application")
   --package                    Manually set the project type to package
   --language <language>        Manually specify a language for project (default = "c")
   --artefact <binary>          Manually specify a binary file for project
   --includes <include path>    Manually specify an include path for project
 
-  --interactive                Rebuild project when files change (use with bake run)
-  -a,--args [arguments]        Pass arguments to application ran with bake run
+  --interactive                Rebuild project when files change (use w/run)
+  -a,--args [arguments]        Pass arguments to application (use w/run)
+  -t,--template [id]            Specify template for new project
+  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)
 
-  --trace                      Set verbosity to TRACE
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
+  --trace                      Set verbosity to TRACE
 
 Commands:
-  init [path]                  Initialize new bake project
-  run [path|project id]         Build & run project
+  new [path]                   Initialize new bake project
+  run [path|project id]        Build & run project
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
@@ -968,19 +1027,26 @@ Commands:
   uninstall [project id]       Remove project from bake environment
   clone <git url>              Clone and build git repository and dependencies
   update [project id]          Update an installed package or application
+  foreach <cmd>                Run command for each discovered project
 
   env                          Echo bake environment
   upgrade                      Upgrade to new bake version
   export <NAME>=|+=<VALUE>     Add variable to bake environment
 
+  info <package id>            Display info on a project in the bake environment
+  list [filter]                List packages in bake environment
+
 Examples:
   bake                         Build all projects discovered in current directory
   bake my_app                  Build all projects discovered in my_app directory
-  bake init                    Initialize new application project in current directory
-  bake init my_app             Initialize new application project in directory my_app
-  bake init my_lib --package   Initialize new package project in directory my_lib
+  bake new                     Initialize new application project in current directory
+  bake new my_app              Initialize new application project in directory my_app
+  bake new my_lib --package    Initialize new package project in directory my_lib
   bake run my_app -a hello     Run my_app project, pass 'hello' as argument
+  bake new game -t sdl2.basic  Create new project from the sdl2.basic template
   bake publish major           Increase major project version, create git tag
+  bake info foo.bar            Show information about package foo.bar
+  bake list foo.*              List all packages that start with foo.
 
 ### Writing Plugins
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.

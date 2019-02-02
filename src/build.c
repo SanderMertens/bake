@@ -27,16 +27,22 @@ int bake_do_pre_discovery(
     bake_config *config,
     bake_project *project)
 {
-    /* Step 1: export metadata to environment to make project discoverable */
-    ut_log_push("install-metadata");
-    if (project->public)
-        ut_try (bake_install_metadata(config, project), NULL);
-    ut_log_pop();
+    if (project->type == BAKE_TEMPLATE) {
+        ut_log_push("install-template");
+        ut_try( bake_install_template(config, project), NULL);
+        ut_log_pop();
+    } else {
+        /* Step 1: export metadata to environment to make project discoverable */
+        ut_log_push("install-metadata");
+        if (project->public)
+            ut_try (bake_install_metadata(config, project), NULL);
+        ut_log_pop();
 
-    /* Step 2: parse driver configuration in project JSON */
-    ut_log_push("load-driver-config");
-    ut_try (bake_project_parse_driver_config(config, project), NULL);
-    ut_log_pop();
+        /* Step 2: parse driver configuration in project JSON */
+        ut_log_push("load-driver-config");
+        ut_try (bake_project_parse_driver_config(config, project), NULL);
+        ut_log_pop();
+    }
 
     return 0;
 error:
@@ -49,6 +55,10 @@ int bake_do_post_discovery(
     bake_config *config,
     bake_project *project)
 {
+    if (project->type == BAKE_TEMPLATE) {
+        return 0;
+    }
+
     /* Step 3: parse dependee configuration */
     ut_log_push("init-drivers");
     ut_try (bake_project_init_drivers(config, project), NULL);
@@ -73,6 +83,10 @@ int bake_do_build_intern(
     bake_project *project,
     bool rebuild)
 {
+    if (project->type == BAKE_TEMPLATE) {
+        return 0;
+    }
+
     /* Step 5: if rebuilding, clean project cache for current platform/config */
     if (rebuild) {
         ut_log_push("clean-cache");
@@ -151,6 +165,10 @@ int bake_do_build(
     bake_config *config,
     bake_project *project)
 {
+    if (project->type == BAKE_TEMPLATE) {
+        return 0;
+    }
+
     return bake_do_build_intern(config, project, false);
 }
 
@@ -158,6 +176,10 @@ int bake_do_clean(
     bake_config *config,
     bake_project *project)
 {
+    if (project->type == BAKE_TEMPLATE) {
+        return 0;
+    }
+
     return bake_project_clean(config, project);
 }
 
@@ -165,6 +187,10 @@ int bake_do_rebuild(
     bake_config *config,
     bake_project *project)
 {
+    if (project->type == BAKE_TEMPLATE) {
+        return 0;
+    }
+
     return bake_do_build_intern(config, project, true);
 }
 
@@ -174,15 +200,19 @@ int bake_do_install(
 {
     if (!project->public) return 0;
 
-    /* Step 1: export metadata to environment to make project discoverable */
-    ut_try (bake_install_metadata(config, project), NULL);
+    if (project->type == BAKE_TEMPLATE) {
+        ut_try( bake_install_template(config, project), NULL);
+    } else {
+        /* Step 1: export metadata to environment to make project discoverable */
+        ut_try (bake_install_metadata(config, project), NULL);
 
-    /* Step 2: export project files to environment */
-    ut_try (bake_install_prebuild(config, project), NULL);
+        /* Step 2: export project files to environment */
+        ut_try (bake_install_prebuild(config, project), NULL);
 
-    /* Step 3: install binary to environment */
-    if (project->artefact)
-        ut_try (bake_install_postbuild(config, project), NULL);
+        /* Step 3: install binary to environment */
+        if (project->artefact)
+            ut_try (bake_install_postbuild(config, project), NULL);
+    }
 
     return 0;
 error:

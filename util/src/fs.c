@@ -86,15 +86,10 @@ int ut_mkdir(const char *fmt, ...) {
         if (errno == ENOENT) {
             /* Allocate so as to not run out of stackspace in recursive call */
             char *prefix = ut_strdup(name);
-            char *ptr = &prefix[strlen(prefix)-1], ch;
-            while ((ch = *ptr) && (ptr >= prefix)) {
-                if (ch == '/') {
-                    *ptr = '\0';
-                    break;
-                }
-                ptr--;
-            }
-            if (ch == '/') {
+            char *ptr = strrchr(prefix, '/');
+
+            if (ptr && ptr != prefix && ptr[-1] != '.') {
+                ptr[0] = '\0';
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
                     if (!mkdir(name, 0755)) {
@@ -106,6 +101,7 @@ int ut_mkdir(const char *fmt, ...) {
                     goto error;
                 }
             } else {
+                free(prefix);
                 goto error; /* If no prefix is found, report error */
             }
             free(prefix);
@@ -234,45 +230,36 @@ int16_t ut_cp_dir(
     const char *src,
     const char *dst)
 {
-    ut_dirstack stack = NULL;
     if (ut_mkdir(dst)) {
-        goto error;
-    }
-
-    stack = ut_dirstack_push(NULL, src);
-    if (!stack) {
         goto error;
     }
 
     ut_iter it;
 
-    if (ut_dir_iter(ut_dirstack_wd(stack), NULL, &it)) {
+    if (ut_dir_iter(src, NULL, &it)) {
         goto error;
     }
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
+        char *src_path = ut_asprintf("%s/%s", src, file);
 
-        if (ut_isdir(file)) {
-            char *dstdir = ut_asprintf("%s/%s", dst, file);
-            if (ut_cp_dir(file, dstdir)) {
+        if (ut_isdir(src_path)) {
+            char *dst_path = ut_asprintf("%s/%s", dst, src_path);
+            if (ut_cp_dir(src_path, dst_path)) {
                 goto error;
             }
-            free(dstdir);
+            free(dst_path);
         } else {
-            if (ut_cp_file(file, dst)) {
+            if (ut_cp_file(src_path, dst)) {
                 goto error;
             }
         }
+        free(src_path);
     }
-
-    ut_dirstack_pop(stack);
 
     return 0;
 error:
-    if (stack) {
-        ut_dirstack_pop(stack);
-    }
     return -1;
 }
 
@@ -325,7 +312,6 @@ bool ut_checklink(
     }
     int res;
     if (((res = readlink(link, ptr, length)) < 0)) {
-        printf("not a link\n");
         goto nomatch;
     }
     if (res != length) {
