@@ -233,6 +233,13 @@ int bake_parse_args(
 
     const char *arg = argv[i];
     if (arg && arg[0] != '-') {
+        if (!strcmp(arg, "init")) {
+            ut_warning("bake init command deprecated, use bake new");
+            arg = "new";
+        } else if (!strcmp(arg, "locate")) {
+            ut_warning("bake locate command deprecated, use bake info");
+            arg = "info";
+        }
         if (!bake_init_action(arg)) {
             action = arg;
             i ++;
