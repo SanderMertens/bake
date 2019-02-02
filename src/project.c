@@ -1636,52 +1636,52 @@ char *bake_project_template_filename(
     bake_project *project,
     char *file)
 {
-    char *real = strrchr(file, '/');
-    if (!real) {
-        real = file;
-    } else {
-        real ++;
-    }
+    ut_strbuf buf = UT_STRBUF_INIT;
 
-    if (real[0] == '_' && real[1] == '_') {
-        char *ext = strrchr(real, '.');
-        char *path = NULL;
+    char *ptr, ch;
+    bool in_expr = false;
 
-        if (!ext) {
-            ext = "";
-        }
-
-        if (real != file) {
-            path = ut_strdup(file);
-            char *last_elem = strrchr(path, '/');
-            last_elem[1] = '\0';
-        } else {
-            path = "";
-        }
-
-        real += 2; /* Strip __ */
-
-        char *tmp = ut_asprintf("%s${%s%s", path, real, ext);
-        char *ptr, ch;
-        for (ptr = tmp; (ch = *ptr); ptr ++) {
-            if (ch == '_') {
-                ptr[0] = ' ';
-            }
-            if (ch == '.') {
-                ptr[0] = '}';
-                strcpy(ptr + 1, ext);
-                break;
+    for (ptr = file; (ch = *ptr); ptr ++) {
+        if (ch == '_' && ptr[1] == '_') {
+            if (!in_expr) {
+                ut_strbuf_appendstr(&buf, "${");
+                ptr ++;
+                in_expr = true;
+            } else {
+                ut_strbuf_appendstr(&buf, "}");
+                ptr ++;
+                in_expr = false;
             }
         }
-        
-        real = bake_attr_replace(config, project, project->id, tmp);
-        free(tmp);
 
-    } else {
-        real = file;
+        else if (ch == '.' && in_expr) {
+            ut_strbuf_appendstr(&buf, "}.");
+            in_expr = false;
+        }
+
+        else if (ch == '_' && in_expr) {
+            ut_strbuf_appendstr(&buf, " ");
+        }
+
+        else {
+            ut_strbuf_appendstrn(&buf, &ch, 1);
+        }
     }
 
-    return real;
+    char *expr = ut_strbuf_get(&buf);
+    if (!expr) {
+        ut_throw("failed to parse file '%s'", file);
+    }
+
+    char *result = bake_attr_replace(config, project, project->id, expr);
+
+    if (!result) {
+        ut_throw("failed to parse file '%s' (%s)", file, expr);
+    }
+
+    free(expr);
+
+    return result;
 }
 
 /* Setup a new project from a template */
