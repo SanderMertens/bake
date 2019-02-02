@@ -724,6 +724,8 @@ int bake_list(
         ut_trace("no bake target environment detected");
     }
 
+    ut_log("\n#[grey]Packages & Applications:#[normal]\n");
+
     /* Copy packages to array so they can be sorted with qsort */
     env_package *buffer = malloc(sizeof(env_package) * ut_ll_count(packages));
     uint32_t i = 0;
@@ -769,7 +771,7 @@ int bake_list(
             char *id = ut_iter_next(&it);
 
             if (!template_count) {
-                ut_log("\nTemplates:\n");
+                ut_log("\n#[grey]Templates:#[normal]\n");
             }
 
             ut_strbuf buf = UT_STRBUF_INIT;
@@ -784,7 +786,7 @@ int bake_list(
                 if (lang_count) {
                     ut_strbuf_appendstr(&buf, ", ");
                 }
-                ut_strbuf_appendstr(&buf, lang);
+                ut_strbuf_append(&buf, "#[green]%s#[normal]", lang);
                 lang_count ++;
             }
 
@@ -808,10 +810,11 @@ int bake_list(
 
     printf("\n");
     if (error_count) {
-        ut_log("#[normal]applications: %d, packages: %d, #[red]errors:#[normal] %d\n",
-            app_count, package_count, error_count);
+        ut_log("#[normal]applications: %d, packages: %d, templates: %d, #[red]errors:#[normal] %d\n",
+            app_count, package_count, template_count, error_count);
     } else {
-        ut_log("#[normal]applications: %d, packages: %d\n", app_count, package_count);
+        ut_log("#[normal]applications: %d, packages: %d, templates: %d\n", 
+            app_count, package_count, template_count);
     }
     printf("\n");
 
