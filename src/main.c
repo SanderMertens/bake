@@ -808,12 +808,12 @@ int bake_list(
     }
     free(template_path);
 
-    printf("\n");
+    ut_log("\n#[grey]Summary:#[normal]\n");
     if (error_count) {
-        ut_log("#[normal]applications: %d, packages: %d, templates: %d, #[red]errors:#[normal] %d\n",
+        ut_info("#[reset]applications: %d, packages: %d, templates: %d, #[red]errors:#[reset] %d",
             app_count, package_count, template_count, error_count);
     } else {
-        ut_log("#[normal]applications: %d, packages: %d, templates: %d\n", 
+        ut_info("#[reset]applications: %d, packages: %d, templates: %d", 
             app_count, package_count, template_count);
     }
     printf("\n");
