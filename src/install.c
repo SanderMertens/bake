@@ -366,7 +366,8 @@ int16_t bake_install_template(
     char *template_root = ut_asprintf("%s/templates", cfg->home);
     ut_try( ut_mkdir(template_root), NULL);
 
-    char *template_path = ut_asprintf("%s/%s", template_root, project->id);
+    char *template_path = ut_asprintf("%s/%s/%s", 
+        template_root, project->id, project->language);
 
     ut_try( ut_rm(template_path), NULL);
     ut_try( ut_symlink(project->path, template_path), NULL);

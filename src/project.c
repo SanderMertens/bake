@@ -1690,10 +1690,18 @@ int16_t bake_project_setup_w_template(
     bake_project *project,
     const char *template_id)
 {
-    const char *template_path = ut_locate(
+    char *template_path = NULL;
+    const char *template_root = ut_locate(
             template_id, NULL, UT_LOCATE_TEMPLATE);
-    if (!template_path) {
+    if (!template_root) {
         ut_throw("template '%s' not found", template_id);
+        goto error;
+    }
+
+    template_path = ut_asprintf("%s/%s", template_root, project->language);
+    if (ut_file_test(template_path) != 1) {
+        ut_throw("template '%s' not available for language '%s'",
+            template_id, project->language);
         goto error;
     }
 
@@ -1763,7 +1771,9 @@ int16_t bake_project_setup_w_template(
 
     ut_try( bake_project_create_gitignore(project), NULL);
 
+    free(template_path);
     return 0;
 error:
+    free(template_path);
     return -1;
 }

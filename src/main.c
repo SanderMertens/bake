@@ -690,7 +690,8 @@ int bake_list(
     ut_iter it;
     bake_project_type type;
 
-    uint32_t total = 0, package_count = 0, app_count = 0, error_count = 0;
+    uint32_t total = 0, package_count = 0, app_count = 0, template_count = 0, 
+             error_count = 0;
 
     /* Collect packages from BAKE_HOME */
     char *home_meta = ut_asprintf("%s/meta", config->home);
@@ -760,6 +761,50 @@ int bake_list(
 
         free(buffer[i].id);
     }
+
+    /* List templates */
+    char *template_path = ut_asprintf("%s/templates", config->home);
+    if (!ut_dir_iter(template_path, "/*", &it)) {
+        while (ut_iter_hasNext(&it)) {
+            char *id = ut_iter_next(&it);
+
+            if (!template_count) {
+                ut_log("\nTemplates:\n");
+            }
+
+            ut_strbuf buf = UT_STRBUF_INIT;
+            ut_strbuf_appendstr(&buf, "[");
+
+            uint32_t lang_count = 0;
+            char *path = ut_asprintf("%s/templates/%s", config->home, id);
+            ut_iter lang_it;
+            ut_try(ut_dir_iter(path, NULL, &lang_it), NULL);
+            while (ut_iter_hasNext(&lang_it)) {
+                char *lang = ut_iter_next(&lang_it);
+                if (lang_count) {
+                    ut_strbuf_appendstr(&buf, ", ");
+                }
+                ut_strbuf_appendstr(&buf, lang);
+                lang_count ++;
+            }
+
+            ut_strbuf_appendstr(&buf, "]");
+
+            if (!lang_count) {
+                ut_log("T  %s #[red]!no languages!\n", id);
+                ut_strbuf_reset(&buf);
+            } else {
+                char *languages = ut_strbuf_get(&buf);
+                ut_log("T  %s #[grey]=> #[normal]%s\n", id, languages);
+                free(languages);
+            }
+
+            template_count ++;
+        }
+    } else {
+        ut_catch();
+    }
+    free(template_path);
 
     printf("\n");
     if (error_count) {
