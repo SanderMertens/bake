@@ -578,7 +578,7 @@ int16_t bake_attr_add(
 
     /* Add member to list of project attributes */
     attr = bake_attr_parse_value(config, project, project_id, attr, value);
-    if (new_attr) {
+    if (attr && new_attr) {
         attr->name = ut_strdup(name);
         ut_ll_append(attributes, attr);
     } else if (!attr) {

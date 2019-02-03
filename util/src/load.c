@@ -538,13 +538,15 @@ const char* ut_locate(
         break;
     case UT_LOCATE_ETC:
         if (!loaded->etc) {
-            loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
+            if (loaded->env) {
+                loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
+            }
         }
         result = loaded->etc;
         break;
     case UT_LOCATE_INCLUDE:
         if (!loaded->include) {
-            if (loaded->etc) {
+            if (loaded->env) {
                 loaded->include = ut_asprintf("%s/include/%s.dir", loaded->env, package);
             }
         }
