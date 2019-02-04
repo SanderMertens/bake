@@ -1511,10 +1511,10 @@ int16_t bake_project_create_gitignore(
         goto error;
     }
 
-    fprintf(f, ".bake_cache");
-    fprintf(f, ".DS_Store");
-    fprintf(f, ".vscode");
-    fprintf(f, "bin");
+    fprintf(f, ".bake_cache\n");
+    fprintf(f, ".DS_Store\n");
+    fprintf(f, ".vscode\n");
+    fprintf(f, "bin\n");
 
     fclose(f);
 
