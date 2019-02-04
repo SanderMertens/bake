@@ -561,6 +561,13 @@ int bake_project_load_drivers(
             !strcmp(member, "value"))
             continue;
 
+        if (strchr(member, '$')) {
+            ut_throw(
+                "cannot use template functions at root of project.json ('%s')",
+                member);
+            goto error;
+        }
+
         JSON_Value *value = json_object_get_value_at(project->json, i);
         JSON_Object *obj = json_value_get_object(value);
 

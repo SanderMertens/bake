@@ -337,6 +337,7 @@ char* bake_attr_replace(
 
     if (replaced) {
         char *str = ut_strbuf_get(&output);
+
         return str;
     } else {
         return ut_strdup(input);
