@@ -418,7 +418,17 @@ int16_t bake_config_load(
             goto error;
         }
     } else {
-        ut_ok("no bake configuration files found, use defaults");
+        if (!strcmp(cfg_id, "debug")) {
+            ut_ok("no configuration file found, use defaults for debug");
+        } else if (!strcmp(cfg_id, "release")) {
+            ut_ok("no configuration file found, use defaults for release");
+            cfg_out->optimizations = true;
+            cfg_out->debug = false;
+        } else {
+            ut_throw("no configuration file found, unknown configuration '%s'",
+                cfg_id);
+            goto error;
+        }
     }
 
     /* Set BAKE_HOME to a default value if the config didn't specify it */
