@@ -108,3 +108,14 @@ char *timespec_to_str(
     strftime(str, sizeof(str) - 1, "%d %m %Y %H:%M", _tm);
     return ut_strdup(str);
 }
+
+double timespec_measure(
+    struct timespec *start)
+{
+    struct timespec stop, temp;
+    timespec_gettime(&stop);
+    temp = stop;
+    stop = timespec_sub(stop, *start);
+    *start = temp;
+    return timespec_toDouble(stop);
+}

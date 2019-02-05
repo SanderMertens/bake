@@ -82,6 +82,15 @@ int timespec_compare(
     struct timespec t1,
     struct timespec t2);
 
+/** Measure time passed since last measurement.
+ *
+ * @param t1 Last measurement
+ * @result Time elapsed since last measurement
+ */
+UT_EXPORT
+double timespec_measure(
+    struct timespec *t1);
+
 /** Convert time to double-precision floating point value.
  *
  * @param t Time value.
