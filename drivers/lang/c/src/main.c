@@ -57,7 +57,7 @@ void generate_deps(
 static
 bool is_darwin(void)
 {
-    if (strcmp(UT_OS_STRING, "darwin")) {
+    if (stricmp(UT_OS_STRING, "Darwin")) {
         return false;
     }
     return true;
