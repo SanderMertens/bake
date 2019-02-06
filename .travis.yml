@@ -30,5 +30,4 @@ install:
   - ./bake setup
 
 script:
-  - ./bake examples
-  
+  - bake examples
