@@ -334,14 +334,14 @@ void link_dynamic_binary(
     ut_ll static_object_paths = NULL;
 
     bool cpp = is_cpp(project);
-    bool export_symbols = driver->get_attr_bool("export-symbols");
 
     ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
-        if (!export_symbols && !is_clang(cpp)) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
+        bool export_symbols = driver->get_attr_bool("export-symbols");
+        if (!export_symbols) {
+            ut_strbuf_appendstr(&cmd, " -fvisibility=hidden");
             hide_symbols = true;
         }
 
@@ -355,7 +355,7 @@ void link_dynamic_binary(
 
     /* Set optimizations */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3");
+        ut_strbuf_appendstr(&cmd, " -O3 -flto");
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }
