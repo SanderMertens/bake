@@ -296,7 +296,7 @@ void link_dynamic_binary(
         char *pdb_file = strdup(target);
         char *ext = strrchr(pdb_file, '.');
         strcpy(ext + 1, "pdb");
-        ut_strbuf_append(&cmd, " /Zi /Fd \"%s\"", pdb_file);
+        ut_strbuf_append(&cmd, " /PDB:\"%s\"", pdb_file);
     }
 
     /* When strict, warnings are errors */
