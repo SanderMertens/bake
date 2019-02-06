@@ -435,6 +435,22 @@ int16_t bake_install_postbuild(
         free(installedArtefact);
     }
 
+    if (project->type == BAKE_PACKAGE && ut_os_match("windows"))
+    {
+        char *artefact_lib_file = ut_strdup(project->artefact_file);
+        char *ext = strrchr(artefact_lib_file, '.');
+        strcpy(ext + 1, "lib");
+        char *targetLibrary = ut_strdup(targetBinary);
+        ext = strrchr(targetLibrary, '.');
+        strcpy(ext + 1, "lib");
+
+        /* Copy .lib file */
+        if(ut_file_test(artefact_lib_file))
+        if (ut_cp(artefact_lib_file, targetLibrary)) {
+            goto error;
+        }
+    }
+
     free(targetBinary);
 
     return 0;

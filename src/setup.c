@@ -246,6 +246,14 @@ int16_t bake_build_make_project(
       strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
       strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
+#ifdef _WIN32
+    // Copy lib files
+    ut_try(ut_rename(
+        strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s.lib", path, artefact),
+        strarg("%s" PATH_SEPARATOR LIB_PREFIX "%s.lib", bin_path, artefact)),
+        "failed to move '%s' to project bin path", id);
+
+#endif
 
     free(bin_path);
 

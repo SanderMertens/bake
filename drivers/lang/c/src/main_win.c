@@ -287,13 +287,13 @@ void link_dynamic_binary(
             hide_symbols = true;
         }
 
-        ut_strbuf_appendstr(&cmd, " /DYNAMICBASE:NO /NXCOMPAT:NO /GS- /DLL");
+        ut_strbuf_appendstr(&cmd, " /DYNAMICBASE:NO /NXCOMPAT:NO /DLL");
 
     }
 
     /* Include symbols */
     if (config->symbols) {
-        char *pdb_file = strdup(config->target_lib);
+        char *pdb_file = strdup(target);
         char *ext = strrchr(pdb_file, '.');
         strcpy(ext + 1, "pdb");
         ut_strbuf_append(&cmd, " /Zi /Fd \"%s\"", pdb_file);
@@ -330,7 +330,7 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " %s", lib->is.string);
+            ut_strbuf_append(&cmd, " %s.lib", lib->is.string);
         }
     }
 
@@ -348,7 +348,7 @@ void link_dynamic_binary(
     ut_iter it = ut_ll_iter(project->link);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " %s", dep);
+        ut_strbuf_append(&cmd, " %s.lib", dep);
     }
 
     /* Add project libpath */
