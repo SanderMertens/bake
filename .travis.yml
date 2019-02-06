@@ -31,3 +31,4 @@ install:
 
 script:
   - ./bake examples
+  
