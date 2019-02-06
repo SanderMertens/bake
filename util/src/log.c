@@ -24,6 +24,22 @@
 #define UT_LOG_FILE_LEN (20)
 #define UT_MAX_LOG (1024)
 
+#ifdef _WIN32
+void ut_enable_console_color(int io_handle)
+{
+    HANDLE hOut = GetStdHandle(io_handle);
+    if (hOut == INVALID_HANDLE_VALUE)
+        return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode))
+        return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+#endif
+
 ut_log_verbosity ut_logv(
     char const *file,
     unsigned int line,

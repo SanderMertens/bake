@@ -63,6 +63,10 @@ extern "C" {
 #define TRACE_MAX_FUNCTION_NAME_LENGTH 1024
 #endif
 
+#ifdef _WIN32
+    void ut_enable_console_color();
+#endif
+
 /* -- Setting & getting verbosity level -- */
 
 /* Error verbosity levels */

@@ -63,6 +63,7 @@
 /* OS-specific headers */
 #if defined(_WIN32)
 #include <windows.h>
+#include <versionhelpers.h>
 #else
 #include <fnmatch.h>
 #include <inttypes.h>
@@ -204,8 +205,16 @@ extern "C" {
 #endif
 
 
-/* Color constants */
 #ifndef _WIN32
+#define UT_CONSOLE_ENABLE_COLOR 1
+#else
+#if NTDDI_VERSION > NTDDI_WINBLUE
+#define UT_CONSOLE_ENABLE_COLOR 1
+#endif
+#endif
+
+/* Color constants */
+#ifdef UT_CONSOLE_ENABLE_COLOR
 #define UT_BLACK   "\033[1;30m"
 #define UT_RED     "\033[0;31m"
 #define UT_GREEN   "\033[0;32m"

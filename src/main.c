@@ -776,6 +776,14 @@ int bake_foreach_action(
 }
 
 int main(int argc, const char *argv[]) {
+
+#ifdef _WIN32
+    #if NTDDI_VERSION > NTDDI_WINBLUE
+    ut_enable_console_color(STD_OUTPUT_HANDLE);
+    ut_enable_console_color(STD_ERROR_HANDLE);
+    #endif
+#endif
+
     if (ut_getenv("BAKE_CONFIG")) {
         cfg = ut_getenv("BAKE_CONFIG");
     }
