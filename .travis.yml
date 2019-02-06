@@ -31,3 +31,5 @@ install:
 
 script:
   - bake examples
+  - bake examples --cfg release
+  - bake list
