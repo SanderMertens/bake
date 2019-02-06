@@ -264,25 +264,41 @@ int ut_load_libraryAction(
 }
 
 static
-int16_t ut_test_package(
-    const char *env,
-    const char *package,
-    time_t *t_out)
+bool ut_package_exists(
+    const char *package)
 {
-    int16_t result = 0;
-    char *path;
+    bool result = true;
 
-    path = ut_asprintf("%s/meta/%s/project.json", env, package);
-
+    char *path = ut_asprintf("%s/meta/%s/project.json", UT_LOAD_HOME_PATH, package);
     if ((result = ut_file_test(path)) == 1) {
         ut_debug("found '%s'", path);
-        *t_out = ut_lastmodified(path);
     } else {
         if (result != -1) {
             ut_debug("file '%s' not found", path);
         }
+        result = false;
     }
+    free(path);
 
+    return result;
+}
+
+static
+bool ut_package_test_env(
+    const char *env,
+    const char *package)
+{
+    bool result = true;
+
+    char *path = ut_asprintf("%s/include/%s", env, package);
+    if ((result = ut_file_test(path)) == 1) {
+        ut_debug("found '%s'", path);
+    } else {
+        if (result != -1) {
+            ut_debug("file '%s' not found", path);
+        }
+        result = false;
+    }
     free(path);
 
     return result;
@@ -301,23 +317,24 @@ int16_t ut_locate_package(
 
     ut_log_push(strarg("locate:%s", package));
 
-    /* Look for project in BAKE_TARGET first */
-    ut_debug("try to find '%s' in $BAKE_TARGET ('%s')", package, UT_LOAD_TARGET_PATH);
-    if ((ret = ut_test_package(UT_LOAD_TARGET_PATH, package, &t_target)) != -1) {
-        if (ret == 1) {
-            *env = UT_LOAD_TARGET_PATH;
-        }
+    /* First test if package exists */
+    if (!ut_package_exists(package)) {
+        return 0;
+    }
 
-        /* If no errors and BAKE_TARGET != BAKE_HOME look in BAKE_HOME */
-        if (UT_LOAD_TARGET_OTHER_THAN_HOME) {
-            ut_debug("try to find '%s' in $BAKE_HOME ('%s')", package, UT_LOAD_HOME_PATH);
-            if ((ut_test_package(UT_LOAD_HOME_PATH, package, &t_home) == 1)) {
-                if (!ret || t_target < t_home) {
-                    *env = UT_LOAD_HOME_PATH;
-                }
-            }
+    /* Second test if package can be found in BAKE_HOME or BAKE_TARGET. Do this
+     * by testing whether an 'include' path for the package exists (easier than
+     * testing for binaries). */
+    if (ut_package_test_env(UT_LOAD_TARGET_PATH, package)) {
+        *env = UT_LOAD_TARGET_PATH;
+    } else if (strcmp(UT_LOAD_TARGET_PATH, UT_LOAD_HOME_PATH)) {
+        if (ut_package_test_env(UT_LOAD_HOME_PATH, package)) {
+            *env = UT_LOAD_HOME_PATH;
         } else {
-            ut_debug("skip looking in $BAKE_HOME (same as $BAKE_TARGET)");
+            /* Package has no include files in either TARGET or HOME. This either
+            * means the package hasn't been built yet, or it is a pure
+            * configuration package. Assume the latter. */
+            *env = UT_LOAD_HOME_PATH;
         }
     }
 
@@ -518,7 +535,7 @@ const char* ut_locate(
     /* If package is not in load admin but has been located, add to admin */
     if (!loaded->env && env) {
         strset(&loaded->env, env);
-        loaded->project = ut_asprintf("%s/meta/%s", env, package);
+        loaded->project = ut_asprintf("%s/%s", UT_LOAD_HOME_META_PATH, package);
         loaded->repo = ut_strdup(package);
         char *ptr, ch;
         for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
@@ -1051,7 +1068,7 @@ int16_t ut_load_init(
     if (!target) {
         UT_LOAD_TARGET_PATH = ut_strdup(cwd);
     } else {
-        UT_LOAD_TARGET_PATH = ut_asprintf("%s/%s-%s",
+        UT_LOAD_TARGET_PATH = ut_asprintf("%s/%s/%s",
           target, UT_PLATFORM_STRING, config);
 
         UT_LOAD_TARGET_META_PATH =

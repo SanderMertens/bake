@@ -565,7 +565,7 @@ error:
 int bake_info(
     bake_config *config,
     const char *id,
-    const char *env,
+    const char *cfg,
     bool test_lib,
     bake_project_type *type_out,
     bool clean_missing)
@@ -579,28 +579,28 @@ int bake_info(
         } else {
             bake_project *project = bake_project_new(path, config);
             if (!project) {
-                ut_log("?  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!invalid config!\n",
-                    id, env ? env : path);
+                ut_log("?  #[normal]%s #[grey]=> #[normal]%s #[red]!invalid config!\n",
+                    id, cfg);
                 goto error;
             } else {
                 if (project->language) {
                     if (project->type == BAKE_APPLICATION) {
                         ut_log(
-                          "A  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
-                          id, env ? env : path);
+                          "A  %s #[grey]=> #[normal]%s #[red]!missing binary!\n",
+                          id, cfg);
                         goto error;
                     } else {
                         ut_log(
-                          "P  %s #[grey]=> #[cyan]%s#[normal] #[red]!missing binary!\n",
-                          id, env ? env : path);
+                          "P  %s #[grey]=> #[normal]%s #[red]!missing binary!\n",
+                          id, cfg);
                         goto error;
                     }
                     bake_project_free(project);
                     goto error;
                 } else {
                     if (!clean_missing) {
-                        ut_log("C  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                            id, env ? env : path);
+                        ut_log("C  #[normal]%s #[grey]=> #[normal]%s\n",
+                            id, cfg);
                     }
                     bake_project_free(project);
 
@@ -616,14 +616,14 @@ int bake_info(
                 dl = ut_dl_open(bin);
             }
             if (test_lib && !dl) {
-                ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal] #[red]!load error!\n",
-                    id, env ? env : bin);
+                ut_log("P  #[normal]%s #[grey]=> #[normal]%s #[red]!load error!\n",
+                    id, cfg);
                 ut_log("   %s\n", ut_dl_error());
                 goto error;
             } else {
                 if (!clean_missing) {
-                    ut_log("P  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                        id, env ? env : bin);
+                    ut_log("P  #[normal]%s #[grey]=> #[normal]%s\n",
+                        id, cfg);
                 }
                 if (dl) ut_dl_close(dl);
                 if (type_out) *type_out = BAKE_PACKAGE;
@@ -631,12 +631,12 @@ int bake_info(
         } else if (!clean_missing) {
             const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
             if (lib_static) {
-                ut_log("S  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                    id, env ? env : bin);
+                ut_log("S  #[normal]%s #[grey]=> #[normal]%s\n",
+                    id, cfg);
                 if (type_out) *type_out = BAKE_PACKAGE;
             } else {
-                ut_log("A  #[normal]%s #[grey]=> #[cyan]%s#[normal]\n",
-                    id, env ? env : bin);
+                ut_log("A  #[normal]%s #[grey]=> #[normal]%s\n",
+                    id, cfg);
                 if (type_out) *type_out = BAKE_APPLICATION;
             }
         }
@@ -653,17 +653,8 @@ error:
 
 typedef struct env_package {
     char *id;
-    bool in_home;
-    bool in_target;
+    char *cfg;
 } env_package;
-
-int env_package_find(
-    void *id,
-    void *ptr)
-{
-    env_package *package = ptr;
-    return strcmp(package->id, id);
-}
 
 int env_package_compare(
     const void *ptr1,
@@ -674,19 +665,42 @@ int env_package_compare(
     return strcmp(package1->id, package2->id);
 }
 
-char* bake_print_env(
+static
+int16_t list_configurations(
     bake_config *config,
     env_package *package)
 {
-    if (package->in_home && package->in_target) {
-        return "#[green]BAKE_HOME#[normal],#[cyan]BAKE_TARGET";
-    } else if (package->in_home) {
-        return "#[green]BAKE_HOME";
-    } else if (package->in_target) {
-        return "#[cyan]BAKE_TARGET";
-    } else {
-        return "???";
+    ut_strbuf buf = UT_STRBUF_INIT;
+    uint32_t count = 0;
+
+    ut_strbuf_appendstr(&buf, "[");
+    if (ut_file_test(config->target_root) == 1) {
+        ut_iter it;
+        ut_try (ut_dir_iter(config->target_root, NULL, &it), NULL);
+        while (ut_iter_hasNext(&it)) {
+            char *cfg = ut_iter_next(&it);
+            char *test = ut_asprintf("%s/%s/include/%s", 
+                config->target_root, cfg, package->id);
+
+            if (ut_file_test(test) == 1) {
+                if (count) {
+                    ut_strbuf_appendstr(&buf, ",");
+                }
+                ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
+                count ++;
+            }
+        }
     }
+    if (!count) {
+        ut_strbuf_appendstr(&buf, "#[grey]all#[normal]");
+    }
+
+    ut_strbuf_appendstr(&buf, "]");
+    package->cfg = ut_strbuf_get(&buf);
+
+    return 0;
+error:
+    return -1;
 }
 
 int bake_list(
@@ -701,34 +715,13 @@ int bake_list(
              error_count = 0;
 
     /* Collect packages from BAKE_HOME */
-    char *home_meta = ut_asprintf("%s/meta", config->home);
-    ut_try( ut_dir_iter(home_meta, "/*", &it), NULL);
+    ut_try( ut_dir_iter(ut_load_homeMetaPath(), "/*", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *id = ut_iter_next(&it);
         env_package *ep = ut_calloc(sizeof(env_package));
         ep->id = ut_strdup(id);
-        ep->in_home = true;
+        list_configurations(config, ep);
         ut_ll_append(packages, ep);
-    }
-
-    /* Collect packages from BAKE_TARGET */
-    char *target_meta = ut_asprintf("%s/meta", config->target);
-    if (ut_file_test(target_meta) == 1) {
-        ut_try( ut_dir_iter(target_meta, "/*", &it), NULL);
-        while (ut_iter_hasNext(&it)) {
-            char *id = ut_iter_next(&it);
-
-            env_package *ep = ut_ll_find(packages, env_package_find, id);
-            if (!ep) {
-                ep = ut_calloc(sizeof(env_package));
-                ep->id = ut_strdup(id);
-                ut_ll_append(packages, ep);
-            }
-
-            ep->in_target = true;
-        }
-    } else {
-        ut_trace("no bake target environment detected");
     }
 
     ut_log("\n#[grey]Packages & Applications:#[normal]\n");
@@ -756,7 +749,7 @@ int bake_list(
         }
 
         if (!bake_info(
-            config, package->id, bake_print_env(config, package), true, &type,
+            config, package->id, package->cfg, true, &type,
             clean_missing))
         {
             if (type == BAKE_APPLICATION) {
@@ -826,8 +819,6 @@ int bake_list(
     printf("\n");
 
     ut_ll_free(packages);
-    free(home_meta);
-    free(target_meta);
     free(buffer);
 
     return 0;

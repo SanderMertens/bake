@@ -48,7 +48,8 @@ struct bake_config {
 
     /* Set by configuration loader */
     char *home;              /* $BAKE_HOME */
-    char *target;            /* $BAKE_TARGET/<platform>-<configuration> */
+    char *target_root;       /* $BAKE_TARGET/<platform> */
+    char *target;            /* $BAKE_TARGET/<platform>/<configuration> */
     char *home_bin;          /* $BAKE_HOME/bin */
     char *home_lib;          /* $BAKE_HOME/lib */
     char *target_bin;        /* $BAKE_TARGET/<platform>-<configuration>/bin */

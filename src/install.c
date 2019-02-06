@@ -218,7 +218,7 @@ int16_t bake_install_metadata(
         char *project_json = ut_asprintf("%s/project.json", project->path);
         if (ut_file_test(project_json)) {
             char *projectDir = ut_envparse(
-                "%s/meta/%s", config->target, project->id);
+                "%s/meta/%s", config->home, project->id);
 
             ut_try (ut_mkdir(projectDir), NULL);
 

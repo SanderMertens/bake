@@ -1,4 +1,3 @@
-
 #include <bake>
 
 #define OBJ_DIR ".bake_cache/obj"

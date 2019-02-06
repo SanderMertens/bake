@@ -479,9 +479,11 @@ int16_t bake_config_load(
     /* Precompute bake paths */
     cfg_out->configuration = ut_strdup(cfg_id);
     if (!build_to_home) {
+        cfg_out->target_root = ut_asprintf(
+            "%s/%s", ut_getenv("BAKE_TARGET"),
+            UT_PLATFORM_STRING);
         cfg_out->target = ut_asprintf(
-            "%s/%s-%s", ut_getenv("BAKE_TARGET"),
-            UT_PLATFORM_STRING, cfg_out->configuration);
+            "%s/%s", cfg_out->target_root, cfg_out->configuration);
     } else {
         cfg_out->target = ut_strdup(ut_getenv("BAKE_HOME"));
     }
