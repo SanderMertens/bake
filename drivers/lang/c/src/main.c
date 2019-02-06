@@ -63,6 +63,15 @@ bool is_darwin(void)
     return true;
 }
 
+static
+bool is_linux(void)
+{
+    if (stricmp(UT_OS_STRING, "Linux")) {
+        return false;
+    }
+    return true;
+}
+
 /* Is language C++ */
 static
 bool is_cpp(
@@ -134,7 +143,7 @@ void compile_src(
         cpp = true;
     }
 
-    /* In obscure cases with static libs, stack protector can cause trouble */
+    /* In obscure cases with static libs, stack protector can cause unresolved symbols */
     ut_strbuf_append(&cmd, "%s -Wall -fPIC -fno-stack-protector", cc(cpp));
 
     /* Set standard for C or C++ */
@@ -168,7 +177,12 @@ void compile_src(
 
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        if (!is_clang(cpp) || !is_linux()) {
+            ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        } else {
+            /* On some Linux versions clang has trouble loading the LTO plugin */
+            ut_strbuf_appendstr(&cmd, " -O3");
+        }
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }
