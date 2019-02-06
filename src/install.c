@@ -137,25 +137,16 @@ error:
     return -1;
 }
 
-int16_t bake_uninstall_from_env(
-    const char *env,
+int16_t bake_uninstall_from_cfg(
+    bake_config *config,
+    const char *cfg,
     bake_project *project,
     bool uninstall)
 {
-    if (uninstall) {
-        ut_try( ut_rm(strarg("%s/meta/%s", env, project->id)), NULL);
-
-        if (project->type == BAKE_PACKAGE) {
-            ut_try( ut_rm(strarg("%s/lib/%s", env, project->artefact)), NULL);
-        } else if (project->type == BAKE_APPLICATION) {
-            ut_try( ut_rm(strarg("%s/bin/%s", env, project->artefact)), NULL);
-        } else if (project->type == BAKE_TOOL) {
-            ut_try( ut_rm(strarg("%s/%s", env, project->artefact)), NULL);
-        }
-    }
-
-    ut_try( ut_rm(strarg("%s/etc/%s", env, project->id)), NULL);
-    ut_try( ut_rm(strarg("%s/include/%s.dir", env, project->id)), NULL);
+    /* Try removing all possible artefacts, in case project type changed */
+    ut_rm(strarg("%s/%s/lib/lib%s" UT_OS_LIB_EXT, config->target_root, cfg, project->id_underscore));
+    ut_rm(strarg("%s/%s/bin/%s" UT_OS_BIN_EXT, config->target_root, cfg, project->id_underscore));
+    ut_rm(strarg("%s/%s/%s" UT_OS_BIN_EXT, config->target_root, cfg, project->id_underscore));
 
     return 0;
 error:
@@ -165,13 +156,38 @@ error:
 int16_t bake_install_clear(
     bake_config *config,
     bake_project *project,
+    const char *project_id,
     bool uninstall)
 {
     ut_log_push("uninstall");
-    ut_try(bake_uninstall_from_env(config->home, project, uninstall), NULL);
-    ut_try(bake_uninstall_from_env(config->target, project, uninstall), NULL);
 
-    char *link_name = ut_asprintf("%s/include/%s", config->target, project->id);
+    if (uninstall) {
+        /* Clean metadata from BAKE_HOME */
+        if (ut_rm(strarg("%s/meta/%s", config->home, project_id))) {
+            /* Raise error, but don't abort. Try to cleanup as much as possible. */
+            ut_raise();
+        }
+
+        /* Only delete binaries when uninstalling */
+        if (ut_file_test(config->target_root)) {
+            ut_iter it;
+            if (ut_dir_iter(config->target_root, NULL, &it)) {
+                ut_raise(); /* ditto */
+            } else {
+                while (ut_iter_hasNext(&it)) {
+                    char *cfg = ut_iter_next(&it);
+                    bake_uninstall_from_cfg(config, cfg, project, uninstall);
+                }
+            }
+        }
+    }
+
+    /* Only clean from current configuration */
+    ut_rm(strarg("%s/etc/%s", config->target, project_id));
+    ut_rm(strarg("%s/include/%s.dir", config->target, project_id));
+
+    /* Remove link to main include file */
+    char *link_name = ut_asprintf("%s/include/%s", config->target, project_id);
     ut_try( ut_rm(link_name), NULL);
     free(link_name);
 
@@ -199,10 +215,13 @@ int16_t bake_install_uninstall(
 
     bake_project *project = bake_project_new(project_dir, config);
     if (!project) {
-        goto error;
+        /* Silence error. Cleanup as much as possible */
+        ut_catch();
     }
 
-    ut_try( bake_install_clear(config, project, true), NULL);
+    if (bake_install_clear(config, project, project_id, true)) {
+        ut_raise();
+    }
 
     ut_log("#[grey]uninstalled #[normal]'%s'\n", project->id);
 error:

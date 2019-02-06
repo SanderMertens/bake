@@ -137,6 +137,7 @@ int16_t bake_install_postbuild(
 int16_t bake_install_clear(
     bake_config *config,
     bake_project *project,
+    const char *project_id,
     bool uninstall);
 
 /** Remove files from config->target for project */

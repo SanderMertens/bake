@@ -61,14 +61,17 @@ extern "C" {
 #ifdef UT_OS_WINDOWS
 #define UT_OS_STRING "windows"
 #define UT_OS_LIB_EXT ".dll"
+#define UT_OS_BIN_EXT ".exe"
 #define UT_WINDOWS
 #elif defined(UT_OS_LINUX)
 #define UT_OS_STRING "linux"
 #define UT_OS_LIB_EXT ".so"
+#define UT_OS_BIN_EXT ""
 #define UT_LINUX
 #elif defined(UT_OS_OSX)
 #define UT_OS_STRING "darwin"
 #define UT_OS_LIB_EXT ".dylib"
+#define UT_OS_BIN_EXT ""
 #define UT_MACOS
 #define UT_LINUX
 #endif
