@@ -726,7 +726,6 @@ void generate(
 /* -- Rules */
 UT_EXPORT int bakemain(bake_driver_api *driver) {
 
-    printf("******** bakemain start\n");
     ut_init("driver/bake/c");
 
     /* Create pattern that matches source files */
@@ -763,6 +762,5 @@ UT_EXPORT int bakemain(bake_driver_api *driver) {
     /* Callback for setting up a project */
     driver->setup(setup_project);
 
-    printf("******** bakemain end\n");
     return 0;
 }
