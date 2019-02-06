@@ -7,8 +7,16 @@ build_script:
 
     cd build-windows\
 
-    nmake /f bake.mak
+    nmake
 
     cd ..\
+    
 test_script:
+- cmd: echo %CD%
+- cmd: dir
 - cmd: bake.exe setup
+- cmd: dir %USERPROFILE%\bake\
+- cmd: dir %USERPROFILE%\bake\lib
+- cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
+- cmd: cd examples
+- cmd: bake build
