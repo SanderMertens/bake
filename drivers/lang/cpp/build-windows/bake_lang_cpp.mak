@@ -65,11 +65,11 @@ $(TARGET): $(OBJECTS) $(TARGETDIR)
 
 $(TARGETDIR):
 	@echo Creating $(TARGETDIR)
-	$(SILENT) mkdir $(TARGETDIR)
+	$(SILENT) @if NOT EXIST $(TARGETDIR) mkdir $(TARGETDIR)
 
 $(OBJDIR):
 	@echo Creating $(OBJDIR)
-	$(SILENT) mkdir $(OBJDIR)
+	$(SILENT) @if NOT EXIST $(OBJDIR) mkdir $(OBJDIR)
 
 clean:
 	@echo Cleaning bake_lang_cpp
