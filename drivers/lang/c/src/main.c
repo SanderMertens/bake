@@ -100,10 +100,20 @@ const char *cc(
             return cxx;
         } else {
             if (!cc)
-                cc = "gcc";
+                cc = "clang";
             return cc;
         }
     }
+}
+
+/* Is current compiler clang */
+static
+bool is_clang(bool is_cpp)
+{
+    if (stricmp(cc(is_cpp), "clang")) {
+        return true;
+    }
+    return false;
 }
 
 /* Compile source file */
@@ -330,7 +340,7 @@ void link_dynamic_binary(
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
-        if (!export_symbols && !is_darwin()) {
+        if (!export_symbols && !is_clang(cpp)) {
             ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
             hide_symbols = true;
         }
@@ -338,7 +348,7 @@ void link_dynamic_binary(
         ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
 
         /* Fail when symbols are not found in library */
-        if (!is_darwin()) {
+        if (!is_clang(cpp)) {
             ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
         }
     }
@@ -454,7 +464,7 @@ void link_dynamic_binary(
             bake_attr *lib = ut_iter_next(&it);
             ut_strbuf_append(&cmd, " -L%s", lib->is.string);
 
-            if (is_darwin()) {
+            if (is_clang(cpp)) {
                 ut_strbuf_append(
                     &cmd, " -Xlinker -rpath -Xlinker %s", lib->is.string);
             }
