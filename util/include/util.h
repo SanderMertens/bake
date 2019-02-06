@@ -350,5 +350,6 @@ const char* ut_appname();
 #include "path.h"
 #include "load.h"
 #include "version.h"
+#include "vs.h"
 
 #endif /* UT_BASE_H */

@@ -102,12 +102,12 @@ void compile_src(
         cpp = true;
     }
 
-    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char *vc_shell_cmd = ut_get_vc_shell_cmd();
     /* Start VC env */
-    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+    ut_strbuf_append(&cmd, "%s &&", vc_shell_cmd);
 
     /* In obscure cases with static libs, stack protector can cause trouble */
-    ut_strbuf_append(&cmd, " %s /Wall", cc(cpp));
+    ut_strbuf_append(&cmd, " %s", cc(cpp));
 
     /* Set standard for C or C++ */
     if (cpp) {
@@ -274,11 +274,11 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    char tool[] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat";
+    char *vc_shell_cmd = ut_get_vc_shell_cmd();
     /* Start VC env */
-    ut_strbuf_append(&cmd, "\"%s\" x64 &&", tool);
+    ut_strbuf_append(&cmd, "%s &&", vc_shell_cmd);
 
-    ut_strbuf_append(&cmd, "link.exe");
+    ut_strbuf_append(&cmd, " link.exe");
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
