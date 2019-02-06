@@ -110,7 +110,7 @@ const char *cc(
 static
 bool is_clang(bool is_cpp)
 {
-    if (strncmp(cc(is_cpp), "clang", 5)) {
+    if (!strncmp(cc(is_cpp), "clang", 5)) {
         return true;
     }
     return false;
