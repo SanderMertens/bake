@@ -566,6 +566,7 @@ int bake_info(
     bake_config *config,
     const char *id,
     const char *cfg,
+    bool in_current_cfg,
     bool test_lib,
     bake_project_type *type_out,
     bool clean_missing)
@@ -583,7 +584,7 @@ int bake_info(
                     id, cfg);
                 goto error;
             } else {
-                if (project->language) {
+                if (project->language && in_current_cfg) {
                     if (project->type == BAKE_APPLICATION) {
                         ut_log(
                           "A  %s #[grey]=> #[normal]%s #[red]!missing binary!\n",
@@ -654,6 +655,7 @@ error:
 typedef struct env_package {
     char *id;
     char *cfg;
+    bool in_current_cfg;
 } env_package;
 
 int env_package_compare(
@@ -673,6 +675,8 @@ int16_t list_configurations(
     ut_strbuf buf = UT_STRBUF_INIT;
     uint32_t count = 0;
 
+    package->in_current_cfg = false;
+
     ut_strbuf_appendstr(&buf, "[");
     if (ut_file_test(config->target_root) == 1) {
         ut_iter it;
@@ -688,11 +692,16 @@ int16_t list_configurations(
                 }
                 ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
                 count ++;
+
+                if (!strcmp(cfg, config->configuration)) {
+                    package->in_current_cfg = true;
+                }
             }
         }
     }
     if (!count) {
         ut_strbuf_appendstr(&buf, "#[grey]all#[normal]");
+        package->in_current_cfg = true;
     }
 
     ut_strbuf_appendstr(&buf, "]");
@@ -749,7 +758,7 @@ int bake_list(
         }
 
         if (!bake_info(
-            config, package->id, package->cfg, true, &type,
+            config, package->id, package->cfg, package->in_current_cfg, true, &type,
             clean_missing))
         {
             if (type == BAKE_APPLICATION) {
@@ -959,7 +968,7 @@ int main(int argc, const char *argv[]) {
                 ut_try (bake_list(&config, true), NULL);
             }
         } else if (!strcmp(action, "info")) {
-            bake_info(&config, path, NULL, true, NULL, false);
+            bake_info(&config, path, NULL, true, true, NULL, false);
         } else if (!strcmp(action, "list")) {
             bake_list(&config, false);
         } else if (!strcmp(action, "export")) {
