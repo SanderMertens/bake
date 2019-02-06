@@ -50,8 +50,8 @@ const char *template = NULL;
 const char *export_expr = NULL;
 const char *publish_cmd = NULL;
 bool interactive = false;
+bool recursive = false;
 int run_argc = 0;
-bool clean_missing = false;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
 const char *list_filter = NULL;
@@ -92,12 +92,12 @@ void bake_usage(void)
     printf("  --package                    Manually set the project type to package\n");
     printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
-    printf("  --includes <include path>    Manually specify an include path for project\n");
+    printf("  -i,--includes <include path> Manually specify an include path for project\n");
     printf("\n");
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
+    printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
     printf("  -t,--template [id]           Specify template for new project\n");
-    printf("  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -108,6 +108,7 @@ void bake_usage(void)
     printf("  build [path]                 Build a project (default command)\n");
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
+    printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
@@ -199,6 +200,7 @@ int16_t bake_init_action(
 
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
+        !strcmp(arg, "cleanup") ||
         !strcmp(arg, "new") ||
         !strcmp(arg, "run") ||
         !strcmp(arg, "uninstall") ||
@@ -270,8 +272,8 @@ int bake_parse_args(
             ARG(0, "includes", includes = argv[i + 1]; i ++);
 
             ARG(0, "local-setup", local_setup = true; i ++);
-            ARG(0, "interactive", interactive = true; i ++);
-            ARG(0, "missing", clean_missing = true; i ++);
+            ARG('i', "interactive", interactive = true; i ++);
+            ARG('r', "recursive", recursive = true; i ++);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
@@ -733,7 +735,9 @@ int bake_list(
         ut_ll_append(packages, ep);
     }
 
-    ut_log("\n#[grey]Packages & Applications:#[normal]\n");
+    if (!clean_missing) {
+        ut_log("\n#[grey]Packages & Applications:#[normal]\n");
+    }
 
     /* Copy packages to array so they can be sorted with qsort */
     env_package *buffer = malloc(sizeof(env_package) * ut_ll_count(packages));
@@ -774,56 +778,61 @@ int bake_list(
     }
 
     /* List templates */
-    char *template_path = ut_asprintf("%s/templates", config->home);
-    if (!ut_dir_iter(template_path, "/*", &it)) {
-        while (ut_iter_hasNext(&it)) {
-            char *id = ut_iter_next(&it);
+    if (!clean_missing) {
+        char *template_path = ut_asprintf("%s/templates", config->home);
+        if (!ut_dir_iter(template_path, "/*", &it)) {
+            while (ut_iter_hasNext(&it)) {
+                char *id = ut_iter_next(&it);
 
-            if (!template_count) {
-                ut_log("\n#[grey]Templates:#[normal]\n");
-            }
-
-            ut_strbuf buf = UT_STRBUF_INIT;
-            ut_strbuf_appendstr(&buf, "[");
-
-            uint32_t lang_count = 0;
-            char *path = ut_asprintf("%s/templates/%s", config->home, id);
-            ut_iter lang_it;
-            ut_try(ut_dir_iter(path, NULL, &lang_it), NULL);
-            while (ut_iter_hasNext(&lang_it)) {
-                char *lang = ut_iter_next(&lang_it);
-                if (lang_count) {
-                    ut_strbuf_appendstr(&buf, ", ");
+                if (!template_count) {
+                    ut_log("\n#[grey]Templates:#[normal]\n");
                 }
-                ut_strbuf_append(&buf, "#[green]%s#[normal]", lang);
-                lang_count ++;
+
+                ut_strbuf buf = UT_STRBUF_INIT;
+                ut_strbuf_appendstr(&buf, "[");
+
+                uint32_t lang_count = 0;
+                char *path = ut_asprintf("%s/templates/%s", config->home, id);
+                ut_iter lang_it;
+                ut_try(ut_dir_iter(path, NULL, &lang_it), NULL);
+                while (ut_iter_hasNext(&lang_it)) {
+                    char *lang = ut_iter_next(&lang_it);
+                    if (lang_count) {
+                        ut_strbuf_appendstr(&buf, ", ");
+                    }
+                    ut_strbuf_append(&buf, "#[green]%s#[normal]", lang);
+                    lang_count ++;
+                }
+
+                ut_strbuf_appendstr(&buf, "]");
+
+                if (!lang_count) {
+                    ut_log("T  %s #[red]!no languages!\n", id);
+                    ut_strbuf_reset(&buf);
+                } else {
+                    char *languages = ut_strbuf_get(&buf);
+                    ut_log("T  %s #[grey]=> #[normal]%s\n", id, languages);
+                    free(languages);
+                }
+
+                template_count ++;
             }
-
-            ut_strbuf_appendstr(&buf, "]");
-
-            if (!lang_count) {
-                ut_log("T  %s #[red]!no languages!\n", id);
-                ut_strbuf_reset(&buf);
-            } else {
-                char *languages = ut_strbuf_get(&buf);
-                ut_log("T  %s #[grey]=> #[normal]%s\n", id, languages);
-                free(languages);
-            }
-
-            template_count ++;
+        } else {
+            ut_catch();
         }
-    } else {
-        ut_catch();
+        free(template_path);
     }
-    free(template_path);
 
-    ut_log("\n#[grey]Summary:#[normal]\n");
-    if (error_count) {
-        ut_info("#[reset]applications: %d, packages: %d, templates: %d, #[red]errors:#[reset] %d",
-            app_count, package_count, template_count, error_count);
-    } else {
-        ut_info("#[reset]applications: %d, packages: %d, templates: %d", 
-            app_count, package_count, template_count);
+    if (!clean_missing) {
+        ut_log("\n#[grey]Summary:#[normal]\n");
+        if (error_count) {
+            ut_info(
+                "#[reset]applications: %d, packages: %d, templates: %d, #[red]errors:#[reset] %d",
+                app_count, package_count, template_count, error_count);
+        } else {
+            ut_info("#[reset]applications: %d, packages: %d, templates: %d", 
+                app_count, package_count, template_count);
+        }
     }
     printf("\n");
 
@@ -962,11 +971,9 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "uninstall")) {
-            if (!clean_missing) {
-                ut_try (bake_install_uninstall(&config, id), NULL);
-            } else {
-                ut_try (bake_list(&config, true), NULL);
-            }
+            ut_try (bake_install_uninstall(&config, id), NULL);
+        } else if (!strcmp(action, "cleanup")) {
+            ut_try (bake_list(&config, true), NULL);
         } else if (!strcmp(action, "info")) {
             bake_info(&config, path, NULL, true, true, NULL, false);
         } else if (!strcmp(action, "list")) {
