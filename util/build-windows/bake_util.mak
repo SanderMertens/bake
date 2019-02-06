@@ -72,6 +72,7 @@ CPP_SOURCE= ..\src\dl_win.c \
 			..\src\time.c \
 			..\src\util.c \
 			..\src\version.c \
+			..\src\vs.c \
 
 OBJECTS=$(CPP_SOURCE:.c=.obj)
 

@@ -88,6 +88,7 @@ UTIL_SOURCE= ..\util\src\dl_win.c \
 			..\util\src\time.c \
 			..\util\src\util.c \
 			..\util\src\version.c \
+			..\util\src\vs.c \
 
 CPP_SOURCE=$(BAKE_SOURCE) $(UTIL_SOURCE)
 
