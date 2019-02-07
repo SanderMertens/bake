@@ -109,6 +109,9 @@ void compile_src(
     /* In obscure cases with static libs, stack protector can cause trouble */
     ut_strbuf_append(&cmd, " %s", cc(cpp));
 
+    /* Suppress Visual C++ banner */
+    ut_strbuf_appendstr(&cmd, " /NOLOGO");
+
     /* Give project access to its own id */
     ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
 
@@ -270,6 +273,9 @@ void link_dynamic_binary(
     ut_strbuf_append(&cmd, "%s &&", vc_shell_cmd);
 
     ut_strbuf_append(&cmd, " link.exe");
+    
+    /* Suppress Visual C++ banner */
+    ut_strbuf_appendstr(&cmd, " /NOLOGO");
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
