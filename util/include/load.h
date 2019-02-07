@@ -47,6 +47,7 @@ extern char *UT_BIN_PATH;
 extern char *UT_LIB_PATH;
 extern char *UT_JAVA_PATH;
 extern char *UT_HOME_LIB_PATH;
+extern char *UT_HOME_BIN_PATH;
 
 /* Extensions for the used target */
 extern char *UT_SHARED_LIB_EXT;
@@ -157,6 +158,17 @@ const char* ut_locate(
     const char *package,
     ut_dl *dl_out,
     ut_locate_kind kind);
+
+/** Test if package is part of the build toolchain */
+UT_EXPORT
+bool ut_project_is_buildtool(
+    const char *id);
+
+/** Test if package is available for config */
+UT_EXPORT
+bool ut_project_in_config(
+    const char *id,
+    const char *cfg);
 
 /** Reset locate cache to force subsequent ut_locate calls to redo lookup.
  * The ut_locate operation caches its results, so that subsequent calls can skip

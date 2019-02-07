@@ -459,7 +459,7 @@ int16_t bake_project_init(
     project->id_underscore = ut_strdup(project->id);
     project->id_dash = ut_strdup(project->id);
 
-    if (!strncmp(project->id, "bake.", 5)) {
+    if (ut_project_is_buildtool(project->id)) {
         project->bake_extension = true;
     }
 

@@ -44,6 +44,7 @@ char *UT_BIN_PATH;
 char *UT_LIB_PATH;
 char *UT_JAVA_PATH;
 char *UT_HOME_LIB_PATH;
+char *UT_HOME_BIN_PATH;
 
 /* File extensions for binaries for current target */
 char *UT_SHARED_LIB_EXT;
@@ -283,7 +284,9 @@ int ut_load_libraryAction(
 static
 int16_t ut_locate_binary(
     const char *id,
-    struct ut_loaded *loaded)
+    const char *config,
+    struct ut_loaded *loaded,
+    int *found)
 {
     char *id_bin = ut_strdup(id);
     char *ptr, ch;
@@ -294,20 +297,30 @@ int16_t ut_locate_binary(
     }
 
     int16_t ret = 0;
+    bool clean_path = false;
 
     char *bin = NULL;
     char *lib_path = UT_LIB_PATH;
     char *bin_path = UT_BIN_PATH;
-    if (!strncmp(id, "bake.", 5)) {
+
+    if (ut_project_is_buildtool(id)) {
         lib_path = UT_HOME_LIB_PATH;
+        bin_path = UT_HOME_BIN_PATH;
+    } else if (strcmp(config, UT_CONFIG)) {
+        lib_path = ut_asprintf("%s/%s/lib", UT_TARGET_PATH, config);
+        bin_path = ut_asprintf("%s/%s/bin", UT_TARGET_PATH, config);
+        clean_path = true;
     }
 
     /* Test for dynamic library */
     bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_SHARED_LIB_EXT);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
-        loaded->lib = bin;
-        loaded->bin = bin;
+        if (loaded) {
+            loaded->lib = bin;
+            loaded->bin = bin;
+        }
+        if (found) *found = true;
     } else {
         if (ret != 0) {
             ut_throw("could not access file '%s'", bin);
@@ -323,8 +336,11 @@ int16_t ut_locate_binary(
         bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_STATIC_LIB_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
-            loaded->static_lib = bin;
-            loaded->bin = bin;
+            if (loaded) {
+                loaded->static_lib = bin;
+                loaded->bin = bin;
+            }
+            if (found) *found = true;
         } else {
             if (ret != 0) {
                 ut_throw("could not access file '%s'", bin);
@@ -341,8 +357,11 @@ int16_t ut_locate_binary(
         bin = ut_asprintf("%s/%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
-            loaded->app = bin;
-            loaded->bin = bin;
+            if (loaded) {
+                loaded->app = bin;
+                loaded->bin = bin;
+            }
+            if (found) *found = true;
         } else {
             if (ret != 0) {
                 ut_throw("could not access file '%s'", bin);
@@ -356,8 +375,17 @@ int16_t ut_locate_binary(
 
     free(id_bin);
 
+    if (clean_path) {
+        free(lib_path);
+        free(bin_path);
+    }
+
     return 0;
 error:
+    if (clean_path) {
+        free(lib_path);
+        free(bin_path);
+    }
     return -1;
 }
 
@@ -515,7 +543,7 @@ const char* ut_locate(
     case UT_LOCATE_APP:
     case UT_LOCATE_BIN:
         if (!loaded->tried_binary) {
-            ut_try (ut_locate_binary(id, loaded), NULL);
+            ut_try (ut_locate_binary(id, UT_CONFIG, loaded, NULL), NULL);
             loaded->tried_binary = true;
         }
         if (kind == UT_LOCATE_LIB) result = loaded->lib;
@@ -549,6 +577,21 @@ error:
         ut_throw(NULL);
     }
     return NULL;
+}
+
+bool ut_project_is_buildtool(
+    const char *id)
+{
+    return !strncmp(id, "bake.", 5);
+}
+
+bool ut_project_in_config(
+    const char *id,
+    const char *config)
+{
+    int found = 0;
+    ut_locate_binary(id, config, NULL, &found);
+    return found;
 }
 
 void ut_locate_reset(
@@ -1033,6 +1076,7 @@ int16_t ut_load_init(
     UT_LIB_PATH = ut_asprintf("%s/lib", UT_TARGET_PATH);
     UT_JAVA_PATH = ut_asprintf("%s/java", UT_HOME_PATH);
     UT_HOME_LIB_PATH = ut_asprintf("%s/lib", UT_HOME_PATH);
+    UT_HOME_BIN_PATH = ut_asprintf("%s/bin", UT_HOME_PATH);
 
     /* For now, default to current platform */
     UT_SHARED_LIB_EXT = UT_OS_LIB_EXT;

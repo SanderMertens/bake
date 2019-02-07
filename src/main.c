@@ -654,6 +654,7 @@ error:
 typedef struct env_package {
     char *id;
     char *cfg;
+    uint32_t count;
     bool in_current_cfg;
 } env_package;
 
@@ -672,39 +673,42 @@ int16_t list_configurations(
     env_package *package)
 {
     ut_strbuf buf = UT_STRBUF_INIT;
-    uint32_t count = 0;
 
-    package->in_current_cfg = false;
+    if (!ut_project_is_buildtool(package->id)) {
+        uint32_t count = 0;
 
-    ut_strbuf_appendstr(&buf, "[");
-    if (ut_file_test(config->platform) == 1) {
-        ut_iter it;
-        ut_try (ut_dir_iter(config->platform, NULL, &it), NULL);
-        while (ut_iter_hasNext(&it)) {
-            char *cfg = ut_iter_next(&it);
-            char *test = ut_asprintf("%s/%s/include/%s", 
-                config->platform, cfg, package->id);
+        package->in_current_cfg = false;
 
-            if (ut_file_test(test) == 1) {
-                if (count) {
-                    ut_strbuf_appendstr(&buf, ",");
-                }
-                ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
-                count ++;
+        ut_strbuf_appendstr(&buf, "[");
+        if (ut_file_test(config->platform) == 1) {
+            ut_iter it;
+            ut_try (ut_dir_iter(config->platform, NULL, &it), NULL);
+            while (ut_iter_hasNext(&it)) {
+                char *cfg = ut_iter_next(&it);
 
-                if (!strcmp(cfg, config->configuration)) {
-                    package->in_current_cfg = true;
+                if (ut_project_in_config(package->id, cfg)) {
+                    if (count) {
+                        ut_strbuf_appendstr(&buf, ",");
+                    }
+                    ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
+                    count ++;
+
+                    if (!strcmp(cfg, config->configuration)) {
+                        package->in_current_cfg = true;
+                    }
                 }
             }
         }
-    }
-    if (!count) {
-        ut_strbuf_appendstr(&buf, "#[grey]all#[normal]");
+
+        ut_strbuf_appendstr(&buf, "]");
+        if (count) {
+            package->cfg = ut_strbuf_get(&buf);
+        }
+        package->count = count;
+    } else {
+        package->cfg = ut_strdup("#[grey]all#[normal]");
         package->in_current_cfg = true;
     }
-
-    ut_strbuf_appendstr(&buf, "]");
-    package->cfg = ut_strbuf_get(&buf);
 
     return 0;
 error:
