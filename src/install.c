@@ -23,11 +23,11 @@
 
 static
 int16_t bake_install_dir_for_target(
-    char *id,
-    char *source_path,
-    char *dir,
-    char *subdir,
-    char *target,
+    const char *id,
+    const char *source_path,
+    const char *dir,
+    const char *subdir,
+    const char *target,
     bool softlink)
 {
     ut_dirstack stack = NULL;
@@ -101,33 +101,23 @@ error:
 
 static
 int16_t bake_install_dir(
-    bake_config *config,
-    char *id,
-    char *source_path,
-    char *dir,
-    char *subdir,
+    const char *env,
+    const char *id,
+    const char *source_path,
+    const char *dir,
+    const char *subdir,
     bool softlink)
 {
     char *target;
 
     if (id) {
-        target = ut_envparse("%s/%s/%s",
-            config->target,
-            dir,
-            id);
+        target = ut_envparse("%s/%s/%s", env, dir, id);
     } else {
-        target = ut_envparse("%s/%s",
-            config->target,
-            dir);
+        target = ut_envparse("%s/%s", env, dir);
     }
 
     if (bake_install_dir_for_target(
-        id,
-        source_path,
-        dir,
-        subdir,
-        target,
-        softlink))
+        id, source_path, dir, subdir, target, softlink))
     {
         goto error;
     }
@@ -144,9 +134,10 @@ int16_t bake_uninstall_from_cfg(
     bool uninstall)
 {
     /* Try removing all possible artefacts, in case project type changed */
-    ut_rm(strarg("%s/%s/lib/lib%s" UT_OS_LIB_EXT, config->target_root, cfg, project->id_underscore));
-    ut_rm(strarg("%s/%s/bin/%s" UT_OS_BIN_EXT, config->target_root, cfg, project->id_underscore));
-    ut_rm(strarg("%s/%s/%s" UT_OS_BIN_EXT, config->target_root, cfg, project->id_underscore));
+    ut_rm( strarg("%s/lib%s%s", config->lib, project->id_underscore, UT_SHARED_LIB_EXT));
+    ut_rm( strarg("%s/lib%s%s", config->lib, project->id_underscore, UT_STATIC_LIB_EXT));
+    ut_rm( strarg("%s/%s%s", config->bin, project->id_underscore, UT_EXECUTABLE_EXT));
+    ut_rm( strarg("%s/%s%s", config->target, project->id_underscore, UT_EXECUTABLE_EXT));
 
     return 0;
 error:
@@ -163,15 +154,15 @@ int16_t bake_install_clear(
 
     if (uninstall) {
         /* Clean metadata from BAKE_HOME */
-        if (ut_rm(strarg("%s/meta/%s", config->home, project_id))) {
+        if (ut_rm(strarg("%s/%s", UT_META_PATH, project_id))) {
             /* Raise error, but don't abort. Try to cleanup as much as possible. */
             ut_raise();
         }
 
         /* Only delete binaries when uninstalling */
-        if (ut_file_test(config->target_root)) {
+        if (ut_file_test(UT_PLATFORM_PATH)) {
             ut_iter it;
-            if (ut_dir_iter(config->target_root, NULL, &it)) {
+            if (ut_dir_iter(UT_PLATFORM_PATH, NULL, &it)) {
                 ut_raise(); /* ditto */
             } else {
                 while (ut_iter_hasNext(&it)) {
@@ -183,11 +174,11 @@ int16_t bake_install_clear(
     }
 
     /* Only clean from current configuration */
-    ut_rm(strarg("%s/etc/%s", config->target, project_id));
-    ut_rm(strarg("%s/include/%s.dir", config->target, project_id));
+    ut_rm(strarg("%s/%s", UT_ETC_PATH, project_id));
+    ut_rm(strarg("%s/%s.dir", UT_INCLUDE_PATH, project_id));
 
     /* Remove link to main include file */
-    char *link_name = ut_asprintf("%s/include/%s", config->target, project_id);
+    char *link_name = ut_asprintf("%s/%s", UT_INCLUDE_PATH, project_id);
     ut_try( ut_rm(link_name), NULL);
     free(link_name);
 
@@ -237,7 +228,7 @@ int16_t bake_install_metadata(
         char *project_json = ut_asprintf("%s/project.json", project->path);
         if (ut_file_test(project_json)) {
             char *projectDir = ut_envparse(
-                "%s/meta/%s", config->home, project->id);
+                "%s/%s", UT_META_PATH, project->id);
 
             ut_try (ut_mkdir(projectDir), NULL);
 
@@ -305,7 +296,7 @@ int16_t bake_install_prebuild(
         while (ut_iter_hasNext(&it)) {
             char *tmp_id = ut_asprintf("%s.dir", project->id);
             if (bake_install_dir(
-                config,
+                config->home,
                 tmp_id,
                 project->path,
                 "include",
@@ -318,29 +309,34 @@ int16_t bake_install_prebuild(
             free(tmp_id);
         }
 
-        /* Create softlink to main header file so projects can include packages
-         * using their logical name */
-        char *header_name = ut_asprintf("%s/include/%s.dir/%s.h",
-            config->target, project->id, project->id_short);
+        /* Header that references main header file so projects can include
+         * packages using their logical name */
+        char *header_name = ut_asprintf("%s/%s.dir/%s.h",
+            UT_INCLUDE_PATH, project->id, project->id_short);
         if (ut_file_test(header_name) == 1) {
-            char *link_name = ut_asprintf("%s/include/%s",
-                config->target, project->id);
-            FILE *f = fopen(link_name, "w");
-            fprintf(f, "#include \"%s.dir/%s.h\"\n", project->id, project->id_short);
+            char *hdr = ut_asprintf("%s/%s", UT_INCLUDE_PATH, project->id);
+            FILE *f = fopen(hdr, "w");
+            if (!f) {
+                ut_throw("failed to open include file '%s' for writing", hdr);
+                free(hdr);
+                goto error;
+            }
+            fprintf(f, "#include \"%s.dir/%s.h\"\n", 
+                project->id, project->id_short);
             fclose(f);
-            free(link_name);
+            free(hdr);
         }
         free(header_name);
 
         if (bake_install_dir(
-            config, project->id, project->path, "etc", NULL, true))
+            config->target, project->id, project->path, "etc", NULL, true))
         {
             goto error;
         }
 
         if (project->type == BAKE_PACKAGE) {
             if (bake_install_dir(
-                config, project->id, project->path, "lib", NULL, true))
+                config->target, project->id, project->path, "lib", NULL, true))
             {
                 goto error;
             }
@@ -350,22 +346,22 @@ int16_t bake_install_prebuild(
         char *install_path = ut_asprintf("%s/install", project->path);
         if (install_path) {
             if (bake_install_dir(
-                config, NULL, install_path, "include", NULL, true))
+                config->home, NULL, install_path, "include", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "lib", NULL, true))
+                config->target, NULL, install_path, "lib", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "etc", NULL, true))
+                config->target, NULL, install_path, "etc", NULL, true))
             {
                 goto error;
             }
             if (bake_install_dir(
-                config, NULL, install_path, "java", NULL, true))
+                config->target, NULL, install_path, "java", NULL, true))
             {
                 goto error;
             }
@@ -382,17 +378,15 @@ int16_t bake_install_template(
     bake_config *cfg,
     bake_project *project)
 {
-    char *template_root = ut_asprintf("%s/templates", cfg->home);
-    ut_try( ut_mkdir(template_root), NULL);
+    ut_try( ut_mkdir(UT_TEMPLATE_PATH), NULL);
 
-    char *template_path = ut_asprintf("%s/%s/%s", 
-        template_root, project->id, project->language);
+    char *project_template = ut_asprintf("%s/%s/%s", 
+        UT_TEMPLATE_PATH, project->id, project->language);
 
-    ut_try( ut_rm(template_path), NULL);
-    ut_try( ut_symlink(project->path, template_path), NULL);
+    ut_try( ut_rm(project_template), NULL);
+    ut_try( ut_symlink(project->path, project_template), NULL);
 
-    free(template_path);
-    free(template_root);
+    free(project_template);
 
     return 0;
 error:
@@ -432,9 +426,9 @@ int16_t bake_install_postbuild(
     bool copy = false;
 
     if (project->type == BAKE_PACKAGE) {
-        targetDir = config->target_lib;
+        targetDir = config->lib;
     } else {
-        targetDir = config->target_bin;
+        targetDir = config->bin;
     }
 
     if (!ut_file_test(project->artefact_file)) {

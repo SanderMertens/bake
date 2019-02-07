@@ -28,6 +28,29 @@ extern "C" {
 
 typedef int (*ut_load_cb)(char *file, int argc, char* argv[], void* userData);
 
+/* Information about current target */
+char *UT_ARCH;
+char *UT_OS;
+char *UT_PLATFORM;  /* arch-os */
+char *UT_CONFIG;
+
+/* Paths to bake environment locations */
+extern char *UT_HOME_PATH;
+extern char *UT_TARGET_PATH;
+extern char *UT_PLATFORM_PATH;
+extern char *UT_META_PATH;
+extern char *UT_INCLUDE_PATH;
+extern char *UT_ETC_PATH;
+extern char *UT_SRC_PATH;
+extern char *UT_TEMPLATE_PATH;
+extern char *UT_BIN_PATH;
+extern char *UT_LIB_PATH;
+
+/* Extensions for the used target */
+extern char *UT_SHARED_LIB_EXT;
+extern char *UT_STATIC_LIB_EXT;
+extern char *UT_EXECUTABLE_EXT;
+
 /** Load a resource.
  * The ut_use function provides a single interface to loading files or
  * packages into corto. The function accepts any filetype known to corto (types
@@ -85,7 +108,6 @@ int ut_run(
     char *argv[]);
 
 typedef enum ut_locate_kind {
-    UT_LOCATE_ENV,     /* environment, for example: /usr/local */
     UT_LOCATE_LIB,     /* full path to library */
     UT_LOCATE_STATIC,  /* full path to static library */
     UT_LOCATE_APP,     /* full path to application */
@@ -225,24 +247,13 @@ int ut_load_register(
 /* Internal function for initializing paths in loader */
 UT_EXPORT
 int16_t ut_load_init(
-    const char *target,
     const char *home,
+    const char *arch,
+    const char *os,
     const char *config);
 
 UT_EXPORT
 void ut_load_deinit(void);
-
-UT_EXPORT
-const char* ut_load_homePath(void);
-
-UT_EXPORT
-const char* ut_load_targetPath(void);
-
-UT_EXPORT
-const char* ut_load_homeMetaPath(void);
-
-UT_EXPORT
-const char* ut_load_targetMetaPath(void);
 
 #ifdef __cplusplus
 }

@@ -397,7 +397,6 @@ ut_ll bake_config_find_config(void)
 
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *cfg_id,
     const char *env_id,
     bool build_to_home)
 {
@@ -412,21 +411,21 @@ int16_t bake_config_load(
         if (bake_config_load_config(
             config_files,
             cfg_out,
-            cfg_id,
+            UT_CONFIG,
             env_id))
         {
             goto error;
         }
     } else {
-        if (!strcmp(cfg_id, "debug")) {
+        if (!strcmp(UT_CONFIG, "debug")) {
             ut_ok("no configuration file found, use defaults for debug");
-        } else if (!strcmp(cfg_id, "release")) {
+        } else if (!strcmp(UT_CONFIG, "release")) {
             ut_ok("no configuration file found, use defaults for release");
             cfg_out->optimizations = true;
             cfg_out->debug = false;
         } else {
             ut_throw("no configuration file found, unknown configuration '%s'",
-                cfg_id);
+                UT_CONFIG);
             goto error;
         }
     }
@@ -454,7 +453,7 @@ int16_t bake_config_load(
     /* Ensure these environment variables are part of the bake environment */
     bake_config_add_var(cfg_out, "BAKE_HOME", ut_getenv("BAKE_HOME"));
     bake_config_add_var(cfg_out, "BAKE_TARGET", ut_getenv("BAKE_TARGET"));
-    bake_config_add_var(cfg_out, "BAKE_CONFIG", cfg_id);
+    bake_config_add_var(cfg_out, "BAKE_CONFIG", UT_CONFIG);
     bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id);
     bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING);
     bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"));
@@ -477,27 +476,22 @@ int16_t bake_config_load(
     bake_config_setEnv(cfg_out);
 
     /* Precompute bake paths */
-    cfg_out->configuration = ut_strdup(cfg_id);
+    cfg_out->configuration = ut_strdup(UT_CONFIG);
     if (!build_to_home) {
-        cfg_out->target_root = ut_asprintf(
-            "%s/%s", ut_getenv("BAKE_TARGET"),
-            UT_PLATFORM_STRING);
-        cfg_out->target = ut_asprintf(
-            "%s/%s", cfg_out->target_root, cfg_out->configuration);
+        cfg_out->platform = UT_PLATFORM_PATH;
+        cfg_out->target = UT_TARGET_PATH;
     } else {
-        cfg_out->target = ut_strdup(ut_getenv("BAKE_HOME"));
+        cfg_out->target = UT_HOME_PATH;
     }
 
-    cfg_out->home = ut_strdup(ut_getenv("BAKE_HOME"));
-    cfg_out->home_lib = ut_asprintf("%s/lib", cfg_out->home);
-    cfg_out->home_bin = ut_asprintf("%s/bin", cfg_out->home);
-    cfg_out->target_lib = ut_asprintf("%s/lib", cfg_out->target);
-    cfg_out->target_bin = ut_asprintf("%s/bin", cfg_out->target);
+    cfg_out->home = UT_HOME_PATH;
+    cfg_out->lib = UT_LIB_PATH;
+    cfg_out->bin = UT_BIN_PATH;
 
     /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
-    bake_config_appendEnv("PATH", strarg("~/bake:%s:%s", cfg_out->target_bin, cfg_out->home_bin));
-    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
-    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s:%s", cfg_out->target_lib, cfg_out->home_lib));
+    bake_config_appendEnv("PATH", strarg("~/bake:%s", cfg_out->bin));
+    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s", cfg_out->lib));
+    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s", cfg_out->lib));
     bake_config_appendEnv("CLASSPATH", strarg(".:%s/java", cfg_out->target));
 
     if (ut_log_verbosityGet() <= UT_OK) {

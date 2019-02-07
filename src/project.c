@@ -1224,9 +1224,9 @@ int16_t bake_project_build(
         goto error;
     }
 
-    /* Copy libraries to BAKE_TARGET, return list with local library names */
+    /* Copy libraries to libpath, return list with local library names */
     ut_ll old_link = project->link;
-    project->link = bake_project_copy_libs(project, config->target_lib);
+    project->link = bake_project_copy_libs(project, UT_LIB_PATH);
     if (!project->link) {
         ut_throw(NULL);
         goto error;

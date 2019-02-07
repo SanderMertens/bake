@@ -35,7 +35,6 @@
 /** Find bake config file(s), load specified configuration & environment */
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *cfg_id,
     const char *env_id,
     bool build_to_home);
 

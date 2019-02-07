@@ -25,10 +25,28 @@ static ut_ll fileHandlers = NULL;
 static ut_ll loadedAdmin = NULL;
 static ut_ll libraries = NULL;
 
-/* Static variables set during initialization that contain paths to packages */
-static char *UT_LOAD_TARGET_PATH, *UT_LOAD_HOME_PATH;
-static char *UT_LOAD_TARGET_META_PATH, *UT_LOAD_HOME_META_PATH;
-static bool UT_LOAD_TARGET_OTHER_THAN_HOME = false;
+/* Information about current target */
+char *UT_ARCH;
+char *UT_OS;
+char *UT_PLATFORM;
+char *UT_CONFIG;
+
+/* Paths pointing to bake environment and current target */
+char *UT_HOME_PATH;
+char *UT_TARGET_PATH;
+char *UT_PLATFORM_PATH;
+char *UT_META_PATH;
+char *UT_INCLUDE_PATH;
+char *UT_ETC_PATH;
+char *UT_SRC_PATH;
+char *UT_TEMPLATE_PATH;
+char *UT_BIN_PATH;
+char *UT_LIB_PATH;
+
+/* File extensions for binaries for current target */
+char *UT_SHARED_LIB_EXT;
+char *UT_STATIC_LIB_EXT;
+char *UT_EXECUTABLE_EXT;
 
 /* Lock protecting the package administration */
 extern ut_mutex_s UT_LOAD_LOCK;
@@ -36,7 +54,6 @@ extern ut_mutex_s UT_LOAD_LOCK;
 struct ut_loaded {
     char* id; /* package id or file */
 
-    char *env; /* Environment in which the package is installed */
     char *lib; /* Path to library (if available) */
     char *static_lib; /* Path to static library (if available) */
     char *app; /* Path to executable (if available) */
@@ -46,7 +63,7 @@ struct ut_loaded {
     char *dev; /* Path to project in development (if available) */
     char *include; /* Path to project include (if available) */
     char *template; /* Path to template */
-    char *project; /* Path to project lib. Always available if valid project */
+    char *meta; /* Path to metadata. Always available if valid project */
     char *repo; /* Repository name (replace . with -) */
     bool tried_binary; /* Set to true if tried loading the bin path */
     bool tried_locating; /* Set to true if tried locating package */
@@ -180,6 +197,8 @@ int ut_load_fromDl(
         }
     }
 
+    /* support for this will be dropped */
+
     proc = (int(*)(int,char*[]))ut_dl_proc(dl, "cortomain");
     if (proc) {
         if ((ret = proc(argc, argv))) {
@@ -213,10 +232,8 @@ error:
     return -1;
 }
 
-/*
- * Load a Corto library
- * Receives the absolute path to the lib<name>.so file.
- */
+/* Load a library
+ * Receives the absolute path to the lib<name>.so (or equivalent) file. */
 static
 int ut_load_library(
     char* fileName,
@@ -250,9 +267,7 @@ error:
     return -1;
 }
 
-/*
- * An adapter on top of ut_load_library to fit the ut_load_cb signature.
- */
+/* An adapter on top of ut_load_library to fit the ut_load_cb signature. */
 int ut_load_libraryAction(
     char* file,
     int argc,
@@ -264,104 +279,24 @@ int ut_load_libraryAction(
 }
 
 static
-bool ut_package_exists(
-    const char *package)
-{
-    bool result = true;
-
-    char *path = ut_asprintf("%s/meta/%s/project.json", UT_LOAD_HOME_PATH, package);
-    if ((result = ut_file_test(path)) == 1) {
-        ut_debug("found '%s'", path);
-    } else {
-        if (result != -1) {
-            ut_debug("file '%s' not found", path);
-        }
-        result = false;
-    }
-    free(path);
-
-    return result;
-}
-
-static
-bool ut_package_test_env(
-    const char *env,
-    const char *package)
-{
-    bool result = true;
-
-    char *path = ut_asprintf("%s/include/%s", env, package);
-    if ((result = ut_file_test(path)) == 1) {
-        ut_debug("found '%s'", path);
-    } else {
-        if (result != -1) {
-            ut_debug("file '%s' not found", path);
-        }
-        result = false;
-    }
-    free(path);
-
-    return result;
-}
-
-static
-int16_t ut_locate_package(
-    const char* package,
-    const char **env)
-{
-    time_t t_target = 0, t_home = 0;
-    int16_t ret = 0;
-
-    ut_assert(UT_LOAD_TARGET_PATH != NULL, "UT_LOAD_TARGET_PATH is not set");
-    ut_assert(UT_LOAD_HOME_PATH != NULL, "UT_LOAD_HOME_PATH is not set");
-
-    ut_log_push(strarg("locate:%s", package));
-
-    /* First test if package exists */
-    if (!ut_package_exists(package)) {
-        return 0;
-    }
-
-    /* Second test if package can be found in BAKE_HOME or BAKE_TARGET. Do this
-     * by testing whether an 'include' path for the package exists (easier than
-     * testing for binaries). */
-    if (ut_package_test_env(UT_LOAD_TARGET_PATH, package)) {
-        *env = UT_LOAD_TARGET_PATH;
-    } else if (strcmp(UT_LOAD_TARGET_PATH, UT_LOAD_HOME_PATH)) {
-        if (ut_package_test_env(UT_LOAD_HOME_PATH, package)) {
-            *env = UT_LOAD_HOME_PATH;
-        } else {
-            /* Package has no include files in either TARGET or HOME. This either
-            * means the package hasn't been built yet, or it is a pure
-            * configuration package. Assume the latter. */
-            *env = UT_LOAD_HOME_PATH;
-        }
-    }
-
-    ut_log_pop();
-    return ret;
-}
-
-static
 int16_t ut_locate_binary(
     const char *id,
     struct ut_loaded *loaded)
 {
     int16_t ret = 0;
 
-    char *pkg_underscore = ut_strdup(id);
+    char *id_bin = ut_strdup(id);
     char *ptr, ch;
-    for (ptr = pkg_underscore; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
+    for (ptr = id_bin; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
             *ptr = '_';
         }
     }
 
     char *bin = NULL;
 
-#ifdef UT_MACOS
-    /* Test for .dylib library */
-    bin = ut_asprintf("%s/lib/lib%s.dylib", loaded->env, pkg_underscore);
+    /* Test for dynamic library */
+    bin = ut_asprintf("%s/lib%s%s", UT_LIB_PATH, id_bin, UT_SHARED_LIB_EXT);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
         loaded->lib = bin;
@@ -375,29 +310,10 @@ int16_t ut_locate_binary(
             free(bin);
         }
     }
-#endif
 
-    /* Test for .so library */
+    /* Test for static library */
     if (ret == 0) {
-        bin = ut_asprintf("%s/lib/lib%s.so", loaded->env, pkg_underscore);
-        if ((ret = ut_file_test(bin)) == 1) {
-            /* Library found */
-            loaded->lib = bin;
-            loaded->bin = bin;
-        } else {
-            if (ret != 0) {
-                ut_throw("could not access file '%s'", bin);
-                free(bin);
-                goto error;
-            } else {
-                free(bin);
-            }
-        }
-    }
-
-    /* Test for .a library */
-    if (ret == 0) {
-        bin = ut_asprintf("%s/lib/lib%s.a", loaded->env, pkg_underscore);
+        bin = ut_asprintf("%s/lib%s%s", UT_LIB_PATH, id_bin, UT_STATIC_LIB_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->static_lib = bin;
@@ -415,7 +331,7 @@ int16_t ut_locate_binary(
 
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s/bin/%s", loaded->env, pkg_underscore);
+        bin = ut_asprintf("%s/%s%s", UT_BIN_PATH, id_bin, UT_EXECUTABLE_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             loaded->app = bin;
@@ -431,7 +347,7 @@ int16_t ut_locate_binary(
         }
     }
 
-    free(pkg_underscore);
+    free(id_bin);
 
     /* Prevent looking for the binary again */
     loaded->tried_binary = true;
@@ -450,7 +366,7 @@ int16_t ut_locate_src(
         return 0;
     }
 
-    char *src = ut_asprintf("%s/src/%s", UT_LOAD_HOME_PATH, loaded->repo);
+    char *src = ut_asprintf("%s/%s", UT_SRC_PATH, loaded->repo);
     if (ut_file_test(src) == 1) {
         loaded->src = src;
     } else {
@@ -458,7 +374,7 @@ int16_t ut_locate_src(
         free(src);
     }
 
-    src = ut_asprintf("%s/source.txt", loaded->project);
+    src = ut_asprintf("%s/source.txt", loaded->meta);
     if (ut_file_test(src) == 1) {
         char *path = ut_file_load(src);
 
@@ -480,8 +396,9 @@ int16_t ut_locate_src(
     return 0;
 }
 
+/* Locate various paths for projects in the bake environment */
 const char* ut_locate(
-    const char* package,
+    const char* id,
     ut_dl *dl_out,
     ut_locate_kind kind)
 {
@@ -489,98 +406,103 @@ const char* ut_locate(
     const char *env = NULL;
     struct ut_loaded *loaded = NULL;
 
-    if (!package || !package[0]) {
-        ut_throw("invalid package identifier");
+    if (!id || !id[0]) {
+        ut_throw("invalid (empty) project identifier");
         goto error;
     }
 
     ut_try ( ut_mutex_lock(&UT_LOAD_LOCK), NULL);
 
     /* If package has been loaded already, don't resolve it again */
-    loaded = ut_loaded_find(package);
-    if (loaded && loaded->tried_locating) {
-        if (!loaded->env) {
-            ut_debug("locating '%s' failed before", package);
-            goto error;
-        }
-
-        env = loaded->env;
-    } else {
-        /* If package has not been found, try locating it */
-        if (ut_locate_package(package, &env) == -1) {
-            /* Error happened other than not being able to find the package */
-            ut_throw(NULL);
-            goto error;
-        }
-    }
-
+    loaded = ut_loaded_find(id);
     if (!loaded) {
-        loaded = ut_loaded_add(package);
-        loaded->loading = 0; /* locate is not going to load package */
-
-        /* Regardless of whether package has been located in environment, test
-         * if the package identifier is also a template */
-        char *template_path = ut_asprintf(
-            "%s/templates/%s", UT_LOAD_HOME_PATH, package);
-        if (ut_file_test(template_path) == 1) {
-            loaded->template = template_path;
-        } else {
-            free(template_path);
-        }
+        loaded = ut_loaded_add(id);
+        loaded->loading = 0; /* locate is not going to load project */
     }
 
-    /* Only try to locate packages once */
-    loaded->tried_locating = true;
-
-    /* If package is not in load admin but has been located, add to admin */
-    if (!loaded->env && env) {
-        strset(&loaded->env, env);
-        loaded->project = ut_asprintf("%s/%s", UT_LOAD_HOME_META_PATH, package);
-        loaded->repo = ut_strdup(package);
-        char *ptr, ch;
-        for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
-            if (ch == '.') {
-                *ptr = '-';
+    if (loaded && loaded->tried_locating) {
+        /* Templates don't occupy the same namespace as ordinary projects */
+        if (kind != UT_LOCATE_TEMPLATE) {
+            if (!loaded->meta) {
+                ut_debug("locating project '%s' failed before", id);
+                goto error;
+            }
+        } else {
+            if (!loaded->template) {
+                ut_debug("locating template '%s' failed before", id);
+                goto error;
             }
         }
     }
+
+    /* Test whether project or template project exists */
+    if (kind == UT_LOCATE_TEMPLATE) {
+        if (!loaded->template) {
+            char *tmpl_path = ut_asprintf("%s/%s", UT_TEMPLATE_PATH, id);
+            if (ut_file_test(tmpl_path) == 1) {
+                loaded->template = tmpl_path;
+            } else {
+                ut_trace("template path '%s' not found", tmpl_path);
+                free(tmpl_path);
+                goto error;
+            }
+        }
+    } else {
+        if (!loaded->meta) {
+            char *meta_path = ut_asprintf("%s/%s", UT_META_PATH, id);
+            if (ut_file_test(meta_path) == 1) {
+                loaded->template = meta_path;
+
+                /* Prepare repository identifier (replaces . with -) */
+                loaded->repo = ut_strdup(id);
+                char *ptr, ch;
+                for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
+                    if (ch == '.') {
+                        *ptr = '-';
+                    }
+                }
+            } else {
+                ut_trace("template path '%s' not found", meta_path);
+                free(meta_path);
+                goto error;
+            }
+        }
+    }
+
+    /* Only try to locate packages once (until reset is called) */
+    loaded->tried_locating = true; 
 
     /* If env has been found, derive location */
     switch(kind) {
-    case UT_LOCATE_ENV:
-        result = loaded->env; /* always set */
-        break;
     case UT_LOCATE_PROJECT:
-        result = loaded->project; /* always set */
+        result = loaded->meta;
         break;
+    case UT_LOCATE_TEMPLATE:
+        result = loaded->template;
+        break;        
     case UT_LOCATE_ETC:
         if (!loaded->etc) {
-            if (loaded->env) {
-                loaded->etc = ut_asprintf("%s/etc/%s", loaded->env, package);
-            }
+            loaded->etc = ut_asprintf("%s/%s", UT_ETC_PATH, id);
         }
         result = loaded->etc;
         break;
     case UT_LOCATE_INCLUDE:
         if (!loaded->include) {
-            if (loaded->env) {
-                loaded->include = ut_asprintf("%s/include/%s.dir", loaded->env, package);
-            }
+            loaded->include = ut_asprintf("%s/%s.dir", UT_INCLUDE_PATH, id);
         }
         result = loaded->include;
         break;
-    case UT_LOCATE_TEMPLATE:
-        result = loaded->template;
-        break;
     case UT_LOCATE_SOURCE:
-        if (!loaded->src) {
-            ut_try (ut_locate_src(package, loaded), NULL);
+        if (!loaded->tried_src) {
+            ut_try (ut_locate_src(id, loaded), NULL);
+            loaded->tried_src = true;
         }
         result = loaded->src;
         break;
     case UT_LOCATE_DEVSRC:
-        if (!loaded->dev) {
-            ut_try (ut_locate_src(package, loaded), NULL);
+        if (!loaded->tried_src) {
+            ut_try (ut_locate_src(id, loaded), NULL);
+            loaded->tried_src = true;
         }
         result = loaded->dev;
         break;
@@ -589,9 +511,8 @@ const char* ut_locate(
     case UT_LOCATE_APP:
     case UT_LOCATE_BIN:
         if (!loaded->tried_binary) {
-            if (ut_locate_binary(package, loaded)) {
-                goto error;
-            }
+            ut_try (ut_locate_binary(id, loaded), NULL);
+            loaded->tried_binary = true;
         }
         if (kind == UT_LOCATE_LIB) result = loaded->lib;
         if (kind == UT_LOCATE_STATIC) result = loaded->static_lib;
@@ -616,15 +537,7 @@ const char* ut_locate(
         /* Library was not found */
     }
 
-
-    /* If loaded hasn't been loaded by now, package isn't found */
-    if (!result) {
-        ut_trace("could not locate '%s'", package);
-        goto error;
-    }
-
-    ut_try (
-        ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
+    ut_try ( ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
 
     return result;
 error:
@@ -644,20 +557,20 @@ void ut_locate_reset(
     loaded = ut_loaded_find(package);
     if (loaded) {
         if (!loaded->loading && !loaded->library) {
-            free(loaded->env);
             free(loaded->bin);
             free(loaded->etc);
+            free(loaded->src);
+            free(loaded->dev);
             free(loaded->include);
-            free(loaded->project);
+            free(loaded->meta);
 
-            loaded->env = NULL;
             loaded->lib = NULL;
             loaded->static_lib = NULL;
             loaded->app = NULL;
             loaded->bin = NULL;
             loaded->etc = NULL;
             loaded->include = NULL;
-            loaded->project = NULL;
+            loaded->meta = NULL;
 
             loaded->tried_binary = false;
             loaded->tried_locating = false;
@@ -963,12 +876,11 @@ void ut_loaderOnExit(
          while(ut_iter_hasNext(&iter)) {
              struct ut_loaded *loaded = ut_iter_next(&iter);
              free(loaded->id);
-             if (loaded->env) free(loaded->env);
              if (loaded->lib) free(loaded->lib);
              if (loaded->app) free(loaded->app);
              if (loaded->etc) free(loaded->etc);
              if (loaded->include) free(loaded->include);
-             if (loaded->project) free(loaded->project);
+             if (loaded->meta) free(loaded->meta);
              free(loaded);
          }
          ut_ll_free(loadedAdmin);
@@ -1055,64 +967,84 @@ error:
 
 /* Initialize paths necessary for loader */
 int16_t ut_load_init(
-    const char *target,
     const char *home,
+    const char *arch,
+    const char *os,
     const char *config)
 {
-    char *cwd = ut_strdup(ut_cwd());
-
-    if (!target) target = ut_getenv("BAKE_TARGET");
-    if (!home) home = ut_getenv("BAKE_HOME");
-    if (!config) config = ut_getenv("BAKE_CONFIG");
-
-    if (!target) {
-        UT_LOAD_TARGET_PATH = ut_strdup(cwd);
-    } else {
-        UT_LOAD_TARGET_PATH = ut_asprintf("%s/%s/%s",
-          target, UT_PLATFORM_STRING, config);
-
-        UT_LOAD_TARGET_META_PATH =
-            ut_asprintf("%s/meta", UT_LOAD_TARGET_PATH);
-    }
-
     if (!home) {
-        UT_LOAD_HOME_PATH = ut_strdup(cwd);
-    } else {
-        UT_LOAD_HOME_PATH = ut_asprintf("%s", home);
-
-        UT_LOAD_HOME_META_PATH =
-            ut_asprintf("%s/meta", UT_LOAD_HOME_PATH);
+        home = ut_getenv("BAKE_HOME");
+        if (!home) {
+            home = "~/bake";
+        }
     }
 
-    if (strcmp(UT_LOAD_TARGET_PATH, UT_LOAD_HOME_PATH)) {
-        UT_LOAD_TARGET_OTHER_THAN_HOME = true;
+    if (!arch) {
+        arch = ut_getenv("BAKE_ARCHITECTURE");
+        if (!arch) {
+            arch = UT_CPU_STRING;
+        }
+    }
+    
+    if (!os) {
+        os = ut_getenv("BAKE_OS");
+        if (!os) {
+            os = UT_OS_STRING;
+        }
     }
 
-    free(cwd);
+    if (!config) {
+        config = ut_getenv("BAKE_CONFIG");
+        if (!config) {
+            config = "debug";
+        }
+    }
+
+    UT_ARCH = ut_strdup(arch);
+    UT_OS = ut_strdup(os);
+    UT_PLATFORM = ut_asprintf("%s-%s", arch, os);
+    UT_CONFIG = ut_strdup(config);
+
+    UT_HOME_PATH = ut_envparse("%s", home);
+    UT_TARGET_PATH = ut_asprintf("%s/%s/%s", UT_HOME_PATH, UT_PLATFORM, config);
+    UT_PLATFORM_PATH = ut_asprintf("%s/%s", UT_HOME_PATH, UT_PLATFORM);
+    UT_META_PATH = ut_asprintf("%s/meta", UT_HOME_PATH);
+    UT_SRC_PATH = ut_asprintf("%s/src", UT_HOME_PATH);
+    UT_INCLUDE_PATH = ut_asprintf("%s/include", UT_HOME_PATH);
+    UT_TEMPLATE_PATH = ut_asprintf("%s/templates", UT_HOME_PATH);
+    UT_BIN_PATH = ut_asprintf("%s/bin", UT_TARGET_PATH);
+    UT_LIB_PATH = ut_asprintf("%s/lib", UT_TARGET_PATH);
+
+    /* For now, default to current platform */
+    UT_SHARED_LIB_EXT = UT_OS_LIB_EXT;
+    UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
+    UT_EXECUTABLE_EXT = UT_OS_BIN_EXT;
+
+    ut_setenv("BAKE_HOME", UT_HOME_PATH);
+    ut_setenv("BAKE_TARGET", UT_TARGET_PATH);
+    ut_setenv("BAKE_CONFIG", config);
+    ut_setenv("BAKE_ARCH", UT_ARCH);
+    ut_setenv("BAKE_OS", UT_OS);
+    ut_setenv("BAKE_PLATFORM", UT_PLATFORM);
 
     return 0;
 }
 
-const char* ut_load_homePath(void) {
-    return UT_LOAD_HOME_PATH;
-}
-
-const char* ut_load_targetPath(void) {
-    return UT_LOAD_TARGET_PATH;
-}
-
-const char* ut_load_homeMetaPath(void) {
-    return UT_LOAD_HOME_META_PATH;
-}
-
-const char* ut_load_targetMetaPath(void) {
-    return UT_LOAD_TARGET_META_PATH;
-}
-
-
 /* Initialize paths necessary for loader */
 void ut_load_deinit(void)
 {
-    free(UT_LOAD_TARGET_PATH);
-    free(UT_LOAD_HOME_PATH);
+    free(UT_HOME_PATH);
+    free(UT_TARGET_PATH);
+    free(UT_PLATFORM_PATH);
+    free(UT_META_PATH);
+    free(UT_SRC_PATH);
+    free(UT_INCLUDE_PATH);
+    free(UT_TEMPLATE_PATH);
+    free(UT_BIN_PATH);
+    free(UT_LIB_PATH);
+
+    free(UT_ARCH);
+    free(UT_OS);
+    free(UT_PLATFORM);
+    free(UT_CONFIG);
 }

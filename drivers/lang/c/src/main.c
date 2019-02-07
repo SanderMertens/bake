@@ -293,7 +293,7 @@ char* find_static_lib(
     int ret;
 
     /* Find static library in environment libpath */
-    char *file = ut_asprintf("%s/lib%s.a", config->target_lib, lib);
+    char *file = ut_asprintf("%s/lib%s.a", config->lib, lib);
     if ((ret = ut_file_test(file)) == 1) {
         return file;
     } else if (ret != 0) {
@@ -465,8 +465,8 @@ void link_dynamic_binary(
     }
 
     /* Add BAKE_TARGET to library path */
-    if (ut_file_test(config->target_lib)) {
-        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
+    if (ut_file_test(config->lib)) {
+        ut_strbuf_append(&cmd, " -L%s", config->lib);
     }
 
     /* Add BAKE_HOME to library path if it's different */

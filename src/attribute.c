@@ -51,19 +51,24 @@ int16_t bake_project_func_locate(
 
     if (!strcmp(argument, "package")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_PROJECT);
+    } else if (!strcmp(argument, "template")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_TEMPLATE);
     } else if (!strcmp(argument, "include")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_INCLUDE);
     } else if (!strcmp(argument, "etc")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_ETC);
-    } else if (!strcmp(argument, "env")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_ENV);
     } else if (!strcmp(argument, "lib")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_LIB);
     } else if (!strcmp(argument, "app")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_APP);
     } else if (!strcmp(argument, "bin")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_BIN);
+    } else if (!strcmp(argument, "src")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_SOURCE);
+    } else if (!strcmp(argument, "devsrc")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_DEVSRC);
     }
+    
     if (value) {
         ut_strbuf_appendstr(buffer, value);
         return 0;

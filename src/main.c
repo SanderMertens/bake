@@ -27,7 +27,7 @@ ut_tls BAKE_PROJECT_KEY;
 ut_tls BAKE_CONFIG_KEY;
 
 /* Bake configuration */
-const char *cfg = "debug";
+const char *cfg = NULL;
 const char *env = "default";
 const char *action = "build";
 const char *path = ".";
@@ -680,13 +680,13 @@ int16_t list_configurations(
     package->in_current_cfg = false;
 
     ut_strbuf_appendstr(&buf, "[");
-    if (ut_file_test(config->target_root) == 1) {
+    if (ut_file_test(config->platform) == 1) {
         ut_iter it;
-        ut_try (ut_dir_iter(config->target_root, NULL, &it), NULL);
+        ut_try (ut_dir_iter(config->platform, NULL, &it), NULL);
         while (ut_iter_hasNext(&it)) {
             char *cfg = ut_iter_next(&it);
             char *test = ut_asprintf("%s/%s/include/%s", 
-                config->target_root, cfg, package->id);
+                config->platform, cfg, package->id);
 
             if (ut_file_test(test) == 1) {
                 if (count) {
@@ -726,7 +726,7 @@ int bake_list(
              error_count = 0;
 
     /* Collect packages from BAKE_HOME */
-    ut_try( ut_dir_iter(ut_load_homeMetaPath(), "/*", &it), NULL);
+    ut_try( ut_dir_iter(UT_META_PATH, "/*", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *id = ut_iter_next(&it);
         env_package *ep = ut_calloc(sizeof(env_package));
@@ -860,22 +860,9 @@ int bake_foreach_action(
 }
 
 int main(int argc, const char *argv[]) {
-    if (ut_getenv("BAKE_CONFIG")) {
-        cfg = ut_getenv("BAKE_CONFIG");
-    }
     if (ut_getenv("BAKE_ENVIRONMENT")) {
         env = ut_getenv("BAKE_ENVIRONMENT");
     }
-
-    bake_config config = {
-        .configuration = cfg,
-        .environment = env,
-        .symbols = true,
-        .debug = true,
-        .optimizations = false,
-        .coverage = false,
-        .strict = false
-    };
 
     srand (time(NULL));
 
@@ -889,11 +876,24 @@ int main(int argc, const char *argv[]) {
     ut_try (ut_tls_new(&BAKE_PROJECT_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_CONFIG_KEY, NULL), NULL);
 
+    /* Initialize package loader for default home, arch, os and config */
+    ut_load_init(NULL, NULL, NULL, cfg);
+
+    bake_config config = {
+        .configuration = UT_CONFIG,
+        .environment = env,
+        .symbols = true,
+        .debug = true,
+        .optimizations = false,
+        .coverage = false,
+        .strict = false
+    };
+
     ut_tls_set(BAKE_CONFIG_KEY, &config);
 
     ut_log_push("init");
     ut_try (bake_parse_args(argc, argv), NULL);
-    ut_trace("configuration: %s", cfg);
+    ut_trace("configuration: %s", UT_CONFIG);
     ut_trace("environment: %s", env);
     ut_trace("path: %s", path);
     ut_trace("action: %s", action);
@@ -911,14 +911,8 @@ int main(int argc, const char *argv[]) {
     }
 
     ut_log_push("config");
-    ut_try (bake_config_load(&config, cfg, env, build_to_home), NULL);
+    ut_try (bake_config_load(&config, env, build_to_home), NULL);
     ut_log_pop();
-
-    /* Initialize package loader */
-    ut_load_init(
-        ut_getenv("BAKE_TARGET"),
-        ut_getenv("BAKE_HOME"),
-        ut_getenv("BAKE_CONFIG"));
 
     /* Initialize crawler */
     bake_crawler_init();
