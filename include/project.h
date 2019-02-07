@@ -80,6 +80,7 @@ struct bake_project {
     char *id_underscore;    /* Id with underscores instead of dots */
     char *id_dash;          /* Id with dashes instead of dots */
     char *id_short;         /* Last element of id */
+    bool bake_extension;    /* Is package a bake extension (install to HOME) */
 
     /* Direct access to the parson JSON data */
     void *json;

@@ -42,6 +42,8 @@ char *UT_SRC_PATH;
 char *UT_TEMPLATE_PATH;
 char *UT_BIN_PATH;
 char *UT_LIB_PATH;
+char *UT_JAVA_PATH;
+char *UT_HOME_LIB_PATH;
 
 /* File extensions for binaries for current target */
 char *UT_SHARED_LIB_EXT;
@@ -283,8 +285,6 @@ int16_t ut_locate_binary(
     const char *id,
     struct ut_loaded *loaded)
 {
-    int16_t ret = 0;
-
     char *id_bin = ut_strdup(id);
     char *ptr, ch;
     for (ptr = id_bin; (ch = *ptr); ptr ++) {
@@ -293,10 +293,17 @@ int16_t ut_locate_binary(
         }
     }
 
+    int16_t ret = 0;
+
     char *bin = NULL;
+    char *lib_path = UT_LIB_PATH;
+    char *bin_path = UT_BIN_PATH;
+    if (!strncmp(id, "bake.", 5)) {
+        lib_path = UT_HOME_LIB_PATH;
+    }
 
     /* Test for dynamic library */
-    bin = ut_asprintf("%s/lib%s%s", UT_LIB_PATH, id_bin, UT_SHARED_LIB_EXT);
+    bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_SHARED_LIB_EXT);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
         loaded->lib = bin;
@@ -313,7 +320,7 @@ int16_t ut_locate_binary(
 
     /* Test for static library */
     if (ret == 0) {
-        bin = ut_asprintf("%s/lib%s%s", UT_LIB_PATH, id_bin, UT_STATIC_LIB_EXT);
+        bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_STATIC_LIB_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             loaded->static_lib = bin;
@@ -331,7 +338,7 @@ int16_t ut_locate_binary(
 
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s/%s%s", UT_BIN_PATH, id_bin, UT_EXECUTABLE_EXT);
+        bin = ut_asprintf("%s/%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             loaded->app = bin;
@@ -348,9 +355,6 @@ int16_t ut_locate_binary(
     }
 
     free(id_bin);
-
-    /* Prevent looking for the binary again */
-    loaded->tried_binary = true;
 
     return 0;
 error:
@@ -451,7 +455,7 @@ const char* ut_locate(
         if (!loaded->meta) {
             char *meta_path = ut_asprintf("%s/%s", UT_META_PATH, id);
             if (ut_file_test(meta_path) == 1) {
-                loaded->template = meta_path;
+                loaded->meta = meta_path;
 
                 /* Prepare repository identifier (replaces . with -) */
                 loaded->repo = ut_strdup(id);
@@ -965,6 +969,19 @@ error:
     return -1;
 }
 
+static
+void ut_load_(
+    const char *env,
+    const char *value)
+{
+    char *existing = ut_getenv(env);
+    if (!existing || !strlen(existing)) {
+        ut_setenv(env, value);
+    } else {
+        ut_setenv(env, strarg("%s:%s", value, existing));
+    }
+}
+
 /* Initialize paths necessary for loader */
 int16_t ut_load_init(
     const char *home,
@@ -1014,18 +1031,33 @@ int16_t ut_load_init(
     UT_TEMPLATE_PATH = ut_asprintf("%s/templates", UT_HOME_PATH);
     UT_BIN_PATH = ut_asprintf("%s/bin", UT_TARGET_PATH);
     UT_LIB_PATH = ut_asprintf("%s/lib", UT_TARGET_PATH);
+    UT_JAVA_PATH = ut_asprintf("%s/java", UT_HOME_PATH);
+    UT_HOME_LIB_PATH = ut_asprintf("%s/lib", UT_HOME_PATH);
 
     /* For now, default to current platform */
     UT_SHARED_LIB_EXT = UT_OS_LIB_EXT;
     UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
     UT_EXECUTABLE_EXT = UT_OS_BIN_EXT;
 
+    /* Set environment variables */
     ut_setenv("BAKE_HOME", UT_HOME_PATH);
     ut_setenv("BAKE_TARGET", UT_TARGET_PATH);
     ut_setenv("BAKE_CONFIG", config);
     ut_setenv("BAKE_ARCH", UT_ARCH);
     ut_setenv("BAKE_OS", UT_OS);
     ut_setenv("BAKE_PLATFORM", UT_PLATFORM);
+
+    /* Set system environment variables */
+    ut_appendenv("PATH", "~/bake");
+    ut_appendenv("PATH", "%s", UT_BIN_PATH);
+    ut_appendenv("LD_LIBRARY_PATH", "%s", UT_LIB_PATH);
+    ut_appendenv("LD_LIBRARY_PATH", "%s", UT_HOME_LIB_PATH);
+    ut_appendenv("CLASSPATH", "%s", UT_JAVA_PATH);
+
+    if (!stricmp(os, "Darwin")) {
+        ut_appendenv("DYLD_LIBRARY_PATH", "%s", UT_LIB_PATH);
+        ut_appendenv("DYLD_LIBRARY_PATH", "%s", UT_HOME_LIB_PATH);
+    }
 
     return 0;
 }

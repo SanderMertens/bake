@@ -33,7 +33,6 @@ const char *action = "build";
 const char *path = ".";
 bool discover = true;
 bool build = true;
-bool build_to_home = false;
 bool local_setup = false;
 bool strict = false;
 bool optimize = false;
@@ -83,7 +82,6 @@ void bake_usage(void)
     printf("\n");
     printf("  --cfg <configuration>        Specify configuration id\n");
     printf("  --env <environment>          Specify environment id\n");
-    printf("  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET\n");
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("\n");
@@ -256,7 +254,6 @@ int bake_parse_args(
             bool parsed = false;
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
-            ARG(0, "build-to-home", build_to_home = true; i ++);
             ARG(0, "strict", strict = true; i ++);
             ARG(0, "optimize", optimize = true; i ++);
 
@@ -911,7 +908,7 @@ int main(int argc, const char *argv[]) {
     }
 
     ut_log_push("config");
-    ut_try (bake_config_load(&config, env, build_to_home), NULL);
+    ut_try (bake_config_load(&config, env), NULL);
     ut_log_pop();
 
     /* Initialize crawler */

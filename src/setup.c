@@ -39,9 +39,8 @@ int16_t cmd(
 
 int16_t bake_create_script(void)
 {
-    char *script_path = ut_envparse("$HOME/bake/bakes.sh");
+    char *script_path = ut_envparse("~/bake/bake.sh");
     if (!script_path) {
-        ut_error("missing $HOME environment variable");
         goto error;
     }
 
@@ -129,7 +128,7 @@ int16_t bake_build_make_project(
     const char *artefact)
 {
     char *install_cmd = ut_asprintf(
-      "bake install %s --id %s --package --includes include --build-to-home",
+      "bake install %s --id %s --package --includes include",
       path, id);
     ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
@@ -161,7 +160,7 @@ int16_t bake_build_make_project(
     free(bin_path);
 
     install_cmd = ut_asprintf(
-      "bake install %s --id %s --artefact %s --build-to-home --package",
+      "bake install %s --id %s --artefact %s --package",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
     ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
@@ -217,7 +216,7 @@ int16_t bake_setup(
         "failed to copy bake executable to user bake environment");
     ut_log("#[green]OK#[reset]   copy bake executable to $BAKE_HOME\n");
 
-    ut_try(cmd("bake install --id bake --includes include --build-to-home"),
+    ut_try(cmd("bake install --id bake --includes include"),
         "failed to install bake include files");
     ut_log("#[green]OK#[reset]   install bake include files to $BAKE_HOME\n");
 
@@ -227,7 +226,7 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers/lang/cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
-    ut_try(cmd("bake libraries --build-to-home"), NULL);
+    ut_try(cmd("bake libraries"), NULL);
     ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
 
     ut_try(cmd("bake templates"), NULL);
@@ -235,7 +234,6 @@ int16_t bake_setup(
 
 
     /*
-
      ______   ______   ______   __   __       ______   ______  ______
     /\  __ \ /\  ___\ /\  ___\ /\ \ /\ \     /\  __ \ /\  == \/\__  _\
     \ \  __ \\ \___  \\ \ \____\ \ \\ \ \    \ \  __ \\ \  __<\/_/\ \/

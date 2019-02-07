@@ -393,31 +393,6 @@ error:
     return -1;
 }
 
-static
-int16_t bake_post_install_bin(
-    bake_config *config,
-    bake_project *project,
-    const char *targetDir)
-{
-    char *bin_path = project->artefact_path;
-
-    if (ut_file_test(bin_path) == 1) {
-        ut_iter it;
-        ut_try( ut_dir_iter(bin_path, NULL, &it), NULL);
-
-        while (ut_iter_hasNext(&it)) {
-            char *file = ut_iter_next(&it);
-            char *file_path = ut_asprintf("%s/%s", bin_path, file);
-            ut_try( ut_cp(file_path, targetDir), NULL);
-            free(file_path);
-        }
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
 int16_t bake_install_postbuild(
     bake_config *config,
     bake_project *project)
@@ -426,9 +401,13 @@ int16_t bake_install_postbuild(
     bool copy = false;
 
     if (project->type == BAKE_PACKAGE) {
-        targetDir = config->lib;
+        if (project->bake_extension) {
+            targetDir = UT_HOME_LIB_PATH;
+        } else {
+            targetDir = UT_LIB_PATH;
+        }
     } else {
-        targetDir = config->bin;
+        targetDir = UT_BIN_PATH;
     }
 
     if (!ut_file_test(project->artefact_file)) {
@@ -478,6 +457,5 @@ int16_t bake_install_postbuild(
 
     return 0;
 error:
-    if (targetDir) free(targetDir);
     return -1;
 }

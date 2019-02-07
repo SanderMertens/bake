@@ -45,6 +45,8 @@ extern char *UT_SRC_PATH;
 extern char *UT_TEMPLATE_PATH;
 extern char *UT_BIN_PATH;
 extern char *UT_LIB_PATH;
+extern char *UT_JAVA_PATH;
+extern char *UT_HOME_LIB_PATH;
 
 /* Extensions for the used target */
 extern char *UT_SHARED_LIB_EXT;

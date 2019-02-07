@@ -203,19 +203,6 @@ error:
 }
 
 static
-void bake_config_appendEnv(
-    const char *env,
-    const char *value)
-{
-    char *existing = ut_getenv(env);
-    if (!existing || !strlen(existing)) {
-        ut_setenv(env, value);
-    } else {
-        ut_setenv(env, strarg("%s:%s", value, existing));
-    }
-}
-
-static
 void bake_config_setEnv(
     bake_config *cfg)
 {
@@ -397,8 +384,7 @@ ut_ll bake_config_find_config(void)
 
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *env_id,
-    bool build_to_home)
+    const char *env_id)
 {
     /* Use default configuration and environment */
     cfg_out->env_variables = ut_ll_new();
@@ -457,10 +443,10 @@ int16_t bake_config_load(
     bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id);
     bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING);
     bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"));
-    bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", NULL);
-    bake_config_add_var(cfg_out, "CLASSPATH", NULL);
+    bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", ut_getenv("LD_LIBRARY_PATH"));
+    bake_config_add_var(cfg_out, "CLASSPATH", ut_getenv("CLASSPATH"));
     if (ut_os_match("darwin")) {
-        bake_config_add_var(cfg_out, "DYLD_LIBRARY_PATH", NULL);
+        bake_config_add_var(cfg_out, "DYLD_LIBRARY_PATH", ut_getenv("DYLD_LIBRARY_PATH"));
     }
 
     /* Ensure that these environment variables are set, so no errors are thrown
@@ -477,22 +463,11 @@ int16_t bake_config_load(
 
     /* Precompute bake paths */
     cfg_out->configuration = ut_strdup(UT_CONFIG);
-    if (!build_to_home) {
-        cfg_out->platform = UT_PLATFORM_PATH;
-        cfg_out->target = UT_TARGET_PATH;
-    } else {
-        cfg_out->target = UT_HOME_PATH;
-    }
-
+    cfg_out->platform = UT_PLATFORM_PATH;
+    cfg_out->target = UT_TARGET_PATH;
     cfg_out->home = UT_HOME_PATH;
     cfg_out->lib = UT_LIB_PATH;
     cfg_out->bin = UT_BIN_PATH;
-
-    /* Append bake environment to PATH. (DY)LD_LIBRARY_PATH and CLASSPATH */
-    bake_config_appendEnv("PATH", strarg("~/bake:%s", cfg_out->bin));
-    bake_config_appendEnv("LD_LIBRARY_PATH", strarg(".:%s", cfg_out->lib));
-    bake_config_appendEnv("DYLD_LIBRARY_PATH", strarg(".:%s", cfg_out->lib));
-    bake_config_appendEnv("CLASSPATH", strarg(".:%s/java", cfg_out->target));
 
     if (ut_log_verbosityGet() <= UT_OK) {
         ut_log_push("environment");

@@ -24,14 +24,14 @@
 int16_t ut_setenv(const char *varname, const char *value, ...) {
     if (value) {
         va_list arglist;
-        char *buff;
         va_start(arglist, value);
-        buff = ut_venvparse(value, arglist);
+        char *buff = ut_venvparse(value, arglist);
         if (!buff) {
             va_end(arglist);
             goto error;
         }
         va_end(arglist);
+
         if (setenv(varname, buff, 1)) {
             ut_throw("failed to set variable '%s'", varname);
             goto error;
@@ -47,6 +47,69 @@ error:
 
 char* ut_getenv(const char *varname) {
     return getenv(varname);
+}
+
+int path_included(
+    const char *path_list,
+    const char *new_path)
+{
+    int len = strlen(new_path);
+    const char *ptr = path_list;
+    char ch;
+
+    do {
+        if (ptr[0] == ':') ptr ++;
+
+        if (!strncmp(ptr, new_path, len)) {
+            return true;
+        }
+    } while ((ptr = strchr(ptr, ':')));
+
+    return false;
+}
+
+int16_t ut_appendenv(
+    const char *varname, 
+    const char *value, 
+    ...) 
+{
+    if (value) {
+        char *orig_value = ut_getenv(varname);
+        va_list arglist;
+        va_start(arglist, value);
+        char *buff = ut_venvparse(value, arglist);
+        if (!buff) {
+            va_end(arglist);
+            goto error;
+        }
+        va_end(arglist);
+
+        char *new_value = NULL;
+        if (orig_value) {
+            if (!path_included(orig_value, buff)) {
+                new_value = ut_asprintf("%s:%s", orig_value, buff);
+            }
+        } else {
+            new_value = buff;
+        }
+
+        if (new_value) {
+            if (setenv(varname, new_value, 1)) {
+                ut_throw("failed to set variable '%s'", varname);
+                goto error;
+            }
+
+            if (new_value != buff) {
+                free(new_value);
+            }
+        }
+
+        free(buff);
+    }
+
+    return 0;
+error:
+    return -1;
 }
 
 static
