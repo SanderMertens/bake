@@ -109,15 +109,6 @@ void compile_src(
     /* In obscure cases with static libs, stack protector can cause trouble */
     ut_strbuf_append(&cmd, " %s", cc(cpp));
 
-    /* Set standard for C or C++ */
-    if (cpp) {
-        ut_strbuf_append(&cmd, " /std:%s",
-            driver->get_attr_string("cpp-standard"));
-    } else {
-        ut_strbuf_append(&cmd, " /std:%s -D_XOPEN_SOURCE=600",
-            driver->get_attr_string("c-standard"));
-    }
-
     /* Give project access to its own id */
     ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
 
