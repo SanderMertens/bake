@@ -92,6 +92,9 @@ const char *cc(
     const char *cxx = ut_getenv("CXX");
     const char *cc = ut_getenv("CC");
 
+    if (cc && !strlen(cc)) cc = NULL;
+    if (cxx && !strlen(cxx)) cxx = NULL;
+
     if (!is_darwin()) {
         if (is_cpp) {
             if (!cxx)
@@ -103,12 +106,15 @@ const char *cc(
             return cc;
         }
     } else {
+        /* On MacOS, invoking gcc and g++ actually invokes clang, unless 
+         * explicitly configured otherwise. It is safest to assume clang, as
+         * some gcc options can cause the clang linker to fail (like -z). */
         if (is_cpp) {
-            if (!cxx)
+            if (!cxx || !strcmp(cxx, "g++"))
                 cxx = "clang++";
             return cxx;
         } else {
-            if (!cc)
+            if (!cc || !strcmp(cc, "gcc"))
                 cc = "clang";
             return cc;
         }
@@ -363,13 +369,18 @@ void link_dynamic_binary(
 
         /* Fail when symbols are not found in library */
         if (!is_clang(cpp)) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
+            ut_strbuf_appendstr(&cmd, " -z defs");
         }
     }
 
     /* Set optimizations */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        if (!is_clang(cpp) || !is_linux()) {
+            ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        } else {
+            /* On some Linux versions clang has trouble loading the LTO plugin */
+            ut_strbuf_appendstr(&cmd, " -O3");
+        }
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }
