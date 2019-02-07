@@ -25,11 +25,11 @@ all: $(PROJECTS)
 bake_lang_c:
 !IF "$(bake_config)" != ""
 	@ECHO "==== Building bake_lang_c ($(bake_config)) ===="
-	$(MAKE) /F bake_lang_c.mak config=$(bake_config) all
+	$(MAKE) /NOLOGO /F bake_lang_c.mak config=$(bake_config) all
 !ENDIF
 
 clean:
-	$(MAKE) /F bake_lang_c.mak clean
+	$(MAKE) /NOLOGO /F bake_lang_c.mak clean
 
 help:
 	@ECHO "Usage: nmake /f [config=name] [target]"

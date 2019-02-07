@@ -44,7 +44,7 @@ char * ut_get_vc_shell_cmd()
         vs_path_env[strlen(vs_path_env) - 1] = '\0';
     char * vc_shell = ut_asprintf("%s\\VC\\Auxiliary\\Build\\vcvarsall.bat", vs_path_env);
     // Check file path exist
-    char * vc_shell_cmd = ut_asprintf("call \"%s\" x64", vc_shell);
+    char * vc_shell_cmd = ut_asprintf("call \"%s\" x64 1> nul", vc_shell);
     return vc_shell_cmd;
 }
 
