@@ -19,4 +19,4 @@ test_script:
 - cmd: dir %USERPROFILE%\bake\lib
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
 - cmd: cd examples
-- cmd: bake build
+- cmd: bake build --cfg release
