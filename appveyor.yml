@@ -14,7 +14,7 @@ init:
   - 
     
 test_script:
-- sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
+- cmd: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 - cmd: echo %CD%
 - cmd: dir
 - cmd: SET BAKE_VERBOSITY=DEBUG
