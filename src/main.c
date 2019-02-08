@@ -726,7 +726,7 @@ int bake_list(
     uint32_t total = 0, package_count = 0, app_count = 0, template_count = 0, 
              error_count = 0;
 
-    ut_log("\n#[grey]Listing projects for platform:\n  #[normal]%s\n", UT_PLATFORM);
+    ut_log("\n#[grey]Listing projects for platform:\n * #[normal]%s\n", UT_PLATFORM);
 
     /* Collect packages from BAKE_HOME */
     ut_try( ut_dir_iter(UT_META_PATH, "/*", &it), NULL);
@@ -879,8 +879,17 @@ int main(int argc, const char *argv[]) {
     ut_try (ut_tls_new(&BAKE_PROJECT_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_CONFIG_KEY, NULL), NULL);
 
+    ut_log_push("init");
+    ut_try (bake_parse_args(argc, argv), NULL);
+
     /* Initialize package loader for default home, arch, os and config */
     ut_load_init(NULL, NULL, NULL, cfg);
+
+    ut_trace("configuration: %s", UT_CONFIG);
+    ut_trace("environment: %s", env);
+    ut_trace("path: %s", path);
+    ut_trace("action: %s", action);
+    ut_log_pop();
 
     bake_config config = {
         .configuration = UT_CONFIG,
@@ -893,14 +902,6 @@ int main(int argc, const char *argv[]) {
     };
 
     ut_tls_set(BAKE_CONFIG_KEY, &config);
-
-    ut_log_push("init");
-    ut_try (bake_parse_args(argc, argv), NULL);
-    ut_trace("configuration: %s", UT_CONFIG);
-    ut_trace("environment: %s", env);
-    ut_trace("path: %s", path);
-    ut_trace("action: %s", action);
-    ut_log_pop();
 
     if (!action) {
         return 0;
