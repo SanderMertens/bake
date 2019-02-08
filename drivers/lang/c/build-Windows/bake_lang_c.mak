@@ -6,7 +6,7 @@ config=debug
 !ENDIF
 
 !IFNDEF verbose
-SILENT = @
+
 !ENDIF
 
 !IFNDEF BAKE_HOME
