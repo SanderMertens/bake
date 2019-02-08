@@ -573,14 +573,14 @@ char *link_to_lib(
 
     /* If not found, check if provided name has an extension */
     char *ext = strrchr(name, '.');
-    if (ext && !strchr(name, PATH_SEPARATOR_C)) {
+    if (ext && !strchr(name, UT_OS_PS[0])) {
         /* Hardcoded filename was provided but not found */
         return NULL;
     }
 
     /* Try finding a library called lib*.so or lib*.dylib (OSX only) or *.lib (Windwos only) */
     char *full_path = strdup(name);
-    char *lib_name = strrchr(full_path, PATH_SEPARATOR_C);
+    char *lib_name = strrchr(full_path, UT_OS_PS[0]);
     if (lib_name) {
         lib_name[0] = '\0';
         lib_name ++;
@@ -592,7 +592,7 @@ char *link_to_lib(
     /* Try .so or .lib or .dylib */
     if (full_path) {
         // fullpath[\|/][lib]lib_name[.so|.dylib|.lib]
-        char *so = ut_asprintf("%s%c" LIB_PREFIX "%s" UT_OS_LIB_EXT, full_path, PATH_SEPARATOR_C, lib_name);
+        char *so = ut_asprintf("%s"UT_OS_PS LIB_PREFIX "%s" UT_OS_LIB_EXT, full_path, lib_name);
         if (ut_file_test(so)) {
             result = so;
         }
@@ -663,11 +663,11 @@ void generate(
     strupper(id_upper);
 
     /* Ensure include directory exists */
-    ut_mkdir("%s%cinclude", project->path, PATH_SEPARATOR_C);
+    ut_mkdir("%s"UT_OS_PS"include", project->path);
 
     /* Create main header file */
     char *header_filename = ut_asprintf(
-        "%s%cinclude%cbake_config.h", project->path, PATH_SEPARATOR_C, PATH_SEPARATOR_C);
+        "%s"UT_OS_PS"include"UT_OS_PS"bake_config.h", project->path);
     FILE *f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open file '%s'", header_filename);

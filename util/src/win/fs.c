@@ -51,7 +51,7 @@ int ut_symlink(
     char *fullname = NULL;
     // Check if relative path
     if (oldname[0] == '.' || oldname[1] != ':') {
-        fullname = ut_asprintf("%s%c%s", ut_cwd(), PATH_SEPARATOR_C, oldname);
+        fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), oldname);
         ut_path_clean(fullname, fullname);
     }
     else {
@@ -178,8 +178,8 @@ int ut_rm(const char *name) {
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
     char *fullname;
-    if (strlen(name) > 1 && name[0] == '.' && name[1] == PATH_SEPARATOR_C)
-        fullname = ut_asprintf("%s%c%s\0", ut_cwd(), PATH_SEPARATOR_C, name+2);
+    if (strlen(name) > 1 && name[0] == '.' && name[1] == UT_OS_PS[0])
+        fullname = ut_asprintf("%s"UT_OS_PS"%s\0", ut_cwd(), name+2);
     else
         fullname = ut_asprintf("%s\0", name);
     SHFILEOPSTRUCT fileOp = { 0 };
