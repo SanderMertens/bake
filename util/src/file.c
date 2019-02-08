@@ -100,7 +100,7 @@ int16_t ut_file_test(
     const char* filefmt,
     ...)
 {
-    FILE* exists = NULL;
+    bool exists = false;
     va_list arglist;
 
     va_start(arglist, filefmt);
@@ -110,9 +110,10 @@ int16_t ut_file_test(
     if (file) {
 #ifndef _WIN32
         errno = 0;
-        exists = fopen(file, "rb");
-        if (exists) {
-            fclose(exists);
+        FILE *f = fopen(file, "rb");
+        if (f) {
+            exists = true;
+            fclose(f);
         } else if ((errno != ENOENT) && (errno != ENOTDIR)) {
             ut_throw("%s: %s", file, strerror(errno));
             return -1;

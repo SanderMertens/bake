@@ -59,7 +59,7 @@ char* ut_cwd(void) {
 }
 
 int ut_mkdir(const char *fmt, ...) {
-    int _errno = 0;
+    int local_errno = 0;
 
     va_list args;
     va_start(args, fmt);
@@ -84,8 +84,8 @@ int ut_mkdir(const char *fmt, ...) {
 
     ut_trace("#[cyan]mkdir %s", name);
 
-    if (mkdir(name, 0755)) {
-        _errno = errno;
+    if (__mkdir(name)) {
+        local_errno = errno;
 
         /* If error is ENOENT an element in the prefix of the name
          * doesn't exist. Recursively create pathname, and retry. */
@@ -99,9 +99,9 @@ int ut_mkdir(const char *fmt, ...) {
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
                     if (!mkdir(name, 0755)) {
-                        _errno = 0;
+                        local_errno = 0;
                     } else {
-                        _errno = errno;
+                        local_errno = errno;
                     }
                 } else {
                     goto error;
@@ -115,7 +115,7 @@ int ut_mkdir(const char *fmt, ...) {
 
         /* Post condition for function is that directory exists so don't
          * report an error if it already did. */
-        if (_errno && (_errno != EEXIST)) {
+        if (local_errno && (local_errno != EEXIST)) {
             goto error;
         }
     }
@@ -161,7 +161,7 @@ int ut_cp_file(
         if (errno == ENOENT) {
             /* If error is ENOENT, try creating directory */
             char *dir = ut_path_dirname(fullDst);
-            int old_errno = errno;
+            int oldlocal_errno = errno;
 
             if (dir[0] && !ut_mkdir(dir)) {
                 /* Retry */
@@ -170,7 +170,7 @@ int ut_cp_file(
                     goto error_CloseFiles;
                 }
             } else {
-                ut_throw("cannot open %s: %s", fullDst, strerror(old_errno));
+                ut_throw("cannot open %s: %s", fullDst, strerror(oldlocal_errno));
             }
             free(dir);
         } else {
