@@ -599,8 +599,8 @@ int bake_info(
                     goto error;
                 } else {
                     if (!clean_missing) {
-                        ut_log("C  #[normal]%s #[grey]=> #[normal]%s\n",
-                            id, cfg);
+                        ut_log("C  #[normal]%s #[grey]=> #[grey]all#[normal]\n",
+                            id);
                     }
                     bake_project_free(project);
 
@@ -725,6 +725,8 @@ int bake_list(
 
     uint32_t total = 0, package_count = 0, app_count = 0, template_count = 0, 
              error_count = 0;
+
+    ut_log("\n#[grey]Listing projects for platform:\n  #[normal]%s\n", UT_PLATFORM);
 
     /* Collect packages from BAKE_HOME */
     ut_try( ut_dir_iter(UT_META_PATH, "/*", &it), NULL);
