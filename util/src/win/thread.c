@@ -385,7 +385,9 @@ int ut_sem_free(
 }
 
 int ut_ainc(int* count) {
-    int value;
-    // TODO: Implement ainc
-    return( value + 1 );
+    return InterlockedIncrement(count);
+}
+
+int ut_adec(int* count) {
+    return InterlockedDecrement(count);
 }
