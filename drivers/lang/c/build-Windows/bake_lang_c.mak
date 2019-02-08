@@ -53,7 +53,7 @@ all: prebuild prelink $(TARGET)
 
 !ENDIF
 
-CPP_SOURCE= ..\src\main_win.c \
+CPP_SOURCE= ..\src\win\main_win.c \
 
 OBJECTS=$(CPP_SOURCE:.c=.obj)
 
