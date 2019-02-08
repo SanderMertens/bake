@@ -250,17 +250,17 @@ int16_t bake_build_make_project(
 #ifdef _WIN32
     // Copy lib files
     ut_try(ut_rename(
-        strarg("%s" UT_OS_PS LIB_PREFIX "%s.lib", path, artefact),
-        strarg("%s" UT_OS_PS LIB_PREFIX "%s.lib", bin_path, artefact)),
-        "failed to move '%s' to project bin path", id);
+        strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
+        strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", bin_path, artefact)),
+            "failed to move '%s' to project bin path", id);
 
 #endif
 
     free(bin_path);
 
     install_cmd = ut_asprintf(
-      "bake install %s --id %s --artefact %s --package",
-      path, id, artefact);
+        "bake install %s --id %s --artefact %s --package",
+        path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
     ut_log("#[green]OK#[reset]   install '%s' to bake environment\n", id);
