@@ -108,6 +108,7 @@ int16_t ut_file_test(
     va_end(arglist);
 
     if (file) {
+#ifndef _WIN32
         errno = 0;
         exists = fopen(file, "rb");
         if (exists) {
@@ -118,6 +119,10 @@ int16_t ut_file_test(
         } else {
             errno = 0;
         }
+#else
+        DWORD dwAttrib = GetFileAttributes(file);
+        exists = (dwAttrib != INVALID_FILE_ATTRIBUTES);
+#endif
     }
 
     free(file);
@@ -278,7 +283,7 @@ char* ut_file_path(char* file, char* buffer) {
     strcpy(buffer, file);
     i = strlen(buffer);
     while (i >= 0) {
-        if ((buffer[i] == '/') || (buffer[i] == '\\')) {
+        if (buffer[i] == UT_OS_PS[0]) {
             buffer[i] = '\0';
             break;
         }

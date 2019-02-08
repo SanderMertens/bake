@@ -42,7 +42,11 @@
 #endif
 
 /* Standard C library */
+#if defined(_WIN32)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -57,14 +61,17 @@
 #include <time.h>
 
 /* OS-specific headers */
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32)
 #include <windows.h>
+#include <versionhelpers.h>
 #else
 #include <fnmatch.h>
 #include <inttypes.h>
+
 #ifdef ENABLE_BACKTRACE
 #include <execinfo.h>
 #endif
+
 #include <dlfcn.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -83,18 +90,18 @@
 #endif
 #endif
 
+/* Cpp headers */
 #ifdef __cplusplus
 #ifndef UT_CPP_H
-
-/* Cpp headers */
 #include <utility>
 #endif
 extern "C" {
 #endif
 
-#ifndef NDEBUG
-#define UT_MAGIC (0x6B6F7274)
-#define UT_MAGIC_DESTRUCT (0x74726F6B)
+#ifndef _WIN32
+#define ut_fnmatch(pattern, string) fnmatch(pattern, string, 0)
+#else
+#define ut_fnmatch(pattern, string) PathMatchSpecA(string, pattern)
 #endif
 
 /*
@@ -200,7 +207,16 @@ extern "C" {
 #endif
 
 
+#ifndef _WIN32
+#define UT_CONSOLE_ENABLE_COLOR 1
+#else
+#if NTDDI_VERSION > NTDDI_WINBLUE
+#define UT_CONSOLE_ENABLE_COLOR 1
+#endif
+#endif
+
 /* Color constants */
+#ifdef UT_CONSOLE_ENABLE_COLOR
 #define UT_BLACK   "\033[1;30m"
 #define UT_RED     "\033[0;31m"
 #define UT_GREEN   "\033[0;32m"
@@ -212,6 +228,19 @@ extern "C" {
 #define UT_GREY    "\033[0;37m"
 #define UT_NORMAL  "\033[0;49m"
 #define UT_BOLD    "\033[1;49m"
+#else
+#define UT_BLACK   ""
+#define UT_RED     ""
+#define UT_GREEN   ""
+#define UT_YELLOW  ""
+#define UT_BLUE    ""
+#define UT_MAGENTA ""
+#define UT_CYAN    ""
+#define UT_WHITE   ""
+#define UT_GREY    ""
+#define UT_NORMAL  ""
+#define UT_BOLD    ""
+#endif
 
 #define UT_FUNCTION __func__
 
@@ -307,7 +336,14 @@ const char* ut_appname();
 #include "time.h"
 #include "dl.h"
 #include "fs.h"
-#include "posix_thread.h"
+
+#ifdef _WIN32
+#include "win/thread.h"
+#include "win/vs.h"
+#else
+#include "posix/thread.h"
+#endif
+
 #include "thread.h"
 #include "file.h"
 #include "env.h"

@@ -57,6 +57,15 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+#include <dbghelp.h>
+#define TRACE_MAX_STACK_FRAMES 1024
+#define TRACE_MAX_FUNCTION_NAME_LENGTH 1024
+#endif
+
+#ifdef _WIN32
+    void ut_enable_console_color();
+#endif
 
 /* -- Setting & getting verbosity level -- */
 

@@ -50,6 +50,10 @@ char *UT_HOME_BIN_PATH;
 char *UT_SHARED_LIB_EXT;
 char *UT_STATIC_LIB_EXT;
 char *UT_EXECUTABLE_EXT;
+char *UT_BIN_EXT;
+char *UT_LIB_EXT;
+char *UT_STATIC_LIB_EXT;
+char *UT_LIB_PREFIX;
 
 /* Lock protecting the package administration */
 extern ut_mutex_s UT_LOAD_LOCK;
@@ -101,13 +105,13 @@ struct ut_loaded* ut_loaded_find(
         ut_iter iter = ut_ll_iter(loadedAdmin);
         struct ut_loaded *lib;
         const char *nameptr = name;
-        if (nameptr[0] == '/') nameptr ++;
+        if (nameptr[0] == UT_OS_PS[0]) nameptr ++;
         if (nameptr[0] == '.') nameptr ++;
 
         while (ut_iter_hasNext(&iter)) {
             lib = ut_iter_next(&iter);
             const char *idptr = lib->id;
-            if (idptr[0] == '/') idptr ++;
+            if (idptr[0] == UT_OS_PS[0]) idptr ++;
             if (idptr[0] == '.') idptr ++;
             if (!idcmp(nameptr, idptr)) {
                 return lib;
@@ -307,13 +311,13 @@ int16_t ut_locate_binary(
         lib_path = UT_HOME_LIB_PATH;
         bin_path = UT_HOME_BIN_PATH;
     } else if (strcmp(config, UT_CONFIG)) {
-        lib_path = ut_asprintf("%s/%s/lib", UT_PLATFORM_PATH, config);
-        bin_path = ut_asprintf("%s/%s/bin", UT_PLATFORM_PATH, config);
+        lib_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"lib", UT_PLATFORM_PATH, config);
+        bin_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"bin", UT_PLATFORM_PATH, config);
         clean_path = true;
     }
 
     /* Test for dynamic library */
-    bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_SHARED_LIB_EXT);
+    bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_SHARED_LIB_EXT);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
         if (loaded) {
@@ -333,7 +337,7 @@ int16_t ut_locate_binary(
 
     /* Test for static library */
     if (ret == 0) {
-        bin = ut_asprintf("%s/lib%s%s", lib_path, id_bin, UT_STATIC_LIB_EXT);
+        bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_STATIC_LIB_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             if (loaded) {
@@ -352,9 +356,10 @@ int16_t ut_locate_binary(
         }
     }
 
+
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s/%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
+        bin = ut_asprintf("%s"UT_OS_PS"%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             if (loaded) {
@@ -398,7 +403,7 @@ int16_t ut_locate_src(
         return 0;
     }
 
-    char *src = ut_asprintf("%s/%s", UT_SRC_PATH, loaded->repo);
+    char *src = ut_asprintf("%s"UT_OS_PS"%s", UT_SRC_PATH, loaded->repo);
     if (ut_file_test(src) == 1) {
         loaded->src = src;
     } else {
@@ -406,7 +411,7 @@ int16_t ut_locate_src(
         free(src);
     }
 
-    src = ut_asprintf("%s/source.txt", loaded->meta);
+    src = ut_asprintf("%s"UT_OS_PS"source.txt", loaded->meta);
     if (ut_file_test(src) == 1) {
         char *path = ut_file_load(src);
 
@@ -470,7 +475,7 @@ const char* ut_locate(
     /* Test whether project or template project exists */
     if (kind == UT_LOCATE_TEMPLATE) {
         if (!loaded->template) {
-            char *tmpl_path = ut_asprintf("%s/%s", UT_TEMPLATE_PATH, id);
+            char *tmpl_path = ut_asprintf("%s"UT_OS_PS"%s", UT_TEMPLATE_PATH, id);
             if (ut_file_test(tmpl_path) == 1) {
                 loaded->template = tmpl_path;
             } else {
@@ -481,7 +486,7 @@ const char* ut_locate(
         }
     } else {
         if (!loaded->meta) {
-            char *meta_path = ut_asprintf("%s/%s", UT_META_PATH, id);
+            char *meta_path = ut_asprintf("%s"UT_OS_PS"%s", UT_META_PATH, id);
             if (ut_file_test(meta_path) == 1) {
                 loaded->meta = meta_path;
 
@@ -514,13 +519,13 @@ const char* ut_locate(
         break;        
     case UT_LOCATE_ETC:
         if (!loaded->etc) {
-            loaded->etc = ut_asprintf("%s/%s", UT_ETC_PATH, id);
+            loaded->etc = ut_asprintf("%s"UT_OS_PS"%s", UT_ETC_PATH, id);
         }
         result = loaded->etc;
         break;
     case UT_LOCATE_INCLUDE:
         if (!loaded->include) {
-            loaded->include = ut_asprintf("%s/%s.dir", UT_INCLUDE_PATH, id);
+            loaded->include = ut_asprintf("%s"UT_OS_PS"%s.dir", UT_INCLUDE_PATH, id);
         }
         result = loaded->include;
         break;
@@ -661,7 +666,7 @@ struct ut_fileHandler* ut_load_filehandler(
     /* If filehandler is not found, look it up in driver/ext */
     if (!h) {
         ut_id extPackage;
-        sprintf(extPackage, "driver.ext.%s", ext);
+        sprintf(extPackage, "driver"UT_OS_PS"ext"UT_OS_PS"%s", ext);
 
         ut_try(
             ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
@@ -682,7 +687,7 @@ struct ut_fileHandler* ut_load_filehandler(
         h = ut_lookupExt(ext);
         if (!h) {
             ut_throw(
-                "package 'driver/ext/%s' loaded but extension is not registered",
+                "package 'driver"UT_OS_PS"ext"UT_OS_PS"%s' loaded but extension is not registered",
                 ext);
             ut_try(
                 ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
@@ -1039,7 +1044,7 @@ int16_t ut_load_init(
     if (!home) {
         home = ut_getenv("BAKE_HOME");
         if (!home) {
-            home = "~/bake";
+            home = "~"UT_OS_PS"bake";
         }
     }
 
@@ -1070,22 +1075,27 @@ int16_t ut_load_init(
     UT_CONFIG = ut_strdup(config);
 
     UT_HOME_PATH = ut_envparse("%s", home);
-    UT_TARGET_PATH = ut_asprintf("%s/%s/%s", UT_HOME_PATH, UT_PLATFORM, config);
-    UT_PLATFORM_PATH = ut_asprintf("%s/%s", UT_HOME_PATH, UT_PLATFORM);
-    UT_META_PATH = ut_asprintf("%s/meta", UT_HOME_PATH);
-    UT_SRC_PATH = ut_asprintf("%s/src", UT_HOME_PATH);
-    UT_INCLUDE_PATH = ut_asprintf("%s/include", UT_HOME_PATH);
-    UT_TEMPLATE_PATH = ut_asprintf("%s/templates", UT_HOME_PATH);
-    UT_BIN_PATH = ut_asprintf("%s/bin", UT_TARGET_PATH);
-    UT_LIB_PATH = ut_asprintf("%s/lib", UT_TARGET_PATH);
-    UT_JAVA_PATH = ut_asprintf("%s/java", UT_HOME_PATH);
-    UT_HOME_LIB_PATH = ut_asprintf("%s/lib", UT_HOME_PATH);
-    UT_HOME_BIN_PATH = ut_asprintf("%s/bin", UT_HOME_PATH);
+    UT_TARGET_PATH = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"%s", UT_HOME_PATH, UT_PLATFORM, config);
+    UT_PLATFORM_PATH = ut_asprintf("%s"UT_OS_PS"%s", UT_HOME_PATH, UT_PLATFORM);
+    UT_META_PATH = ut_asprintf("%s"UT_OS_PS"meta", UT_HOME_PATH);
+    UT_SRC_PATH = ut_asprintf("%s"UT_OS_PS"src", UT_HOME_PATH);
+    UT_INCLUDE_PATH = ut_asprintf("%s"UT_OS_PS"include", UT_HOME_PATH);
+    UT_TEMPLATE_PATH = ut_asprintf("%s"UT_OS_PS"templates", UT_HOME_PATH);
+    UT_BIN_PATH = ut_asprintf("%s"UT_OS_PS"bin", UT_TARGET_PATH);
+    UT_LIB_PATH = ut_asprintf("%s"UT_OS_PS"lib", UT_TARGET_PATH);
+    UT_JAVA_PATH = ut_asprintf("%s"UT_OS_PS"java", UT_HOME_PATH);
+    UT_HOME_LIB_PATH = ut_asprintf("%s"UT_OS_PS"lib", UT_HOME_PATH);
+    UT_HOME_BIN_PATH = ut_asprintf("%s"UT_OS_PS"bin", UT_HOME_PATH);
 
     /* For now, default to current platform */
     UT_SHARED_LIB_EXT = UT_OS_LIB_EXT;
     UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
     UT_EXECUTABLE_EXT = UT_OS_BIN_EXT;
+    UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
+    UT_BIN_EXT = UT_OS_BIN_EXT;
+    UT_LIB_EXT = UT_OS_LIB_EXT;
+    UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
+    UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
 
     /* Set environment variables */
     ut_setenv("BAKE_HOME", UT_HOME_PATH);
@@ -1096,16 +1106,16 @@ int16_t ut_load_init(
     ut_setenv("BAKE_PLATFORM", UT_PLATFORM);
 
     /* Set system environment variables */
-    ut_appendenv("PATH", "~/bake");
-    ut_appendenv("PATH", "%s", UT_BIN_PATH);
-    ut_appendenv("LD_LIBRARY_PATH", "%s", UT_LIB_PATH);
-    ut_appendenv("LD_LIBRARY_PATH", "%s", UT_HOME_LIB_PATH);
+    ut_appendenv(UT_ENV_BINPATH, "~"UT_OS_PS"bake");
+    ut_appendenv(UT_ENV_BINPATH, "%s", UT_BIN_PATH);
+    ut_appendenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
+    ut_appendenv(UT_ENV_LIBPATH, "%s", UT_HOME_LIB_PATH);
     ut_appendenv("CLASSPATH", "%s", UT_JAVA_PATH);
 
-    if (!stricmp(os, "Darwin")) {
-        ut_appendenv("DYLD_LIBRARY_PATH", "%s", UT_LIB_PATH);
-        ut_appendenv("DYLD_LIBRARY_PATH", "%s", UT_HOME_LIB_PATH);
-    }
+#ifdef UT_ENV_DYLIBPATH
+    ut_appendenv(UT_ENV_DYLIBPATH, "%s", UT_LIB_PATH);
+    ut_appendenv(UT_ENV_DYLIBPATH, "%s", UT_HOME_LIB_PATH);
+#endif
 
     return 0;
 }

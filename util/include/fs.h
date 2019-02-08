@@ -27,6 +27,11 @@
 #ifndef UT_FS_H
 #define UT_FS_H
 
+#ifdef _WIN32
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -248,6 +253,15 @@ int ut_rmtree(
 UT_EXPORT
 time_t ut_lastmodified(
     const char *name);
+
+bool ut_dir_hasNext(
+    ut_iter *it);
+
+void* ut_dir_next(
+    ut_iter *it);
+
+void ut_dir_release(
+    ut_iter *it);
 
 #ifdef __cplusplus
 }

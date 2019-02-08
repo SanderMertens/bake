@@ -1,0 +1,22 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+build_script:
+- cmd: >-
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+
+    cd build-windows\
+
+    nmake
+
+    cd ..\
+    
+test_script:
+- cmd: echo %CD%
+- cmd: dir
+- cmd: bake.exe setup
+- cmd: dir %USERPROFILE%\bake\
+- cmd: dir %USERPROFILE%\bake\lib
+- cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
+- cmd: cd examples
+- cmd: bake build --cfg release

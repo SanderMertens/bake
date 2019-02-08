@@ -216,8 +216,8 @@ int16_t bake_crawler_crawl(
 {
     char *prev = strdup(ut_cwd());
     char *fullpath;
-    if (path[0] != '/') {
-        fullpath = ut_asprintf("%s/%s", wd, path);
+    if (path[0] != UT_OS_PS[0]) {
+        fullpath = ut_asprintf("%s"UT_OS_PS"%s", wd, path);
         ut_path_clean(fullpath, fullpath);
     } else {
         fullpath = ut_strdup(path);
@@ -226,7 +226,7 @@ int16_t bake_crawler_crawl(
     bool isProject = false;
     bake_project *p = NULL;
 
-    if (ut_file_test(strarg("%s/project.json", fullpath))) {
+    if (ut_file_test(strarg("%s"UT_OS_PS"project.json", fullpath))) {
         isProject = true;
 
         p = bake_project_new(fullpath, config);
@@ -252,7 +252,7 @@ int16_t bake_crawler_crawl(
             continue;
         }
 
-        if (ut_isdir(strarg("%s/%s", fullpath, file))) {
+        if (ut_isdir(strarg("%s"UT_OS_PS"%s", fullpath, file))) {
 
             /* If this is a bake project, filter out directories that have
              * special meaning. */

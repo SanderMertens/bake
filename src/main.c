@@ -351,13 +351,6 @@ int bake_parse_args(
         id = path;
     }
 
-    /* If artefact is manually specified, translate to platform specific name */
-    if (artefact) {
-        if (type == BAKE_PACKAGE) {
-            artefact = ut_asprintf("lib%s" UT_OS_LIB_EXT, artefact);
-        }
-    }
-
     return 0;
 error:
     return -1;
@@ -449,7 +442,11 @@ int bake_env(
         ut_iter it = ut_ll_iter(config->env_variables);
         while (ut_iter_hasNext(&it)) {
             char *var = ut_iter_next(&it);
+#ifndef _WIN32
             ut_strbuf_append(&buff, "%s=%s\n", var, ut_getenv(var));
+#else
+            ut_strbuf_append(&buff, "set %s=%s\n", var, ut_getenv(var));
+#endif
         }
     }
 
@@ -490,7 +487,7 @@ int bake_init_project(
     } else {
         /* Best guess project id from current working directory */
         char *cwd = ut_cwd();
-        char *last_elem = strrchr(cwd, '/');
+        char *last_elem = strrchr(cwd, UT_OS_PS[0]);
         if (last_elem && last_elem[1]) {
             id = last_elem + 1;
         } else {
@@ -800,8 +797,7 @@ int bake_list(
 
     /* List templates */
     if (!clean_missing) {
-        char *template_path = ut_asprintf("%s/templates", config->home);
-        if (!ut_dir_iter(template_path, "/*", &it)) {
+        if (!ut_dir_iter(UT_TEMPLATE_PATH, "/*", &it)) {
             while (ut_iter_hasNext(&it)) {
                 char *id = ut_iter_next(&it);
 
@@ -813,7 +809,7 @@ int bake_list(
                 ut_strbuf_appendstr(&buf, "[");
 
                 uint32_t lang_count = 0;
-                char *path = ut_asprintf("%s/templates/%s", config->home, id);
+                char *path = ut_asprintf("%s"UT_OS_PS"%s", UT_TEMPLATE_PATH, id);
                 ut_iter lang_it;
                 ut_try(ut_dir_iter(path, NULL, &lang_it), NULL);
                 while (ut_iter_hasNext(&lang_it)) {
@@ -841,7 +837,6 @@ int bake_list(
         } else {
             ut_catch();
         }
-        free(template_path);
     }
 
     if (!clean_missing) {
@@ -881,6 +876,14 @@ int bake_foreach_action(
 }
 
 int main(int argc, const char *argv[]) {
+
+#ifdef _WIN32
+    #if NTDDI_VERSION > NTDDI_WINBLUE
+    ut_enable_console_color(STD_OUTPUT_HANDLE);
+    ut_enable_console_color(STD_ERROR_HANDLE);
+    #endif
+#endif
+
     if (ut_getenv("BAKE_ENVIRONMENT")) {
         env = ut_getenv("BAKE_ENVIRONMENT");
     }
@@ -902,6 +905,13 @@ int main(int argc, const char *argv[]) {
 
     /* Initialize package loader for default home, arch, os and config */
     ut_load_init(NULL, NULL, NULL, cfg);
+
+    /* If artefact is manually specified, translate to platform specific name */
+    if (artefact) {
+        if (type == BAKE_PACKAGE) {
+            artefact = ut_asprintf("%s%s%s", UT_LIB_PREFIX, artefact, UT_LIB_EXT);
+        }
+    }
 
     ut_trace("configuration: %s", UT_CONFIG);
     ut_trace("environment: %s", env);

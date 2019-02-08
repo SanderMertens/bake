@@ -32,7 +32,11 @@ extern "C" {
 #endif
 
 /** Process handle */
+#ifdef _WIN32
+typedef HANDLE ut_proc;
+#else
 typedef int ut_proc;
+#endif
 
 /** Process signals */
 typedef enum ut_procsignal {

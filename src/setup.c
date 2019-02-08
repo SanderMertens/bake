@@ -21,7 +21,11 @@
 
 #include "bake.h"
 
+#ifndef _WIN32
 #define GLOBAL_PATH "/usr/local/bin"
+#else
+#define GLOBAL_PATH "C:\\Windows\\system32"
+#endif
 
 static
 int16_t cmd(
@@ -37,7 +41,76 @@ int16_t cmd(
     return 0;
 }
 
-int16_t bake_create_script(void)
+int16_t bake_create_script_windows(void)
+{
+    char *script_path = ut_envparse("$USERPROFILE\\bake\\bake.bat");
+    if (!script_path) {
+        ut_error("missing $USERPROFILE environment variable");
+        goto error;
+    }
+
+    FILE *f = fopen(script_path, "wb");
+
+    if (!f) {
+        ut_error("cannot open '%s': %s", script_path, strerror(errno));
+        goto error;
+    }
+
+    fprintf(f, "@ECHO OFF\n\n");
+    fprintf(f, "IF [%%1] == [upgrade] (\n");
+    fprintf(f, "    mkdir %%USERPROFILE%%\\bake\\src\n");
+    fprintf(f, "    cd %%USERPROFILE%%\\bake\\src\n\n");
+
+    fprintf(f, "    IF NOT EXIST \"bake\" (\n");
+    fprintf(f, "        echo \"Cloning bake repository...\"\n");
+    fprintf(f, "        git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
+    fprintf(f, "        cd \"bake\"\n");
+    fprintf(f, "    ) else (\n");
+    fprintf(f, "        cd \"bake\"\n");
+    fprintf(f, "        echo \"Reset bake repository...\"\n");
+    fprintf(f, "        git fetch -q origin\n");
+    fprintf(f, "        git reset -q --hard origin/master\n");
+    fprintf(f, "        git clean -q -xdf\n");
+    fprintf(f, "    )\n");
+    fprintf(f, "\n\n");
+    fprintf(f, "    cd build-windows\\\n");
+    fprintf(f, "    nmake /f bake.mak\n");
+    fprintf(f, "\n\n");
+
+    fprintf(f, "    bake.exe setup --local-setup\n");
+    fprintf(f, "\n\n");
+    fprintf(f, ") ELSE (\n");
+    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\bake.exe %%*\n");
+    fprintf(f, ")\n\n");
+
+    fclose(f);
+
+    /* Copy file to global location, may ask for password */
+    ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
+
+    char *cp_cmd = ut_asprintf("copy /Y %s %s\\bake.bat", script_path, GLOBAL_PATH);
+
+    if (cmd(cp_cmd)) {
+        printf("\n");
+        ut_warning(
+            "Failed to instal bake script to %s. Setup will continue, but\n"
+            "      before you can use bake, you now first need to run:\n"
+            "         %%USERPROFILE%%\\bake\\bake.exe env\n", GLOBAL_PATH
+        );
+    }
+    else {
+        ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
+    }
+
+    free(script_path);
+    free(cp_cmd);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_create_script_unixlike(void)
 {
     char *script_path = ut_envparse("~/bake/bake.sh");
     if (!script_path) {
@@ -122,6 +195,14 @@ error:
     return -1;
 }
 
+int16_t bake_create_script(void)
+{
+    if (ut_os_match("windows"))
+        return bake_create_script_windows();
+    else
+        return bake_create_script_unixlike();
+}
+
 int16_t bake_build_make_project(
     const char *path,
     const char *id,
@@ -136,11 +217,21 @@ int16_t bake_build_make_project(
 
     ut_log("...  build '%s'", id);
     fflush(stdout);
-    ut_try(cmd(strarg("make -C %s/build-%s clean all", path, UT_OS_STRING)),
-      "failed to build '%s'", id);
+
+    char *make_cmd;
+#ifdef _WIN32
+    char *vc_shell_cmd = ut_get_vc_shell_cmd();
+    char *driver_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
+    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
+#else
+    make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
+#endif
+    ut_try( cmd(make_cmd), "failed to build '%s'", id);
+    free(make_cmd);
+
     ut_log("#[green]OK#[reset]   build '%s'\n", id);
 
-    char *bin_path = ut_asprintf("%s/bin/%s-debug", path, UT_PLATFORM_STRING);
+    char *bin_path = ut_asprintf("%s"UT_OS_PS"bin"UT_OS_PS"%s-debug", path, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
 
     /* On macOS, remove rpath that premake automatically adds */
@@ -153,9 +244,17 @@ int16_t bake_build_make_project(
     */
 
     ut_try (ut_rename(
-      strarg("%s/lib%s" UT_OS_LIB_EXT, path, artefact),
-      strarg("%s/lib%s" UT_OS_LIB_EXT, bin_path, artefact)),
+      strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
+      strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
+#ifdef _WIN32
+    // Copy lib files
+    ut_try(ut_rename(
+        strarg("%s" UT_OS_PS LIB_PREFIX "%s.lib", path, artefact),
+        strarg("%s" UT_OS_PS LIB_PREFIX "%s.lib", bin_path, artefact)),
+        "failed to move '%s' to project bin path", id);
+
+#endif
 
     free(bin_path);
 
@@ -163,7 +262,8 @@ int16_t bake_build_make_project(
       "bake install %s --id %s --artefact %s --package",
       path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
-    ut_log("#[green]OK#[reset]   install '%s' to $BAKE_HOME\n", id);
+
+    ut_log("#[green]OK#[reset]   install '%s' to bake environment\n", id);
     free(install_cmd);
 
     return 0;
@@ -176,7 +276,7 @@ int16_t bake_setup(
     bool local)
 {
     char *dir = ut_strdup(bake_cmd);
-    char *last_elem = strrchr(dir, '/');
+    char *last_elem = strrchr(dir, UT_OS_PS[0]);
     if (last_elem) {
         *last_elem = '\0';
         ut_chdir(dir);
@@ -185,15 +285,15 @@ int16_t bake_setup(
     /* Temporary fix to ensure bake shell script is updated on upgrade */
     local = false;
 
-    char *cur_env = ut_envparse("~/bake");
+    char *cur_env = ut_envparse("~"UT_OS_PS"bake");
     char *cur_dir = ut_strdup(ut_cwd());
 
     if (!strcmp(cur_env, cur_dir)) {
-        char *tmp_dir = ut_envparse("~/bake_tmp");
-        char *target_dir = ut_envparse("~/bake/src/bake");
+        char *tmp_dir = ut_envparse("~"UT_OS_PS"bake_tmp");
+        char *target_dir = ut_envparse("~"UT_OS_PS"bake"UT_OS_PS"src"UT_OS_PS"bake");
         ut_try(ut_rm(tmp_dir), NULL);
         ut_try(ut_rename(cur_dir, tmp_dir), NULL);
-        ut_try(ut_mkdir("~/bake/src"), NULL);
+        ut_try(ut_mkdir("~"UT_OS_PS"bake"UT_OS_PS"src"), NULL);
         ut_try(ut_rename(tmp_dir, target_dir), NULL);
         ut_try(ut_chdir(target_dir), NULL);
         free(target_dir);
@@ -205,14 +305,14 @@ int16_t bake_setup(
     ut_try( ut_mkdir(cur_env), NULL);
     free (cur_env);
 
-    ut_log("Bake setup, installing to $BAKE_HOME ('%s')\n", ut_getenv("BAKE_HOME"));
+    ut_log("Bake setup, installing to ~/bake\n");
 
     if (!local) {
         ut_try(bake_create_script(),
           "failed to create global bake script");
     }
 
-    ut_try(ut_cp("./bake", "~/bake/bake"),
+    ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
         "failed to copy bake executable to user bake environment");
     ut_log("#[green]OK#[reset]   copy bake executable to $BAKE_HOME\n");
 
@@ -226,31 +326,31 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers/lang/cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
-    ut_try(cmd("bake libraries"), NULL);
+    ut_try(cmd("bake"UT_OS_BIN_EXT" libraries"), NULL);
     ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
 
-    ut_try(cmd("bake templates"), NULL);
+    ut_try(cmd("bake"UT_OS_BIN_EXT" templates"), NULL);
     ut_log("#[green]OK#[reset]   Installed templates packages\n");
 
-
     /*
+
      ______   ______   ______   __   __       ______   ______  ______
     /\  __ \ /\  ___\ /\  ___\ /\ \ /\ \     /\  __ \ /\  == \/\__  _\
     \ \  __ \\ \___  \\ \ \____\ \ \\ \ \    \ \  __ \\ \  __<\/_/\ \/
      \ \_\ \_\\/\_____\\ \_____\\ \_\\ \_\    \ \_\ \_\\ \_\ \_\ \ \_\
       \/_/\/_/ \/_____/ \/_____/ \/_/ \/_/     \/_/\/_/ \/_/ /_/  \/_/
 
-     */
+    */
 
     ut_log(
-      "#[white]\n"
-      "#[normal]    #[cyan]___      ___      ___      ___ \n"
-      "#[normal]   /\\#[cyan]  \\    #[normal]/\\#[cyan]  \\    #[normal]/\\#[cyan]__\\    #[normal]/\\  #[cyan]\\ \n"
-      "#[normal]  /  \\#[cyan]  \\  #[normal]/  \\#[cyan]  \\  #[normal]/ / #[cyan]_/_  #[normal]/  \\  #[cyan]\\ \n"
-      "#[normal] /  \\ \\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\#[normal]/  -\"\\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\ \n"
-      "#[normal] \\ \\  /#[cyan]  /#[normal]\\/\\  /#[cyan]  /#[normal]\\; ;-\"#[cyan],-\"#[normal]\\ \\ \\/  #[cyan]/ \n"
-      "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
-      "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
+        "#[white]\n"
+        "#[normal]    #[cyan]___      ___      ___      ___ \n"
+        "#[normal]   /\\#[cyan]  \\    #[normal]/\\#[cyan]  \\    #[normal]/\\#[cyan]__\\    #[normal]/\\  #[cyan]\\ \n"
+        "#[normal]  /  \\#[cyan]  \\  #[normal]/  \\#[cyan]  \\  #[normal]/ / #[cyan]_/_  #[normal]/  \\  #[cyan]\\ \n"
+        "#[normal] /  \\ \\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\#[normal]/  -\"\\#[cyan]__\\#[normal]/  \\ \\#[cyan]__\\ \n"
+        "#[normal] \\ \\  /#[cyan]  /#[normal]\\/\\  /#[cyan]  /#[normal]\\; ;-\"#[cyan],-\"#[normal]\\ \\ \\/  #[cyan]/ \n"
+        "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
+        "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
 
     printf("\n       Installation complete \n\n");
 

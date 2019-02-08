@@ -21,6 +21,14 @@
 
  #include "../include/util.h"
 
+#ifndef _WIN32
+#define _setenv(var, val) setenv(var, val, 1)
+#define _unsetenv(var) unsetenv(var)
+#else
+#define _setenv _putenv_s(var, val)
+#define _unsetenv(var) _putenv_s(var, "")
+#endif
+
 int16_t ut_setenv(const char *varname, const char *value, ...) {
     if (value) {
         va_list arglist;
@@ -31,14 +39,13 @@ int16_t ut_setenv(const char *varname, const char *value, ...) {
             goto error;
         }
         va_end(arglist);
-
-        if (setenv(varname, buff, 1)) {
+        if (_setenv(varname, buff)) {
             ut_throw("failed to set variable '%s'", varname);
             goto error;
         }
         free(buff);
     } else {
-        unsetenv(varname);
+        _unsetenv(varname);
     }
     return 0;
 error:
@@ -58,12 +65,12 @@ int path_included(
     char ch;
 
     do {
-        if (ptr[0] == ':') ptr ++;
+        if (ptr[0] == UT_ENV_PATH_SEPARATOR[0]) ptr ++;
 
         if (!strncmp(ptr, new_path, len)) {
             return true;
         }
-    } while ((ptr = strchr(ptr, ':')));
+    } while ((ptr = strchr(ptr, UT_ENV_PATH_SEPARATOR[0])));
 
     return false;
 }
@@ -87,14 +94,15 @@ int16_t ut_appendenv(
         char *new_value = NULL;
         if (orig_value) {
             if (!path_included(orig_value, buff)) {
-                new_value = ut_asprintf("%s:%s", orig_value, buff);
+                new_value = ut_asprintf(
+                    "%s" UT_ENV_PATH_SEPARATOR "%s", orig_value, buff);
             }
         } else {
             new_value = buff;
         }
 
         if (new_value) {
-            if (setenv(varname, new_value, 1)) {
+            if (_setenv(varname, new_value)) {
                 ut_throw("failed to set variable '%s'", varname);
                 goto error;
             }
@@ -126,7 +134,7 @@ int16_t ut_append_var(
 
     if (strlen(val)) {
         if (separator) {
-            ut_strbuf_appendstr(output, ":");
+            ut_strbuf_appendstr(output, UT_ENV_PATH_SEPARATOR);
         }
         ut_strbuf_appendstr(output, val);
     }
@@ -141,7 +149,7 @@ int16_t ut_expand_path(
     ut_strbuf *output,
     const char *path)
 {
-    char *sep = strrchr(path, '/');
+    char *sep = strrchr(path, UT_OS_PS[0]);
     char *wildcard = NULL;
     if (sep) {
         wildcard = strchr(sep, '*');
@@ -171,7 +179,7 @@ int16_t ut_expand_path(
                 ut_strbuf_appendstrn(output, " ", 1);
             }
             if (strcmp(dir, ".")) {
-                ut_strbuf_append(output, "%s/%s", dir, file);
+                ut_strbuf_append(output, "%s"UT_OS_PS"%s", dir, file);
             } else {
                 ut_strbuf_append(output, "%s", file);
             }
@@ -234,7 +242,7 @@ char* ut_venvparse(
                     }
                     env_has_separator = false;
                 } else if (!strcmp(token_str, "~")) {
-                    if (ut_append_var(&path, env_has_separator, "HOME")) {
+                    if (ut_append_var(&path, env_has_separator, UT_ENV_HOME)) {
                         free(token_str);
                         goto error;
                     }
