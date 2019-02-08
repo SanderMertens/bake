@@ -570,6 +570,8 @@ int bake_info(
     bake_project_type *type_out,
     bool clean_missing)
 {
+     if (type_out) *type_out = BAKE_PACKAGE;
+
     const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
     if (!path) {
         if (!clean_missing) {
@@ -607,7 +609,6 @@ int bake_info(
                         if (!clean_missing) {
                             ut_log("P  #[normal]%s #[grey]=> #[normal]%s\n",
                                 id, cfg);
-                            if (type_out) *type_out = BAKE_PACKAGE;
                         }
                     }
 
@@ -618,7 +619,6 @@ int bake_info(
                         if (!clean_missing) {
                             ut_log("S  #[normal]%s #[grey]=> #[normal]%s\n",
                                 id, cfg);
-                            if (type_out) *type_out = BAKE_PACKAGE;
                         }
                     } else {
                         if (!clean_missing) {
@@ -639,6 +639,7 @@ int bake_info(
                     if (!clean_missing) {
                         ut_log( "A  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
+                    if (type_out) *type_out = BAKE_APPLICATION;
 
                 } else {
                     if (!clean_missing) {
