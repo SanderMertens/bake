@@ -307,8 +307,8 @@ int16_t ut_locate_binary(
         lib_path = UT_HOME_LIB_PATH;
         bin_path = UT_HOME_BIN_PATH;
     } else if (strcmp(config, UT_CONFIG)) {
-        lib_path = ut_asprintf("%s/%s/lib", UT_TARGET_PATH, config);
-        bin_path = ut_asprintf("%s/%s/bin", UT_TARGET_PATH, config);
+        lib_path = ut_asprintf("%s/%s/lib", UT_PLATFORM_PATH, config);
+        bin_path = ut_asprintf("%s/%s/bin", UT_PLATFORM_PATH, config);
         clean_path = true;
     }
 
