@@ -313,18 +313,18 @@ int16_t bake_setup(
     }
 
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
-        "failed to copy bake executable to user bake environment");
-    ut_log("#[green]OK#[reset]   copy bake executable to $BAKE_HOME\n");
+        "failed to copy bake executable");
+    ut_log("#[green]OK#[reset]   copy bake executable\n");
 
     ut_try(cmd("bake install --id bake --includes include"),
         "failed to install bake include files");
-    ut_log("#[green]OK#[reset]   install bake include files to $BAKE_HOME\n");
+    ut_log("#[green]OK#[reset]   install bake include files\n");
 
     ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
 
-    ut_try( bake_build_make_project("drivers/lang/c", "bake.lang.c", "bake_lang_c"), NULL);
+    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"c", "bake.lang.c", "bake_lang_c"), NULL);
 
-    ut_try( bake_build_make_project("drivers/lang/cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
+    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     ut_try(cmd("bake"UT_OS_BIN_EXT" libraries"), NULL);
     ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
