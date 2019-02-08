@@ -222,7 +222,7 @@ int16_t bake_build_make_project(
 #ifdef _WIN32
     char *vc_shell_cmd = ut_get_vc_shell_cmd();
     char *driver_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
-    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
+    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /N /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
 #else
     make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
 #endif
@@ -308,14 +308,14 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to ~/bake\n");
 
     if (!local) {
-        ut_try(bake_create_script(), "failed to create global bake script");
+        ut_try( bake_create_script(), "failed to create global bake script");
     }
 
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
         "failed to copy bake executable");
     ut_log("#[green]OK#[reset]   copy bake executable\n");
 
-    ut_try(cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
+    ut_try( cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
         "failed to install bake include files");
     ut_log("#[green]OK#[reset]   install bake include files\n");
 
