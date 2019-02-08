@@ -9,6 +9,9 @@ build_script:
     nmake
 
     cd ..\
+
+init:
+  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
     
 test_script:
 - cmd: echo %CD%
