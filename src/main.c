@@ -630,22 +630,22 @@ int bake_info(
                 }
 
             } else {
+                bool error = false;
                 if (!cfg) {
                     cfg = "#[red]!missing binary!";
+                    error = true;
                 }
                 if (project->type == BAKE_APPLICATION) {
                     if (!clean_missing) {
                         ut_log( "A  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
-                    goto error;
 
                 } else {
                     if (!clean_missing) {
                         ut_log( "P  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
-                    goto error;
                 }
-                if (!cfg) {
+                if (error) {
                     goto error;
                 }
             }
