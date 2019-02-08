@@ -6,7 +6,7 @@ config=debug
 !ENDIF
 
 !IFNDEF verbose
-SILENT = @
+
 !ENDIF
 
 .PHONY: clean prebuild prelink

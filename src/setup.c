@@ -222,7 +222,7 @@ int16_t bake_build_make_project(
 #ifdef _WIN32
     char *vc_shell_cmd = ut_get_vc_shell_cmd();
     char *driver_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
-    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /N /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
+    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
 #else
     make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
 #endif
@@ -253,7 +253,6 @@ int16_t bake_build_make_project(
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", bin_path, artefact)),
             "failed to move '%s' to project bin path", id);
-
 #endif
 
     free(bin_path);

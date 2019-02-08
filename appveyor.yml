@@ -4,8 +4,7 @@ build_script:
 - cmd: >-
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-
-    cd build-windows\
+    cd build-Windows\
 
     nmake
 
@@ -14,7 +13,7 @@ build_script:
 test_script:
 - cmd: echo %CD%
 - cmd: dir
-- cmd: bake.exe setup --trace
+- cmd: bake.exe setup -v debug
 - cmd: dir %USERPROFILE%\bake\
 - cmd: dir %USERPROFILE%\bake\lib
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
