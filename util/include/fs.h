@@ -272,7 +272,7 @@ typedef struct win_dirent_tag {
 
 /* opendir is POSIX function which is not available on windows platform */
 ut_dirent* opendir(
-    const char *name)
+    const char *name);
 #endif
 
 #ifdef __cplusplus
