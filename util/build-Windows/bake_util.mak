@@ -49,12 +49,15 @@ all: prebuild prelink $(TARGET)
 
 !ENDIF
 
-CPP_SOURCE= ..\src\dl_win.c \
+CPP_SOURCE= ..\src\win\dl.c \
+			..\src\win\fs.c \
+			..\src\win\vs.c \
+			..\src\win\thread.c \
+			..\src\win\proc.c \
 			..\src\env.c \
 			..\src\expr.c \
 			..\src\file.c \
-			..\src\fs_win.c \
-			..\src\fs_common.c \
+			..\src\fs.c \
 			..\src\iter.c \
 			..\src\jsw_rbtree.c \
 			..\src\ll.c \
@@ -64,15 +67,12 @@ CPP_SOURCE= ..\src\dl_win.c \
 			..\src\os.c \
 			..\src\parson.c \
 			..\src\path.c \
-			..\src\proc_win.c \
 			..\src\rb.c \
 			..\src\strbuf.c \
 			..\src\string.c \
-			..\src\thread_win.c \
 			..\src\time.c \
 			..\src\util.c \
-			..\src\version.c \
-			..\src\vs.c \
+			..\src\version.c
 
 OBJECTS=$(CPP_SOURCE:.c=.obj)
 

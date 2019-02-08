@@ -81,7 +81,6 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
 	$(OBJDIR)/expr.o \
 	$(OBJDIR)/file.o \
@@ -95,6 +94,7 @@ OBJECTS := \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/parson.o \
 	$(OBJDIR)/path.o \
+	$(OBJDIR)/dl.o \
 	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/thread.o \
@@ -162,9 +162,6 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/dl.o: ../src/dl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/env.o: ../src/env.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -202,6 +199,9 @@ $(OBJDIR)/parson.o: ../src/parson.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/path.o: ../src/path.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/dl.o: ../src/posix/dl.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/fs1.o: ../src/posix/fs.c

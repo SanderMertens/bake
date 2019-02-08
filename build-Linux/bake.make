@@ -79,7 +79,6 @@ OBJECTS := \
 	$(OBJDIR)/rule.o \
 	$(OBJDIR)/run.o \
 	$(OBJDIR)/setup.o \
-	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
 	$(OBJDIR)/expr.o \
 	$(OBJDIR)/file.o \
@@ -93,6 +92,7 @@ OBJECTS := \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/parson.o \
 	$(OBJDIR)/path.o \
+	$(OBJDIR)/dl.o \
 	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/thread.o \
@@ -202,9 +202,6 @@ $(OBJDIR)/run.o: ../src/run.c
 $(OBJDIR)/setup.o: ../src/setup.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/dl.o: ../util/src/dl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/env.o: ../util/src/env.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -242,6 +239,9 @@ $(OBJDIR)/parson.o: ../util/src/parson.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/path.o: ../util/src/path.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/dl.o: ../util/src/posix/dl.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/fs1.o: ../util/src/posix/fs.c
