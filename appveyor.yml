@@ -14,7 +14,7 @@ build_script:
 test_script:
 - cmd: echo %CD%
 - cmd: dir
-- cmd: bake.exe setup
+- cmd: bake.exe setup --trace
 - cmd: dir %USERPROFILE%\bake\
 - cmd: dir %USERPROFILE%\bake\lib
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib

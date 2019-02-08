@@ -94,6 +94,8 @@ int ut_mkdir(const char *fmt, ...) {
             char *prefix = ut_strdup(name);
             char *ptr = strrchr(prefix, UT_OS_PS[0]);
 
+            fprintf(stderr, "name = %s, prefix = %s, ptr = %s\n", name, prefix, ptr);
+
             if (ptr && ptr != prefix && ptr[-1] != '.') {
                 ptr[0] = '\0';
                 if (!ut_mkdir(prefix)) {
