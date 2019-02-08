@@ -49,6 +49,7 @@ int ut_symlink(
     const char *newname)
 {
     char *fullname = NULL;
+
     // Check if relative path
     if (oldname[0] == '.' || oldname[1] != ':') {
         fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), oldname);
@@ -58,6 +59,9 @@ int ut_symlink(
         /* Safe- the variable will not be modified if it's equal to newname */
         fullname = (char*)oldname;
     }
+
+    ut_trace("#[cyan]symlink %s %s", newname, fullname);
+    
     DWORD dwFlags = 0;
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
         DWORD last_error = GetLastError();
@@ -96,6 +100,7 @@ int ut_symlink(
             }
         }
     }
+
     if (fullname != oldname) free(fullname);
     return 0;
 error:
@@ -138,6 +143,8 @@ bool ut_isdir(const char *path) {
 
 int ut_rename(const char *oldName, const char *newName) {
 
+    ut_trace("#[cyan]rename %s %s", oldName, newName);
+
     if (!_access_s(newName, 0))
         ut_rm(newName);
 
@@ -154,6 +161,7 @@ error:
 /* Remove a file. Returns 0 if OK, -1 if failed */
 int ut_rm(const char *name) {
     int result = 0;
+
     if (PathFileExistsA(name))
     {
         if (ut_isdir(name)) {
@@ -172,16 +180,19 @@ int ut_rm(const char *name) {
     if (!result) {
         ut_trace("rm %s", name);
     }
+    
     return result;
 }
 
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
     char *fullname;
-    if (strlen(name) > 1 && name[0] == '.' && name[1] == UT_OS_PS[0])
+    if (strlen(name) > 1 && name[0] == '.' && name[1] == UT_OS_PS[0]) {
         fullname = ut_asprintf("%s"UT_OS_PS"%s\0", ut_cwd(), name+2);
-    else
+    } else {
         fullname = ut_asprintf("%s\0", name);
+    }
+
     SHFILEOPSTRUCT fileOp = { 0 };
     ZeroMemory(&fileOp, sizeof(SHFILEOPSTRUCT));
     fileOp.wFunc = FO_DELETE;
@@ -191,11 +202,17 @@ int ut_rmtree(const char *name) {
         FOF_MULTIDESTFILES | FOF_SILENT;
     fileOp.lpszProgressTitle = "";
     int result = SHFileOperation(&fileOp);
-    if (result == ERROR_FILE_NOT_FOUND || result == ERROR_PATH_NOT_FOUND)
+    
+    if (result == ERROR_FILE_NOT_FOUND || result == ERROR_PATH_NOT_FOUND) {
         return 0;
-    if (result)
+    }
+    
+    if (result) {
         ut_throw("%d: %s", result, fullname);
+    }
+
     free(fullname);
+
     return result;
 }
 
