@@ -228,11 +228,6 @@ ut_ll ut_opendir(const char *name) {
     return result;
 }
 
-typedef struct win_dirent_tag {
-    HANDLE hFind;
-    TCHAR cFileName[MAX_PATH];
-} ut_dirent;
-
 /* opendir is POSIX function which is not available on windows platform */
 ut_dirent* opendir(const char *name)
 {

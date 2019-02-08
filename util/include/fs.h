@@ -263,6 +263,18 @@ void* ut_dir_next(
 void ut_dir_release(
     ut_iter *it);
 
+
+#ifdef _WIN32
+typedef struct win_dirent_tag {
+    HANDLE hFind;
+    TCHAR cFileName[MAX_PATH];
+} ut_dirent;
+
+/* opendir is POSIX function which is not available on windows platform */
+ut_dirent* opendir(
+    const char *name)
+#endif
+
 #ifdef __cplusplus
 }
 #endif
