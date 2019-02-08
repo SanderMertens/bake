@@ -25,7 +25,7 @@
 #define _setenv(var, val) setenv(var, val, 1)
 #define _unsetenv(var) unsetenv(var)
 #else
-#define _setenv _putenv_s(var, val)
+#define _setenv(var, val) _putenv_s(var, val)
 #define _unsetenv(var) _putenv_s(var, "")
 #endif
 
