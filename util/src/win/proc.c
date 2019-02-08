@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include "../../include/util.h"
 #include <io.h>
 
 ut_proc ut_proc_run(

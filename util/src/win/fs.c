@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include "../../include/util.h"
 
 static
 bool ut_checklink(
