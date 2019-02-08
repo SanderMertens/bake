@@ -32,7 +32,7 @@ int16_t cmd(
    char *cmd)
 {
     int8_t ret;
-    int sig = ut_proc_cmd_stderr_only(cmd, &ret);
+    int sig = ut_proc_cmd(cmd, &ret);
     if (sig || ret) {
         ut_error("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
         return -1;
