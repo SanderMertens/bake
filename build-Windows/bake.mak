@@ -65,12 +65,15 @@ BAKE_SOURCE= ..\src\attribute.c \
 			..\src\run.c \
 			..\src\setup.c \
 
-UTIL_SOURCE= ..\util\src\dl_win.c \
+UTIL_SOURCE= ..\util\src\win\dl.c \
+			..\util\src\win\fs.c \
+			..\util\src\win\vs.c \
+			..\util\src\win\thread.c \
+			..\util\src\win\proc.c \
 			..\util\src\env.c \
 			..\util\src\expr.c \
 			..\util\src\file.c \
-			..\util\src\fs_win.c \
-			..\util\src\fs_common.c \
+			..\util\src\fs.c \
 			..\util\src\iter.c \
 			..\util\src\jsw_rbtree.c \
 			..\util\src\ll.c \
@@ -80,15 +83,12 @@ UTIL_SOURCE= ..\util\src\dl_win.c \
 			..\util\src\os.c \
 			..\util\src\parson.c \
 			..\util\src\path.c \
-			..\util\src\proc_win.c \
 			..\util\src\rb.c \
 			..\util\src\strbuf.c \
 			..\util\src\string.c \
-			..\util\src\thread_win.c \
 			..\util\src\time.c \
 			..\util\src\util.c \
-			..\util\src\version.c \
-			..\util\src\vs.c \
+			..\util\src\version.c
 
 CPP_SOURCE=$(BAKE_SOURCE) $(UTIL_SOURCE)
 
