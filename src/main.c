@@ -570,82 +570,97 @@ int bake_info(
     bake_project_type *type_out,
     bool clean_missing)
 {
-    const char *bin = ut_locate(id, NULL, UT_LOCATE_BIN);
-    if (!bin) {
-        const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
-        if (!path) {
+    const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
+    if (!path) {
+        if (!clean_missing) {
             ut_log("?  #[normal]%s #[red]!not found!#[normal]\n", id);
             goto error;
-        } else {
-            bake_project *project = bake_project_new(path, config);
-            if (!project) {
-                ut_log("?  #[normal]%s #[grey]=> #[normal]%s #[red]!invalid config!\n",
-                    id, cfg);
-                goto error;
-            } else {
-                if (project->language && in_current_cfg) {
-                    if (project->type == BAKE_APPLICATION) {
-                        ut_log(
-                          "A  %s #[grey]=> #[normal]%s #[red]!missing binary!\n",
-                          id, cfg);
-                        goto error;
-                    } else {
-                        ut_log(
-                          "P  %s #[grey]=> #[normal]%s #[red]!missing binary!\n",
-                          id, cfg);
-                        goto error;
+        }
+    }
+
+    bake_project *project = bake_project_new(path, config);
+    if (!project) {
+        if (!clean_missing) {
+            ut_log("?  #[normal]%s #[grey]=> #[normal]%s #[red]!invalid config!\n",
+                id, cfg);
+        }
+        goto error;
+    } else {
+        if (project->language) {
+            if (in_current_cfg && project->type == BAKE_PACKAGE) {
+                ut_dl dl = NULL;
+                const char *bin = ut_locate(id, NULL, UT_LOCATE_LIB);
+                if (bin) {
+                    if (test_lib) {
+                        dl = ut_dl_open(bin);
                     }
-                    bake_project_free(project);
+
+                    if (test_lib && !dl) {
+                        if (!clean_missing) {
+                            ut_log("P  #[normal]%s #[grey]=> #[normal]%s #[red]!load error!\n",
+                                id, cfg);
+                            ut_log("   %s\n", ut_dl_error());
+                        }
+                        goto error;
+
+                    } else {
+                        if (!clean_missing) {
+                            ut_log("P  #[normal]%s #[grey]=> #[normal]%s\n",
+                                id, cfg);
+                            if (type_out) *type_out = BAKE_PACKAGE;
+                        }
+                    }
+
+                    if (dl) ut_dl_close(dl);
+                } else {
+                    const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
+                    if (lib_static) {
+                        if (!clean_missing) {
+                            ut_log("S  #[normal]%s #[grey]=> #[normal]%s\n",
+                                id, cfg);
+                            if (type_out) *type_out = BAKE_PACKAGE;
+                        }
+                    } else {
+                        if (!clean_missing) {
+                            ut_log("A  #[normal]%s #[grey]=> #[normal]%s\n",
+                                id, cfg);
+                            if (type_out) *type_out = BAKE_APPLICATION;
+                        }
+                    }
+                }
+
+            } else {
+                if (!cfg) {
+                    cfg = "#[red]!missing binary!";
+                }
+                if (project->type == BAKE_APPLICATION) {
+                    if (!clean_missing) {
+                        ut_log( "A  %s #[grey]=> #[normal]%s\n", id, cfg);
+                    }
                     goto error;
+
                 } else {
                     if (!clean_missing) {
-                        ut_log("C  #[normal]%s #[grey]=> #[grey]all#[normal]\n",
-                            id);
+                        ut_log( "P  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
-                    bake_project_free(project);
-
-                    if (type_out) *type_out = BAKE_PACKAGE;
+                    goto error;
+                }
+                if (!cfg) {
+                    goto error;
                 }
             }
-        }
-    } else {
-        const char *lib = ut_locate(id, NULL, UT_LOCATE_LIB);
-        if (lib) {
-            ut_dl dl = NULL;
-            if (test_lib) {
-                dl = ut_dl_open(bin);
-            }
-            if (test_lib && !dl) {
-                ut_log("P  #[normal]%s #[grey]=> #[normal]%s #[red]!load error!\n",
-                    id, cfg);
-                ut_log("   %s\n", ut_dl_error());
-                goto error;
-            } else {
-                if (!clean_missing) {
-                    ut_log("P  #[normal]%s #[grey]=> #[normal]%s\n",
-                        id, cfg);
-                }
-                if (dl) ut_dl_close(dl);
-                if (type_out) *type_out = BAKE_PACKAGE;
-            }
-        } else if (!clean_missing) {
-            const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
-            if (lib_static) {
-                ut_log("S  #[normal]%s #[grey]=> #[normal]%s\n",
-                    id, cfg);
-                if (type_out) *type_out = BAKE_PACKAGE;
-            } else {
-                ut_log("A  #[normal]%s #[grey]=> #[normal]%s\n",
-                    id, cfg);
-                if (type_out) *type_out = BAKE_APPLICATION;
+        } else {
+            if (!clean_missing) {
+                ut_log("C  #[normal]%s #[grey]=> #[grey]all#[normal]\n", id);
             }
         }
     }
 
+    bake_project_free(project);
+
     return 0;
 error:
     if (clean_missing) {
-        ut_log("#[grey]uninstall '%s'#[normal]\n", id);
         bake_install_uninstall(config, id);
     }
     return -1;
@@ -688,7 +703,7 @@ int16_t list_configurations(
 
                 if (ut_project_in_config(package->id, cfg)) {
                     if (count) {
-                        ut_strbuf_appendstr(&buf, ",");
+                        ut_strbuf_appendstr(&buf, ", ");
                     }
                     ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
                     count ++;
@@ -726,7 +741,9 @@ int bake_list(
     uint32_t total = 0, package_count = 0, app_count = 0, template_count = 0, 
              error_count = 0;
 
-    ut_log("\n#[grey]Listing projects for platform:\n * #[normal]%s\n", UT_PLATFORM);
+    if (!clean_missing) {
+        ut_log("\n#[grey]Listing projects for platform:\n * #[normal]%s\n", UT_PLATFORM);
+    }
 
     /* Collect packages from BAKE_HOME */
     ut_try( ut_dir_iter(UT_META_PATH, "/*", &it), NULL);
