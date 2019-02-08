@@ -69,6 +69,11 @@ int16_t bake_parse_repo_url(
     bool has_protocol = false;
     bool has_url = false;
 
+    *full_url_out = NULL;
+    *base_url_out = NULL;
+    *name_out = NULL;
+    *src_out = NULL;
+
     char *proto = strchr(url, '/');
     if (proto) {
         if (proto == url) {
@@ -108,7 +113,7 @@ int16_t bake_parse_repo_url(
           url);
     }
 
-    char *src_path = ut_envparse("$BAKE_HOME/src/%s", name);
+    char *src_path = ut_envparse("%s/%s", UT_SRC_PATH, name);
 
     char *last_elem = strrchr(full_url, '/');
     char *base_url = NULL;

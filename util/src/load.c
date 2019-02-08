@@ -610,14 +610,18 @@ void ut_locate_reset(
             free(loaded->dev);
             free(loaded->include);
             free(loaded->meta);
+            free(loaded->template);
 
-            loaded->lib = NULL;
-            loaded->static_lib = NULL;
-            loaded->app = NULL;
             loaded->bin = NULL;
             loaded->etc = NULL;
+            loaded->src = NULL;
+            loaded->dev = NULL;
             loaded->include = NULL;
             loaded->meta = NULL;
+            loaded->template = NULL;
+            loaded->app = NULL;
+            loaded->lib = NULL;
+            loaded->static_lib = NULL;
 
             loaded->tried_binary = false;
             loaded->tried_locating = false;
