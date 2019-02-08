@@ -98,7 +98,7 @@ int ut_mkdir(const char *fmt, ...) {
                 ptr[0] = '\0';
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
-                    if (!mkdir(name, 0755)) {
+                    if (!__mkdir(name)) {
                         local_errno = 0;
                     } else {
                         local_errno = errno;

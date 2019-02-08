@@ -211,7 +211,7 @@ int16_t bake_build_make_project(
     char *install_cmd = ut_asprintf(
       "bake install %s --id %s --package --includes include",
       path, id);
-    ut_try(cmd(install_cmd), "failed to install '%s' include files", id);
+    ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
     ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
 
@@ -308,15 +308,14 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to ~/bake\n");
 
     if (!local) {
-        ut_try(bake_create_script(),
-          "failed to create global bake script");
+        ut_try(bake_create_script(), "failed to create global bake script");
     }
 
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
         "failed to copy bake executable");
     ut_log("#[green]OK#[reset]   copy bake executable\n");
 
-    ut_try(cmd("bake install --id bake --includes include"),
+    ut_try(cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
         "failed to install bake include files");
     ut_log("#[green]OK#[reset]   install bake include files\n");
 
