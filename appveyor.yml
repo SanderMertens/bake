@@ -4,16 +4,20 @@ build_script:
 - cmd: >-
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-
-    cd build-windows\
+    cd build-Windows\
 
     nmake
 
     cd ..\
+
+init:
+  - 
     
 test_script:
+- cmd: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 - cmd: echo %CD%
 - cmd: dir
+- cmd: SET BAKE_VERBOSITY=DEBUG
 - cmd: bake.exe setup
 - cmd: dir %USERPROFILE%\bake\
 - cmd: dir %USERPROFILE%\bake\lib

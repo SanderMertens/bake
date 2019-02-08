@@ -32,7 +32,7 @@ int16_t cmd(
    char *cmd)
 {
     int8_t ret;
-    int sig = ut_proc_cmd_stderr_only(cmd, &ret);
+    int sig = ut_proc_cmd(cmd, &ret);
     if (sig || ret) {
         ut_error("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
         return -1;
@@ -253,7 +253,6 @@ int16_t bake_build_make_project(
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", bin_path, artefact)),
             "failed to move '%s' to project bin path", id);
-
 #endif
 
     free(bin_path);
@@ -308,14 +307,14 @@ int16_t bake_setup(
     ut_log("Bake setup, installing to ~/bake\n");
 
     if (!local) {
-        ut_try(bake_create_script(), "failed to create global bake script");
+        ut_try( bake_create_script(), "failed to create global bake script");
     }
 
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
         "failed to copy bake executable");
     ut_log("#[green]OK#[reset]   copy bake executable\n");
 
-    ut_try(cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
+    ut_try( cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
         "failed to install bake include files");
     ut_log("#[green]OK#[reset]   install bake include files\n");
 

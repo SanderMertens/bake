@@ -92,7 +92,7 @@ int ut_mkdir(const char *fmt, ...) {
         if (errno == ENOENT) {
             /* Allocate so as to not run out of stackspace in recursive call */
             char *prefix = ut_strdup(name);
-            char *ptr = strrchr(prefix, '/');
+            char *ptr = strrchr(prefix, UT_OS_PS[0]);
 
             if (ptr && ptr != prefix && ptr[-1] != '.') {
                 ptr[0] = '\0';
@@ -142,9 +142,9 @@ int ut_cp_file(
     bool exists = ut_file_test(dst);
 
     if (exists && ut_isdir(dst) && !ut_isdir(src)) {
-        const char *base = strrchr(src, '/');
+        const char *base = strrchr(src, UT_OS_PS[0]);
         if (!base) base = src; else base = base + 1;
-        fullDst = ut_asprintf("%s/%s", dst, base);
+        fullDst = ut_asprintf("%s"UT_OS_PS"%s", dst, base);
         exists = ut_file_test(fullDst);
     }
 
@@ -248,10 +248,10 @@ int16_t ut_cp_dir(
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        char *src_path = ut_asprintf("%s/%s", src, file);
+        char *src_path = ut_asprintf("%s"UT_OS_PS"%s", src, file);
 
         if (ut_isdir(src_path)) {
-            char *dst_path = ut_asprintf("%s/%s", dst, src_path);
+            char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", dst, src_path);
             if (ut_cp_dir(src_path, dst_path)) {
                 goto error;
             }
