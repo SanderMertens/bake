@@ -13,7 +13,7 @@ build_script:
 test_script:
 - cmd: echo %CD%
 - cmd: dir
-- cmd: BAKE_VERBOSITY=DEBUG
+- cmd: SET BAKE_VERBOSITY=DEBUG
 - cmd: bake.exe setup
 - cmd: dir %USERPROFILE%\bake\
 - cmd: dir %USERPROFILE%\bake\lib
