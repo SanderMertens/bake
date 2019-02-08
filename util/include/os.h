@@ -65,7 +65,7 @@ extern "C" {
 #define UT_OS_BIN_EXT ".exe"
 #define UT_OS_LIB_PREFIX ""
 #define UT_OS_PS "\\"
-#define UT_ENV_HOME "USERHOME"
+#define UT_ENV_HOME "USERPROFILE"
 #define UT_ENV_LIBPATH "PATH"
 #define UT_ENV_BINPATH "PATH"
 #define UT_ENV_PATH_SEPARATOR ":"
