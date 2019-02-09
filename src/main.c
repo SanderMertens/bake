@@ -101,6 +101,7 @@ void bake_usage(void)
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
+    printf("  --debug                      Set verbosity to DEBUG (highest verbosity)\n");
     printf("\n");
     printf("Commands:\n");
     printf("  new [path]                   Initialize new bake project\n");
@@ -260,6 +261,7 @@ int bake_parse_args(
             ARG(0, "optimize", optimize = true; i ++);
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
+            ARG(0, "debug", ut_log_verbositySet(UT_DEBUG));
             ARG('v', "verbosity", bake_set_verbosity(argv[i + 1]); i ++);
 
             ARG(0, "id", id = argv[i + 1]; i ++);
@@ -877,6 +879,25 @@ int bake_foreach_action(
     return result || ret;
 }
 
+void bake_dump_env() {
+    ut_log_push("env-dump");
+    ut_iter it;
+    if (!ut_dir_iter(UT_HOME_PATH, "//", &it)) {
+        while (ut_iter_hasNext(&it)) {
+            char *file = ut_iter_next(&it);
+            if (!strstr(file, UT_OS_PS".git") && 
+                !strstr(file, UT_OS_PS".bake_cache")) 
+            {
+                ut_debug("#[normal]%s", file);
+            }
+        }
+    } else {
+        ut_catch();
+        ut_debug("could not iterate over files in %s", UT_HOME_PATH);
+    }
+    ut_log_pop();
+}
+
 int main(int argc, const char *argv[]) {
 
 #ifdef _WIN32
@@ -938,22 +959,7 @@ int main(int argc, const char *argv[]) {
 
     /* Dump bake environment to console if in debug */
     if (ut_log_verbosityGet() <= UT_DEBUG) {
-        ut_log_push("env-dump");
-        ut_iter it;
-        if (!ut_dir_iter(UT_HOME_PATH, "//", &it)) {
-            while (ut_iter_hasNext(&it)) {
-                char *file = ut_iter_next(&it);
-                if (!strstr(file, UT_OS_PS".git") && 
-                    !strstr(file, UT_OS_PS".bake_cache")) 
-                {
-                    ut_debug("#[normal]%s", file);
-                }
-            }
-        } else {
-            ut_catch();
-            ut_debug("could not iterate over files in %s", UT_HOME_PATH);
-        }
-        ut_log_pop();
+        bake_dump_env();
     }
 
     bake_config config = {
@@ -1063,8 +1069,9 @@ int main(int argc, const char *argv[]) {
     ut_deinit();
     return 0;
 error:
-    if (ut_log_verbosityGet() <= UT_OK) {
-        ut_error("#[red]errors occurred");
+    if (ut_log_verbosityGet() <= UT_DEBUG) {
+        ut_error("#[red]problems occurred, dumping environment");
+        bake_dump_env();
     }
     ut_deinit();
     return -1;
