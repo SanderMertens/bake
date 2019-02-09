@@ -906,13 +906,6 @@ void bake_dump_env() {
 
 int main(int argc, const char *argv[]) {
 
-#ifdef _WIN32
-    #if NTDDI_VERSION > NTDDI_WINBLUE
-    ut_enable_console_color(STD_OUTPUT_HANDLE);
-    ut_enable_console_color(STD_ERROR_HANDLE);
-    #endif
-#endif
-
     if (ut_getenv("BAKE_ENVIRONMENT")) {
         env = ut_getenv("BAKE_ENVIRONMENT");
     }
@@ -921,8 +914,6 @@ int main(int argc, const char *argv[]) {
 
     ut_init("bake");
 
-    ut_log_fmt("%C %V %m");
-
     /* Init thread keys, which are used to pass arguments in driver API */
     ut_try (ut_tls_new(&BAKE_DRIVER_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_FILELIST_KEY, NULL), NULL);
@@ -930,6 +921,12 @@ int main(int argc, const char *argv[]) {
     ut_try (ut_tls_new(&BAKE_CONFIG_KEY, NULL), NULL);
 
     ut_try (bake_parse_args(argc, argv), NULL);
+
+    if (ut_log_verbosityGet() <= UT_DEBUG) {
+        ut_log_fmt("%f:%l: %C %V %m");
+    } else {
+        ut_log_fmt("%C %V %m");
+    }
 
     if (ut_log_verbosityGet() <= UT_OK) {
         printf("\n");

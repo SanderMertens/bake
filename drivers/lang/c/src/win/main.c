@@ -327,7 +327,7 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " %s.lib", lib->is.string);
+            ut_strbuf_append(&cmd, " %s"UT_OS_STATIC_LIB_EXT, lib->is.string);
         }
     }
 
@@ -345,7 +345,7 @@ void link_dynamic_binary(
     ut_iter it = ut_ll_iter(project->link);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " %s.lib", dep);
+        ut_strbuf_append(&cmd, " %s" UT_OS_LIB_EXT, dep);
     }
 
     /* Add project libpath */
@@ -545,12 +545,12 @@ char* artefact_name(
         bool link_static = driver->get_attr_bool("static");
 
         if (link_static) {
-            result = ut_asprintf("%s.lib", id);
+            result = ut_asprintf("%s"UT_OS_STATIC_LIB_EXT, id);
         } else {
-            result = ut_asprintf("%s.dll", id);
+            result = ut_asprintf("%s"UT_OS_LIB_EXT, id);
         }
     } else {
-        result = ut_asprintf("%s.exe", id);
+        result = ut_asprintf("%s"UT_OS_BIN_EXT, id);
     }
 
     return result;

@@ -33,6 +33,7 @@ const char* ut_last_win_error_code(DWORD dw) {
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&lpMsgBuf,
         0, NULL);
+
     return (const char*)lpMsgBuf;
 }
 

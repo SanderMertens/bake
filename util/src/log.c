@@ -2001,6 +2001,12 @@ void ut_log_embedCategories(
 }
 
 int16_t ut_log_init(void) {
+#ifdef _WIN32
+    #if NTDDI_VERSION > NTDDI_WINBLUE
+    ut_enable_console_color(STD_OUTPUT_HANDLE);
+    ut_enable_console_color(STD_ERROR_HANDLE);
+    #endif
+#endif
     return ut_tls_new(&UT_KEY_LOG, ut_lasterrorFree);
 }
 
