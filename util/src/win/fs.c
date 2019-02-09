@@ -75,12 +75,10 @@ int ut_symlink(
                 }
             }
             else {
-                ut_throw("%s: %s", newname, ut_dl_error());
+                goto error;
             }
             free(dir);
-
-        }
-        else if (last_error == ERROR_ALREADY_EXISTS) {
+        } else if (last_error == ERROR_ALREADY_EXISTS) {
             if (!ut_checklink(newname, fullname)) {
 
                 /* If a file with specified name already exists, remove existing file */
@@ -97,6 +95,8 @@ int ut_symlink(
                 /* Existing file is a link that points to the same location */
                 ut_trace("#[cyan]symlink %s %s already exists", newname, fullname);
             }
+        } else {
+            goto error;
         }
     } else {
         ut_trace("#[cyan]symlink %s %s", newname, fullname);
