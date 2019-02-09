@@ -129,7 +129,7 @@ void compile_src(
 
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " /Ox /LTCG");
+        ut_strbuf_appendstr(&cmd, " /Ox /GL");
     } else {
         ut_strbuf_appendstr(&cmd, " /Od");
     }
@@ -298,9 +298,7 @@ void link_dynamic_binary(
 
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " /Ox /LTCG");
-    } else {
-        ut_strbuf_appendstr(&cmd, " /Od");
+        ut_strbuf_appendstr(&cmd, " /LTCG");
     }
 
     /* When strict, warnings are errors */
