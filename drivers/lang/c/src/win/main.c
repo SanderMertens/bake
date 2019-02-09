@@ -332,7 +332,7 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(static_lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " %s"UT_OS_STATIC_LIB_EXT, lib->is.string);
+            ut_strbuf_append(&cmd, " %s.lib", lib->is.string);
         }
     }
 
@@ -350,7 +350,7 @@ void link_dynamic_binary(
     ut_iter it = ut_ll_iter(project->link);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " %s" UT_OS_LIB_EXT, dep);
+        ut_strbuf_append(&cmd, " %s.lib", dep);
     }
 
     /* Add project libpath */
