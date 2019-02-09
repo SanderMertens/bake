@@ -67,6 +67,7 @@ ut_proc ut_proc_runRedirect(
     FILE *err)
 {
     char *cmdline = NULL;
+    int count = 0;
 
     ut_strbuf buf = UT_STRBUF_INIT;
     ut_strbuf_appendstr(&buf, exec);
