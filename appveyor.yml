@@ -14,13 +14,9 @@ init:
   - 
     
 test_script:
-- cmd: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
-- cmd: echo %CD%
 - cmd: dir
 - cmd: SET BAKE_VERBOSITY=DEBUG
 - cmd: bake.exe setup
-- cmd: dir %USERPROFILE%\bake\
-- cmd: dir %USERPROFILE%\bake\lib
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
-- cmd: cd examples
-- cmd: bake build --cfg release
+- cmd: bake build examples
+- cmd: bake build examples --cfg release
