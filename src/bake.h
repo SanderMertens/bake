@@ -286,7 +286,7 @@ int16_t bake_filelist_merge(
     bake_filelist *src);
 
 /** Return number of files in filelist */
-uint64_t bake_filelist_count(
+int bake_filelist_count(
     bake_filelist *fl);
 
 /* -- Rule API -- */

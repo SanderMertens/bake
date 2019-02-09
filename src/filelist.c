@@ -239,7 +239,7 @@ error:
     return -1;
 }
 
-uint64_t bake_filelist_count(
+int bake_filelist_count(
     bake_filelist *fl)
 {
     return ut_ll_count(fl->files);
