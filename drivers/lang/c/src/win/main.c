@@ -218,7 +218,7 @@ char* find_static_lib(
     int ret;
 
     /* Find static library in environment libpath */
-    char *file = ut_asprintf("%s\\%s.lib", config->target_lib, lib);
+    char *file = ut_asprintf("%s\\%s.lib", config->lib, lib);
     if ((ret = ut_file_test(file)) == 1) {
         return file;
     } else if (ret != 0) {
@@ -332,8 +332,8 @@ void link_dynamic_binary(
     }
 
     /* Add BAKE_TARGET to library path */
-    if (ut_file_test(config->target_lib)) {
-        ut_strbuf_append(&cmd, " /LIBPATH:%s", config->target_lib);
+    if (ut_file_test(config->lib)) {
+        ut_strbuf_append(&cmd, " /LIBPATH:%s", config->lib);
     }
 
     /* Add BAKE_HOME to library path if it's different */
@@ -592,13 +592,13 @@ char *link_to_lib(
     /* Try .so or .lib or .dylib */
     if (full_path) {
         // fullpath[\|/][lib]lib_name[.so|.dylib|.lib]
-        char *so = ut_asprintf("%s"UT_OS_PS LIB_PREFIX "%s" UT_OS_LIB_EXT, full_path, lib_name);
+        char *so = ut_asprintf("%s"UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, full_path, lib_name);
         if (ut_file_test(so)) {
             result = so;
         }
     } else {
         // [lib]lib_name[.so|.dylib|.lib]
-        char *so = ut_asprintf(LIB_PREFIX "%s" UT_OS_LIB_EXT, lib_name);
+        char *so = ut_asprintf(UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, lib_name);
         if (ut_file_test(so)) {
             result = so;
         }
