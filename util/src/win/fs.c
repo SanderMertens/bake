@@ -51,12 +51,19 @@ int ut_symlink(
     char *fullname = NULL;
     DWORD last_error;
 
+    ut_debug("symlink '%s' %s'", oldname, newname);
+
+    if (!newname || !oldname) {
+        ut_throw("invalid parameters for ut_symlink (oldname = %s, newname = %s)",
+            oldname, newname);
+        goto error;
+    }
+
     // Check if relative path
     if (oldname[0] == '.' || oldname[1] != ':') {
         fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), oldname);
         ut_path_clean(fullname, fullname);
-    }
-    else {
+    } else {
         /* Safe- the variable will not be modified if it's equal to newname */
         fullname = (char*)oldname;
     }
@@ -187,8 +194,7 @@ int ut_rm(const char *name) {
             result = -1;
             ut_throw( ut_last_win_error());
         }
-    }
-    else {
+    } else {
         /* Don't care if file doesn't exist */
     }
 
