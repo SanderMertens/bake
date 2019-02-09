@@ -49,6 +49,7 @@ int ut_symlink(
     const char *newname)
 {
     char *fullname = NULL;
+    DWORD last_error;
 
     // Check if relative path
     if (oldname[0] == '.' || oldname[1] != ':') {
@@ -67,7 +68,7 @@ int ut_symlink(
     }
 
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
-        DWORD last_error = GetLastError();
+        last_error = GetLastError();
         if (last_error == ERROR_PATH_NOT_FOUND) {
             /* If error is ERROR_PATH_NOT_FOUND, try creating directory */
             char *dir = ut_path_dirname(newname);
@@ -83,6 +84,7 @@ int ut_symlink(
                 goto error;
             }
             free(dir);
+            
         } else if (last_error == ERROR_ALREADY_EXISTS) {
             if (!ut_checklink(newname, fullname)) {
 
@@ -98,19 +100,26 @@ int ut_symlink(
             }
             else {
                 /* Existing file is a link that points to the same location */
-                ut_trace("#[cyan]symlink %s %s already exists", newname, fullname);
+                ut_trace("#[cyan]symlink %s %s already exists", 
+                    newname, fullname);
             }
         } else {
             goto error;
         }
     } else {
-        ut_trace("#[cyan]symlink %s %s", newname, fullname);
+        if (dwFlags) {
+            ut_trace("#[cyan]symlink %s %s (D)", newname, fullname);
+        } else {
+            ut_trace("#[cyan]symlink %s %s", newname, fullname);
+        }
     }
 
     if (fullname != oldname) free(fullname);
     return 0;
 error:
-    ut_throw("symlink %s %s failed: %s", newname, fullname, ut_dl_error());
+    ut_throw("symlink %s %s failed: %s", newname, fullname, 
+        ut_last_win_error_code(last_error));
+
     if (fullname != oldname) free(fullname);
     return -1;
 }
@@ -121,7 +130,7 @@ int16_t ut_setperm(
 {
     ut_trace("#[cyan]setperm %s %d", name, perm);
     if (_chmod(name, perm)) {
-        ut_throw("chmod: %s", ut_dl_error());
+        ut_throw("chmod: %s", ut_last_win_error());
         return -1;
     }
     return 0;
@@ -134,7 +143,7 @@ int16_t ut_getperm(
     struct _stat st;
 
     if (_stat(name, &st) < 0) {
-        ut_throw("getperm: %s", ut_dl_error());
+        ut_throw("getperm: %s", ut_last_win_error());
         return -1;
     }
 
@@ -176,7 +185,7 @@ int ut_rm(const char *name) {
         }
         if (!DeleteFile(name)) {
             result = -1;
-            ut_throw( ut_dl_error());
+            ut_throw( ut_last_win_error());
         }
     }
     else {
@@ -235,7 +244,7 @@ ut_ll ut_opendir(const char *name) {
     if( PathFileExistsA(name) )
         result = ut_ll_new();
     else
-        ut_throw("%s: %s", name, ut_dl_error());
+        ut_throw("%s: %s", name, ut_last_win_error());
 
     hFind = FindFirstFile(szDir, &ffd);
     if(INVALID_HANDLE_VALUE != hFind)
@@ -247,7 +256,7 @@ ut_ll ut_opendir(const char *name) {
         FindClose(hFind);
     }
     else
-        ut_throw("%s: %s", name, ut_dl_error());
+        ut_throw("%s: %s", name, ut_last_win_error());
     return result;
 }
 
@@ -264,7 +273,7 @@ ut_dirent* opendir(const char *name)
     if (PathFileExistsA(name))
         ep = (ut_dirent*)malloc(sizeof(ut_dirent));
     else
-        ut_throw("%s: %s", name, ut_dl_error());
+        ut_throw("%s: %s", name, ut_last_win_error());
 
     hFind = FindFirstFile(szDir, &ffd);
     if (INVALID_HANDLE_VALUE != hFind)
@@ -273,7 +282,7 @@ ut_dirent* opendir(const char *name)
         sprintf(ep->cFileName, "%s", ffd.cFileName);
     }
     else
-        ut_throw("%s: %s", name, ut_dl_error());
+        ut_throw("%s: %s", name, ut_last_win_error());
     return ep;
 }
 

@@ -21,33 +21,21 @@
 
 #include "../../include/util.h"
 
-typedef void*(*dlproc)(void);
+const char* ut_last_win_error_code(DWORD dw) {
+    LPVOID lpMsgBuf;
 
-/* Link dynamic library */
-ut_dl ut_dl_open(const char* file) {
-    ut_dl dl;
-    dl = LoadLibraryA(file);
-    return dl;
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&lpMsgBuf,
+        0, NULL);
+    return (const char*)lpMsgBuf;
 }
 
-/* Close dynamic library */
-void ut_dl_close(ut_dl dl) {
-    FreeLibrary(dl);
-}
-
-/* Lookup symbol in dynamic library */
-void* ut_dl_sym(ut_dl dl, const char* sym) {
-    FARPROC a = GetProcAddress(dl, sym);
-    return (void *)a;
-}
-
-/* Lookup procedure in dynamic library */
-void*(*ut_dl_proc(ut_dl dl, const char* proc))(void) {
-    FARPROC a = GetProcAddress(dl, proc);
-    return (void*)a;
-}
-
-/* Lookup last error */
-const char* ut_dl_error(void) {
-    return ut_last_win_error();
+const char* ut_last_win_error(void) {
+    return ut_last_win_error_code( GetLastError());
 }

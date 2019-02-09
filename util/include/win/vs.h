@@ -35,6 +35,10 @@ UT_EXPORT char * ut_get_vs_dir();
 
 UT_EXPORT char * ut_get_vc_shell_cmd();
 
+const char* ut_last_win_error_code(DWORD dw);
+
+const char* ut_last_win_error(void);
+
 #ifdef __cplusplus
 }
 #endif

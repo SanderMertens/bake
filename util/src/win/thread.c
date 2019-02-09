@@ -30,7 +30,7 @@ ut_thread ut_thread_new(
     thread_handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)f, arg, 0, &thread_id);
 
     if (thread_handle == NULL) {
-        ut_critical("thread creation failed: %s", ut_dl_error());
+        ut_critical("thread creation failed: %s", ut_last_win_error());
     }
     return (ut_thread)thread_handle;
 }
