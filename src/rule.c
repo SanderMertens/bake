@@ -177,9 +177,9 @@ int16_t bake_node_run_rule_map(
 
         count ++;
         if (src->timestamp > dst->timestamp) {
-            ut_log_overwrite(UT_OK, "#[green][#[white]%lld%%#[green]]#[white] %s",
-                100 * count / bake_filelist_count(inputs),
-                src->name);
+            char counter[16];
+            sprintf(counter, "%d%%", 100 * count / bake_filelist_count(inputs));
+            bake_message(UT_LOG, counter, src->name);
 
             /* Make sure target directory exists */
             ut_try (bake_assertPathForFile(dst->path), NULL);

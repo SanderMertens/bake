@@ -378,25 +378,15 @@ int16_t bake_crawler_build_project(
     bake_project *p,
     ut_ll readyForBuild)
 {
-    if (ut_log_verbosityGet() <= UT_OK) {
-        ut_log(
-            "begin %s of %s '%s' in '%s'\n",
-            action_name, bake_project_type_str(p->type), p->id, p->path);
-    }
+    bake_message(UT_LOG, action_name, "'%s'", p->path);
 
     if (action(config, p)) {
-        ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
+        bake_message(UT_ERROR, "error", "bake interrupted by %s in %s", p->id, p->path);
         goto error;
     }
 
     if (p->changed) {
-        if (ut_log_verbosityGet() > UT_OK) {
-            ut_log( "%s '%s' in '%s'\n", action_name, p->id, p->path);
-        } else {
-            ut_log("done\n");
-        }
-    } else if (p->language && strcmp(action_name, "foreach") && p->type != BAKE_TEMPLATE) {
-        ut_log( "#[grey]ready '%s'\n", p->id);
+        bake_message(UT_OK, "done", "#[green]%s#[normal] %s", bake_project_type_str(p->type), p->id);
     }
 
     /* Decrease unresolved_dependencies of dependents */

@@ -295,8 +295,7 @@ ut_proc run_exec(
     if (!is_package) {
         ut_proc pid = ut_proc_run(exec, argv);
 
-        ut_log("run   '%s' [%u] (%s)\n",
-            app_id, pid, exec);
+        bake_message(UT_LOG, "run", "#[green]application#[normal] %s [%u] '%s'", app_id, pid, exec);
 
         return pid;
     } else {
@@ -342,8 +341,7 @@ int16_t run_interactive(
         /* Test whether the app exists, then start it */
         if (ut_file_test(app_bin)) {
             if (retries && !pid) {
-                ut_log("restart '%s' (%dx)\n",
-                    app_id, retries);
+                bake_message(UT_LOG, "restart", "#[green]application#[reset] %s (%dx)", app_id, retries);
             }
 
             if (!pid) {
@@ -391,10 +389,8 @@ int16_t run_interactive(
             if ((retcode == 11) || (retcode == 6)) {
                 ut_error("segmentation fault, fix your code!");
             } else {
-                ut_log("done  '%s' [%d] (%s)\n",
-                    app_id, last_pid, app_bin);
-                ut_log("#[grey]  press Ctrl-C to exit or change files to restart\n",
-                    last_pid);
+                bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%d] '%s'", app_id, last_pid, app_bin);
+                bake_message(UT_LOG, "", "press Ctrl-C to exit or change files to restart", app_id, last_pid, app_bin);
             }
 
             changed = wait_for_changes(
@@ -602,8 +598,7 @@ int bake_run(
             }
         }
 
-        ut_log("done  '%s' [%u] (%s)\n",
-            app_id, pid, app_bin);
+        bake_message(UT_LOG, "done", "#[green]application#[normal] %s [%u] (%s)", app_id, pid, app_bin);
     }
 
     return 0;

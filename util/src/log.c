@@ -863,7 +863,7 @@ void ut_logprint(
         now = data->frames[breakAtCategory - 1].lastTime;
     }
 
-    ut_log_clearLine(data);
+    //ut_log_clearLine(data);
 
     for (fmtptr = log_fmt; (ch = *fmtptr); fmtptr++) {
         ut_strbuf tmp = UT_STRBUF_INIT;
@@ -1009,9 +1009,9 @@ void ut_logprint(
             fprintf(f, "%s", colorized);
         } else {
             if (isTail) {
-                fprintf(f, "%s", colorized);
-                data->last_printed_len = printlen(colorized);
-                ut_log_resetCursor(data);
+                fprintf(f, "%s\n", colorized);
+                //data->last_printed_len = printlen(colorized);
+                //ut_log_resetCursor(data);
             } else {
                 if (msg) {
                     fprintf(f, "%s\n", colorized);

@@ -178,7 +178,7 @@ int16_t bake_create_script_unixlike(void)
     }
 
     /* Copy file to global location, may ask for password */
-    ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
+    bake_message(UT_WARNING, "WARNING", "#[normal]copying script to '" GLOBAL_PATH "', #[yellow]setup may request password");
 
     char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, GLOBAL_PATH);
 
@@ -190,7 +190,7 @@ int16_t bake_create_script_unixlike(void)
             "        export $(~/bake/bake env)\n", GLOBAL_PATH
         );
     } else {
-        ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
+        bake_message(UT_OK, "done", "install bake script to '" GLOBAL_PATH "'");
     }
 
     free(script_path);
@@ -219,9 +219,7 @@ int16_t bake_build_make_project(
       path, id);
     ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
-    ut_log("#[green]OK#[reset]   install include files for '%s'\n", id);
-
-    ut_log("...  build '%s'", id);
+    bake_message(UT_OK, "done", "install include files for '%s'", id);
     fflush(stdout);
 
     char *make_cmd;
@@ -235,7 +233,7 @@ int16_t bake_build_make_project(
     ut_try( cmd(make_cmd), "failed to build '%s'", id);
     free(make_cmd);
 
-    ut_log("#[green]OK#[reset]   build '%s'\n", id);
+    bake_message(UT_OK, "done", "build '%s'", id);
 
     char *bin_path = ut_asprintf("%s"UT_OS_PS"bin"UT_OS_PS"%s-debug", path, UT_PLATFORM_STRING);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
@@ -268,7 +266,7 @@ int16_t bake_build_make_project(
         path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
-    ut_log("#[green]OK#[reset]   install '%s' to bake environment\n", id);
+    bake_message(UT_OK, "done", "install '%s' to bake environment", id);
     free(install_cmd);
 
     return 0;
@@ -310,7 +308,7 @@ int16_t bake_setup(
     ut_try( ut_mkdir(cur_env), NULL);
     free (cur_env);
 
-    ut_log("Bake setup, installing to ~/bake\n");
+    bake_message(UT_LOG, "", "Bake setup, installing to ~/bake");
 
     if (!local) {
         ut_try( bake_create_script(), "failed to create global bake script");
@@ -318,11 +316,12 @@ int16_t bake_setup(
 
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
         "failed to copy bake executable");
-    ut_log("#[green]OK#[reset]   copy bake executable\n");
+
+    bake_message(UT_OK, "done", "copy bake executable");
 
     ut_try( cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
         "failed to install bake include files");
-    ut_log("#[green]OK#[reset]   install bake include files\n");
+    bake_message(UT_OK, "done", "install bake include files");
 
     ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
 
@@ -331,10 +330,10 @@ int16_t bake_setup(
     ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     ut_try(cmd("bake"UT_OS_BIN_EXT" libraries"), NULL);
-    ut_log("#[green]OK#[reset]   Installed library configuration packages\n");
+    bake_message(UT_OK, "done", "install library configuration packages");
 
     ut_try(cmd("bake"UT_OS_BIN_EXT" templates"), NULL);
-    ut_log("#[green]OK#[reset]   Installed templates packages\n");
+    bake_message(UT_OK, "done", "install template packages");
 
     /*
 

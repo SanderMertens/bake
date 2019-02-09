@@ -163,13 +163,13 @@ int16_t bake_update_dependency_list(
         const char *src = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
         if (src) {
             /* If source is in bake environment, pull latest version */
-            ut_log("pull '%s' in '%s'\n", dep, src);
+            bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src);
             git_pull(src);
         } else {
             /* If source is a project under development, just build it */
             src = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
             if (src) {
-                ut_log("found '%s' in '%s' (in dev tree, not pulling)\n", dep, src);
+                bake_message(UT_LOG, "note", "#[green]package#[reset] %s found in '%s' (in dev tree, not pulling)", dep, src);
             }
         }
 
@@ -179,9 +179,7 @@ int16_t bake_update_dependency_list(
             ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
         } else {
             if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
-                ut_log(
-                  "found '%s' but cloning anyway because source is missing\n",
-                  dep);
+                bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
             }
 
             char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
@@ -223,7 +221,7 @@ int16_t bake_update(
     bake_project *project = NULL;
     ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
 
-    ut_log("update '%s' in '%s'\n", full_url, src_path);
+    bake_message(UT_LOG, "update", "'%s' in '%s'", full_url, src_path);
 
     git_pull(src_path);
 
@@ -260,7 +258,7 @@ int16_t bake_clone(
         free(src_path);
         return bake_update(config, url);
     } else {
-        ut_log("clone '%s' into '%s'\n", full_url, src_path);
+        bake_message(UT_LOG, "clone", "'%s' into '%s'", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);
         ut_try (cmd(gitcmd), NULL);
     }
@@ -329,14 +327,14 @@ int16_t bake_publish(
 
     command = ut_asprintf("git commit -m \"Published version %s\"", project->version);
     ut_try( cmd(command), NULL);
-    ut_log("#[green]OK #[normal]Committed version '%s'\n", project->version);
+    bake_message(UT_LOG, "done", "Committed version '%s'", project->version);
 
     command = ut_asprintf("git tag -a v%s -m \"Version v%s\"",
         project->version, project->version);
     ut_try( cmd(command), NULL);
-    ut_log("#[green]OK #[normal]Created tag 'v%s'\n", project->version);
+    bake_message(UT_LOG, "done", "Created tag 'v%s'", project->version);
 
-    ut_log("#[green]OK #[normal]Published %s:%s\n", project->id, project->version);
+    bake_message(UT_LOG, "done", "Published %s:%s", project->id, project->version);
 
     return 0;
 error:

@@ -904,6 +904,35 @@ void bake_dump_env() {
     ut_log_pop();
 }
 
+void bake_message(
+    int kind,
+    const char *bracket_txt,
+    const char *fmt,
+    ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    char *msg = ut_vasprintf(fmt, args);
+    va_end(args);
+
+    char *color;
+    if (kind == UT_OK) {
+        color = "green";
+    } else if (kind == UT_WARNING) {
+        color = "yellow";
+    } else if (kind == UT_ERROR) {
+        color = "red";
+    } else {
+        color = "green";
+    }
+
+    ut_log("#[%s][#[normal]%*s#[%s]]#[reset] %s\n", color, 7, bracket_txt, color, msg);
+
+    free(msg);
+}
+
+
 int main(int argc, const char *argv[]) {
 
     if (ut_getenv("BAKE_ENVIRONMENT")) {

@@ -30,6 +30,12 @@
 #include "crawler.h"
 #include "project.h"
 
+void bake_message(
+    int kind,
+    const char *bracket_txt,
+    const char *fmt,
+    ...);
+
 /* -- Configuration functions -- */
 
 /** Find bake config file(s), load specified configuration & environment */
