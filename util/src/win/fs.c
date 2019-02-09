@@ -61,6 +61,11 @@ int ut_symlink(
     }
     
     DWORD dwFlags = 0;
+
+    if (ut_isdir(fullname)) {
+        dwFlags = SYMBOLIC_LINK_FLAG_DIRECTORY;
+    }
+
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
         DWORD last_error = GetLastError();
         if (last_error == ERROR_PATH_NOT_FOUND) {
@@ -105,7 +110,7 @@ int ut_symlink(
     if (fullname != oldname) free(fullname);
     return 0;
 error:
-    ut_throw("symlink %s %s failed", newname, fullname);
+    ut_throw("symlink %s %s failed: %s", newname, fullname, ut_dl_error());
     if (fullname != oldname) free(fullname);
     return -1;
 }
@@ -114,7 +119,7 @@ int16_t ut_setperm(
     const char *name,
     int perm)
 {
-    ut_trace("setperm %s %d", name, perm);
+    ut_trace("#[cyan]setperm %s %d", name, perm);
     if (_chmod(name, perm)) {
         ut_throw("chmod: %s", ut_dl_error());
         return -1;
@@ -166,12 +171,12 @@ int ut_rm(const char *name) {
     if (PathFileExistsA(name))
     {
         if (ut_isdir(name)) {
-            ut_trace("rm %s (D)", name);
+            ut_trace("#[cyan]rm %s (D)", name);
             return ut_rmtree(name);
         }
         if (!DeleteFile(name)) {
             result = -1;
-            ut_throw(ut_dl_error());
+            ut_throw( ut_dl_error());
         }
     }
     else {
@@ -179,7 +184,7 @@ int ut_rm(const char *name) {
     }
 
     if (!result) {
-        ut_trace("rm %s", name);
+        ut_trace("#[cyan]rm %s", name);
     }
     
     return result;
