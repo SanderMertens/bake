@@ -950,7 +950,8 @@ int main(int argc, const char *argv[]) {
                 }
             }
         } else {
-            ut_throw("could not iterate over files in %s", UT_HOME_PATH);
+            ut_catch();
+            ut_debug("could not iterate over files in %s", UT_HOME_PATH);
         }
         ut_log_pop();
     }
