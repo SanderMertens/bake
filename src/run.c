@@ -598,7 +598,7 @@ int bake_run(
             }
         }
 
-        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] (%s)", app_id, pid, app_bin);
+        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, app_bin);
     }
 
     return 0;
