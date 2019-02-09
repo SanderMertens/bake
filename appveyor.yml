@@ -3,18 +3,14 @@ image: Visual Studio 2017
 build_script:
 - cmd: >-
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
-
     cd build-Windows\
-
     nmake
-
     cd ..\
 
 init:
   - 
     
 test_script:
-- cmd: dir
 - cmd: bake.exe setup
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
 - cmd: bake build examples
