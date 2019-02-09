@@ -15,7 +15,6 @@ init:
     
 test_script:
 - cmd: dir
-- cmd: SET BAKE_VERBOSITY=DEBUG
 - cmd: bake.exe setup
 - cmd: set PATH=%PATH%;%USERPROFILE%\bake\lib
 - cmd: bake build examples
