@@ -21,6 +21,8 @@
 
 #include "bake.h"
 
+#define BAKE_VERSION "2.3.0"
+
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
 ut_tls BAKE_PROJECT_KEY;
@@ -137,7 +139,7 @@ void bake_usage(void)
 
 void bake_version(void)
 {
-    printf("bake version 2.2.1 (%s %s %s)\n",
+    printf("bake version "BAKE_VERSION" (%s %s %s)\n",
         UT_PLATFORM_STRING,
         __DATE__,
         __TIME__);
@@ -900,8 +902,23 @@ int main(int argc, const char *argv[]) {
     ut_try (ut_tls_new(&BAKE_PROJECT_KEY, NULL), NULL);
     ut_try (ut_tls_new(&BAKE_CONFIG_KEY, NULL), NULL);
 
-    ut_log_push("init");
     ut_try (bake_parse_args(argc, argv), NULL);
+
+    if (ut_log_verbosityGet() <= UT_TRACE) {
+        printf("\n");
+        ut_log_push("bake "BAKE_VERSION);
+        ut_strbuf buf = UT_STRBUF_INIT;
+        int i;
+        for (i = 0; i < argc; i ++) {
+            ut_strbuf_append(&buf, "%s ", argv[i]);
+        }
+        char *args = ut_strbuf_get(&buf);
+        ut_trace("cmd  #[cyan]%s#[normal]", args);
+        free(args);
+        ut_log_pop();
+    }
+
+    ut_log_push("init");
 
     /* Initialize package loader for default home, arch, os and config */
     ut_load_init(NULL, NULL, NULL, cfg);
@@ -918,6 +935,23 @@ int main(int argc, const char *argv[]) {
     ut_trace("path: %s", path);
     ut_trace("action: %s", action);
     ut_log_pop();
+
+    /* Dump bake environment to console if in debug */
+    if (ut_log_verbosityGet() <= UT_DEBUG) {
+        ut_log_push("env-dump");
+        ut_iter it;
+        if (!ut_dir_iter(UT_HOME_PATH, "//", &it)) {
+            while (ut_iter_hasNext(&it)) {
+                char *file = ut_iter_next(&it);
+                if (!strstr(file, UT_OS_PS".git") && 
+                    !strstr(file, UT_OS_PS".bake_cache")) 
+                {
+                    ut_debug("#[normal]%s", file);
+                }
+            }
+        }
+        ut_log_pop();
+    }
 
     bake_config config = {
         .configuration = UT_CONFIG,
