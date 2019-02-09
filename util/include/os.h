@@ -68,7 +68,7 @@ extern "C" {
 #define UT_ENV_HOME "USERPROFILE"
 #define UT_ENV_LIBPATH "PATH"
 #define UT_ENV_BINPATH "PATH"
-#define UT_ENV_PATH_SEPARATOR ":"
+#define UT_ENV_PATH_SEPARATOR ";"
 #define UT_WINDOWS
 #elif defined(UT_OS_LINUX)
 #define UT_OS_STRING "Linux"
@@ -80,7 +80,7 @@ extern "C" {
 #define UT_ENV_HOME "HOME"
 #define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
 #define UT_ENV_BINPATH "PATH"
-#define UT_ENV_PATH_SEPARATOR ";"
+#define UT_ENV_PATH_SEPARATOR ":"
 #define UT_LINUX
 #elif defined(UT_OS_OSX)
 #define UT_OS_STRING "Darwin"
