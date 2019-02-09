@@ -787,29 +787,6 @@ int ut_logprint_function(
 }
 
 static
-int ut_logprint_proc(
-    ut_strbuf *buf)
-{
-    char *colors[] = {
-        "green",
-        "yellow",
-        "blue",
-        "magenta",
-        "cyan",
-        "white",
-        "grey",
-    };
-    ut_proc id = ut_proc();
-#ifndef _WIN32
-    ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[id % 6], id);
-#else
-    int _id = (int)id;
-    ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[_id % 6], _id);
-#endif
-    return 1;
-}
-
-static
 void ut_log_resetCursor(
     ut_log_tlsData *data)
 {
@@ -959,7 +936,6 @@ void ut_logprint(
             case 'r': ret = ut_logprint_function(cur, function); break;
             case 'm': ret = ut_logprint_msg(cur, msg); break;
             case 'a': ut_strbuf_append(cur, "#[cyan]%s#[reset]", ut_log_appName); break;
-            case 'A': ret = ut_logprint_proc(cur); break;
             case 'V': if (only_warn) { ut_logprint_kind(cur, kind, breakAtCategory || closeCategory); } else { ret = 0; } break;
             case 'F': if (only_warn) { ret = ut_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
             case 'L': if (only_warn) { ret = ut_logprint_line(cur, line, FALSE); } else { ret = 0; } break;

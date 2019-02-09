@@ -143,7 +143,6 @@ bool ut_log_profile(
  * The following characters can be used for specifying the format:
  * -v Verbosity
  * -a Application name
- * -A Process id
  * -c Category
  * -C Category (tree view)
  * -m Formatted message
