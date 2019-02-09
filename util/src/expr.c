@@ -562,7 +562,7 @@ bool ut_expr_run(
         const char *elements[UT_MAX_SCOPE_DEPTH + 1];
         ut_exprOp *op = program->ops;
         const char **elem = elements;
-        ut_id id;
+        char id[512];
         if (str) {
             strcpy(id, str);
             strlower(id);

@@ -92,9 +92,6 @@
 
 /* Cpp headers */
 #ifdef __cplusplus
-#ifndef UT_CPP_H
-#include <utility>
-#endif
 extern "C" {
 #endif
 
@@ -110,51 +107,14 @@ extern "C" {
  *   scenario's.
  */
 
-/* The maximum nesting level of objects in the hierarchy. There are in total
- * 62 orders of magnitude in the universe, so 64 should be adequate to organize
- * most information sets.
- */
+/* The maximum nesting level of expressions in expr */
 #define UT_MAX_SCOPE_DEPTH (64)
 
-/* The maximum inheritance depth. Think 16 is too small? The Java world record
- * is set at 12 levels of inheritance:
- * http://www.javaspecialists.eu/records/index.jsp
- *
- * Please don't use 16 levels of inheritance.
- */
-#define UT_MAX_INHERITANCE_DEPTH (16)
-
-/* The maximum number of languages you can construct to a single Corto process. */
-#define UT_MAX_BINDINGS (16)
-
-/* The maximum number of threads that can make use of the Corto
- * API simultaneously. */
-#define UT_MAX_THREADS (64)
-
-/* The maximum number of nested notifications. */
-#define UT_MAX_NOTIFY_DEPTH (16)
-
-/* The max length of a scoped identifier (incl \0). When combining this with the
- * MAX_SCOPE_DEPTH, and taking into consideration the scope separator (/) you
- * can have a tree that is 64 levels deep, where each object has a 7-character
- * name, and one object with 6, to compensate for \0. Or, you can have an object
- * in the root with a 510 character name with no children. */
-#define UT_MAX_PATH_LENGTH (512)
-
-/* The maximum number of objects that a thread can wait for simultaneously */
-#define UT_MAX_WAIT_FOR_OBJECTS (32)
-
-/* Corto can't load files with extensions longer than 16 characters */
+/* Limit length of file extensions to 16 characters */
 #define UT_MAX_FILE_EXTENSION (16)
-
-/* Maximum number of OLS extensions that is supported by the core */
-#define UT_MAX_OLS_KEY (256)
 
 /* Maximum number of TLS keys that is supported by the core */
 #define UT_MAX_THREAD_KEY (256)
-
-/* The maximum number of arguments that can be passed to the Corto arg parser */
-#define UT_ARG_MAX (256)
 
 /* The maximum number of TLS strings that can exist simultaneously */
 #define UT_MAX_TLS_STRINGS (5)
@@ -170,12 +130,6 @@ extern "C" {
 
 /* Maximum number of operations in an id expression */
 #define UT_EXPR_MAX_OP (32)
-
-/* Maximum number of content types in a process */
-#define UT_MAX_CONTENTTYPE (32)
-
-/* Maximum number of simultaneous benchmarks */
-#define UT_MAX_BENCHMARK (64)
 
 /* Maximum number of categories in logmsg, like: "comp1: comp2: comp3: msg" */
 #define UT_MAX_LOG_CATEGORIES (24)
@@ -244,30 +198,9 @@ extern "C" {
 
 #define UT_FUNCTION __func__
 
-/* Macro's used to prevent type checking macro's from expanding */
-#define ___
-
-/* Macro used to annotate parameters in bootstrap.h */
-#define _(txt)
-
-/* Corto string representing null */
-#define UT_NULL_STRING ("null")
-
-/* String type that is large enough to hold any corto identifier */
-typedef char ut_id[UT_MAX_PATH_LENGTH];
-
 /* Builtin collection-implementation definitions */
 typedef struct ut_rb_s* ut_rb;
 typedef struct ut_ll_s* ut_ll;
-
-/* Builtin procedure kinds */
-#define UT_PROCEDURE_STUB (0)
-#define UT_PROCEDURE_CDECL (1)
-
-/* C language binding type definition macro's */
-#define UT_ANY(__type) typedef struct __type {ut_type type; void *value; uint8_t owner;} __type
-#define UT_SEQUENCE(type, subtype, postexpr) typedef struct type {uint32_t length; subtype _()(*buffer) postexpr;} type
-#define UT_SEQUENCE_EMPTY(type) (type){0}
 
 /* Iterator type */
 typedef struct ut_iter ut_iter;
@@ -307,8 +240,11 @@ struct jsw_rbtrav {
 };
 
 /* Global variables */
-UT_EXPORT extern int8_t UT_APP_STATUS;
-UT_EXPORT extern int8_t UT_LOG_BACKTRACE;
+UT_EXPORT 
+extern int8_t UT_APP_STATUS;
+
+UT_EXPORT 
+extern int8_t UT_LOG_BACKTRACE;
 
 UT_EXPORT
 void ut_init(

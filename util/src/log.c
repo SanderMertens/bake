@@ -624,7 +624,7 @@ void ut_logprint_friendlyTime(
     ut_strbuf *buf,
     struct timespec t)
 {
-    ut_id tbuff;
+    char tbuff[512];
     time_t sec = t.tv_sec;
     struct tm * timeinfo = localtime(&sec);
     strftime(tbuff, sizeof(tbuff), "%F %T", timeinfo);

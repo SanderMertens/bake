@@ -665,7 +665,7 @@ struct ut_fileHandler* ut_load_filehandler(
 
     /* If filehandler is not found, look it up in driver/ext */
     if (!h) {
-        ut_id extPackage;
+        char extPackage[512];
         sprintf(extPackage, "driver"UT_OS_PS"ext"UT_OS_PS"%s", ext);
 
         ut_try(

@@ -22,7 +22,7 @@
 #include "../include/util.h"
 
 char* ut_hostname(void) {
-    ut_id buff;
+    char buff[256];
     gethostname(buff, sizeof(buff));
     return ut_setThreadString(buff);
 }

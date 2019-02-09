@@ -284,7 +284,7 @@ char* bake_attr_replace(
             }
 
             /* Obtain identifier & check if it contains invalid characters */
-            ut_id func_id = {0}, arg_id = {0};
+            char func_id[512] = {0}, arg_id[512] = {0};
             const char *ptr;
             for (ptr = start; ptr < end; ptr ++) {
                 if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {

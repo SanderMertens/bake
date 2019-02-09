@@ -49,7 +49,7 @@ int ut_chdir(const char *dir) {
 }
 
 char* ut_cwd(void) {
-    ut_id cwd;
+    char cwd[512];
     if (getcwd(cwd, sizeof(cwd))) {
         return ut_setThreadString(cwd);
     } else {
