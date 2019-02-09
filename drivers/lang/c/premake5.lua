@@ -14,7 +14,7 @@ workspace "bake_lang_c"
 
     objdir ".bake_cache"
 
-    files { "include/*.h", "src/*.c" }
+    files { "include/*.h", "src/posix/*.c" }
     includedirs { ".", "$(BAKE_HOME)/include" }
 
     links { "bake_util" }

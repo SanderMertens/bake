@@ -79,7 +79,6 @@ OBJECTS := \
 	$(OBJDIR)/rule.o \
 	$(OBJDIR)/run.o \
 	$(OBJDIR)/setup.o \
-	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
 	$(OBJDIR)/expr.o \
 	$(OBJDIR)/file.o \
@@ -93,11 +92,13 @@ OBJECTS := \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/parson.o \
 	$(OBJDIR)/path.o \
+	$(OBJDIR)/dl.o \
+	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
+	$(OBJDIR)/thread.o \
 	$(OBJDIR)/rb.o \
 	$(OBJDIR)/strbuf.o \
 	$(OBJDIR)/string.o \
-	$(OBJDIR)/thread.o \
 	$(OBJDIR)/time.o \
 	$(OBJDIR)/util.o \
 	$(OBJDIR)/version.o \
@@ -201,9 +202,6 @@ $(OBJDIR)/run.o: ../src/run.c
 $(OBJDIR)/setup.o: ../src/setup.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/dl.o: ../util/src/dl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/env.o: ../util/src/env.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -243,7 +241,16 @@ $(OBJDIR)/parson.o: ../util/src/parson.c
 $(OBJDIR)/path.o: ../util/src/path.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/proc.o: ../util/src/proc.c
+$(OBJDIR)/dl.o: ../util/src/posix/dl.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/fs1.o: ../util/src/posix/fs.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/proc.o: ../util/src/posix/proc.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/thread.o: ../util/src/posix/thread.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rb.o: ../util/src/rb.c
@@ -253,9 +260,6 @@ $(OBJDIR)/strbuf.o: ../util/src/strbuf.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/string.o: ../util/src/string.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/thread.o: ../util/src/thread.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/time.o: ../util/src/time.c

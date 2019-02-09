@@ -19,34 +19,47 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include "../../include/util.h"
 
 typedef void*(*dlproc)(void);
 
 /* Link dynamic library */
 ut_dl ut_dl_open(const char* file) {
     ut_dl dl;
-
-    dl = (ut_dl)dlopen(file, RTLD_NOW | RTLD_LOCAL);
-
+    dl = LoadLibraryA(file);
     return dl;
 }
 
 /* Close dynamic library */
 void ut_dl_close(ut_dl dl) {
-    dlclose(dl);
+    FreeLibrary(dl);
 }
 
 /* Lookup symbol in dynamic library */
 void* ut_dl_sym(ut_dl dl, const char* sym) {
-    return dlsym(dl, sym);
+    FARPROC a = GetProcAddress(dl, sym);
+    return (void *)a;
 }
 
 /* Lookup procedure in dynamic library */
 void*(*ut_dl_proc(ut_dl dl, const char* proc))(void) {
-    return (dlproc)(intptr_t)dlsym(dl, proc);
+    FARPROC a = GetProcAddress(dl, proc);
+    return (void*)a;
 }
 
+/* Lookup last error */
 const char* ut_dl_error(void) {
-    return dlerror();
+    LPVOID lpMsgBuf;
+    LPVOID lpDisplayBuf;
+    DWORD dw = GetLastError();
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&lpMsgBuf,
+        0, NULL);
+    return (const char*)lpMsgBuf;
 }

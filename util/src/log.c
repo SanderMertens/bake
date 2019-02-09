@@ -24,6 +24,22 @@
 #define UT_LOG_FILE_LEN (20)
 #define UT_MAX_LOG (1024)
 
+#ifdef _WIN32
+void ut_enable_console_color(int io_handle)
+{
+    HANDLE hOut = GetStdHandle(io_handle);
+    if (hOut == INVALID_HANDLE_VALUE)
+        return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode))
+        return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+#endif
+
 ut_log_verbosity ut_logv(
     char const *file,
     unsigned int line,
@@ -254,11 +270,12 @@ void ut_printBacktrace(FILE* f, int nEntries, char** symbols) {
 }
 
 void ut_backtrace(FILE* f) {
+#ifndef _WIN32
     int nEntries;
     void* buff[BACKTRACE_DEPTH];
     char** symbols;
 
-#ifdef ENABLE_BACKTRACE
+    #ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -269,8 +286,32 @@ void ut_backtrace(FILE* f) {
     } else {
         fprintf(f, "obtaining backtrace failed.");
     }
+    #endif
 #else
-    fprintf(f, "backtrace unavailable");
+    void *stack[TRACE_MAX_STACK_FRAMES];
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+    WORD numberOfFrames = CaptureStackBackTrace(0, TRACE_MAX_STACK_FRAMES, stack, NULL);
+    SYMBOL_INFO *symbol = (SYMBOL_INFO *)malloc(sizeof(SYMBOL_INFO) + (TRACE_MAX_FUNCTION_NAME_LENGTH - 1) * sizeof(TCHAR));
+    symbol->MaxNameLen = TRACE_MAX_FUNCTION_NAME_LENGTH;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    DWORD displacement;
+    IMAGEHLP_LINE64 *line = (IMAGEHLP_LINE64 *)malloc(sizeof(IMAGEHLP_LINE64));
+    line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    for (int i = 0; i < numberOfFrames; i++)
+    {
+        DWORD64 address = (DWORD64)(stack[i]);
+        SymFromAddr(process, address, NULL, symbol);
+        if (SymGetLineFromAddr64(process, address, &displacement, line))
+        {
+            fprintf(f, "\tat %s in %s: line: %lu: address: 0x%I64X\n", symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+        }
+        else
+        {
+            fprintf(f, "\tSymGetLineFromAddr64 returned error code %lu.\n", GetLastError());
+            fprintf(f, "\tat %s, address 0x%I64X.\n", symbol->Name, symbol->Address);
+        }
+    }
 #endif
 }
 
@@ -283,7 +324,8 @@ char* ut_backtraceString(void) {
     result = malloc(10000);
     *result = '\0';
 
-#ifdef ENABLE_BACKTRACE
+#ifndef _WIN32
+    #ifdef ENABLE_BACKTRACE
     nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
         symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
@@ -298,8 +340,35 @@ char* ut_backtraceString(void) {
     } else {
         fprintf(stderr, "obtaining backtrace failed.");
     }
-#else
+    #else
     result = ut_strdup("backtrace unavailable");
+    #endif
+#else
+    void *stack[TRACE_MAX_STACK_FRAMES];
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+    WORD numberOfFrames = CaptureStackBackTrace(0, TRACE_MAX_STACK_FRAMES, stack, NULL);
+    SYMBOL_INFO *symbol = (SYMBOL_INFO *)malloc(sizeof(SYMBOL_INFO) + (TRACE_MAX_FUNCTION_NAME_LENGTH - 1) * sizeof(TCHAR));
+    symbol->MaxNameLen = TRACE_MAX_FUNCTION_NAME_LENGTH;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    DWORD displacement;
+    IMAGEHLP_LINE64 *line = (IMAGEHLP_LINE64 *)malloc(sizeof(IMAGEHLP_LINE64));
+    line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    for (int i = 0; i < numberOfFrames; i++)
+    {
+        DWORD64 address = (DWORD64)(stack[i]);
+        SymFromAddr(process, address, NULL, symbol);
+        if (SymGetLineFromAddr64(process, address, &displacement, line))
+        {
+            sprintf(result, "%s \tat %s in %s: line: %lu: address: 0x%I64X\n", result, symbol->Name, line->FileName, line->LineNumber, symbol->Address);
+        }
+        else
+        {
+            sprintf(result, "%s \tSymGetLineFromAddr64 returned error code %lu.\n", result, GetLastError());
+            sprintf(result, "%s \tat %s, address 0x%I64X.\n", result, symbol->Name, symbol->Address);
+        }
+    }
+    strcat(result, "\n");
 #endif
 
     return result;
@@ -647,7 +716,7 @@ char const* ut_log_stripFunctionName(
         char const *ptr;
         char ch;
         for (ptr = file; (ch = *ptr); ptr++) {
-            if (ch == '.' || ch == '/') {
+            if (ch == '.' || ch == UT_OS_PS[0]) {
                 file = ptr + 1;
             } else {
                 break;
@@ -731,7 +800,12 @@ int ut_logprint_proc(
         "grey",
     };
     ut_proc id = ut_proc();
+#ifndef _WIN32
     ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[id % 6], id);
+#else
+    int _id = (int)id;
+    ut_strbuf_append(buf, "#[%s]%u#[reset]", colors[_id % 6], _id);
+#endif
     return 1;
 }
 
@@ -944,6 +1018,7 @@ void ut_logprint(
 
     if (str) {
         char *colorized = ut_log_colorize(str);
+
         if (breakAtCategory) {
             fprintf(f, "%s", colorized);
         } else {

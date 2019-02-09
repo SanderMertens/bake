@@ -31,7 +31,11 @@
 extern "C" {
 #endif
 
+#ifndef _WIN32
 typedef struct ut_dl_s* ut_dl;
+#else
+typedef HMODULE ut_dl;
+#endif 
 
 /** Load dynamic library.
  *

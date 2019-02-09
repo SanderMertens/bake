@@ -21,6 +21,12 @@
 
 #include "../include/util.h"
 
+#ifndef _WIN32
+#define __mkdir(name) mkdir(name, 0755)
+#else
+#define __mkdir(name) _mkdir(name)
+#endif
+
 int ut_touch(const char *file) {
     FILE* touch = NULL;
 
@@ -53,7 +59,7 @@ char* ut_cwd(void) {
 }
 
 int ut_mkdir(const char *fmt, ...) {
-    int _errno = 0;
+    int local_errno = 0;
 
     va_list args;
     va_start(args, fmt);
@@ -78,24 +84,24 @@ int ut_mkdir(const char *fmt, ...) {
 
     ut_trace("#[cyan]mkdir %s", name);
 
-    if (mkdir(name, 0755)) {
-        _errno = errno;
+    if (__mkdir(name)) {
+        local_errno = errno;
 
         /* If error is ENOENT an element in the prefix of the name
          * doesn't exist. Recursively create pathname, and retry. */
         if (errno == ENOENT) {
             /* Allocate so as to not run out of stackspace in recursive call */
             char *prefix = ut_strdup(name);
-            char *ptr = strrchr(prefix, '/');
+            char *ptr = strrchr(prefix, UT_OS_PS[0]);
 
             if (ptr && ptr != prefix && ptr[-1] != '.') {
                 ptr[0] = '\0';
                 if (!ut_mkdir(prefix)) {
                     /* Retry current directory */
-                    if (!mkdir(name, 0755)) {
-                        _errno = 0;
+                    if (!__mkdir(name)) {
+                        local_errno = 0;
                     } else {
-                        _errno = errno;
+                        local_errno = errno;
                     }
                 } else {
                     goto error;
@@ -109,7 +115,7 @@ int ut_mkdir(const char *fmt, ...) {
 
         /* Post condition for function is that directory exists so don't
          * report an error if it already did. */
-        if (_errno && (_errno != EEXIST)) {
+        if (local_errno && (local_errno != EEXIST)) {
             goto error;
         }
     }
@@ -136,9 +142,9 @@ int ut_cp_file(
     bool exists = ut_file_test(dst);
 
     if (exists && ut_isdir(dst) && !ut_isdir(src)) {
-        const char *base = strrchr(src, '/');
+        const char *base = strrchr(src, UT_OS_PS[0]);
         if (!base) base = src; else base = base + 1;
-        fullDst = ut_asprintf("%s/%s", dst, base);
+        fullDst = ut_asprintf("%s"UT_OS_PS"%s", dst, base);
         exists = ut_file_test(fullDst);
     }
 
@@ -155,7 +161,7 @@ int ut_cp_file(
         if (errno == ENOENT) {
             /* If error is ENOENT, try creating directory */
             char *dir = ut_path_dirname(fullDst);
-            int old_errno = errno;
+            int oldlocal_errno = errno;
 
             if (dir[0] && !ut_mkdir(dir)) {
                 /* Retry */
@@ -164,7 +170,7 @@ int ut_cp_file(
                     goto error_CloseFiles;
                 }
             } else {
-                ut_throw("cannot open %s: %s", fullDst, strerror(old_errno));
+                ut_throw("cannot open %s: %s", fullDst, strerror(oldlocal_errno));
             }
             free(dir);
         } else {
@@ -242,10 +248,10 @@ int16_t ut_cp_dir(
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        char *src_path = ut_asprintf("%s/%s", src, file);
+        char *src_path = ut_asprintf("%s"UT_OS_PS"%s", src, file);
 
         if (ut_isdir(src_path)) {
-            char *dst_path = ut_asprintf("%s/%s", dst, src_path);
+            char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", dst, src_path);
             if (ut_cp_dir(src_path, dst_path)) {
                 goto error;
             }
@@ -299,221 +305,6 @@ error:
     return -1;
 }
 
-static
-bool ut_checklink(
-    const char *link,
-    const char *file)
-{
-    char buf[512];
-    char *ptr = buf;
-    int length = strlen(file);
-    if (length >= 512) {
-        ptr = malloc(length + 1);
-    }
-    int res;
-    if (((res = readlink(link, ptr, length)) < 0)) {
-        goto nomatch;
-    }
-    if (res != length) {
-        goto nomatch;
-    }
-    if (strncmp(file, ptr, length)) {
-        goto nomatch;
-    }
-    if (ptr != buf) free(ptr);
-    return true;
-nomatch:
-    if (ptr != buf) free(ptr);
-    return false;
-}
-
-int ut_symlink(
-    const char *oldname,
-    const char *newname)
-{
-    char *fullname = NULL;
-    if (oldname[0] != '/') {
-        fullname = ut_asprintf("%s/%s", ut_cwd(), oldname);
-        ut_path_clean(fullname, fullname);
-    } else {
-        /* Safe- the variable will not be modified if it's equal to newname */
-        fullname = (char*)oldname;
-    }
-
-    ut_trace("#[cyan]symlink %s %s", newname, fullname);
-
-    if (symlink(fullname, newname)) {
-
-        if (errno == ENOENT) {
-            /* If error is ENOENT, try creating directory */
-            char *dir = ut_path_dirname(newname);
-            int old_errno = errno;
-
-            if (dir[0] && !ut_mkdir(dir)) {
-                /* Retry */
-                if (ut_symlink(fullname, newname)) {
-                    goto error;
-                }
-            } else {
-                ut_throw("%s: %s", newname, strerror(old_errno));
-            }
-            free(dir);
-
-        } else if (errno == EEXIST) {
-            if (!ut_checklink(newname, fullname)) {
-                /* If a file with specified name already exists, remove existing file */
-                if (ut_rm(newname)) {
-                    goto error;
-                }
-
-                /* Retry */
-                if (ut_symlink(fullname, newname)) {
-                    goto error;
-                }
-            } else {
-                /* Existing file is a link that points to the same location */
-            }
-        }
-    }
-
-    if (fullname != oldname) free(fullname);
-    return 0;
-error:
-    if (fullname != oldname) free(fullname);
-    ut_throw("symlink failed");
-    return -1;
-}
-
-int16_t ut_setperm(
-    const char *name,
-    int perm)
-{
-    ut_trace("#[cyan]setperm %s %d", name, perm);
-    if (chmod(name, perm)) {
-        ut_throw("chmod: %s", strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
-int16_t ut_getperm(
-    const char *name,
-    int *perm_out)
-{
-    struct stat st;
-
-    if (stat(name, &st) < 0) {
-        ut_throw("getperm: %s", strerror(errno));
-        return -1;
-    }
-
-    *perm_out = st.st_mode;
-
-    return 0;
-}
-
-bool ut_isdir(const char *path) {
-    struct stat buff;
-    if (stat(path, &buff) < 0) {
-        return 0;
-    }
-    return S_ISDIR(buff.st_mode) ? true : false;
-}
-
-int ut_rename(const char *oldName, const char *newName) {
-    if (rename(oldName, newName)) {
-        ut_throw("failed to move %s %s: %s",
-            oldName, newName, strerror(errno));
-        goto error;
-    }
-    return 0;
-error:
-    return -1;
-}
-
-/* Remove a file. Returns 0 if OK, -1 if failed */
-int ut_rm(const char *name) {
-    int result = 0;
-
-    /* First try to remove file. The 'remove' function may fail if 'name' is a
-     * directory that is not empty, however it may also be a link to a directory
-     * in which case ut_isdir would also return true.
-     *
-     * For that reason, the function should not always perform a recursive delete
-     * if a directory is encountered, because in case of a link, only the link
-     * should be removed, not the contents of its target directory.
-     *
-     * Trying to remove the file first is a solution to this problem that works
-     * on any platform, even the ones that do not support links (as opposed to
-     * checking if the file is a link first).
-     */
-    if (remove(name)) {
-        if (errno != ENOENT) {
-            if (ut_isdir(name)) {
-                ut_trace("#[cyan]rm %s (D)", name);
-                return ut_rmtree(name);
-            } else {
-                result = -1;
-                ut_throw(strerror(errno));
-            }
-        } else {
-            /* Don't care if file doesn't exist */
-        }
-    }
-
-    if (!result) {
-        ut_trace("#[cyan]rm %s", name);
-    }
-
-    return result;
-}
-
-static int ut_rmtreeCallback(
-  const char *path,
-  const struct stat *sb,
-  int typeflag,
-  struct FTW *ftwbuf)
-{
-    UT_UNUSED(sb);
-    UT_UNUSED(typeflag);
-    UT_UNUSED(ftwbuf);
-    if (remove(path)) {
-        ut_throw(strerror(errno));
-        goto error;
-    }
-    return 0;
-error:
-    return -1;
-}
-
-/* Recursively remove a directory */
-int ut_rmtree(const char *name) {
-    return nftw(name, ut_rmtreeCallback, 20, FTW_DEPTH | FTW_PHYS);
-}
-
-/* Read the contents of a directory */
-ut_ll ut_opendir(const char *name) {
-    DIR *dp;
-    struct dirent *ep;
-    ut_ll result = NULL;
-
-    dp = opendir (name);
-
-    if (dp != NULL) {
-        result = ut_ll_new();
-        while ((ep = readdir (dp))) {
-            if (strcmp(ep->d_name, ".") && strcmp(ep->d_name, "..")) {
-                ut_ll_append(result, ut_strdup(ep->d_name));
-            }
-        }
-        closedir (dp);
-    } else {
-        ut_throw("%s: %s", name, strerror(errno));
-    }
-
-    return result;
-}
-
 void ut_closedir(ut_ll dir) {
     ut_iter iter = ut_ll_iter(dir);
 
@@ -527,36 +318,6 @@ struct ut_dir_filteredIter {
     ut_expr_program program;
     void *files;
 };
-
-static
-bool ut_dir_hasNext(
-    ut_iter *it)
-{
-    struct dirent *ep = readdir(it->ctx);
-    while (ep && (!strcmp(ep->d_name, ".") || !strcmp(ep->d_name, ".."))) {
-        ep = readdir(it->ctx);
-    }
-
-    if (ep) {
-        it->data = ep->d_name;
-    }
-
-    return ep ? true : false;
-}
-
-static
-void* ut_dir_next(
-    ut_iter *it)
-{
-    return it->data;
-}
-
-static
-void ut_dir_release(
-    ut_iter *it)
-{
-    closedir(it->ctx);
-}
 
 static
 void ut_dir_releaseRecursiveFilter(
@@ -601,9 +362,9 @@ int16_t ut_dir_collect(
         /* Add file to results if it matches filter */
         char *path;
         if (offset) {
-            path = ut_asprintf("%s/%s/%s", ut_dirstack_wd(stack), offset, file);
+            path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"%s", ut_dirstack_wd(stack), offset, file);
         } else {
-            path = ut_asprintf("%s/%s", ut_dirstack_wd(stack), file);
+            path = ut_asprintf("%s"UT_OS_PS"%s", ut_dirstack_wd(stack), file);
         }
         ut_path_clean(path, path);
 
@@ -616,7 +377,7 @@ int16_t ut_dir_collect(
         }
 
         /* If directory, crawl recursively */
-        char *fullpath = ut_asprintf("%s/%s", ut_ll_last(stack), file);
+        char *fullpath = ut_asprintf("%s"UT_OS_PS"%s", ut_ll_last(stack), file);
         if (ut_isdir(fullpath)) {
             if (ut_dir_collect(file, stack, filter, offset, files, true)) {
                 free(fullpath);
@@ -657,9 +418,9 @@ int16_t ut_dir_iter(
         for (ptr = filter; (ch = *ptr); ptr ++) {
             if (ut_expr_isOperator(ch)) {
                 break;
-            } else if (ch == '/') {
+            } else if (ch == UT_OS_PS[0]) {
                 last_elem = ptr;
-                if (ptr[1] == '/') {
+                if (ptr[1] == UT_OS_PS[0]) {
                     break;
                 }
             }
@@ -671,7 +432,7 @@ int16_t ut_dir_iter(
                 /* If there are no elements, filter matches single file */
             } else {
                 /* If there are elements, append filter to path */
-                path = ut_asprintf("%s/%s", path, filter);
+                path = ut_asprintf("%s"UT_OS_PS"%s", path, filter);
                 ut_path_clean(path, path);
                 filter = NULL;
             }
@@ -681,7 +442,7 @@ int16_t ut_dir_iter(
             } else {
                 /* Part of filter is path, strip it off and add to path */
                 uint32_t old_len = strlen(path);
-                path = ut_asprintf("%s/%s", path, filter);
+                path = ut_asprintf("%s"UT_OS_PS"%s", path, filter);
                 path[strlen(path) - strlen(last_elem)] = '\0';
                 offset = &path[old_len] + 1;
                 filter = last_elem;
@@ -766,7 +527,7 @@ ut_dirstack ut_dirstack_push(
         stack = ut_ll_new();
         ut_ll_append(stack, ut_strdup(dir));
     } else {
-        ut_ll_append(stack, ut_asprintf("%s/%s", ut_ll_last(stack), dir));
+        ut_ll_append(stack, ut_asprintf("%s"UT_OS_PS"%s", ut_ll_last(stack), dir));
     }
 
     return stack;
@@ -791,7 +552,7 @@ const char* ut_dirstack_wd(
         return ".";
     } else {
         last += first_len;
-        if (last[0] == '/') {
+        if (last[0] == UT_OS_PS[0]) {
             last ++;
         }
 

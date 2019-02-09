@@ -1,6 +1,6 @@
-rm -rf build-darwin
-rm -rf build-linux
+rm -rf build-Darwin
+rm -rf build-Linux
 ../../../../premake5 --os=macosx gmake
-mv build build-darwin
+mv build build-Darwin
 ../../../../premake5 --os=linux gmake
-mv build build-linux
+mv build build-Linux

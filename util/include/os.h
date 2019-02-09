@@ -36,7 +36,7 @@ extern "C" {
 #warning "bake is not supported on platforms which are neither 32- nor 64-bit."
 #endif
 
-#if defined(WIN32) || defined(WIN64)
+#if defined(_WIN32)
 #define UT_OS_WINDOWS
 #elif defined(__linux__)
 #define UT_OS_LINUX
@@ -46,13 +46,13 @@ extern "C" {
 #warning "Unsupported operating system"
 #endif
 
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(_M_ARM64)
 #define UT_CPU_STRING  "arm64"
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(_M_ARM)
 #define UT_CPU_STRING  "arm"
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(_M_X64)
 #define UT_CPU_STRING  "x64"
-#elif defined(__i386__)
+#elif defined(__i386__) || defined(_M_IX86)
 #define UT_CPU_STRING  "x86"
 #else
 #error "Unsupported CPU architecture"
@@ -63,18 +63,37 @@ extern "C" {
 #define UT_OS_LIB_EXT ".dll"
 #define UT_OS_STATIC_LIB_EXT ".lib"
 #define UT_OS_BIN_EXT ".exe"
+#define UT_OS_LIB_PREFIX ""
+#define UT_OS_PS "\\"
+#define UT_ENV_HOME "USERPROFILE"
+#define UT_ENV_LIBPATH "PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ":"
 #define UT_WINDOWS
 #elif defined(UT_OS_LINUX)
 #define UT_OS_STRING "Linux"
 #define UT_OS_LIB_EXT ".so"
 #define UT_OS_STATIC_LIB_EXT ".a"
 #define UT_OS_BIN_EXT ""
+#define UT_OS_LIB_PREFIX "lib"
+#define UT_OS_PS "/"
+#define UT_ENV_HOME "HOME"
+#define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ";"
 #define UT_LINUX
 #elif defined(UT_OS_OSX)
 #define UT_OS_STRING "Darwin"
 #define UT_OS_LIB_EXT ".dylib"
 #define UT_OS_STATIC_LIB_EXT ".a"
 #define UT_OS_BIN_EXT ""
+#define UT_OS_LIB_PREFIX "lib"
+#define UT_OS_PS "/"
+#define UT_ENV_HOME "HOME"
+#define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
+#define UT_ENV_DYLIBPATH "DYLD_LIBRARY_PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ":"
 #define UT_MACOS
 #define UT_LINUX
 #endif

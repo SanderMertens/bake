@@ -113,7 +113,7 @@ int16_t bake_parse_repo_url(
           url);
     }
 
-    char *src_path = ut_envparse("%s/%s", UT_SRC_PATH, name);
+    char *src_path = ut_envparse("%s"UT_OS_PS"%s", UT_SRC_PATH, name);
 
     char *last_elem = strrchr(full_url, '/');
     char *base_url = NULL;

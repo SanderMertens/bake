@@ -153,7 +153,7 @@ int16_t bake_project_parse(
     bake_config *config,
     bake_project *project)
 {
-    char *file = ut_asprintf("%s/project.json", project->path);
+    char *file = ut_asprintf("%s"UT_OS_PS"project.json", project->path);
 
     if (ut_file_test(file) == 1) {
         JSON_Value *j = json_parse_file_with_comments(file);
@@ -358,7 +358,7 @@ int16_t bake_project_add_dependee_config(
     const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
     if (libpath) {
         /* Check if dependency has a dependee file with build instructions */
-        char *file = ut_asprintf("%s/dependee.json", libpath);
+        char *file = ut_asprintf("%s"UT_OS_PS"dependee.json", libpath);
         if (ut_file_test(file)) {
             ut_try (
               bake_project_load_dependee_config(config, project, dependency, file),
@@ -434,11 +434,11 @@ void bake_project_init_artefact(
 {
     if (project->artefact) {
         project->artefact_path = ut_asprintf(
-            "%s/bin/%s-%s", project->path, UT_PLATFORM_STRING,
+            "%s"UT_OS_PS"bin"UT_OS_PS"%s-%s", project->path, UT_PLATFORM_STRING,
             config->configuration);
 
         project->artefact_file = ut_asprintf(
-            "%s/%s", project->artefact_path, project->artefact);
+            "%s"UT_OS_PS"%s", project->artefact_path, project->artefact);
     }
 }
 
@@ -532,15 +532,15 @@ int16_t bake_project_init(
     }
 
     project->bin_path = ut_asprintf(
-        "%s/bin", project->path);
+        "%s"UT_OS_PS"bin", project->path);
 
     project->cache_path = ut_asprintf(
-        "%s/.bake_cache", project->path);
+        "%s"UT_OS_PS".bake_cache", project->path);
 
-    if (project->path[0] == '/') {
+    if (project->path[0] == UT_OS_PS[0]) {
         project->fullpath = ut_strdup(project->path);
     } else if (strcmp(project->path, ".")) {
-        project->fullpath = ut_asprintf("%s/%s", ut_cwd(), project->path);
+        project->fullpath = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), project->path);
     } else {
         project->fullpath = ut_strdup(ut_cwd());
     }
@@ -604,7 +604,7 @@ bake_project* bake_project_new(
     if (path) {
         ut_try (
             bake_project_parse(config, result),
-            "failed to parse '%s/project.json'",
+            "failed to parse '%s"UT_OS_PS"project.json'",
             path);
 
         ut_try( bake_project_init(config, result), NULL);
@@ -1039,19 +1039,21 @@ ut_ll bake_project_copy_libs(
     while (ut_iter_hasNext(&it)) {
         char *link = ut_iter_next(&it);
 
-        char *link_lib = strrchr(link, '/');
+        char *link_lib = strrchr(link, UT_OS_PS[0]);
         if (!link_lib) {
             link_lib = link;
         } else {
             link_lib ++;
         }
 
+#ifndef _WIN32
         if (!strncmp(link_lib, "lib", 3)) {
             link_lib += 3;
         }
+#endif
 
-        char *target_link = ut_asprintf("%s/lib%s_%s",
-            path, p->id_underscore, link_lib);
+        char *target_link = ut_asprintf("%s"UT_OS_PS"%s%s_%s",
+            path, UT_LIB_PREFIX, p->id_underscore, link_lib);
 
         /* Copy to path */
         if (ut_cp(link, target_link)) {
@@ -1103,7 +1105,7 @@ int16_t bake_project_add_dependency(
         char *dep_lib = ut_strdup(dep);
         char *ptr, ch;
         for (ptr = dep_lib; (ch = *ptr); ptr ++) {
-            if (ch == '/' || ch == '.') {
+            if (ch == UT_OS_PS[0] || ch == '.') {
                 ptr[0] = '_';
             }
         }
@@ -1334,7 +1336,7 @@ int16_t bake_project_clean_intern(
         ut_iter it = ut_ll_iter(project->files_to_clean);
         while (ut_iter_hasNext(&it)) {
             char *file = ut_iter_next(&it);
-            ut_try(ut_rm(strarg("%s/%s", project->path, file)), NULL);
+            ut_try(ut_rm(strarg("%s"UT_OS_PS"%s", project->path, file)), NULL);
         }
     }
 
@@ -1469,12 +1471,28 @@ const char* bake_project_type_str(
     return "???";
 }
 
+int16_t ut_project_git_init()
+{
+    int8_t ret;
+    char *cmd = ut_asprintf("git init");
+    int sig = ut_proc_cmd(cmd, &ret);
+    if (sig || ret) {
+        ut_throw("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
+        free(cmd);
+        return -1;
+    }
+    free(cmd);
+    return 0;
+}
+
 /* Create project.json file for new project */
 static
 int16_t bake_project_create_project_json(
     bake_project *project)
 {
     char *description = bake_random_description();
+
+    ut_try(ut_project_git_init(), "failed to initialize git repository");
 
     /* Create project.json */
     FILE *f = fopen("project.json", "w");
