@@ -26,10 +26,16 @@ ut_proc ut_proc_run(
     const char* exec,
     const char *argv[])
 {
-    char *cmdline = ut_strdup(exec);
+    char *cmdline = NULL;
     int count = 0;
-    while (argv[count])
-        cmdline = ut_asprintf("%s %s", cmdline, argv[count++]);
+
+    ut_strbuf buf = UT_STRBUF_INIT;
+    ut_strbuf_appendstr(&buf, exec);
+    while (argv[count]) {
+        ut_strbuf_append(&buf, " %s", argv[count ++]);
+    }
+    cmdline = ut_strbuf_get(&buf);
+
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     BOOL bSuccess = FALSE;
@@ -37,6 +43,8 @@ ut_proc ut_proc_run(
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
+
+    ut_trace("#[cyan]%s", cmdline);
 
     bSuccess = CreateProcess(exec,
         cmdline,     // command line 
@@ -58,10 +66,15 @@ ut_proc ut_proc_runRedirect(
     FILE *out,
     FILE *err)
 {
-    char *cmdline = ut_strdup(exec);
-    int count = 0;
-    while (argv[count])
-        cmdline = ut_asprintf("%s %s", cmdline, argv[count++]);
+    char *cmdline = NULL;
+
+    ut_strbuf buf = UT_STRBUF_INIT;
+    ut_strbuf_appendstr(&buf, exec);
+    while (argv[count]) {
+        ut_strbuf_append(&buf, " %s", argv[count ++]);
+    }
+    cmdline = ut_strbuf_get(&buf);
+
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     BOOL bSuccess = FALSE;
@@ -76,6 +89,8 @@ ut_proc ut_proc_runRedirect(
     if (err)
         si.hStdError  = (HANDLE)_get_osfhandle(_fileno(err));
     si.dwFlags |= STARTF_USESTDHANDLES;
+
+    ut_trace("#[cyan]%s", cmdline);
 
     bSuccess = CreateProcess(exec,
         cmdline,     // command line 
