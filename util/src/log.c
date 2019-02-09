@@ -549,6 +549,16 @@ char* ut_log_colorize(
             }
         }
 
+        if (ch == '\n') {
+            if (isNum || isStr || isVar || overrideColor) {
+                if (UT_LOG_USE_COLORS) ut_strbuf_appendstr(&buff, UT_NORMAL);
+                overrideColor = false;
+                isNum = false;
+                isStr = false;
+                isVar = false;
+            }
+        }
+
         if (!dontAppend) {
             ut_strbuf_appendstrn(&buff, ptr, 1);
         }
