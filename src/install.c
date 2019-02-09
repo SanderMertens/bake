@@ -380,7 +380,7 @@ int16_t bake_install_template(
 {
     ut_try( ut_mkdir(UT_TEMPLATE_PATH), NULL);
 
-    char *project_template = ut_asprintf("%s/%s/%s", 
+    char *project_template = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"%s", 
         UT_TEMPLATE_PATH, project->id, project->language);
 
     ut_try( ut_rm(project_template), NULL);

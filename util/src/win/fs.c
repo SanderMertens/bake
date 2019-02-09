@@ -51,7 +51,7 @@ int ut_symlink(
     char *fullname = NULL;
     DWORD last_error;
 
-    ut_debug("symlink '%s' %s'", oldname, newname);
+    ut_debug("symlink '%s' '%s'", oldname, newname);
 
     if (!newname || !oldname) {
         ut_throw("invalid parameters for ut_symlink (oldname = %s, newname = %s)",
