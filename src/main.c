@@ -904,7 +904,7 @@ int main(int argc, const char *argv[]) {
 
     ut_try (bake_parse_args(argc, argv), NULL);
 
-    if (ut_log_verbosityGet() <= UT_TRACE) {
+    if (ut_log_verbosityGet() <= UT_OK) {
         printf("\n");
         ut_log_push("bake "BAKE_VERSION);
         ut_strbuf buf = UT_STRBUF_INIT;
@@ -913,7 +913,7 @@ int main(int argc, const char *argv[]) {
             ut_strbuf_append(&buf, "%s ", argv[i]);
         }
         char *args = ut_strbuf_get(&buf);
-        ut_trace("cmd  #[cyan]%s#[normal]", args);
+        ut_ok("cmd  #[cyan]%s#[normal]", args);
         free(args);
         ut_log_pop();
     }
@@ -949,6 +949,8 @@ int main(int argc, const char *argv[]) {
                     ut_debug("#[normal]%s", file);
                 }
             }
+        } else {
+            ut_throw("could not iterate over files in %s", UT_HOME_PATH);
         }
         ut_log_pop();
     }
@@ -1060,6 +1062,9 @@ int main(int argc, const char *argv[]) {
     ut_deinit();
     return 0;
 error:
+    if (ut_log_verbosityGet() <= UT_OK) {
+        ut_error("#[red]errors occurred");
+    }
     ut_deinit();
     return -1;
 }
