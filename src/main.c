@@ -885,10 +885,16 @@ void bake_dump_env() {
     if (!ut_dir_iter(UT_HOME_PATH, "//", &it)) {
         while (ut_iter_hasNext(&it)) {
             char *file = ut_iter_next(&it);
+
             if (!strstr(file, UT_OS_PS".git") && 
                 !strstr(file, UT_OS_PS".bake_cache")) 
             {
-                ut_debug("#[normal]%s", file);
+                char *is_dir = "";
+                if (ut_isdir( strarg("%s"UT_OS_PS"%s", UT_HOME_PATH, file))) {
+                    is_dir = "(D)";
+                }
+
+                ut_debug("#[normal]%s %s", file, is_dir);
             }
         }
     } else {

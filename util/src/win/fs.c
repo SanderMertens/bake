@@ -59,8 +59,6 @@ int ut_symlink(
         /* Safe- the variable will not be modified if it's equal to newname */
         fullname = (char*)oldname;
     }
-
-    ut_trace("#[cyan]symlink %s %s", newname, fullname);
     
     DWORD dwFlags = 0;
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
@@ -97,15 +95,18 @@ int ut_symlink(
             }
             else {
                 /* Existing file is a link that points to the same location */
+                ut_trace("#[cyan]symlink %s %s already exists", newname, fullname);
             }
         }
+    } else {
+        ut_trace("#[cyan]symlink %s %s", newname, fullname);
     }
 
     if (fullname != oldname) free(fullname);
     return 0;
 error:
+    ut_throw("symlink %s %s failed", newname, fullname);
     if (fullname != oldname) free(fullname);
-    ut_throw("symlink failed");
     return -1;
 }
 
