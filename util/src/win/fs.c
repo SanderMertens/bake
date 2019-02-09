@@ -229,7 +229,7 @@ int ut_rmtree(const char *name) {
     }
     
     if (result) {
-        ut_throw("%d: %s", result, fullname);
+        ut_throw("failed to delete directory %s", fullname);
     }
 
     free(fullname);

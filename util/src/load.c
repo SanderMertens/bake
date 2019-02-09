@@ -1082,6 +1082,7 @@ int16_t ut_load_init(
     UT_META_PATH = ut_asprintf("%s"UT_OS_PS"meta", UT_HOME_PATH);
     UT_SRC_PATH = ut_asprintf("%s"UT_OS_PS"src", UT_HOME_PATH);
     UT_INCLUDE_PATH = ut_asprintf("%s"UT_OS_PS"include", UT_HOME_PATH);
+    UT_ETC_PATH = ut_asprintf("%s"UT_OS_PS"etc", UT_HOME_PATH);
     UT_TEMPLATE_PATH = ut_asprintf("%s"UT_OS_PS"templates", UT_HOME_PATH);
     UT_BIN_PATH = ut_asprintf("%s"UT_OS_PS"bin", UT_TARGET_PATH);
     UT_LIB_PATH = ut_asprintf("%s"UT_OS_PS"lib", UT_TARGET_PATH);

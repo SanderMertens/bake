@@ -939,6 +939,7 @@ int main(int argc, const char *argv[]) {
         char *args = ut_strbuf_get(&buf);
         ut_ok("cmd  #[cyan]%s#[normal]", args);
         free(args);
+        ut_ok("cwd  #[cyan]%s", ut_cwd());
         ut_log_pop();
     }
 

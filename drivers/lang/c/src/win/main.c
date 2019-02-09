@@ -110,7 +110,7 @@ void compile_src(
     ut_strbuf_append(&cmd, " %s", cc(cpp));
 
     /* Suppress Visual C++ banner */
-    ut_strbuf_appendstr(&cmd, " /NOLOGO");
+    ut_strbuf_appendstr(&cmd, " /nologo");
 
     /* Give project access to its own id */
     ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
