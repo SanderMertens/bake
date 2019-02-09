@@ -840,17 +840,19 @@ void* ut_load_sym(
     char *symbol)
 {
     void *result = NULL;
+    bool used_dlopen = false;
 
     if (!*dl_out) {
         const char *lib = ut_locate(package, dl_out, UT_LOCATE_LIB);
         if (!*dl_out) {
             if (lib) {
                 *dl_out = ut_dl_open(lib);
+                used_dlopen = true;
             }
         }
         if (!*dl_out) {
-            char *err = (char*)ut_dl_error();
-            if (err) {
+            if (used_dlopen) {
+                char *err = (char*)ut_dl_error();
                 ut_throw("failed to load library '%s': %s", lib, err);
             } else {
                 ut_throw("failed to locate binary for package '%s'", package);
