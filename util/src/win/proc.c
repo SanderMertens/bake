@@ -127,6 +127,9 @@ int ut_proc_cmd_intern(
     bool stderr_only)
 {
     int status = -1;
+
+    ut_trace("#[cyan]%s", cmd);
+
     if (stderr_only)
     {
         char *buff = ut_asprintf("%s 1> nul", cmd);
