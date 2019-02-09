@@ -129,7 +129,7 @@ void compile_src(
 
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " /Ox /GL");
+        ut_strbuf_appendstr(&cmd, " /Ox /LTCG");
     } else {
         ut_strbuf_appendstr(&cmd, " /Od");
     }
@@ -294,6 +294,13 @@ void link_dynamic_binary(
         char *ext = strrchr(pdb_file, '.');
         strcpy(ext + 1, "pdb");
         ut_strbuf_append(&cmd, " /PDB:\"%s\"", pdb_file);
+    }
+
+    /* Enable full optimizations, including cross-file */
+    if (config->optimizations) {
+        ut_strbuf_appendstr(&cmd, " /Ox /LTCG");
+    } else {
+        ut_strbuf_appendstr(&cmd, " /Od");
     }
 
     /* When strict, warnings are errors */
