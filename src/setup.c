@@ -285,6 +285,8 @@ int16_t bake_setup(
         ut_chdir(dir);
     }
 
+    ut_setenv("BAKE_SETUP", "true");
+
     /* Temporary fix to ensure bake shell script is updated on upgrade */
     local = false;
 

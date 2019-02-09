@@ -378,14 +378,16 @@ int16_t bake_crawler_build_project(
     bake_project *p,
     ut_ll readyForBuild)
 {
-    bake_message(UT_LOG, action_name, "'%s'", p->path);
+    if (!ut_getenv("BAKE_SETUP")) {
+        bake_message(UT_LOG, action_name, "directory '%s'", p->path);
+    }
 
     if (action(config, p)) {
         bake_message(UT_ERROR, "error", "bake interrupted by %s in %s", p->id, p->path);
         goto error;
     }
 
-    if (p->changed) {
+    if (p->changed && !ut_getenv("BAKE_SETUP")) {
         bake_message(UT_OK, "done", "#[green]%s#[normal] %s", bake_project_type_str(p->type), p->id);
     }
 

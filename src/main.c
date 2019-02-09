@@ -576,7 +576,7 @@ int bake_info(
     const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
     if (!path) {
         if (!clean_missing) {
-            ut_log("?  #[normal]%s #[red]!not found!#[normal]\n", id);
+            ut_log("#[green]?#[reset]  #[normal]%s #[red]!not found!#[normal]\n", id);
             goto error;
         }
     }
@@ -584,7 +584,7 @@ int bake_info(
     bake_project *project = bake_project_new(path, config);
     if (!project) {
         if (!clean_missing) {
-            ut_log("?  #[normal]%s #[grey]=> #[normal]%s #[red]!invalid config!\n",
+            ut_log("#[green]?#[reset]  #[normal]%s #[grey]=> #[normal]%s #[red]!invalid config!\n",
                 id, cfg);
         }
         goto error;
@@ -600,7 +600,7 @@ int bake_info(
 
                     if (test_lib && !dl) {
                         if (!clean_missing) {
-                            ut_log("P  #[normal]%s #[grey]=> #[normal]%s #[red]!load error!\n",
+                            ut_log("#[green]P#[reset]  #[normal]%s #[grey]=> #[normal]%s #[red]!load error!\n",
                                 id, cfg);
                             ut_log("   %s\n", ut_dl_error());
                         }
@@ -608,7 +608,7 @@ int bake_info(
 
                     } else {
                         if (!clean_missing) {
-                            ut_log("P  #[normal]%s #[grey]=> #[normal]%s\n",
+                            ut_log("#[green]P#[reset]  #[normal]%s #[grey]=> #[normal]%s\n",
                                 id, cfg);
                         }
                     }
@@ -618,12 +618,12 @@ int bake_info(
                     const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
                     if (lib_static) {
                         if (!clean_missing) {
-                            ut_log("S  #[normal]%s #[grey]=> #[normal]%s\n",
+                            ut_log("#[green]S#[reset]  #[normal]%s #[grey]=> #[normal]%s\n",
                                 id, cfg);
                         }
                     } else {
                         if (!clean_missing) {
-                            ut_log("A  #[normal]%s #[grey]=> #[normal]%s\n",
+                            ut_log("#[green]A#[reset]  #[normal]%s #[grey]=> #[normal]%s\n",
                                 id, cfg);
                             if (type_out) *type_out = BAKE_APPLICATION;
                         }
@@ -638,13 +638,13 @@ int bake_info(
                 }
                 if (project->type == BAKE_APPLICATION) {
                     if (!clean_missing) {
-                        ut_log( "A  %s #[grey]=> #[normal]%s\n", id, cfg);
+                        ut_log( "#[green]A#[reset]  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
                     if (type_out) *type_out = BAKE_APPLICATION;
 
                 } else {
                     if (!clean_missing) {
-                        ut_log( "P  %s #[grey]=> #[normal]%s\n", id, cfg);
+                        ut_log( "#[green]P#[reset]  %s #[grey]=> #[normal]%s\n", id, cfg);
                     }
                 }
                 if (error) {
@@ -653,7 +653,7 @@ int bake_info(
             }
         } else {
             if (!clean_missing) {
-                ut_log("C  #[normal]%s #[grey]=> #[grey]all#[normal]\n", id);
+                ut_log("#[green]C#[reset]  #[normal]%s #[grey]=> #[grey]all#[normal]\n", id);
             }
         }
     }
@@ -828,11 +828,11 @@ int bake_list(
                 ut_strbuf_appendstr(&buf, "]");
 
                 if (!lang_count) {
-                    ut_log("T  %s #[red]!no languages!\n", id);
+                    ut_log("#[green]T#[reset]  %s #[red]!no languages!\n", id);
                     ut_strbuf_reset(&buf);
                 } else {
                     char *languages = ut_strbuf_get(&buf);
-                    ut_log("T  %s #[grey]=> #[normal]%s\n", id, languages);
+                    ut_log("#[green]T#[reset]  %s #[grey]=> #[normal]%s\n", id, languages);
                     free(languages);
                 }
 

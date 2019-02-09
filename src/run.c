@@ -295,7 +295,7 @@ ut_proc run_exec(
     if (!is_package) {
         ut_proc pid = ut_proc_run(exec, argv);
 
-        bake_message(UT_LOG, "run", "#[green]application#[normal] %s [%u] '%s'", app_id, pid, exec);
+        bake_message(UT_LOG, "run", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, exec);
 
         return pid;
     } else {
@@ -598,7 +598,7 @@ int bake_run(
             }
         }
 
-        bake_message(UT_LOG, "done", "#[green]application#[normal] %s [%u] (%s)", app_id, pid, app_bin);
+        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] (%s)", app_id, pid, app_bin);
     }
 
     return 0;
