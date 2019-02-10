@@ -112,6 +112,11 @@ void compile_src(
     /* Suppress Visual C++ banner */
     ut_strbuf_appendstr(&cmd, " /nologo");
 
+    /* If building cpp, add /EHsc for unwind semantics */
+    if (cpp) {
+        ut_strbuf_append(&cmd, " /EHsc");
+    }
+
     /* Give project access to its own id */
     ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
 
