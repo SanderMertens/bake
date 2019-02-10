@@ -1471,28 +1471,12 @@ const char* bake_project_type_str(
     return "???";
 }
 
-int16_t ut_project_git_init()
-{
-    int8_t ret;
-    char *cmd = ut_asprintf("git init");
-    int sig = ut_proc_cmd(cmd, &ret);
-    if (sig || ret) {
-        ut_throw("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
-        free(cmd);
-        return -1;
-    }
-    free(cmd);
-    return 0;
-}
-
 /* Create project.json file for new project */
 static
 int16_t bake_project_create_project_json(
     bake_project *project)
 {
     char *description = bake_random_description();
-
-    ut_try(ut_project_git_init(), "failed to initialize git repository");
 
     /* Create project.json */
     FILE *f = fopen("project.json", "w");
