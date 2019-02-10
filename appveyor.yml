@@ -18,3 +18,10 @@ test_script:
 - cmd: bake build examples
 - cmd: bake build examples --cfg release
 - cmd: bake list
+- cmd: bake clone SanderMertens/example
+- cmd: bake run example
+- cmd: bake run example --cfg release
+- cmd: bake new foo
+- cmd: bake run foo
+- cmd: bake run foo --cfg release
+
