@@ -86,8 +86,7 @@ int ut_symlink(
                 if (ut_symlink(fullname, newname)) {
                     goto error;
                 }
-            }
-            else {
+            } else {
                 goto error;
             }
             free(dir);
@@ -97,6 +96,7 @@ int ut_symlink(
 
                 /* If a file with specified name already exists, remove existing file */
                 if (ut_rm(newname)) {
+                    last_error = GetLastError();
                     goto error;
                 }
 
@@ -184,25 +184,39 @@ error:
 int ut_rm(const char *name) {
     int result = 0;
 
-    if (PathFileExistsA(name))
-    {
-        if (ut_isdir(name)) {
-            ut_trace("#[cyan]rm %s (D)", name);
-            return ut_rmtree(name);
-        }
+    /* First try to remove file. The 'remove' function may fail if 'name' is a
+    * directory that is not empty, however it may also be a link to a directory
+    * in which case ut_isdir would also return true.
+    *
+    * For that reason, the function should not always perform a recursive delete
+    * if a directory is encountered, because in case of a link, only the link
+    * should be removed, not the contents of its target directory.
+    *
+    * Trying to remove the file first is a solution to this problem that works
+    * on any platform, even the ones that do not support links (as opposed to
+    * checking if the file is a link first).
+    */
+    if (PathFileExistsA(name)) {
         if (!DeleteFile(name)) {
-            result = -1;
-            ut_throw( ut_last_win_error());
+            if (ut_isdir(name)) {
+                ut_trace("#[cyan]rm %s (D)", name);
+                return ut_rmtree(name);
+            } else {
+                goto error;
+            }
+        } else {            
+            goto error;
         }
     } else {
         /* Don't care if file doesn't exist */
     }
 
-    if (!result) {
-        ut_trace("#[cyan]rm %s", name);
-    }
+    ut_trace("#[cyan]rm %s", name);
     
     return result;
+error:
+    ut_throw( ut_last_win_error());
+    return -1;
 }
 
 /* Recursively remove a directory */
