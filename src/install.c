@@ -429,43 +429,32 @@ int16_t bake_install_postbuild(
     char *targetBinary = ut_asprintf("%s"UT_OS_PS"%s", targetDir, project->artefact);
 
     if (!ut_file_test(targetBinary) || project->changed || !project->language) {
-        /* Copy binary */
-        if (ut_cp(project->artefact_file, targetBinary)) {
-            goto error;
-        }
 
-        /* Ensure that time on the local system has progressed past the point of the
-         * file timestamp. If the build is running in a VM, the clock between the
-         * client and host could be out of sync temporarily, which can result in
-         * strange behavior. */
-        char *installedArtefact = ut_asprintf("%s"UT_OS_PS"%s", targetDir, project->artefact);
-        time_t t_artefact = ut_lastmodified(installedArtefact);
-        time_t t = time(NULL);
-        int i = 0;
-        while (t_artefact > time(NULL) && i < 10) {
-            ut_sleep(0, 100000000); /* sleep 100msec */
-            i ++;
-        }
-        if (i == 10) {
-            ut_warning(
-                "clock drift of >1sec between the OS clock and the filesystem detected");
-        }
-        free(installedArtefact);
-    }
+        /* Copy all files in project bin path to bake environment */
+        ut_iter it;
+        ut_try( ut_dir_iter(project->artefact_path, NULL, &it), NULL);
 
-    if (project->type == BAKE_PACKAGE && ut_os_match("windows"))
-    {
-        char *artefact_lib_file = ut_strdup(project->artefact_file);
-        char *ext = strrchr(artefact_lib_file, '.');
-        strcpy(ext + 1, "lib");
-        char *targetLibrary = ut_strdup(targetBinary);
-        ext = strrchr(targetLibrary, '.');
-        strcpy(ext + 1, "lib");
+        while (ut_iter_hasNext(&it)) {
+            char *file = ut_iter_next(&it);
+            char *src = ut_asprintf("%s"UT_OS_PS"%s", project->artefact_path, file);
+            char *dst = ut_asprintf("%s"UT_OS_PS"%s", targetDir, file);
+            ut_try (ut_cp(project->artefact_file, targetBinary), 
+                "failed to install binary '%s' to bake environment", file);
 
-        /* Copy .lib file */
-        if(ut_file_test(artefact_lib_file))
-        if (ut_cp(artefact_lib_file, targetLibrary)) {
-            goto error;
+            time_t t_artefact = ut_lastmodified(dst);
+            time_t t = time(NULL);
+            int i = 0;
+            while (t_artefact > time(NULL) && i < 10) {
+                ut_sleep(0, 100000000); /* sleep 100msec */
+                i ++;
+            }
+            if (i == 10) {
+                ut_warning(
+                    "clock drift of >1sec between the OS clock and the filesystem detected");
+            }
+
+            free(src);
+            free(dst);
         }
     }
 
