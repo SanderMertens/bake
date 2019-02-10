@@ -438,8 +438,8 @@ int16_t bake_install_postbuild(
             char *file = ut_iter_next(&it);
             char *src = ut_asprintf("%s"UT_OS_PS"%s", project->artefact_path, file);
             char *dst = ut_asprintf("%s"UT_OS_PS"%s", targetDir, file);
-            ut_try (ut_cp(project->artefact_file, targetBinary), 
-                "failed to install binary '%s' to bake environment", file);
+            ut_try (ut_cp(src, dst), 
+                "failed to install binary '%s' to bake environment", src);
 
             time_t t_artefact = ut_lastmodified(dst);
             time_t t = time(NULL);
@@ -448,7 +448,7 @@ int16_t bake_install_postbuild(
                 ut_sleep(0, 100000000); /* sleep 100msec */
                 i ++;
             }
-            
+
             if (i == 10) {
                 ut_warning(
                     "clock drift of >1sec between the OS clock and the filesystem detected");
