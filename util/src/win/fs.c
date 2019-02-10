@@ -204,8 +204,6 @@ int ut_rm(const char *name) {
             } else {
                 goto error;
             }
-        } else {            
-            goto error;
         }
     } else {
         /* Don't care if file doesn't exist */
