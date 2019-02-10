@@ -62,8 +62,6 @@ int ut_symlink(
     char *fullname = NULL;
     DWORD last_error;
 
-    ut_debug("symlink '%s' '%s'", oldname, newname);
-
     if (!newname || !oldname) {
         ut_throw("invalid parameters for ut_symlink (oldname = %s, newname = %s)",
             oldname, newname);
@@ -84,6 +82,8 @@ int ut_symlink(
     if (ut_isdir(fullname)) {
         dwFlags = SYMBOLIC_LINK_FLAG_DIRECTORY;
     }
+
+    ut_debug("symlink '%s' '%s' %s", oldname, newname, dwFlags ? "(D)" : "");
 
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
         last_error = GetLastError();
@@ -107,7 +107,7 @@ int ut_symlink(
             
         } else if (last_error == ERROR_ALREADY_EXISTS) {
             ut_debug(
-                "file '%s' already exists. try removing and recreate", fullname);
+                "file '%s' already exists. try recreating link to '%s'", newname, fullname);
 
             if (!ut_checklink(newname, fullname)) {
                 ut_debug(
@@ -124,8 +124,7 @@ int ut_symlink(
                 if (ut_symlink(fullname, newname)) {
                     goto error;
                 }
-            }
-            else {
+            } else {
                 /* Existing file is a link that points to the same location */
                 ut_trace("#[cyan]symlink %s %s already exists", 
                     newname, fullname);
