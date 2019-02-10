@@ -29,7 +29,8 @@ typedef int (*bake_crawler_cb)(
  *
  * @return New crawler object.
  */
- void bake_crawler_init(void);
+ void bake_crawler_init(
+    bool recursive);
 
 /** Free crawler.
  *

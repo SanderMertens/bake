@@ -272,9 +272,9 @@ int bake_parse_args(
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
 
-            ARG(0, "local-setup", local_setup = true; i ++);
-            ARG('i', "interactive", interactive = true; i ++);
-            ARG('r', "recursive", recursive = true; i ++);
+            ARG(0, "local-setup", local_setup = true);
+            ARG('i', "interactive", interactive = true);
+            ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
@@ -1023,7 +1023,7 @@ int main(int argc, const char *argv[]) {
     ut_log_pop();
 
     /* Initialize crawler */
-    bake_crawler_init();
+    bake_crawler_init(recursive);
 
     if (discover) {
         /* If discover is true, first discover projects in provided path */

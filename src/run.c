@@ -269,6 +269,7 @@ int build_project(
     ut_proc pid = ut_proc_run("bake", (const char*[]){
         "bake",
         (char*)path,
+        "-r",
          NULL
     });
 
