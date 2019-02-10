@@ -198,6 +198,8 @@ int ut_rm(const char *name) {
     if (PathFileExistsA(name)) {
         if (!DeleteFile(name)) {
             if (ut_isdir(name)) {
+                ut_debug("deleting '%s' as normal file failed: %s", name, ut_last_win_error());
+                ut_debug("trying to delete '%s' as directory", name);
                 ut_trace("#[cyan]rm %s (D)", name);
                 return ut_rmtree(name);
             } else {
