@@ -35,3 +35,9 @@ script:
   - bake list
   - bake clone SanderMertens/example
   - bake run example
+  - bake run example --cfg release
+  - bake new foo
+  - bake run foo
+  - bake run foo --cfg release
+
+  
