@@ -448,6 +448,7 @@ int16_t bake_install_postbuild(
                 ut_sleep(0, 100000000); /* sleep 100msec */
                 i ++;
             }
+            
             if (i == 10) {
                 ut_warning(
                     "clock drift of >1sec between the OS clock and the filesystem detected");

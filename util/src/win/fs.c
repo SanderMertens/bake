@@ -26,21 +26,32 @@ bool ut_checklink(
     const char *link,
     const char *file)
 {
-    DWORD dwAttrib = GetFileAttributes(link);
-    bool is_symlink = ( dwAttrib & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
-    if (!is_symlink)
-        return false;
     HANDLE hFile = CreateFile(link, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
+    if (hFile == INVALID_HANDLE_VALUE) {
+        ut_debug("file '%s' does not exist (not a link)", link);
         return false;
-    TCHAR tartget_path[MAX_PATH];
+    }
+
+    DWORD dwAttrib = GetFileAttributes(link);
+    bool is_symlink = (dwAttrib & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
+    if (!is_symlink) {
+        ut_debug("file '%s' is not a link", link);
+        return false;
+    }
+
+    TCHAR target_path[MAX_PATH];
     DWORD dwRet;
     int length = strlen(file);
 
-    dwRet = GetFinalPathNameByHandle(hFile, tartget_path, MAX_PATH, 0);
+    dwRet = GetFinalPathNameByHandle(hFile, target_path, MAX_PATH, 0);
     CloseHandle(hFile);
-    if (!strncmp(file, tartget_path + 4, length))
+    if (!strncmp(file, target_path + 4, length)) {
+        ut_debug("file '%s' is a link, and points to '%s'", link, file);
         return true;
+    } else {
+        ut_debug("file '%s' is a link, but points to '%s'", link, target_path);
+    }
+
     return false;
 }
 
@@ -77,6 +88,9 @@ int ut_symlink(
     if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
         last_error = GetLastError();
         if (last_error == ERROR_PATH_NOT_FOUND) {
+            ut_debug(
+                "path to link '%s' not found. create it, and retry", newname);
+
             /* If error is ERROR_PATH_NOT_FOUND, try creating directory */
             char *dir = ut_path_dirname(newname);
             DWORD old_errno = last_error;
@@ -92,7 +106,13 @@ int ut_symlink(
             free(dir);
             
         } else if (last_error == ERROR_ALREADY_EXISTS) {
+            ut_debug(
+                "file '%s' already exists. try removing and recreate", fullname);
+
             if (!ut_checklink(newname, fullname)) {
+                ut_debug(
+                    "file '%s' is not a link, or points to a different location", 
+                    newname);
 
                 /* If a file with specified name already exists, remove existing file */
                 if (ut_rm(newname)) {
