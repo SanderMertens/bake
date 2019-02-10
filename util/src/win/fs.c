@@ -182,7 +182,6 @@ error:
 
 /* Remove a file. Returns 0 if OK, -1 if failed */
 int ut_rm(const char *name) {
-    int result = 0;
 
     /* First try to remove file. The 'remove' function may fail if 'name' is a
     * directory that is not empty, however it may also be a link to a directory
@@ -211,7 +210,7 @@ int ut_rm(const char *name) {
 
     ut_trace("#[cyan]rm %s", name);
     
-    return result;
+    return 0;
 error:
     ut_throw( ut_last_win_error());
     return -1;

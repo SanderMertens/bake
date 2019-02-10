@@ -1,7 +1,7 @@
 {
-    "id":"app_dependency",
+    "id":"examples.c.app_dependency",
     "type":"application",
     "value": {
-        "use": ["pkg_helloworld"]
+        "use": ["examples.c.pkg_helloworld"]
     }
 }

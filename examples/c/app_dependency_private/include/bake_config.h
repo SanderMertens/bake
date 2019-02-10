@@ -14,26 +14,26 @@
  * dependencies will automatically show up in this file. Include bake_config.h
  * in your main project file. Do not edit! */
 
-#ifndef APP_DEPENDENCY_PRIVATE_BAKE_CONFIG_H
-#define APP_DEPENDENCY_PRIVATE_BAKE_CONFIG_H
+#ifndef EXAMPLES_C_APP_DEPENDENCY_PRIVATE_BAKE_CONFIG_H
+#define EXAMPLES_C_APP_DEPENDENCY_PRIVATE_BAKE_CONFIG_H
 
 /* Headers of public dependencies */
 /* No dependencies */
 
 /* Headers of private dependencies */
-#ifdef APP_DEPENDENCY_PRIVATE_IMPL
-#include <pkg_helloworld>
+#ifdef EXAMPLES_C_APP_DEPENDENCY_PRIVATE_IMPL
+#include <examples.c.pkg_helloworld>
 #endif
 
 /* Convenience macro for exporting symbols */
-#if APP_DEPENDENCY_PRIVATE_IMPL && defined _MSC_VER
-#define APP_DEPENDENCY_PRIVATE_EXPORT __declspec(dllexport)
-#elif APP_DEPENDENCY_PRIVATE_IMPL
-#define APP_DEPENDENCY_PRIVATE_EXPORT __attribute__((__visibility__("default")))
+#if EXAMPLES_C_APP_DEPENDENCY_PRIVATE_IMPL && defined _MSC_VER
+#define EXAMPLES_C_APP_DEPENDENCY_PRIVATE_EXPORT __declspec(dllexport)
+#elif EXAMPLES_C_APP_DEPENDENCY_PRIVATE_IMPL
+#define EXAMPLES_C_APP_DEPENDENCY_PRIVATE_EXPORT __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
-#define APP_DEPENDENCY_PRIVATE_EXPORT __declspec(dllimport)
+#define EXAMPLES_C_APP_DEPENDENCY_PRIVATE_EXPORT __declspec(dllimport)
 #else
-#define APP_DEPENDENCY_PRIVATE_EXPORT
+#define EXAMPLES_C_APP_DEPENDENCY_PRIVATE_EXPORT
 #endif
 
 #endif

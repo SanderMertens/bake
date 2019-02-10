@@ -1,5 +1,5 @@
 {
-    "id": "app_helloworld",
+    "id": "examples.cpp.app_helloworld",
     "type": "application",
     "value": {
         "language": "cpp"

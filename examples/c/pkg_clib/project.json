@@ -1,5 +1,5 @@
 {
-    "id":"pkg_clib",
+    "id":"examples.c.pkg_clib",
     "type":"package",
     "lang.c": {
         "lib": ["m"]
