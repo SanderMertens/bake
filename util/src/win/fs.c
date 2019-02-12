@@ -21,133 +21,19 @@
 
 #include "../../include/util.h"
 
-static
-bool ut_checklink(
-    const char *link,
-    const char *file)
-{
-    HANDLE hFile = CreateFile(link, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        ut_debug("file '%s' does not exist (not a link)", link);
-        return false;
-    }
-
-    DWORD dwAttrib = GetFileAttributes(link);
-    bool is_symlink = (dwAttrib & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
-    if (!is_symlink) {
-        ut_debug("file '%s' is not a link", link);
-        return false;
-    }
-
-    TCHAR target_path[MAX_PATH];
-    DWORD dwRet;
-    int length = strlen(file);
-
-    dwRet = GetFinalPathNameByHandle(hFile, target_path, MAX_PATH, 0);
-    CloseHandle(hFile);
-    if (!strncmp(file, target_path + 4, length)) {
-        ut_debug("file '%s' is a link, and points to '%s'", link, file);
-        return true;
-    } else {
-        ut_debug("file '%s' is a link, but points to '%s'", link, target_path);
-    }
-
-    return false;
-}
-
 int ut_symlink(
     const char *oldname,
     const char *newname)
 {
-    char *fullname = NULL;
-    DWORD last_error;
-
-    if (!newname || !oldname) {
-        ut_throw("invalid parameters for ut_symlink (oldname = %s, newname = %s)",
-            oldname, newname);
-        goto error;
-    }
-
-    // Check if relative path
-    if (oldname[0] == '.' || oldname[1] != ':') {
-        fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), oldname);
-        ut_path_clean(fullname, fullname);
-    } else {
-        /* Safe- the variable will not be modified if it's equal to newname */
-        fullname = (char*)oldname;
-    }
-    
-    DWORD dwFlags = 0;
-
-    if (ut_isdir(fullname)) {
-        dwFlags = SYMBOLIC_LINK_FLAG_DIRECTORY;
-    }
-
-    ut_debug("symlink '%s' '%s' %s", oldname, newname, dwFlags ? "(D)" : "");
-
-    if (!CreateSymbolicLinkA(newname, fullname, dwFlags)) {
-        last_error = GetLastError();
-        if (last_error == ERROR_PATH_NOT_FOUND) {
-            ut_debug(
-                "path to link '%s' not found. create it, and retry", newname);
-
-            /* If error is ERROR_PATH_NOT_FOUND, try creating directory */
-            char *dir = ut_path_dirname(newname);
-            DWORD old_errno = last_error;
-
-            if (dir[0] && !ut_mkdir(dir)) {
-                /* Retry */
-                if (ut_symlink(fullname, newname)) {
-                    goto error;
-                }
-            } else {
-                goto error;
-            }
-            free(dir);
-            
-        } else if (last_error == ERROR_ALREADY_EXISTS) {
-            ut_debug(
-                "file '%s' already exists. try recreating link to '%s'", newname, fullname);
-
-            if (!ut_checklink(newname, fullname)) {
-                ut_debug(
-                    "file '%s' is not a link, or points to a different location", 
-                    newname);
-
-                /* If a file with specified name already exists, remove existing file */
-                if (ut_rm(newname)) {
-                    last_error = GetLastError();
-                    goto error;
-                }
-
-                /* Retry */
-                if (ut_symlink(fullname, newname)) {
-                    goto error;
-                }
-            } else {
-                /* Existing file is a link that points to the same location */
-                ut_trace("#[cyan]symlink %s %s already exists", 
-                    newname, fullname);
-            }
-        } else {
-            goto error;
-        }
-    } else {
-        if (dwFlags) {
-            ut_trace("#[cyan]symlink %s %s (D)", newname, fullname);
-        } else {
-            ut_trace("#[cyan]symlink %s %s", newname, fullname);
-        }
-    }
-
-    if (fullname != oldname) free(fullname);
-    return 0;
-error:
-    ut_throw("symlink %s %s failed: %s", newname, fullname, 
-        ut_last_win_error_code(last_error));
-
-    if (fullname != oldname) free(fullname);
-    return -1;
+    /* Windows requires elevated privileges to allow for the creation of
+     * symlinks (even in USERPROFILE), which would require users to either
+     * run bake in an elevated prompt, or lower security settings of the
+     * Windows installation.
+     * That's too much of a hassle, so instead bake will just revert to
+     * copying files on Windows. The drawback is that now to get anything
+     * updated in the bake environment, a user will have to bake the 
+     * project first. */
+    return ut_cp(oldname, newname);
 }
 
 int16_t ut_setperm(
