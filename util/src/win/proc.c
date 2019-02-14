@@ -22,15 +22,19 @@
 #include "../../include/util.h"
 #include <io.h>
 
-ut_proc ut_proc_run(
+static
+ut_proc ut_proc_run_intern(
     const char* exec,
-    const char *argv[])
+    const char *argv[],
+    bool redirect,
+    FILE *in,
+    FILE *out,
+    FILE *err)
 {
     char *cmdline = NULL;
-    int count = 0;
+    int count = 1;
 
     ut_strbuf buf = UT_STRBUF_INIT;
-    ut_strbuf_appendstr(&buf, exec);
     while (argv[count]) {
         ut_strbuf_append(&buf, " %s", argv[count ++]);
     }
@@ -40,13 +44,22 @@ ut_proc ut_proc_run(
     PROCESS_INFORMATION pi;
     BOOL bSuccess = FALSE;
 
+    char filename[MAX_PATH];
+    LPSTR lpFilePart;
+    if (!SearchPath(NULL, exec, UT_OS_BIN_EXT, MAX_PATH, filename, &lpFilePart)) {
+        ut_throw("failed to locate executable '%s'", exec);
+        goto error;
+    }
+
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    ut_trace("#[cyan]%s", cmdline);
+    // redirect currently not supported
 
-    bSuccess = CreateProcess(exec,
+    ut_trace("#[cyan]%s %s", filename, cmdline);
+
+    bSuccess = CreateProcess(filename,
         cmdline,     // command line 
         NULL,          // process security attributes 
         NULL,          // primary thread security attributes 
@@ -56,7 +69,10 @@ ut_proc ut_proc_run(
         NULL,          // use parent's current directory 
         &si,  // STARTUPINFO pointer 
         &pi);
+
     return pi.hProcess;
+error:
+    return NULL;
 }
 
 ut_proc ut_proc_runRedirect(
@@ -66,44 +82,14 @@ ut_proc ut_proc_runRedirect(
     FILE *out,
     FILE *err)
 {
-    char *cmdline = NULL;
-    int count = 0;
+    return ut_proc_run_intern(exec, argv, true, in, out, err);
+}
 
-    ut_strbuf buf = UT_STRBUF_INIT;
-    ut_strbuf_appendstr(&buf, exec);
-    while (argv[count]) {
-        ut_strbuf_append(&buf, " %s", argv[count ++]);
-    }
-    cmdline = ut_strbuf_get(&buf);
-
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    BOOL bSuccess = FALSE;
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-    if (in)
-        si.hStdInput  = (HANDLE)_get_osfhandle(_fileno(in));
-    if(out)
-        si.hStdOutput = (HANDLE)_get_osfhandle(_fileno(out));
-    if (err)
-        si.hStdError  = (HANDLE)_get_osfhandle(_fileno(err));
-    si.dwFlags |= STARTF_USESTDHANDLES;
-
-    ut_trace("#[cyan]%s", cmdline);
-
-    bSuccess = CreateProcess(exec,
-        cmdline,     // command line 
-        NULL,          // process security attributes 
-        NULL,          // primary thread security attributes 
-        TRUE,          // handles are inherited 
-        0,             // creation flags 
-        NULL,          // use parent's environment 
-        NULL,          // use parent's current directory 
-        &si,  // STARTUPINFO pointer 
-        &pi);
-    return pi.hProcess;
+ut_proc ut_proc_run(
+    const char* exec,
+    const char *argv[])
+{
+    return ut_proc_run_intern(exec, argv, false, NULL, NULL, NULL);
 }
 
 int ut_proc_kill(ut_proc hProcess, ut_procsignal sig) {
@@ -114,10 +100,23 @@ int ut_proc_kill(ut_proc hProcess, ut_procsignal sig) {
 
 int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
     WaitForSingleObject(hProcess, INFINITE);
+    
+    if (rc) {
+        DWORD exit_code = 0;
+        if (!GetExitCodeProcess(hProcess, &exit_code)) {
+            ut_throw("failed to get exit code of process: %s", ut_last_win_error());
+            return -1;
+        }
+
+        *rc = exit_code;
+    }
+
+    CloseHandle(hProcess);
+
     return 0;
 }
 
-#define BUFFER_SIZE (256)
+#define BUFFER_SIZE (512)
 
 /* Simple blocking function to create and wait for a process */
 static
@@ -126,21 +125,69 @@ int ut_proc_cmd_intern(
     int8_t *rc,
     bool stderr_only)
 {
-    int status = -1;
+    ut_proc pid;
+    const char *args[UT_MAX_CMD_ARGS];
+    char stack_buffer[BUFFER_SIZE];
+    char *buffer = stack_buffer;
 
-    ut_trace("#[cyan]%s", cmd);
+    int len = strlen(cmd);
+    if (len >= BUFFER_SIZE) {
+        buffer = malloc(len + 1);
+    }
 
-    if (stderr_only)
-    {
-        char *buff = ut_asprintf("%s 1> nul", cmd);
-        status = system(buff);
+    strcpy(buffer, cmd);
+
+    /* Split up commands */
+    char ch, *ptr;
+    uint8_t argCount = 0;
+    bool newArg = false;
+    bool isString = false;
+    args[argCount] = buffer;
+
+    for (ptr = buffer; (ch = *ptr); ptr++) {
+        if (ch == '"') {
+            if (isspace(ptr[-1])) {
+                *ptr = '\0';
+            }
+            isString = !isString;
+            if (!isString) {
+                newArg = true;
+            }
+        } else
+        if (!isString && isspace(ch)) {
+            *ptr = '\0';
+            newArg = true;
+        } else if (newArg) {
+            args[++argCount] = ptr;
+            newArg = false;
+        }
     }
-    else
-    {
-        status = system(cmd);
+
+    args[argCount + 1] = NULL;
+
+    if (stderr_only) {
+        if (!(pid = ut_proc_runRedirect(
+            args[0],
+            args,
+            stdin,
+            NULL,
+            stderr)))
+        {
+            ut_throw("failed to start process %s (%d)", args[0], pid);
+            goto error;
+        }
+    } else {
+        if (!(pid = ut_proc_run(args[0], args))) {
+            ut_throw("failed to start process %s (%d)", args[0], pid);
+            goto error;
+        }
     }
-    *rc = status;
-    return  status;
+
+    if (buffer != stack_buffer) free(buffer);
+    return ut_proc_wait(pid, rc);
+error:
+    if (buffer != stack_buffer) free(buffer);
+    return -1;
 }
 
 int ut_proc_cmd(char* cmd, int8_t *rc) {

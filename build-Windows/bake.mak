@@ -20,7 +20,7 @@ DEFINES = -DBAKE_IMPL -DUT_IMPL -DDEBUG $(DEFINES)
 INCLUDES =  /I ..\ 
 FORCE_INCLUDE = 
 ALL_CPPFLAGS = /nologo $(CPPFLAGS) $(DEFINES) $(INCLUDES) $(ALL_CPPFLAGS)
-ALL_CFLAGS   = /nologo $(CFLAGS) $(ALL_CPPFLAGS) -D_XOPEN_SOURCE=600 $(ALL_CFLAGS)
+ALL_CFLAGS   = /nologo $(CFLAGS) $(ALL_CPPFLAGS) $(ALL_CFLAGS)
 ALL_RESFLAGS = /nologo $(RESFLAGS) $(DEFINES) $(INCLUDES) $(ALL_RESFLAGS)
 LIBS = Ws2_32.lib Shlwapi.lib Kernel32.lib Dbghelp.lib Shell32.lib
 ALL_LDFLAGS  = $(LDFLAGS) $(ALL_LDFLAGS)
@@ -39,7 +39,7 @@ DEFINES = -DBAKE_IMPL -DUT_IMPL $(DEFINES)
 INCLUDES =  /I ..\ 
 FORCE_INCLUDE = 
 ALL_CPPFLAGS = $(CPPFLAGS) $(DEFINES) $(INCLUDES) $(ALL_CPPFLAGS)
-ALL_CFLAGS   = $(CFLAGS) $(ALL_CPPFLAGS) -D_XOPEN_SOURCE=600 $(ALL_CFLAGS)
+ALL_CFLAGS   = $(CFLAGS) $(ALL_CPPFLAGS) $(ALL_CFLAGS)
 ALL_RESFLAGS = $(RESFLAGS) $(DEFINES) $(INCLUDES) $(ALL_RESFLAGS)
 LIBS = Ws2_32.lib Shlwapi.lib Kernel32.lib Dbghelp.lib Shell32.lib
 ALL_LDFLAGS  = $(LDFLAGS) $(ALL_LDFLAGS)
@@ -114,6 +114,8 @@ clean:
 	$(SILENT) @if EXIST $(TARGET) del /Q $(TARGET)
 	$(SILENT) @if EXIST $(OBJDIR) del /Q $(OBJDIR)
 	$(SILENT) @if EXIST ..\src\*.obj del /Q ..\src\*.obj
+	$(SILENT) @if EXIST ..\util\src\*.obj del /Q ..\util\src\*.obj
+	$(SILENT) @if EXIST ..\util\src\win\*.obj del /Q ..\util\src\win\*.obj
 
 prebuild:
 	$(PREBUILDCMDS)

@@ -8,3 +8,5 @@ bin
 *.lib
 *.dll
 bake
+*.obj
+*.exp

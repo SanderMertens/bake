@@ -102,12 +102,7 @@ void compile_src(
         cpp = true;
     }
 
-    char *vc_shell_cmd = ut_get_vc_shell_cmd();
-    /* Start VC env */
-    ut_strbuf_append(&cmd, "%s &&", vc_shell_cmd);
-
-    /* In obscure cases with static libs, stack protector can cause trouble */
-    ut_strbuf_append(&cmd, " %s", cc(cpp));
+    ut_strbuf_append(&cmd, "%s", cc(cpp));
 
     /* Suppress Visual C++ banner */
     ut_strbuf_appendstr(&cmd, " /nologo");
@@ -197,7 +192,7 @@ void compile_src(
     ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
 
     /* Execute command */
-    char *cmdstr = ut_asprintf("\"%s\"",ut_strbuf_get(&cmd));
+    char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
     free(cmdstr);
 }
@@ -273,11 +268,7 @@ void link_dynamic_binary(
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
-    char *vc_shell_cmd = ut_get_vc_shell_cmd();
-    /* Start VC env */
-    ut_strbuf_append(&cmd, "%s &&", vc_shell_cmd);
-
-    ut_strbuf_append(&cmd, " link.exe");
+    ut_strbuf_append(&cmd, "link");
     
     /* Suppress Visual C++ banner */
     ut_strbuf_appendstr(&cmd, " /NOLOGO");

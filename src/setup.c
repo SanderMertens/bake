@@ -55,6 +55,8 @@ int16_t bake_create_script_windows(void)
         goto error;
     }
 
+    char *vc_shell_cmd = ut_get_vc_shell_cmd();
+
     FILE *f = fopen(script_path, "wb");
 
     if (!f) {
@@ -63,10 +65,13 @@ int16_t bake_create_script_windows(void)
     }
 
     fprintf(f, "@ECHO OFF\n\n");
+    fprintf(f, "where nmake > nul\n");
+    fprintf(f, "IF %%ERRORLEVEL%% == 1 (\n");
+    fprintf(f, "    %s\n", vc_shell_cmd);
+    fprintf(f, ")\n");
     fprintf(f, "IF [%%1] == [upgrade] (\n");
     fprintf(f, "    mkdir %%USERPROFILE%%\\bake\\src\n");
     fprintf(f, "    cd %%USERPROFILE%%\\bake\\src\n\n");
-
     fprintf(f, "    IF NOT EXIST \"bake\" (\n");
     fprintf(f, "        echo \"Cloning bake repository...\"\n");
     fprintf(f, "        git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
@@ -79,29 +84,29 @@ int16_t bake_create_script_windows(void)
     fprintf(f, "        git clean -q -xdf\n");
     fprintf(f, "    )\n");
     fprintf(f, "\n\n");
-    fprintf(f, "    cd build-windows\\\n");
+    fprintf(f, "    cd build-Windows\\\n");
     fprintf(f, "    nmake /f bake.mak\n");
     fprintf(f, "\n\n");
-
     fprintf(f, "    bake.exe setup --local-setup\n");
     fprintf(f, "\n\n");
     fprintf(f, ") ELSE (\n");
-    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\bake.exe %%*\n");
+    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\bake2.exe %%*\n");
     fprintf(f, ")\n\n");
 
     fclose(f);
 
+    free(vc_shell_cmd);
+
     /* Copy file to global location, may ask for password */
     ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
 
-    char *cp_cmd = ut_asprintf("copy /Y %s %s\\bake.bat", script_path, GLOBAL_PATH);
-
-    if (cmd(cp_cmd)) {
+    if (ut_cp(script_path, GLOBAL_PATH)) {
         printf("\n");
         ut_warning(
-            "Failed to instal bake script to %s. Setup will continue, but\n"
-            "      before you can use bake, you now first need to run:\n"
-            "         %%USERPROFILE%%\\bake\\bake.exe env\n", GLOBAL_PATH
+            "Failed to instal bake script to %s. Setup will continue, but you will\n"
+            "need to manually add %%USERPROFILE%%\\bake to the %%PATH%% environment variable.\n"
+            "Alternatively, you can retry the setup with administrator privileges.\n",
+            GLOBAL_PATH
         );
     }
     else {
@@ -109,7 +114,6 @@ int16_t bake_create_script_windows(void)
     }
 
     free(script_path);
-    free(cp_cmd);
 
     return 0;
 error:
@@ -166,8 +170,8 @@ int16_t bake_create_script_unixlike(void)
     fprintf(f, "    build_bake\n");
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
-    fprintf(f, "    export `$HOME/bake/bake env`\n");
-    fprintf(f, "    exec $HOME/bake/bake \"$@\"\n");
+    fprintf(f, "    export `$HOME/bake/bake2 env`\n");
+    fprintf(f, "    exec $HOME/bake/bake2 \"$@\"\n");
     fprintf(f, "fi\n");
     fclose(f);
 
@@ -223,15 +227,23 @@ int16_t bake_build_make_project(
     fflush(stdout);
 
     char *make_cmd;
+
 #ifdef _WIN32
-    char *vc_shell_cmd = ut_get_vc_shell_cmd();
+    char *cwd = ut_strdup(ut_cwd());
     char *driver_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
-    make_cmd = ut_asprintf("\"%s && cd \"%s\" && nmake /NOLOGO /F Makefile clean all\"", vc_shell_cmd, driver_path);
+    make_cmd = ut_asprintf("nmake /NOLOGO /F Makefile clean all\"");
+    ut_try( ut_chdir(driver_path), NULL);
 #else
     make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
 #endif
+
     ut_try( cmd(make_cmd), "failed to build '%s'", id);
     free(make_cmd);
+
+#ifdef _WIN32
+    ut_try( ut_chdir(cwd), NULL);
+    free(cwd);
+#endif
 
     bake_message(UT_OK, "done", "build '%s'", id);
 
@@ -316,12 +328,12 @@ int16_t bake_setup(
         ut_try( bake_create_script(), "failed to create global bake script");
     }
 
-    ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake" UT_OS_BIN_EXT),
+    ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/bake2" UT_OS_BIN_EXT),
         "failed to copy bake executable");
 
     bake_message(UT_OK, "done", "copy bake executable");
 
-    ut_try( cmd("bake"UT_OS_BIN_EXT" install --id bake --includes include"),
+    ut_try( cmd("bake install --id bake --includes include"),
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 
@@ -331,10 +343,10 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
-    ut_try(cmd("bake"UT_OS_BIN_EXT" libraries"), NULL);
+    ut_try(cmd("bake libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
 
-    ut_try(cmd("bake"UT_OS_BIN_EXT" templates"), NULL);
+    ut_try(cmd("bake templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
 
     /*
