@@ -47,7 +47,8 @@ int16_t cmd(
     return 0;
 }
 
-int16_t bake_create_script_windows(void)
+#ifdef _WIN32
+int16_t bake_create_script(void)
 {
     char *script_path = ut_envparse("$USERPROFILE\\bake\\bake.bat");
     if (!script_path) {
@@ -119,8 +120,8 @@ int16_t bake_create_script_windows(void)
 error:
     return -1;
 }
-
-int16_t bake_create_script_unixlike(void)
+#else
+int16_t bake_create_script(void)
 {
     char *script_path = ut_envparse("~/bake/bake.sh");
     if (!script_path) {
@@ -204,14 +205,7 @@ int16_t bake_create_script_unixlike(void)
 error:
     return -1;
 }
-
-int16_t bake_create_script(void)
-{
-    if (ut_os_match("windows"))
-        return bake_create_script_windows();
-    else
-        return bake_create_script_unixlike();
-}
+#endif
 
 int16_t bake_build_make_project(
     const char *path,
@@ -263,8 +257,8 @@ int16_t bake_build_make_project(
       strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
       strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
+        
 #ifdef _WIN32
-    // Copy lib files
     ut_try(ut_rename(
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", bin_path, artefact)),
