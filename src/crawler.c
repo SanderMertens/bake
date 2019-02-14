@@ -77,6 +77,11 @@ int16_t bake_crawler_lookupDependency(
     bake_project *p,
     const char *use)
 {
+    /* Don't try to rebuild bake dependencies (like bake.util) */
+    if (!strncmp(use, "bake.", 5)) {
+        return 0;
+    }
+
     bake_project *dep = ut_rb_find(crawler->nodes, use);
 
     if (!dep || !dep->path) {
