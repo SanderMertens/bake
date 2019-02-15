@@ -137,6 +137,11 @@ void ut_path_offset(
     int tolen,
     bool travel);
 
+/* Test if provided path is relative */
+UT_EXPORT
+bool ut_path_is_relative(
+    const char *path);
+
 #ifdef __cplusplus
 }
 #endif

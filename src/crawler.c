@@ -283,7 +283,7 @@ int16_t bake_crawler_crawl(
 {
     char *prev = strdup(ut_cwd());
     char *fullpath;
-    if (path[0] != UT_OS_PS[0]) {
+    if (ut_path_is_relative(path)) {
         fullpath = ut_asprintf("%s"UT_OS_PS"%s", wd, path);
         ut_path_clean(fullpath, fullpath);
     } else {

@@ -418,9 +418,9 @@ int16_t ut_dir_iter(
         for (ptr = filter; (ch = *ptr); ptr ++) {
             if (ut_expr_isOperator(ch)) {
                 break;
-            } else if (ch == UT_OS_PS[0]) {
+            } else if (ch == '/') {
                 last_elem = ptr;
-                if (ptr[1] == UT_OS_PS[0]) {
+                if (ptr[1] == '/') {
                     break;
                 }
             }

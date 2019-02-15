@@ -307,11 +307,7 @@ ut_ll bake_config_find_files(
     char *cur_path = path;
 
     char *path_parsed = ut_envparse(path);
-#ifndef _WIN32
-    if (path_parsed[0] == UT_OS_PS[0]) {
-#else
-    if (strlen(path_parsed) > 1 && path_parsed[1] == ':') {
-#endif
+    if (!ut_path_is_relative(path_parsed)) {
         /* Absolute path */
         cur_path = strdup(path_parsed);
     } else {

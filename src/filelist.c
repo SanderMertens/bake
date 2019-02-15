@@ -70,7 +70,7 @@ bake_file* bake_filelist_add_intern(
     bfile->name = ut_strdup(filename);
     bfile->path = ut_strdup(path);
 
-    if (filename[0] == UT_OS_PS[0]) {
+    if (!ut_path_is_relative(filename)) {
         bfile->file_path = ut_strdup(filename);
     } else {
         bfile->file_path = ut_asprintf("%s%c%s", path, UT_OS_PS[0],  filename);
@@ -186,7 +186,7 @@ bake_file* bake_filelist_add_file(
         filepath = fl->path;
     }
 
-    if ((file && file[0] == UT_OS_PS[0]) || (fl->path && !strcmp(fl->path, "."))) {
+    if ((file && !ut_path_is_relative(file)) || (fl->path && !strcmp(fl->path, "."))) {
         path = ut_strdup(file);
     } else {
         path = ut_asprintf("%s"UT_OS_PS"%s", filepath, file);

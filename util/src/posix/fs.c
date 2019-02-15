@@ -54,7 +54,7 @@ int ut_symlink(
     const char *newname)
 {
     char *fullname = NULL;
-    if (oldname[0] != UT_OS_PS[0]) {
+    if (ut_path_is_relative(oldname)) {
         fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), oldname);
         ut_path_clean(fullname, fullname);
     }

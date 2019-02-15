@@ -308,3 +308,21 @@ void ut_package_to_path(
         }
     }
 }
+
+bool ut_path_is_relative(
+    const char *path)
+{
+#ifdef _WIN32
+    if (path[0] && path[1] == ':') {
+        return false;
+    } else {
+        return true;
+    }
+#else
+    if (path[0] == UT_OS_PS[0]) {
+        return false;
+    } else {
+        return true;
+    }
+#endif
+}

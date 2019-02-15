@@ -537,7 +537,7 @@ int16_t bake_project_init(
     project->cache_path = ut_asprintf(
         "%s"UT_OS_PS".bake_cache", project->path);
 
-    if (project->path[0] == UT_OS_PS[0]) {
+    if (!ut_path_is_relative(project->path)) {
         project->fullpath = ut_strdup(project->path);
     } else if (strcmp(project->path, ".")) {
         project->fullpath = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), project->path);

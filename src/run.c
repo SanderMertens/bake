@@ -430,7 +430,7 @@ bool is_valid_project(
         goto error;
     }
 
-    char *project_json = ut_asprintf("%s"UT_OS_PS"project.json");
+    char *project_json = ut_asprintf("%s"UT_OS_PS"project.json", project);
     if (ut_file_test(project_json) != 1) {
         ut_throw("cannot find or load file '%s'", project_json);
         goto error;
