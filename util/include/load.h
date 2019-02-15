@@ -29,10 +29,10 @@ extern "C" {
 typedef int (*ut_load_cb)(char *file, int argc, char* argv[], void* userData);
 
 /* Information about current target */
-char *UT_ARCH;
-char *UT_OS;
-char *UT_PLATFORM;  /* arch-os */
-char *UT_CONFIG;
+extern char *UT_ARCH;
+extern char *UT_OS;
+extern char *UT_PLATFORM;  /* arch-os */
+extern char *UT_CONFIG;
 
 /* Paths to bake environment locations */
 extern char *UT_HOME_PATH;
