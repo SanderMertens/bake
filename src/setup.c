@@ -91,7 +91,7 @@ int16_t bake_create_script(void)
     fprintf(f, "    bake.exe setup --local-setup\n");
     fprintf(f, "\n\n");
     fprintf(f, ") ELSE (\n");
-    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\bake2.exe %%*\n");
+    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\"BAKE_EXEC".exe %%*\n");
     fprintf(f, ")\n\n");
 
     fclose(f);
@@ -171,8 +171,8 @@ int16_t bake_create_script(void)
     fprintf(f, "    build_bake\n");
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
-    fprintf(f, "    export `$HOME/bake/bake2 env`\n");
-    fprintf(f, "    exec $HOME/bake/bake2 \"$@\"\n");
+    fprintf(f, "    export `$HOME/bake/"BAKE_EXEC" env`\n");
+    fprintf(f, "    exec $HOME/bake/"BAKE_EXEC" \"$@\"\n");
     fprintf(f, "fi\n");
     fclose(f);
 

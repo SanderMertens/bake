@@ -266,12 +266,17 @@ int build_project(
     int8_t procResult = 0;
 
     /* Build */
-    ut_proc pid = ut_proc_run("bake", (const char*[]){
-        "bake",
+    ut_proc pid = ut_proc_run(BAKE_EXEC, (const char*[]){
+        BAKE_EXEC,
         (char*)path,
         "-r",
          NULL
     });
+
+    if (!pid) {
+        ut_throw("failed to invoke bake %s -r", path);
+        goto error;
+    }
 
     if (ut_proc_wait(pid, &procResult) || procResult) {
         ut_throw("failed to build '%s'", path);
@@ -415,14 +420,24 @@ bool is_valid_project(
     const char *project)
 {
     /* Test if directory exists */
-    if (ut_file_test(project) && ut_isdir(project)) {
-        /* Test if specified directory has project.json */
-        if (ut_file_test(strarg("%s"UT_OS_PS"project.json", project))) {
-            /* Valid bake project found */
-            return true;
-        }
+    if (ut_file_test(project) != 1) {
+        ut_throw("project directory '%s' does not exist", project);
+        goto error;
     }
 
+    if (!ut_isdir(project)) {
+        ut_throw("file '%s' is not a directory", project);
+        goto error;
+    }
+
+    char *project_json = ut_asprintf("%s"UT_OS_PS"project.json");
+    if (ut_file_test(project_json) != 1) {
+        ut_throw("cannot find or load file '%s'", project_json);
+        goto error;
+    }
+
+    return true;
+error:
     return false;
 }
 
@@ -478,6 +493,8 @@ int bake_run(
         /* First check if passed argument is a valid directory */
         if (is_valid_project(app_id)) {
             project_dir = (char*)app_id;
+        } else {
+            ut_catch();
         }
 
         /* If project is not found, lookup in package repositories */
@@ -491,8 +508,13 @@ int bake_run(
             /* Check if the package repository contains a link back to the
              * location of the project. */
             char *source_file = ut_asprintf("%s"UT_OS_PS"source.txt", package_path);
-            if (ut_file_test(source_file)) {
+            if (ut_file_test(source_file) == 1) {
                 project_dir = ut_file_load(source_file);
+                if (!project_dir) {
+                    ut_throw("file '%s' does not contain project path", source_file);
+                    goto error;
+                }
+
                 str_strip(project_dir); /* Remove trailing whitespace */
 
                 if (!is_valid_project(project_dir)) {
@@ -500,10 +522,13 @@ int bake_run(
                      * give up yet, maybe the project got moved. */
                     ut_warning(
                         "package '%s' points to project folder '%s'"
-                        " which does not contain a valid bake project",
+                        " which is not a valid bake project. Attempting"
+                        " to run existing binary, which may be outdated.",
                         app_id, project_dir);
                     project_dir = NULL;
                 }
+            } else {
+                ut_warning("could not find a source directory for '%s'", app_id);
             }
         }
         /* Test if current directory is a valid project */
@@ -573,7 +598,9 @@ int bake_run(
         ut_proc pid;
         ut_trace("starting process '%s'", app_bin);
 
-        ut_try( build_project(project_dir), "build failed, cannot run");
+        if (project_dir) {
+            ut_try( build_project(project_dir), "build failed, cannot run");
+        }
 
         if (argc) {
             pid = run_exec(app_bin, app_id, is_package, argv);

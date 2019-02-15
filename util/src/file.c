@@ -82,9 +82,9 @@ char* ut_file_load(
 
     /* Load contents in memory */
     content = malloc (size + 1);
-    if (fread(content, 1, size, file) != (unsigned int)size) {
+    if (!(size = fread(content, 1, size, file))) {
+        ut_throw("ut_file_load('%s') read zero bytes instead of %d", filename, size);
         free(content);
-        content = NULL;
     } else {
         content[size] = '\0';
     }

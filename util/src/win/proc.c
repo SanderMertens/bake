@@ -47,7 +47,7 @@ ut_proc ut_proc_run_intern(
     char filename[MAX_PATH];
     LPSTR lpFilePart;
     if (!SearchPath(NULL, exec, UT_OS_BIN_EXT, MAX_PATH, filename, &lpFilePart)) {
-        ut_throw("failed to locate executable '%s'", exec);
+        ut_throw("SearchPath: failed to locate executable '%s' in PATH", exec);
         goto error;
     }
 

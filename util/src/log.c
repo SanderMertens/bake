@@ -1476,7 +1476,7 @@ void _ut_log_pop(
         if (!frame->printed && UT_LOG_PROFILE) {
             printed = true;
             ut_logprint(
-                stderr, UT_LOG_FMT_CURRENT, UT_INFO, NULL, file, line, function, NULL, FALSE, TRUE);
+                stdout, UT_LOG_FMT_CURRENT, UT_INFO, NULL, file, line, function, NULL, FALSE, TRUE);
         }
 
         if (strcmp(frame->initial.function, function)) {
@@ -1491,7 +1491,7 @@ void _ut_log_pop(
                     function, frame->initial.function),
                 empty_list,
                 false,
-                stderr,
+                stdout,
                 false);
         }
 
@@ -1512,7 +1512,7 @@ void _ut_log_pop(
                 char *indent = ut_log_categoryIndent(data->categories, 0, UT_DEBUG);
                 /* Print everything that preceeds the category */
                 ut_logprint(
-                    stderr, UT_LOG_FMT_CURRENT, UT_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
+                    stdout, UT_LOG_FMT_CURRENT, UT_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
                 ut_log(
                     "%s#[grey]+#[reset]\n", indent ? indent : "");
                 if (indent) free(indent);
@@ -1568,7 +1568,7 @@ void ut_tracev(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_TRACE, 0, fmt, args, true, stderr, false);
+    ut_logv(file, line, function, UT_TRACE, 0, fmt, args, true, stdout, false);
 }
 
 void ut_warningv(
@@ -1601,7 +1601,7 @@ void ut_okv(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_OK, 0, fmt, args, true, stderr, false);
+    ut_logv(file, line, function, UT_OK, 0, fmt, args, true, stdout, false);
 }
 
 void ut_infov(
@@ -1611,7 +1611,7 @@ void ut_infov(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, UT_INFO, 0, fmt, args, true, stderr, false);
+    ut_logv(file, line, function, UT_INFO, 0, fmt, args, true, stdout, false);
 }
 
 void _ut_log_overwritev(
@@ -1622,7 +1622,7 @@ void _ut_log_overwritev(
     const char *fmt,
     va_list args)
 {
-    ut_logv(file, line, function, verbosity, 0, fmt, args, true, stderr, true);
+    ut_logv(file, line, function, verbosity, 0, fmt, args, true, stdout, true);
 }
 
 static
@@ -2007,23 +2007,13 @@ void ut_log(char *fmt, ...) {
     ut_log_tlsData *data = ut_getThreadData();
     int len;
 
-    ut_log_clearLine(data);
-
     va_start(arglist, fmt);
     formatted = ut_vasprintf(fmt, arglist);
     va_end(arglist);
 
     colorized = ut_log_colorize(formatted);
     len = printlen(colorized);
-    fprintf(stderr, "%s", colorized);
-
-    /* If no newline is printed, keep track of how many backtrace characters
-     * need to ba appended before printing the next log statement */
-    if (colorized[strlen(colorized) - 1] != '\n') {
-        data->last_printed_len = len;
-        ut_log_resetCursor(data);
-        fflush(stderr);
-    }
+    fprintf(stdout, "%s", colorized);
 
     free(colorized);
     free(formatted);
