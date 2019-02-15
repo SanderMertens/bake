@@ -666,7 +666,7 @@ struct ut_fileHandler* ut_load_filehandler(
     /* If filehandler is not found, look it up in driver/ext */
     if (!h) {
         char extPackage[512];
-        sprintf(extPackage, "driver"UT_OS_PS"ext"UT_OS_PS"%s", ext);
+        sprintf(extPackage, "driver.ext.%s", ext);
 
         ut_try(
             ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
@@ -687,7 +687,7 @@ struct ut_fileHandler* ut_load_filehandler(
         h = ut_lookupExt(ext);
         if (!h) {
             ut_throw(
-                "package 'driver"UT_OS_PS"ext"UT_OS_PS"%s' loaded but extension is not registered",
+                "package 'driver.ext.%s' loaded but extension is not registered",
                 ext);
             ut_try(
                 ut_mutex_unlock(&UT_LOAD_LOCK), NULL);
@@ -1021,19 +1021,6 @@ int ut_load_register(
     return 0;
 error:
     return -1;
-}
-
-static
-void ut_load_(
-    const char *env,
-    const char *value)
-{
-    char *existing = ut_getenv(env);
-    if (!existing || !strlen(existing)) {
-        ut_setenv(env, value);
-    } else {
-        ut_setenv(env, strarg("%s:%s", value, existing));
-    }
 }
 
 /* Initialize paths necessary for loader */
