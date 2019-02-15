@@ -192,7 +192,7 @@ int16_t bake_create_script(void)
         ut_warning(
             "Failed to instal bake script to %s. Setup will continue, but\n"
             "      before you can use bake, you now first need to run:\n"
-            "        export $(~/bake/bake env)\n", GLOBAL_PATH
+            "        export $(~/bake/"BAKE_EXEC" env)\n", GLOBAL_PATH
         );
     } else {
         bake_message(UT_OK, "done", "install bake script to '" GLOBAL_PATH "'");
@@ -257,7 +257,7 @@ int16_t bake_build_make_project(
       strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
       strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
-        
+
 #ifdef _WIN32
     ut_try(ut_rename(
         strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
