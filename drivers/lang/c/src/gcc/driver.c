@@ -220,7 +220,7 @@ void add_misc(
     ut_strbuf *cmd)
 {
     /* In obscure cases with static libs, stack protector can cause unresolved symbols */
-    ut_strbuf_append(cmd, "%s -fPIC -fno-stack-protector", cc(cpp));
+    ut_strbuf_append(cmd, " -fPIC -fno-stack-protector");
 
     /* Include symbols */
     if (config->symbols) {
@@ -245,6 +245,8 @@ void compile_src(
         /* If extension is not c, treat as a C++ file */
         cpp = true;
     }
+
+    ut_strbuf_append(&cmd, "%s", cc(cpp));
 
     /* Add misc options */
     add_misc(driver, config, project, cpp, &cmd);
