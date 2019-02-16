@@ -520,3 +520,10 @@ void precompile_h(
 {
     /* TODO: support precompiled headers on Windows */
 }
+
+/* Is current compiler clang */
+static
+bool is_clang(bool is_cpp)
+{
+    return false;
+}
