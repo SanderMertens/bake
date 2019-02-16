@@ -42,11 +42,11 @@ void init(
         } else {
             driver->set_attr_bool("precompile-header", false);
         }
+        free(main_header);
 #else
         /* TODO: support precompiled headers on Windows */
         driver->set_attr_bool("precompile-header", false);
 #endif
-        free(main_header);
     }
     if (!driver->get_attr("static")) {
         driver->set_attr_bool("static", false);
