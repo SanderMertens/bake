@@ -192,6 +192,10 @@ bake_file* bake_filelist_add_file(
         path = ut_asprintf("%s"UT_OS_PS"%s", filepath, file);
     }
 
+    if (!path) {
+        return NULL;
+    }
+
     if (ut_file_test(path) == 1) {
         lastmodified = ut_lastmodified(path);
     }

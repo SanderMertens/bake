@@ -458,6 +458,23 @@ int16_t ut_dir_iter(
             ut_throw("directory '%s' does not exist", name);
             goto error;
         }
+    } else if (!filter) {
+        if (!ut_isdir(path)) {
+            ut_ll result = ut_ll_new();
+            char *path_offset = path;
+
+            if (name && strcmp(name, ".")) {
+                size_t len = strlen(name);
+                path_offset += len;
+                if (path_offset[0] == UT_OS_PS[0]) {
+                    path_offset ++;
+                }
+            }
+
+            ut_ll_append(result, path_offset);
+            *it_out = ut_ll_iterAlloc(result);
+            return 0;
+        }
     }
 
     if (!filter && !offset) {

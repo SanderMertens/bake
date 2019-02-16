@@ -20,38 +20,8 @@ char* src_to_obj(
     return result;
 }
 
-/* TODO - used for header dependencies */
-char* src_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-char* obj_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-
 /* -- Actions -- */
 
-/* TODO - used for header dependencies */
-static
-void generate_deps(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-}
 
 /* Is current OS Darwin */
 static
@@ -70,18 +40,6 @@ bool is_linux(void)
         return false;
     }
     return true;
-}
-
-/* Is language C++ */
-static
-bool is_cpp(
-    bake_project *project)
-{
-    if (!strcmp(project->language, "cpp")) {
-        return true;
-    } else {
-        return false;
-    }
 }
 
 /* Get compiler */
@@ -131,6 +89,128 @@ bool is_clang(bool is_cpp)
     return false;
 }
 
+static
+void add_includes(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    ut_strbuf *cmd)
+{
+    /* Add configured include paths */
+    bake_attr *include_attr = driver->get_attr("include");
+    if (include_attr) {
+        ut_iter it = ut_ll_iter(include_attr->is.array);
+        while (ut_iter_hasNext(&it)) {
+            bake_attr *include = ut_iter_next(&it);
+            char* file = include->is.string;
+
+            if (file[0] == '/' || file[0] == '$') {
+                ut_strbuf_append(cmd, " -I%s", file);
+            } else {
+                ut_strbuf_append(cmd, " -I%s/%s", project->path, file);
+            }
+        }
+    }
+
+    /* Add BAKE_TARGET to include path */
+    ut_strbuf_append(cmd, " -I %s/include", config->home);
+
+    /* Add project root to include path */
+    ut_strbuf_append(cmd, " -I%s", project->path);
+}   
+
+static
+void add_flags(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    if (!cpp) {
+        /* CFLAGS for c projects */
+        bake_attr *flags_attr = driver->get_attr("cflags");
+        if (flags_attr) {
+            ut_iter it = ut_ll_iter(flags_attr->is.array);
+            while (ut_iter_hasNext(&it)) {
+                bake_attr *flag = ut_iter_next(&it);
+                ut_strbuf_append(cmd, " %s", flag->is.string);
+            }
+        }
+    } else {
+        /* CXXFLAGS for c4cpp projects */
+        bake_attr *flags_attr = driver->get_attr("cxxflags");
+        if (flags_attr) {
+            ut_iter it = ut_ll_iter(flags_attr->is.array);
+            while (ut_iter_hasNext(&it)) {
+                bake_attr *flag = ut_iter_next(&it);
+                ut_strbuf_append(cmd, " %s", flag->is.string);
+            }
+        }
+    }
+
+    /* Enable debugging code */
+    if (!config->debug) {
+        ut_strbuf_appendstr(cmd, " -DNDEBUG");
+    }
+
+    /* Give project access to its own id */
+    ut_strbuf_append(cmd, " -DBAKE_PROJECT_ID=\"%s\"", project->id);
+
+    /* This macro is only set for source files of this project, and can be used
+     * to exclude header statements for dependencies */
+    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id_underscore);
+    strupper(building_macro);
+    ut_strbuf_appendstr(cmd, building_macro);
+    free(building_macro);
+}
+
+static
+void add_std(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    /* Set standard for C or C++ */
+    if (cpp) {
+        ut_strbuf_append(cmd, " -std=%s",
+            driver->get_attr_string("cpp-standard"));
+    } else {
+        ut_strbuf_append(cmd, " -std=%s -D_XOPEN_SOURCE=600",
+            driver->get_attr_string("c-standard"));
+    }
+
+    ut_strbuf_appendstr(cmd, " -Wall");
+
+    /* If strict, enable lots of warnings & treat warnings as errors */
+    if (config->strict) {
+        ut_strbuf_appendstr(cmd, " -Werror -Wextra -pedantic");
+    }
+}
+
+static
+void add_optimization(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    /* Enable full optimizations, including cross-file */
+    if (config->optimizations) {
+        if (!is_clang(cpp) || !is_linux()) {
+            ut_strbuf_appendstr(cmd, " -O3 -flto");
+        } else {
+            /* On some Linux versions clang has trouble loading the LTO plugin */
+            ut_strbuf_appendstr(cmd, " -O3");
+        }
+    } else {
+        ut_strbuf_appendstr(cmd, " -O0");
+    }
+}
+
 /* Compile source file */
 static
 void compile_src(
@@ -150,97 +230,30 @@ void compile_src(
     }
 
     /* In obscure cases with static libs, stack protector can cause unresolved symbols */
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC -fno-stack-protector", cc(cpp));
-
-    /* Set standard for C or C++ */
-    if (cpp) {
-        ut_strbuf_append(&cmd, " -std=%s",
-            driver->get_attr_string("cpp-standard"));
-    } else {
-        ut_strbuf_append(&cmd, " -std=%s -D_XOPEN_SOURCE=600",
-            driver->get_attr_string("c-standard"));
-    }
-
-    /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " -DBAKE_PROJECT_ID=\"%s\"", project->id);
-
-    /* This macro is only set for source files of this project, and can be used
-     * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id_underscore);
-    strupper(building_macro);
-    ut_strbuf_appendstr(&cmd, building_macro);
-    free(building_macro);
+    ut_strbuf_append(&cmd, "%s -fPIC -fno-stack-protector", cc(cpp));
 
     /* Include symbols */
     if (config->symbols) {
         ut_strbuf_appendstr(&cmd, " -g");
     }
 
-    /* Enable debugging code */
-    if (!config->debug) {
-        ut_strbuf_appendstr(&cmd, " -DNDEBUG");
+    /* Add optimization flags */
+    add_optimization(driver, config, project, cpp, &cmd);
+
+    /* Add c/c++ standard arguments */
+    add_std(driver, config, project, cpp, &cmd);
+
+    /* Add CFLAGS */
+    add_flags(driver, config, project, cpp, &cmd);
+
+    /* Add precompiled header */
+    if (driver->get_attr_bool("precompile-header")) {
+        ut_strbuf_append(&cmd, " -include %s/include/%s.h", 
+            project->path, project->id_base);
     }
 
-    /* Enable full optimizations, including cross-file */
-    if (config->optimizations) {
-        if (!is_clang(cpp) || !is_linux()) {
-            ut_strbuf_appendstr(&cmd, " -O3 -flto");
-        } else {
-            /* On some Linux versions clang has trouble loading the LTO plugin */
-            ut_strbuf_appendstr(&cmd, " -O3");
-        }
-    } else {
-        ut_strbuf_appendstr(&cmd, " -O0");
-    }
-
-    /* If strict, enable lots of warnings & treat warnings as errors */
-    if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " -Werror -Wextra -pedantic");
-    }
-
-    if (!cpp) {
-        /* CFLAGS for c projects */
-        bake_attr *flags_attr = driver->get_attr("cflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *flag = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", flag->is.string);
-            }
-        }
-    } else {
-        /* CXXFLAGS for c4cpp projects */
-        bake_attr *flags_attr = driver->get_attr("cxxflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *flag = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", flag->is.string);
-            }
-        }
-    }
-
-    /* Add configured include paths */
-    bake_attr *include_attr = driver->get_attr("include");
-    if (include_attr) {
-        ut_iter it = ut_ll_iter(include_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *include = ut_iter_next(&it);
-            char* file = include->is.string;
-
-            if (file[0] == '/' || file[0] == '$') {
-                ut_strbuf_append(&cmd, " -I%s", file);
-            } else {
-                ut_strbuf_append(&cmd, " -I%s/%s", project->path, file);
-            }
-        }
-    }
-
-    /* Add BAKE_TARGET to include path */
-    ut_strbuf_append(&cmd, " -I %s/include", config->home);
-
-    /* Add project root to include path */
-    ut_strbuf_append(&cmd, " -I%s", project->path);
+    /* Add include directories */
+    add_includes(driver, config, project, &cmd);
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " -c %s -o %s", source, target);
@@ -252,13 +265,39 @@ void compile_src(
 }
 
 static
-void obj_deps(
+void precompile_h(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     char *source,
     char *target)
-{
+{   
+    ut_strbuf cmd = UT_STRBUF_INIT;
+    bool cpp = is_cpp(project);
+
+    /* Add source file and object file */
+    ut_strbuf_append(&cmd, 
+        "%s -fno-stack-protector -x %s-header %s -o %s", 
+        cc(cpp), 
+        cpp ? "c++" : "c",
+        source, target);
+
+    /* Add optimization flags */
+    add_optimization(driver, config, project, cpp, &cmd);
+
+    /* Add -std option */
+    add_std(driver, config, project, cpp, &cmd);
+
+    /* Add CFLAGS */
+    add_flags(driver, config, project, cpp, &cmd);
+
+    /* Add include directories */
+    add_includes(driver, config, project, &cmd);
+
+    /* Execute command */
+    char *cmdstr = ut_strbuf_get(&cmd);
+    driver->exec(cmdstr);
+    free(cmdstr);
 }
 
 /* A better mechanism is needed to abstract away from the difference between
@@ -557,21 +596,6 @@ void link_binary(
     }
 }
 
-/* Initialize project defaults */
-static
-void init(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    if (!driver->get_attr("cpp-standard")) {
-        driver->set_attr_string("cpp-standard", "c++0x");
-    }
-    if (!driver->get_attr("c-standard")) {
-        driver->set_attr_string("c-standard", "c99");
-    }
-}
-
 /* Specify files to clean */
 static
 void clean(
@@ -579,90 +603,13 @@ void clean(
     bake_config *config,
     bake_project *project)
 {
-}
-
-/* Initialize directory with new project */
-static
-void setup_project(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    /* Get short project id */
-    const char *id = project->id;
-    bake_project_type kind = project->type;
-    const char *short_id = project->id_short;
-
-    /* Create directories */
-    ut_mkdir("src");
-    ut_mkdir("include");
-
-    /* Create main source file */
-    char *source_filename = ut_asprintf("src/main.c");
-    FILE *f = fopen(source_filename, "w");
-    if (!f) {
-        ut_error("failed to open '%s'", source_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-        "#include <include/%s.h>\n"
-        "\n"
-        "int main(int argc, char *argv[]) {\n"
-        "    return 0;\n"
-        "}\n",
-        short_id
-    );
-
-    fclose(f);
-    free(source_filename);
-
-    /* Create upper-case id for defines in header file */
-    char *id_upper = strdup(id);
-    strupper(id_upper);
-    char *ptr, ch;
-    for (ptr = id_upper; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
-            ptr[0] = '_';
-        }
-    }
-
-    /* Create main header file */
-    char *header_filename = ut_asprintf("include/%s.h", short_id);
-    f = fopen(header_filename, "w");
-    if (!f) {
-        ut_error("failed to open '%s'", header_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-        "#ifndef %s_H\n"
-        "#define %s_H\n\n"
-        "/* This generated file contains includes for project dependencies */\n"
-        "#include \"bake_config.h\"\n",
-        id_upper,
-        id_upper);
-
-    if (kind != BAKE_PACKAGE) {
-        fprintf(f, "%s",
-            "\n"
-            "#ifdef __cplusplus\n"
-            "extern \"C\" {\n"
-            "#endif\n"
-            "\n"
-            "#ifdef __cplusplus\n"
-            "}\n"
-            "#endif\n");
-    }
-
-    fprintf(f, "%s",
-        "\n"
-        "#endif\n"
-        "\n");
-
-    fclose(f);
+    char *header = ut_asprintf("include/%s.h.pch", project->id_base);
+    driver->remove(header);
+    free(header);
+    
+    header = ut_asprintf("include/%s.h.gch", project->id_base);
+    driver->remove(header);
+    free(header);
 }
 
 /* -- Misc functions -- */
@@ -817,115 +764,3 @@ void add_dependency_includes(
     }
 }
 
-/* Generate bake_config.h */
-static
-void generate(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    const char *short_id = project->id_short;
-
-    /* Create upper-case id for defines in header file */
-    char *id_upper = ut_strdup(project->id_underscore);
-    strupper(id_upper);
-
-    /* Ensure include directory exists */
-    ut_mkdir("%s/include", project->path);
-
-    /* Create main header file */
-    char *header_filename = ut_asprintf(
-        "%s/include/bake_config.h", project->path);
-    FILE *f = fopen(header_filename, "w");
-    if (!f) {
-        ut_error("failed to open file '%s'", header_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-"/*\n"
-"                                   )\n"
-"                                  (.)\n"
-"                                  .|.\n"
-"                                  | |\n"
-"                              _.--| |--._\n"
-"                           .-';  ;`-'& ; `&.\n"
-"                          \\   &  ;    &   &_/\n"
-"                           |\"\"\"---...---\"\"\"|\n"
-"                           \\ | | | | | | | /\n"
-"                            `---.|.|.|.---'\n"
-"\n"
-" * This file is generated by bake.lang.c for your convenience. Headers of\n"
-" * dependencies will automatically show up in this file. Include bake_config.h\n"
-" * in your main project file. Do not edit! */\n\n"
-"#ifndef %s_BAKE_CONFIG_H\n"
-"#define %s_BAKE_CONFIG_H\n\n",
-        id_upper,
-        id_upper);
-
-    fprintf(f, "/* Headers of public dependencies */\n");
-    add_dependency_includes(config, f, project->use);
-
-    fprintf(f, "\n/* Headers of private dependencies */\n");
-    fprintf(f, "#ifdef %s_IMPL\n", id_upper);
-    add_dependency_includes(config, f, project->use_private);
-    fprintf(f, "#endif\n");
-
-    fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
-    fprintf(f,
-      "#if %s_IMPL && defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllexport)\n"
-      "#elif %s_IMPL\n"
-      "#define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
-      "#elif defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllimport)\n"
-      "#else\n"
-      "#define %s_EXPORT\n"
-      "#endif\n", id_upper, id_upper, id_upper, id_upper, id_upper, id_upper);
-
-    fprintf(f, "%s", "\n#endif\n\n");
-    fclose(f);
-}
-
-/* -- Rules */
-int bakemain(bake_driver_api *driver) {
-
-    ut_init("driver/bake/c");
-
-    /* Create pattern that matches source files */
-    driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-
-    /* Create rule for dynamically generating dep files from source files */
-    driver->rule("deps", "$SOURCES", driver->target_map(src_to_dep), generate_deps);
-
-    /* Create rule for dynamically generating object files from source files */
-    driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), compile_src);
-
-    /* Create rule for dynamically generating dependencies for every object in
-     * $objects, using the generated dependency files. */
-    driver->dependency_rule("$objects", "$deps", driver->target_map(obj_to_dep), obj_deps);
-
-    /* Create rule for creating binary from objects */
-    driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);
-
-    /* Generate header file that automatically includes project dependencies */
-    driver->generate(generate);
-
-    /* Callback that initializes projects with the right build dependencies */
-    driver->init(init);
-
-    /* Callback that specifies files to clean */
-    driver->clean(clean);
-
-    /* Callback for generating artefact name(s) */
-    driver->artefact(artefact_name);
-
-    /* Callback for looking up library from link */
-    driver->link_to_lib(link_to_lib);
-
-    /* Callback for setting up a project */
-    driver->setup(setup_project);
-
-    return 0;
-}

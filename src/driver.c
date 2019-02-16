@@ -85,7 +85,9 @@ int16_t bake_node_addToTarget(
     bake_rule_target *target)
 {
     const char *pattern = NULL;
-    if (target->kind == BAKE_RULE_TARGET_PATTERN) {
+    if (target->kind == BAKE_RULE_TARGET_PATTERN || 
+        target->kind == BAKE_RULE_TARGET_FILE) 
+    {
         pattern = target->is.pattern;
     }
 
@@ -137,6 +139,26 @@ void bake_driver_pattern(
 
     } else {
         bake_node_add(driver, bake_pattern_new(name, pattern));
+    }
+}
+
+static
+void bake_driver_file(
+    bake_driver *driver,
+    const char *name,
+    const char *file)
+{
+    bake_node *n;
+    if ((n = bake_node_find(driver, name))) {
+        if (n->kind != BAKE_RULE_FILE) {
+            driver->error = 1;
+            ut_error("'%s' redeclared as pattern", name);
+        } else {
+            ((bake_pattern*)n)->pattern = file;
+        }
+
+    } else {
+        bake_node_add(driver, bake_file_pattern_new(name, file));
     }
 }
 
@@ -201,6 +223,15 @@ void bake_driver_pattern_cb(
 }
 
 static
+void bake_driver_file_cb(
+    const char *name,
+    const char *pattern)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_driver_file(driver, name, pattern);
+}
+
+static
 void bake_driver_rule_cb(
     const char *name,
     const char *source,
@@ -243,6 +274,16 @@ bake_rule_target bake_driver_target_pattern_cb(
 {
     bake_rule_target result;
     result.kind = BAKE_RULE_TARGET_PATTERN;
+    result.is.pattern = pattern;
+    return result;
+}
+
+static
+bake_rule_target bake_driver_target_file_cb(
+    const char *pattern)
+{
+    bake_rule_target result;
+    result.kind = BAKE_RULE_TARGET_FILE;
     result.is.pattern = pattern;
     return result;
 }
@@ -337,7 +378,9 @@ bool bake_driver_get_bool_attr_cb(
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
     bake_attr *attr = bake_project_get_attr(project, driver->id, name);
+
     if (!attr) {
+        ut_warning("attribute '%s' not found", name);
         return false;
     }
 
@@ -345,7 +388,7 @@ bool bake_driver_get_bool_attr_cb(
         return attr->is.boolean;
     } else {
         project->error = true;
-        ut_throw("attribute '%s' is not of type boolean", name);
+        ut_error("attribute '%s' is not of type boolean", name);
         return false;
     }
 }
@@ -521,10 +564,12 @@ void bake_driver_import_cb(
 bake_driver_api bake_driver_api_impl = {
     .import = bake_driver_import_cb,
     .pattern = bake_driver_pattern_cb,
+    .file = bake_driver_file_cb,
     .rule = bake_driver_rule_cb,
     .dependency_rule = bake_driver_dependency_rule_cb,
     .condition = bake_driver_condition_cb,
     .target_pattern = bake_driver_target_pattern_cb,
+    .target_file = bake_driver_target_file_cb,
     .target_map = bake_driver_target_map_cb,
     .init = bake_driver_init_cb,
     .setup = bake_driver_setup_cb,

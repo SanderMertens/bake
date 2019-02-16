@@ -484,11 +484,11 @@ int16_t bake_project_init(
         }
     }
 
-    project->id_short = strrchr(project->id, '.');
-    if (!project->id_short) {
-        project->id_short = project->id;
+    project->id_base = strrchr(project->id, '.');
+    if (!project->id_base) {
+        project->id_base = project->id;
     } else {
-        project->id_short ++;
+        project->id_base ++;
     }
 
     if (!project->sources) {
@@ -647,6 +647,7 @@ bake_attr* bake_project_get_attr(
     const char *attr)
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+
     if (driver && driver->attributes) {
         return bake_attr_get(driver->attributes, attr);
     } else {
@@ -754,7 +755,7 @@ int bake_project_parse_driver_config(
         }
 
         driver->attributes = bake_attrs_parse(
-            config, project, project->id, driver->json, NULL);
+            config, project, project->id, driver->json, driver->attributes);
         if (!driver->attributes) {
             goto error;
         }

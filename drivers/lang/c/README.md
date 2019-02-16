@@ -18,6 +18,7 @@ static | bool | Create static library (packages only, default=false)
 c-standard | string | Specify C standard (default=c99)
 cpp-standard | string | Specify C++ standard (default=c++0x)
 export-symbols | bool | Export all library symbols (default=false)
+precompile-header | bool | Precompile main project header (default=true)
 
 ## Example
 

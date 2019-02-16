@@ -21,6 +21,11 @@
 
 #include "bake.h"
 
+extern ut_tls BAKE_DRIVER_KEY;
+extern ut_tls BAKE_FILELIST_KEY;
+extern ut_tls BAKE_PROJECT_KEY;
+extern ut_tls BAKE_CONFIG_KEY;
+
 bake_node* bake_node_find(
     bake_driver *driver,
     const char *name)
@@ -48,8 +53,23 @@ bake_pattern* bake_pattern_new(
     result->super.name = name;
     result->super.cond = NULL;
     result->pattern = pattern ? ut_strdup(pattern) : NULL;
+
     return result;
 }
+
+bake_pattern* bake_file_pattern_new(
+    const char *name,
+    const char *pattern)
+{
+    bake_pattern *result = ut_calloc(sizeof(bake_pattern));
+    result->super.kind = BAKE_RULE_FILE;
+    result->super.name = name;
+    result->super.cond = NULL;
+    result->pattern = pattern ? ut_strdup(pattern) : NULL;
+
+    return result;
+}
+
 
 bake_rule* bake_rule_new(
     const char *name,
@@ -107,6 +127,7 @@ error:
 
 static
 bake_filelist* bake_node_eval_pattern(
+    bake_config *config,
     bake_node *n,
     bake_project *p)
 {
@@ -137,9 +158,34 @@ bake_filelist* bake_node_eval_pattern(
         }
 
     } else if (((bake_pattern*)n)->pattern) {
+        char *pattern = bake_attr_replace(
+            config, p, p->id, ((bake_pattern*)n)->pattern);
+        if (!pattern) {
+            ut_error("failed to parse pattern '%s'", ((bake_pattern*)n)->pattern);
+            goto error;
+        }
+
+        ut_trace("create filelist from pattern '%s'", pattern);
+
         /* If this is a regular pattern, match against project directory */
-        targets = bake_filelist_new(p->path, ((bake_pattern*)n)->pattern);
-        ut_try (!targets, NULL);
+        if (n->kind == BAKE_RULE_PATTERN) {
+            targets = bake_filelist_new(p->path, pattern);
+            if (!targets || !bake_filelist_count(targets)) {
+                ut_error(
+                    "pattern %s didn't match anything (relative path = '%s')",
+                    pattern, p->path);
+
+                if (targets) {
+                    bake_filelist_free(targets);
+                    targets = NULL;
+                }
+            }
+        } else if (n->kind == BAKE_RULE_FILE) {
+            targets = bake_filelist_new(p->path, NULL);
+            bake_filelist_add_file(targets, NULL, pattern);
+        }
+
+        free(pattern);
     }
 
     if (!targets) {
@@ -239,7 +285,7 @@ int16_t bake_node_run_rule_pattern(
             shouldBuild = true;
             ut_trace("no targets found for rule '%s', rebuilding",
                 ((bake_node*)r)->name);
-        } else {
+        } else if (r->action) {
             ut_iter src_iter = bake_filelist_iter(inputs);
             while (!shouldBuild && ut_iter_hasNext(&src_iter)) {
                 bake_file *src = ut_iter_next(&src_iter);
@@ -291,7 +337,10 @@ int16_t bake_node_run_rule_pattern(
             ut_ok("from #[bold]%s#[normal]", source_list_str);
         }
 
-        r->action(&bake_driver_api_impl, c, p, source_list_str, dst);
+        if (r->action) {
+            r->action(&bake_driver_api_impl, c, p, source_list_str, dst);
+        }
+
         if (p->error) {
             if (dst) {
                 ut_throw("command for task '%s' failed", dst);
@@ -326,14 +375,18 @@ int16_t bake_node_eval(
 {
     bake_filelist *targets = NULL, *inputs = NULL;
 
+    /* Set project for TLS key, in case condition reads/writes project attrs */
+    ut_tls_set(BAKE_DRIVER_KEY, driver);
+    ut_tls_set(BAKE_PROJECT_KEY, p);
+
     if (n->cond && !n->cond(&bake_driver_api_impl, c, p)) {
         return 0;
     }
 
     ut_log_push((char*)n->name);
 
-    if (n->kind == BAKE_RULE_PATTERN) {
-        targets = bake_node_eval_pattern(n, p);
+    if (n->kind == BAKE_RULE_PATTERN || n->kind == BAKE_RULE_FILE) {
+        targets = bake_node_eval_pattern(c, n, p);
         if (!targets) {
             targets = inherits;
         }
@@ -354,6 +407,7 @@ int16_t bake_node_eval(
             bake_node *e = ut_iter_next(&it);
             if (bake_node_eval(driver, e, p, c, targets, inputs)) {
                 ut_throw("dependency '%s' failed", e->name);
+                ut_log_pop();
                 goto error;
             }
         }
@@ -376,7 +430,9 @@ int16_t bake_node_eval(
                 ut_log_pop();
 
             /* When rule specifies a pattern, generate targets from pattern */
-            } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN) {
+            } else if (r->target.kind == BAKE_RULE_TARGET_PATTERN || 
+                       r->target.kind == BAKE_RULE_TARGET_FILE) 
+            {
                 bool shouldBuild = false;
 
                 if (!r->target.is.pattern || (r->target.is.pattern[0] == '$' && inherits)) {

@@ -21,50 +21,8 @@ char* src_to_obj(
     return result;
 }
 
-/* TODO - used for header dependencies */
-char* src_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-char* obj_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-
 /* -- Actions -- */
 
-/* TODO - used for header dependencies */
-static
-void generate_deps(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-}
-
-/* Is language C++ */
-static
-bool is_cpp(
-    bake_project *project)
-{
-    if (!strcmp(project->language, "cpp")) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 /* Get compiler */
 static
@@ -84,6 +42,7 @@ const char *cc(
         return cc;
     }
 }
+
 /* Compile source file for Windows platform using MSVC*/
 static
 void compile_src(
@@ -422,21 +381,6 @@ void link_binary(
     }
 }
 
-/* Initialize project defaults */
-static
-void init(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    if (!driver->get_attr("cpp-standard")) {
-        driver->set_attr_string("cpp-standard", "c++0x");
-    }
-    if (!driver->get_attr("c-standard")) {
-        driver->set_attr_string("c-standard", "c99");
-    }
-}
-
 /* Specify files to clean */
 static
 void clean(
@@ -444,90 +388,6 @@ void clean(
     bake_config *config,
     bake_project *project)
 {
-}
-
-/* Initialize directory with new project */
-static
-void setup_project(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    /* Get short project id */
-    const char *id = project->id;
-    bake_project_type kind = project->type;
-    const char *short_id = project->id_short;
-
-    /* Create directories */
-    ut_mkdir("src");
-    ut_mkdir("include");
-
-    /* Create main source file */
-    char *source_filename = ut_asprintf("src\\main.c");
-    FILE *f = fopen(source_filename, "w");
-    if (!f) {
-        ut_error("failed to open '%s'", source_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-        "#include <include/%s.h>\n"
-        "\n"
-        "int main(int argc, char *argv[]) {\n"
-        "    return 0;\n"
-        "}\n",
-        short_id
-    );
-
-    fclose(f);
-    free(source_filename);
-
-    /* Create upper-case id for defines in header file */
-    char *id_upper = strdup(id);
-    strupper(id_upper);
-    char *ptr, ch;
-    for (ptr = id_upper; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
-            ptr[0] = '_';
-        }
-    }
-
-    /* Create main header file */
-    char *header_filename = ut_asprintf("include\\%s.h", short_id);
-    f = fopen(header_filename, "w");
-    if (!f) {
-        ut_error("failed to open '%s'", header_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-        "#ifndef %s_H\n"
-        "#define %s_H\n\n"
-        "/* This generated file contains includes for project dependencies */\n"
-        "#include \"bake_config.h\"\n",
-        id_upper,
-        id_upper);
-
-    if (kind != BAKE_PACKAGE) {
-        fprintf(f, "%s",
-            "\n"
-            "#ifdef __cplusplus\n"
-            "extern \"C\" {\n"
-            "#endif\n"
-            "\n"
-            "#ifdef __cplusplus\n"
-            "}\n"
-            "#endif\n");
-    }
-
-    fprintf(f, "%s",
-        "\n"
-        "#endif\n"
-        "\n");
-
-    fclose(f);
 }
 
 /* -- Misc functions -- */
@@ -650,115 +510,13 @@ void add_dependency_includes(
     }
 }
 
-/* Generate bake_config.h */
 static
-void generate(
+void precompile_h(
     bake_driver_api *driver,
     bake_config *config,
-    bake_project *project)
+    bake_project *project,
+    char *source,
+    char *target)
 {
-    const char *short_id = project->id_short;
-
-    /* Create upper-case id for defines in header file */
-    char *id_upper = ut_strdup(project->id_underscore);
-    strupper(id_upper);
-
-    /* Ensure include directory exists */
-    ut_mkdir("%s"UT_OS_PS"include", project->path);
-
-    /* Create main header file */
-    char *header_filename = ut_asprintf(
-        "%s"UT_OS_PS"include"UT_OS_PS"bake_config.h", project->path);
-    FILE *f = fopen(header_filename, "w");
-    if (!f) {
-        ut_error("failed to open file '%s'", header_filename);
-        project->error = true;
-        return;
-    }
-
-    fprintf(f,
-"/*\n"
-"                                   )\n"
-"                                  (.)\n"
-"                                  .|.\n"
-"                                  | |\n"
-"                              _.--| |--._\n"
-"                           .-';  ;`-'& ; `&.\n"
-"                          \\   &  ;    &   &_/\n"
-"                           |\"\"\"---...---\"\"\"|\n"
-"                           \\ | | | | | | | /\n"
-"                            `---.|.|.|.---'\n"
-"\n"
-" * This file is generated by bake.lang.c for your convenience. Headers of\n"
-" * dependencies will automatically show up in this file. Include bake_config.h\n"
-" * in your main project file. Do not edit! */\n\n"
-"#ifndef %s_BAKE_CONFIG_H\n"
-"#define %s_BAKE_CONFIG_H\n\n",
-        id_upper,
-        id_upper);
-
-    fprintf(f, "/* Headers of public dependencies */\n");
-    add_dependency_includes(config, f, project->use);
-
-    fprintf(f, "\n/* Headers of private dependencies */\n");
-    fprintf(f, "#ifdef %s_IMPL\n", id_upper);
-    add_dependency_includes(config, f, project->use_private);
-    fprintf(f, "#endif\n");
-
-    fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
-    fprintf(f,
-      "#if %s_IMPL && defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllexport)\n"
-      "#elif %s_IMPL\n"
-      "#define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
-      "#elif defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllimport)\n"
-      "#else\n"
-      "#define %s_EXPORT\n"
-      "#endif\n", id_upper, id_upper, id_upper, id_upper, id_upper, id_upper);
-
-    fprintf(f, "%s", "\n#endif\n\n");
-    fclose(f);
-}
-
-/* -- Rules */
-UT_EXPORT int bakemain(bake_driver_api *driver) {
-
-    ut_init("driver/bake/c");
-
-    /* Create pattern that matches source files */
-    driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-
-    /* Create rule for dynamically generating dep files from source files */
-    driver->rule("deps", "$SOURCES", driver->target_map(src_to_dep), generate_deps);
-
-    /* Create rule for dynamically generating object files from source files */
-    driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), compile_src);
-
-    /* Create rule for dynamically generating dependencies for every object in
-     * $objects, using the generated dependency files. */
-    driver->dependency_rule("$objects", "$deps", driver->target_map(obj_to_dep), obj_deps);
-
-    /* Create rule for creating binary from objects */
-    driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);
-
-    /* Generate header file that automatically includes project dependencies */
-    driver->generate(generate);
-
-    /* Callback that initializes projects with the right build dependencies */
-    driver->init(init);
-
-    /* Callback that specifies files to clean */
-    driver->clean(clean);
-
-    /* Callback for generating artefact name(s) */
-    driver->artefact(artefact_name);
-
-    /* Callback for looking up library from link */
-    driver->link_to_lib(link_to_lib);
-
-    /* Callback for setting up a project */
-    driver->setup(setup_project);
-
-    return 0;
+    /* TODO: support precompiled headers on Windows */
 }

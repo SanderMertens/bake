@@ -10,7 +10,7 @@ void setup_project(
     /* Get short project id */
     const char *id = project->id;
     bake_project_type kind = project->type;
-    const char *short_id = project->id_short;
+    const char *short_id = project->id_base;
 
     /* Create directories */
     ut_mkdir("src");

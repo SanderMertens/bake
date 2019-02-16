@@ -339,6 +339,11 @@ bake_pattern* bake_pattern_new(
     const char *name,
     const char *pattern);
 
+/* Create a new file pattern */
+bake_pattern* bake_file_pattern_new(
+    const char *name,
+    const char *pattern);
+
 /** Create new rule */
 bake_rule* bake_rule_new(
     const char *name,

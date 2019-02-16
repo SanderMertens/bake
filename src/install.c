@@ -312,7 +312,7 @@ int16_t bake_install_prebuild(
         /* Header that references main header file so projects can include
          * packages using their logical name */
         char *header_name = ut_asprintf("%s"UT_OS_PS"%s.dir"UT_OS_PS"%s.h",
-            UT_INCLUDE_PATH, project->id, project->id_short);
+            UT_INCLUDE_PATH, project->id, project->id_base);
         if (ut_file_test(header_name) == 1) {
             char *hdr = ut_asprintf("%s"UT_OS_PS"%s", UT_INCLUDE_PATH, project->id);
             FILE *f = fopen(hdr, "w");
@@ -322,7 +322,7 @@ int16_t bake_install_prebuild(
                 goto error;
             }
             fprintf(f, "#include \"%s.dir/%s.h\"\n", 
-                project->id, project->id_short);
+                project->id, project->id_base);
             fclose(f);
             free(hdr);
         }
