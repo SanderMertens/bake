@@ -211,6 +211,23 @@ void add_optimization(
     }
 }
 
+static
+void add_misc(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    /* In obscure cases with static libs, stack protector can cause unresolved symbols */
+    ut_strbuf_append(cmd, "%s -fPIC -fno-stack-protector", cc(cpp));
+
+    /* Include symbols */
+    if (config->symbols) {
+        ut_strbuf_appendstr(cmd, " -g");
+    }
+}
+
 /* Compile source file */
 static
 void compile_src(
@@ -229,13 +246,8 @@ void compile_src(
         cpp = true;
     }
 
-    /* In obscure cases with static libs, stack protector can cause unresolved symbols */
-    ut_strbuf_append(&cmd, "%s -fPIC -fno-stack-protector", cc(cpp));
-
-    /* Include symbols */
-    if (config->symbols) {
-        ut_strbuf_appendstr(&cmd, " -g");
-    }
+    /* Add misc options */
+    add_misc(driver, config, project, cpp, &cmd);
 
     /* Add optimization flags */
     add_optimization(driver, config, project, cpp, &cmd);
@@ -277,10 +289,13 @@ void precompile_h(
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, 
-        "%s -fno-stack-protector -x %s-header %s -o %s", 
+        "%s -x %s-header %s -o %s", 
         cc(cpp), 
         cpp ? "c++" : "c",
         source, target);
+
+    /* Add misc options */
+    add_misc(driver, config, project, cpp, &cmd);
 
     /* Add optimization flags */
     add_optimization(driver, config, project, cpp, &cmd);
