@@ -123,6 +123,8 @@ void setup_project(
     bake_config *config,
     bake_project *project)
 {
+    bool is_template = project->type == BAKE_TEMPLATE;
+
     /* Get short project id */
     const char *id = project->id;
     bake_project_type kind = project->type;
@@ -141,30 +143,34 @@ void setup_project(
         return;
     }
 
-    fprintf(f,
-        "#include <include/%s.h>\n"
-        "\n"
-        "int main(int argc, char *argv[]) {\n"
-        "    return 0;\n"
-        "}\n",
-        short_id
-    );
+    if (is_template) {
+        fprintf(f,
+            "#include <include/${id base}.h>\n"
+            "\n"
+            "int main(int argc, char *argv[]) {\n"
+            "    return 0;\n"
+            "}\n");
+    } else {
+        fprintf(f,
+            "#include <include/%s.h>\n"
+            "\n"
+            "int main(int argc, char *argv[]) {\n"
+            "    return 0;\n"
+            "}\n",
+            short_id);
+    }
 
     fclose(f);
     free(source_filename);
 
-    /* Create upper-case id for defines in header file */
-    char *id_upper = strdup(id);
-    strupper(id_upper);
-    char *ptr, ch;
-    for (ptr = id_upper; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
-            ptr[0] = '_';
-        }
-    }
-
     /* Create main header file */
-    char *header_filename = ut_asprintf("include/%s.h", short_id);
+    char *header_filename;
+    if (is_template) {
+        header_filename = ut_asprintf("include/__id_base.h", short_id);
+    } else {
+        header_filename = ut_asprintf("include/%s.h", short_id);
+    }
+    
     f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open '%s'", header_filename);
@@ -172,13 +178,33 @@ void setup_project(
         return;
     }
 
-    fprintf(f,
-        "#ifndef %s_H\n"
-        "#define %s_H\n\n"
-        "/* This generated file contains includes for project dependencies */\n"
-        "#include \"bake_config.h\"\n",
-        id_upper,
-        id_upper);
+    if (is_template) {
+        fprintf(f,
+            "#ifndef ${id upper}_H\n"
+            "#define ${id upper}_H\n\n"
+            "/* This generated file contains includes for project dependencies */\n"
+            "#include \"bake_config.h\"\n");
+    } else {
+        /* Create upper-case id for defines in header file */
+        char *id_upper = strdup(id);
+        strupper(id_upper);
+        char *ptr, ch;
+        for (ptr = id_upper; (ch = *ptr); ptr ++) {
+            if (ch == '/' || ch == '.') {
+                ptr[0] = '_';
+            }
+        }
+
+        fprintf(f,
+            "#ifndef %s_H\n"
+            "#define %s_H\n\n"
+            "/* This generated file contains includes for project dependencies */\n"
+            "#include \"bake_config.h\"\n",
+            id_upper,
+            id_upper);
+
+        free(id_upper);
+    }
 
     if (kind != BAKE_PACKAGE) {
         fprintf(f, "%s",

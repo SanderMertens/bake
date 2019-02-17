@@ -1565,7 +1565,10 @@ int16_t bake_project_setup(
         project->language, 
         project->type == BAKE_APPLICATION
             ? "application"
-            : "package",
+            : project->type == BAKE_TEMPLATE 
+                ? "template"
+                : "package"
+            ,
         project->id);
 
     return 0;

@@ -130,7 +130,8 @@ int ut_rmtree(const char *name) {
         fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), name);
         ut_path_clean(fullname, fullname);
     } else {
-        fullname = name;
+        /* Override const: if fullname is equal to name, it won't be modified */
+        fullname = (char*)name;
     }
 
     size_t len = strlen(fullname);
