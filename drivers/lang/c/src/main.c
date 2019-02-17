@@ -52,7 +52,7 @@ char* src_to_obj(
 {
     char *obj_dir = driver->get_attr_string("obj-dir");
     /* Add some dummy characters (__) to make room for the extension */
-    char *result = ut_asprintf("%s/%s__", obj_dir, in);
+    char *result = ut_asprintf("%s"UT_OS_PS"%s__", obj_dir, in);
     char *ext = strrchr(result, '.');
     strcpy(ext, obj_ext());
     return result;
@@ -102,14 +102,14 @@ void init(
     }
 
     char *tmp_dir  = ut_asprintf(
-        CACHE_DIR"/%s-%s", UT_PLATFORM_STRING, config->configuration);
+        CACHE_DIR UT_OS_PS "%s-%s", UT_PLATFORM_STRING, config->configuration);
     driver->set_attr_string("tmp-dir", tmp_dir);
     
-    char *obj_dir = ut_asprintf("%s/obj", tmp_dir);
+    char *obj_dir = ut_asprintf("%s"UT_OS_PS"obj", tmp_dir);
     driver->set_attr_string("obj-dir", obj_dir);
     free(obj_dir);
 
-    char *pch_dir = ut_asprintf("%s/include", tmp_dir);
+    char *pch_dir = ut_asprintf("%s"UT_OS_PS"include", tmp_dir);
     driver->set_attr_string("pch-dir", pch_dir);
     free(pch_dir);
     
