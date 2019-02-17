@@ -421,6 +421,7 @@ Project Kind | Description
 -------------|----------
 application  | Executable
 package      | Shared object
+template     | Template for new bake projects
 
 #### Public vs private projects
 A public project is a project that is installed to the bake environment. In this environment, bake knows where to find include files, binaries and other project resources. This allows other projects to refer to these resources by the logical project name, and makes specifying dependencies between projects a lot easier.
@@ -428,19 +429,32 @@ A public project is a project that is installed to the bake environment. In this
 Private projects are projects that are not installed to a bake environment. Because of this, these projects cannot be located by other projects. Private projects may depend on public projects, but public projects cannot depend on private projects. Binaries of private objects are only stored in the bin folder in the project root.
 
 ### Project Layout
-Each bake project uses the same layout. This makes it very easy to build bake projects, as bake always knows where to find project configuration, include files, source files and so on. Bake will look for the following directories and files in a project:
+Each bake project uses the same layout. This makes it very easy to build bake projects, as bake always knows where to find project configuration, include files, source files and so on. A bake project has at least three files:
 
 Directory / File | Description
 -----------------|------------
 project.json | Contains build configuration for the project
 src | Contains the project source files
 include | Contains the project header files
-etc | Contains miscellaneous files (optional)
-install | Contains files that are installed to environment (optional)
-bin | Contains binary build artefacts (created by bake)
-.bake_cache | Contains temporary build artefacts, such as object files and generated code
 
-Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment.
+In addition, a bake project can contain the following optional directories:
+
+Directory / File | Description
+-----------------|------------
+etc | Miscellaneous project-specific files
+install | Miscellaneous files that can be used by all projects in bake environment
+templates | Template projects that are automatically installed when building the project
+
+Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment on Linux/MacOS, and copied when using Windows.
+
+When bake builds a project, build artefacts are stored in these directories:
+
+Directory / File | Description
+-----------------|------------
+bin | Contains project binaries
+.bake_cache | Contains temporary files, like object files and precompiled headers
+
+Bake stores temporary files in platform- and configuration specific directories, so that you can safely do debug/release builds, and builds for different operating systems from the same source directory.
 
 ### Project Configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
@@ -614,13 +628,72 @@ To obtain the id in other formats, the following arguments can be passed to the 
 Parameter | Description | Example
 ----------|-------------
 no parameter | | foo.bar
-short | Last element of an id | bar
-upper | Upper case, replace '.' with '_'. Used for macro's | FOO_BAR
+base | Last element of an id | bar
+upper | Upper case, replace '.' with '\_'. Used for macro's | FOO_BAR
 dash | Replace '.' with '-'. Used for repository names | foo-bar
-underscore | Replace '.' with '_'. Used for variable names | foo_bar
+underscore | Replace '.' with '\_'. Used for variable names | foo_bar
+
+### Templates
+Bake lets you create template projects which contain boilerplate code for common types of applications. Template projects look like regular projects, with two exceptions:
+
+- The project type is set to `template`
+- Files may contain template functions that are resolved when instantiating a template
+
+You can create a new template project by specifying the `--template` flag when using the `bake new` command:
+
+```
+bake new my_template --template
+```
+
+This will create a new template project which is ready to instantiate, like this:
+
+```
+bake new my_app -t my_template
+```
+
+A template project can be parameterized using bake template functions (see previous chapter), like so:
+
+```c
+int main(int argc, char *argv[]) {
+
+    printf("Hello ${id}!");
+
+    return 0;
+}
+```
+
+Template functions may occur at any point in your files. Not all files in a project are parsed. Only files with the following extensions are considered by the template parser:
+
+- c, cpp, h, hpp, html, js, css, json, md, sh, bat, lua, python, java, cs, make
+
+Additionally, files with the following filename will be considered:
+
+- Makefile
+
+These lists may be extended with additional extensions and filenames.
+
+Additionally, filenames may also be parameterized with bake template functions. The syntax for doing so is (`xxx` is a placeholder for parts of the filename):
+
+```
+xxx__<template function>.<file extension>
+xxx__<template function>_<template argument>.<file extension>
+xxx__<template function>__xxx.<file extension>
+xxx__<template function>_<template argument>__xxx.<file extension>
+```
+
+For example, if you want a source file in your template project to have the base name of the instantiated project, you can name it like this:
+
+```
+__id_base.c
+```
+
+This is equivalent to the template function:
+```
+${id base}.c
+```
 
 ### Installing Miscellaneous Files
-Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
+Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to a location where other projects can also access it, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
 
 ```
 my_app
@@ -637,10 +710,10 @@ my_app
 would be installed to the following locations:
 
 ```
-$BAKE_TARGET/platform-config/etc/my_app/index.html
-$BAKE_TARGET/platform-config/etc/my_app/style.html
-$BAKE_TARGET/platform-config/etc/image.jpg
-$BAKE_TARGET/platform-config/etc/manual.pdf
+$BAKE_HOME/platform/config/etc/my_app/index.html
+$BAKE_HOME/platform/config/etc/my_app/style.html
+$BAKE_HOME/platform/config/etc/image.jpg
+$BAKE_HOME/platform/config/etc/manual.pdf
 ```
 
 Bake allows projects to differentiate between different platforms when installing files from the `etc` and `install` directories. This can be useful when for example distributing binaries for different architectures and operating systems. By default, all files from these directories installed. However, bake will look for subdirectories that match the platform string. Files in those directories will only be installed to that platform. For example, consider the following tree:
@@ -746,7 +819,7 @@ Because bake does not automatically add project-specific include paths to the in
 The `${locate include}` part of the include path will be substituted by the project-specific include folder when the `project.json` is parsed.
 
 #### Link external files from global environment
-When a project needs to link with an external binary, one option is to install it to a global location, like `/usr/local/lib`. The bake equivalent is to install it to the `lib` root directory. That way, the library will be installed to `$BAKE_TARGET/lib`. Thus when `$BAKE_TARGET` is set to `/usr/local`, the library will be installed to `/usr/local/lib`.
+When a project needs to link with an external binary, one option is to install it to a global location. The bake equivalent is to install it to the `lib` directory in the bake environment. That way, the library will be installed to `$BAKE_TARGET/lib`.
 
 To install the library to this location, it needs to be added to the project folder. Add the library to this location:
 
