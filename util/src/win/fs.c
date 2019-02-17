@@ -126,16 +126,17 @@ error:
 /* Recursively remove a directory */
 int ut_rmtree(const char *name) {
     char *fullname;
-    if (strlen(name) > 1 && name[0] == '.' && name[1] == UT_OS_PS[0]) {
-        fullname = ut_asprintf("%s"UT_OS_PS"%s\0", ut_cwd(), name+2);
+    if (ut_path_is_relative(name)) {
+        fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), name);
+        ut_path_clean(fullname, fullname);
     } else {
-        fullname = ut_asprintf("%s\0", name);
+        fullname = ut_strdup(name);
     }
 
     SHFILEOPSTRUCT fileOp = { 0 };
     ZeroMemory(&fileOp, sizeof(SHFILEOPSTRUCT));
     fileOp.wFunc = FO_DELETE;
-    fileOp.pFrom = ut_asprintf("%s\0", name);
+    fileOp.pFrom = ut_strdup(name);
     fileOp.pTo = "\0";
     fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR |
         FOF_MULTIDESTFILES | FOF_SILENT;
@@ -147,7 +148,7 @@ int ut_rmtree(const char *name) {
     }
     
     if (result) {
-        ut_throw("failed to delete directory %s", fullname);
+        ut_throw("failed to delete directory %s (%x)", fullname, result);
     }
 
     free(fullname);
