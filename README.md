@@ -12,12 +12,20 @@ Bake's main features are:
 
 Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
+Bake is supported on the following platforms:
+
+- Linux
+- MacOS
+- Windows (validated on Windows 10)
+
 ## Contents
 * [Installation](#installation)
 * [Getting Started](#getting-started)
 * [FAQ](#faq)
 * [Manual](#manual)
   * [Introduction](#introduction)
+  * [Building projects](#running-code)
+  * [Running projects](#running-projects)
   * [Project kinds](#project-kinds)
   * [Project layout](#project-layout)
   * [Project configuration](#project-configuration)
@@ -45,6 +53,30 @@ make -C bake/build-$(uname)
 bake/bake setup
 ```
 
+On Windows:
+```
+git clone https://github.com/SanderMertens/bake
+cd build-Windows
+nmake
+cd ..
+bake setup
+```
+On Windows, make sure to open a visual studio command prompt, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
+
+Bake installs a script to a location that is globally accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This lets you invoke bake from anywhere without any prior setup, however it often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press <Enter> untill the setup resumes. On Windows the setup will automatically continue if you did not start the command prompt as administrator.
+ 
+In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%/bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
+
+On Linux:
+```
+export PATH=$PATH:$HOME/bake
+```
+
+On Windows:
+```
+set PATH=%PATH%;%USERPROFILE%/bake
+```
+ 
 After you've installed bake once, you can upgrade to the latest version with:
 
 ```demo
@@ -427,6 +459,11 @@ This makes it difficult to share code between different people and organizations
 Bake is therefore not just a build tool like `make` that can automatically generate compiler commands. It is also a build system that specifies how projects are organized and configured. When a project relies on bake, a user does, for example, not need to worry about how to link with it, where to find its include files or whether binaries have been built with incompatible compiler flags.
 
 A secondary goal is to create a zero-dependency build tool that can be easily ported to other platforms. Whereas other build tools exist, like `make`, `premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations. Bake's only dependency is the C runtime.
+
+### Building Projects
+Bakes primary task is to build the code in your projects, and generate binaries in a reliable and reproducible way. It
+
+### Running Projects
 
 ### Project Kinds
 Bake supports different project kinds which are configured in the `type` property of a `project.json` file. The project kind determines whether a project is a library or executable, whether a project is installed to a bake environment and whether a project is managed or not. The following table shows an overview of the different project kinds:
