@@ -127,17 +127,17 @@ error:
 int ut_rmtree(const char *name) {
     char *fullname;
     if (ut_path_is_relative(name)) {
-        fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), name);
+        fullname = ut_asprintf("%s"UT_OS_PS"%s\0", ut_cwd(), name);
         ut_path_clean(fullname, fullname);
     } else {
-        fullname = ut_strdup(name);
+        fullname = ut_asprintf("%s\0", name);
     }
 
     SHFILEOPSTRUCT fileOp = { 0 };
     ZeroMemory(&fileOp, sizeof(SHFILEOPSTRUCT));
     fileOp.wFunc = FO_DELETE;
-    fileOp.pFrom = ut_strdup(name);
-    fileOp.pTo = "\0";
+    fileOp.pFrom = ut_asprintf("%s\0", name);
+    fileOp.pTo = NULL;
     fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR |
         FOF_MULTIDESTFILES | FOF_SILENT;
     fileOp.lpszProgressTitle = "";
