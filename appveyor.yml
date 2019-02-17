@@ -24,4 +24,7 @@ test_script:
 - cmd: bake new foo
 - cmd: bake run foo
 - cmd: bake run foo --cfg release
+- cmd: bake new my_template --template
+- cmd: bake new my_tmpl_app -t my_template
+- cmd: bake run my_tmpl_app
 
