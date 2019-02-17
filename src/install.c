@@ -201,6 +201,12 @@ int16_t bake_install_uninstall(
     const char *project_dir = ut_locate(project_id, NULL, UT_LOCATE_PROJECT);
     if (!project_dir) {
         ut_throw("project '%s' not found", project_id);
+
+        if (ut_locate(project_id, NULL, UT_LOCATE_TEMPLATE)) {
+            ut_info("Did you mean:");
+            ut_info("  bake uninstall %s --template\n", project_id);
+        }
+
         goto error;
     }
 
@@ -235,7 +241,7 @@ int16_t bake_install_uninstall_template(
     }
 
     ut_try( ut_rm(project_dir), NULL);
-    
+
     ut_log("#[grey]uninstalled template #[normal]'%s'\n", project_id);
 error:
     return -1;
