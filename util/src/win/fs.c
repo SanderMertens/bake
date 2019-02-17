@@ -127,16 +127,21 @@ error:
 int ut_rmtree(const char *name) {
     char *fullname;
     if (ut_path_is_relative(name)) {
-        fullname = ut_asprintf("%s"UT_OS_PS"%s\0", ut_cwd(), name);
+        fullname = ut_asprintf("%s"UT_OS_PS"%s", ut_cwd(), name);
         ut_path_clean(fullname, fullname);
     } else {
-        fullname = ut_asprintf("%s\0", name);
+        fullname = name;
     }
+
+    size_t len = strlen(fullname);
+    char *dbl_0_terminated = malloc(len + 2);
+    strcpy(dbl_0_terminated, fullname);
+    dbl_0_terminated[len + 1] = '\0';
 
     SHFILEOPSTRUCT fileOp = { 0 };
     ZeroMemory(&fileOp, sizeof(SHFILEOPSTRUCT));
     fileOp.wFunc = FO_DELETE;
-    fileOp.pFrom = ut_asprintf("%s\0", name);
+    fileOp.pFrom = dbl_0_terminated;
     fileOp.pTo = NULL;
     fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR |
         FOF_MULTIDESTFILES | FOF_SILENT;
@@ -148,10 +153,12 @@ int ut_rmtree(const char *name) {
     }
     
     if (result) {
-        ut_throw("failed to delete directory %s (%x)", fullname, result);
+        ut_throw("failed to delete directory %s (0x%x)", fullname, result);
     }
 
-    free(fullname);
+    free(dbl_0_terminated);
+
+    if (fullname != name) free(fullname);
 
     return result;
 }
