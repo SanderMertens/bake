@@ -17,6 +17,20 @@ Bake depends on git for its package management features, and does _not_ have a s
 * [Getting Started](#getting-started)
 * [FAQ](#faq)
 * [Manual](#manual)
+  * [Introduction](#introduction)
+  * [Project kinds](#project-kinds)
+  * [Project layout](#project-layout)
+  * [Project configuration](#project-configuration)
+  * [Template functions](#template-functions)
+  * [Templates](#templates)
+  * [Installing Miscellaneous Files](#installing-miscellaneous-files)
+  * [Integrating Non-bake Projects](#integrating-non-bake-projects)
+  * [Private dependencies](#private-dependencies)
+  * [The Bake Environment](#the-bake-environment)
+  * [Environment Variables](#environment-variables)
+  * [Configuring Bake](#configuring-bake)
+  * [Command line interface](#command-line-interface)
+  * [Writing drivers](#writing-drivers)
 * [Authors](#authors)
 * [Legal stuff](#legal-stuff)
 
@@ -1062,6 +1076,7 @@ With the `--cfg` and `--env` flags the respective configuration or environment c
 ### Command line usage
 The following is the output of `bake --help`
 
+```
 Usage: bake [options] <command> <path>
 
 Options:
@@ -1070,24 +1085,26 @@ Options:
 
   --cfg <configuration>        Specify configuration id
   --env <environment>          Specify environment id
-  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET
   --strict                     Manually enable strict compiler options
   --optimize                   Manually enable compiler optimizations
 
+  --package                    Set the project type to package
+  --template                   Set the project type to template
+
   --id <project id>            Manually specify a project id
   --type <package|template>    Manually specify a project type (default = "application")
-  --package                    Manually set the project type to package
   --language <language>        Manually specify a language for project (default = "c")
   --artefact <binary>          Manually specify a binary file for project
-  --includes <include path>    Manually specify an include path for project
+  -i,--includes <include path> Manually specify an include path for project
 
   --interactive                Rebuild project when files change (use w/run)
+  -r,--recursive               Recursively build all dependencies of discovered projects
   -a,--args [arguments]        Pass arguments to application (use w/run)
-  -t,--template [id]            Specify template for new project
-  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)
+  -t [id]                      Specify template for new project
 
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
   --trace                      Set verbosity to TRACE
+  --debug                      Set verbosity to DEBUG (highest verbosity)
 
 Commands:
   new [path]                   Initialize new bake project
@@ -1095,6 +1112,7 @@ Commands:
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
+  cleanup                      Cleanup bake environment by removing dead or invalid projects
   publish <patch|minor|major>  Publish new project version
   install [path]               Install project to bake environment
   uninstall [project id]       Remove project from bake environment
@@ -1112,16 +1130,18 @@ Commands:
 Examples:
   bake                         Build all projects discovered in current directory
   bake my_app                  Build all projects discovered in my_app directory
-  bake new                     Initialize new application project in current directory
-  bake new my_app              Initialize new application project in directory my_app
-  bake new my_lib --package    Initialize new package project in directory my_lib
-  bake run my_app -a hello     Run my_app project, pass 'hello' as argument
+  bake new                     Create new application project in current directory
+  bake new my_app              Create new application project in directory my_app
+  bake new my_lib --package    Create new package project in directory my_lib
+  bake new my_tmpl --template  Create new template project in directory my_tmpl
   bake new game -t sdl2.basic  Create new project from the sdl2.basic template
+  bake run my_app -a hello     Run my_app project, pass 'hello' as argument
   bake publish major           Increase major project version, create git tag
   bake info foo.bar            Show information about package foo.bar
   bake list foo.*              List all packages that start with foo.
+```
 
-### Writing Plugins
+### Writing Drivers
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
 
 The bake build engine has a design that is similar to other build engines in that it uses rules that depend on other rules. Rules have rule-actions, which get executed when a rule is outdated. Whether a rule is outdated or not is determined by comparing timestamps of the rule dependencies with the timestamps of the rule output.
