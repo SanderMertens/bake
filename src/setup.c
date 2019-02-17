@@ -36,7 +36,13 @@ int16_t cmd(
     if (ut_log_verbosityGet() <= UT_TRACE) {
         sig = ut_proc_cmd(cmd, &ret);
     } else {
+#ifdef _WIN32
+        char *cmd_redirect = ut_asprintf("%s > nul", cmd);
+        ret = system(cmd_redirect);
+        sig = 0;
+#else
         sig = ut_proc_cmd_stderr_only(cmd, &ret);
+#endif
     }
     
     if (sig || ret) {
@@ -227,7 +233,7 @@ int16_t bake_build_make_project(
 #ifdef _WIN32
     char *cwd = ut_strdup(ut_cwd());
     char *driver_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
-    make_cmd = ut_asprintf("nmake /NOLOGO /F Makefile clean all\"");
+    make_cmd = ut_asprintf("nmake /NOLOGO /F Makefile clean all");
     ut_try( ut_chdir(driver_path), NULL);
 #else
     make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
