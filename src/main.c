@@ -87,9 +87,11 @@ void bake_usage(void)
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("\n");
+    printf("  --package                    Set the project type to package\n");
+    printf("  --template                   Set the project type to template\n");
+    printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
     printf("  --type <package|template>    Manually specify a project type (default = \"application\")\n");
-    printf("  --package                    Manually set the project type to package\n");
     printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Manually specify a binary file for project\n");
     printf("  -i,--includes <include path> Manually specify an include path for project\n");
@@ -97,7 +99,7 @@ void bake_usage(void)
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
-    printf("  -t,--template [id]           Specify template for new project\n");
+    printf("  -t [id]                      Specify template for new project\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -267,7 +269,8 @@ int bake_parse_args(
             ARG(0, "id", id = argv[i + 1]; i ++);
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
-            ARG('t', "template", template = argv[i + 1]; i ++);
+            ARG(0, "template", type = BAKE_TEMPLATE);
+            ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
@@ -462,7 +465,7 @@ int bake_env(
 }
 
 /* Initialize a new bake project */
-int bake_init_project(
+int bake_new_project(
     bake_config *config)
 {
     if (path && strcmp(path, ".")) {
@@ -527,7 +530,11 @@ int bake_init_project(
     }
 
     /* Install project metadata to bake env so it is discoverable by id */
-    ut_try (bake_install_metadata(config, project), NULL);
+    if (project->type == BAKE_TEMPLATE) {
+        ut_try( bake_install_template(config, project), NULL);
+    } else {
+        ut_try (bake_install_metadata(config, project), NULL);
+    }
 
     return 0;
 error:
@@ -1066,7 +1073,7 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "setup")) {
             ut_try (bake_setup(argv[0], local_setup), NULL);
         } else if (!strcmp(action, "new")) {
-            ut_try (bake_init_project(&config), NULL);
+            ut_try (bake_new_project(&config), NULL);
         } else if (!strcmp(action, "run")) {
             ut_try (
               bake_run(&config, path, interactive, run_argc, run_argv), NULL);
