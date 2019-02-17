@@ -25,7 +25,6 @@ Bake depends on git for its package management features, and does _not_ have a s
   * [Templates](#templates)
   * [Installing Miscellaneous Files](#installing-miscellaneous-files)
   * [Integrating Non-bake Projects](#integrating-non-bake-projects)
-  * [Private dependencies](#private-dependencies)
   * [The Bake Environment](#the-bake-environment)
   * [Environment Variables](#environment-variables)
   * [Configuring Bake](#configuring-bake)
@@ -514,6 +513,23 @@ keep_binary | bool | Do not clean binary files when doing bake clean. When a bin
 
 The `cflags` attribute is specified inside the `lang.c` property. This is because `cflags` is a property specific to the C driver. For documentation on which properties are valid for which drivers, see the driver documentation.
 
+#### Private dependencies
+When projects depend on other projects that require additional library paths or include paths, it may not be desirable to require having these properties propagate to dependees. For example, `bar` depends on `foo`, and `foo` requires adding an `include` path to the build configuration. Now, `helloworld` depends on `bar`, but it does not need to know about `foo`.
+
+To prevent the `foo` build settings from propagating to `helloworld`, `bar` will need to configure `foo` as a "private dependency". The following configuration shows how to do this:
+
+```json
+{
+    "id": "bar",
+    "type": "package",
+    "value": {
+        "use_private": ["foo"]
+    }
+}
+```
+
+This way, `foo` is still added as a dependency to `bar`, but `helloworld` will not be exposed to `foo`, nor inherit any of its build settings.
+
 ### Template Functions
 Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Additionally, template functions can be used to parameterize bake template projects. Template functions take the following form:
 
@@ -936,27 +952,10 @@ project.json:
 }
 ```
 
-### Private dependencies
-When projects depend on other projects that require additional library paths or include paths, it may not be desirable to require having these properties propagate to dependees. For example, `bar` depends on `foo`, and `foo` requires adding an `include` path to the build configuration. Now, `helloworld` depends on `bar`, but it does not need to know about `foo`.
-
-To prevent the `foo` build settings from propagating to `helloworld`, `bar` will need to configure `foo` as a "private dependency". The following configuration shows how to do this:
-
-```json
-{
-    "id": "bar",
-    "type": "package",
-    "value": {
-        "use_private": ["foo"]
-    }
-}
-```
-
-This way, `foo` is still added as a dependency to `bar`, but `helloworld` will not be exposed to `foo`, nor inherit any of its build settings.
-
 ### The Bake Environment
-Bake allows projects to be installed to a so called "bake environment". A bake environment is a location configured in the `$BAKE_HOME` and `$BAKE_TARGET` environment variables. Projects that are built to the bake environment are called "public" projects.
+Bake installs projects to the "bake environment". The bake environment is located in a location specified by the `BAKE_HOME` environment variable, and contains all the metadata and binaries for public projects, miscellaneous files and templates. By default, the bake environment is located in `~/bake`. A different location can be specified by changing the value of the `BAKE_HOME` environment variable.
 
-Public projects can be automatically discovered, looked up, loaded and linked with by using their logical name. Here is an example of two public projects, one `application` and one `package`, where the `application` depends on the `package`:
+Projects in the bake environment can be automatically discovered and linked with by using their logical name. Here is an example of two public projects, one `application` and one `package`, where the `application` depends on the `package`:
 
 ```json
 {
@@ -977,39 +976,31 @@ Public projects can be automatically discovered, looked up, loaded and linked wi
 
 Note that neither project configuration specifies where they are built to, or where to find the `my_lib` project. This is automatically managed by the bake environment.
 
-The `$BAKE_TARGET` environment variable specifies the location where new projects are built to. The `$BAKE_HOME` environment variable specifies where the bake environment is located. Typically these variables are set to the same location. Dependencies are looked up in both `$BAKE_TARGET` as well as `$BAKE_HOME`.
-
-By default, both `$BAKE_TARGET` and `$BAKE_HOME` are set to `~/bake`. Inside this directory, a number of directories are commonly found. The following table describes their function:
-
-Directory | Description
-----------|-------------
-bin | Contains executable binaries
-lib | Contains shared libraries
-include | Contains include files of projects
-java | Contains Java JARs
-etc | Contains miscellaneous files used by projects at runtime
-meta | Contains project metadata
-src | Contains downloaded sources (when using bake clone)
-
-The contents of `$BAKE_TARGET` are split up by project, to prevent name-clashes between projects. For the two aforementioned example projects, miscellaneous files would be stored in the following directories:
+To get an overview of the projects stored in the bake environment, you can do:
 
 ```
-$BAKE_TARGET/platform-config/etc/my_app
-$BAKE_TARGET/platform-config/etc/my_lib
+bake list
 ```
-Platform and config here are replaced respectively with the platform that bake is running on, and the current configuration (for example `debug` or `release`).
 
-When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/bake`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
+The bake environment stores platform-specific data (such as binaries) in a location that is specific to a platform and build configuration. For example, if you are doing a debug build on Windows, you will find a directory in `$BAKE_HOME` called:
+
+```
+x64-Windows/debug
+```
+
+During a build, this directory is accessible through the `BAKE_TARGET` environment variable. This will contain all binaries (in `bin` and `lib` directories) for projects built for this platform and build configuration. The `bake list` command shows which projects have been built for which build configuration.
 
 ### Environment Variables
 Bake uses the following environment variables:
 
 Variable | Description
 ---------|------------
-BAKE_HOME | Location where bake looks for projects specified in `use`.
-BAKE_TARGET | Location where bake installs projects. Usually the same as `$BAKE_HOME`.
+BAKE_HOME | Location of the bake environment
 BAKE_CONFIG | The current build configuration used by bake (`debug` by default)
 BAKE_ENVIRONMENT | The current build environment used by bake (`default` by default)
+BAKE_VERBOSITY | Specify the bake logging level (`INFO` by default)
+BAKE_ARCHITECTURE | Specify the processor architecture (default is the host architecture)
+BAKE_OS | Specify the operating system (default is the host operating system)
 
 ### Configuring Bake
 Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
