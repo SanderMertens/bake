@@ -132,6 +132,7 @@ void bake_usage(void)
     printf("  bake new                     Create new application project in current directory\n");
     printf("  bake new my_app              Create new application project in directory my_app\n");
     printf("  bake new my_lib --package    Create new package project in directory my_lib\n");
+    printf("  bake new my_tmpl --template  Create new template project in directory my_tmpl\n");
     printf("  bake new game -t sdl2.basic  Create new project from the sdl2.basic template\n");
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
@@ -1080,7 +1081,11 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "uninstall")) {
-            ut_try (bake_install_uninstall(&config, id), NULL);
+            if (type == BAKE_TEMPLATE) {
+                ut_try (bake_install_uninstall_template(&config, id), NULL);
+            } else {
+                ut_try (bake_install_uninstall(&config, id), NULL);
+            }
         } else if (!strcmp(action, "cleanup")) {
             ut_try (bake_list(&config, true), NULL);
         } else if (!strcmp(action, "info")) {

@@ -144,11 +144,15 @@ int16_t bake_install_clear(
     const char *project_id,
     bool uninstall);
 
-/** Remove files from config->target for project */
+/** Uninstall project from bake environment */
 int16_t bake_install_uninstall(
     bake_config *config,
     const char *project_id);
 
+/** Uninstall template from bake environment */
+int16_t bake_install_uninstall_template(
+    bake_config *config,
+    const char *project_id);
 
 /* -- Driver functions -- */
 

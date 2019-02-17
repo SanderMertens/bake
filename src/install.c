@@ -219,6 +219,28 @@ error:
     return -1;
 }
 
+int16_t bake_install_uninstall_template(
+    bake_config *config,
+    const char *project_id)
+{
+    if (!project_id) {
+        ut_throw("no project id specified for uninstaller");
+        goto error;
+    }
+
+    const char *project_dir = ut_locate(project_id, NULL, UT_LOCATE_TEMPLATE);
+    if (!project_dir) {
+        ut_throw("project '%s' not found", project_id);
+        goto error;
+    }
+
+    ut_try( ut_rm(project_dir), NULL);
+    
+    ut_log("#[grey]uninstalled template #[normal]'%s'\n", project_id);
+error:
+    return -1;
+}
+
 int16_t bake_install_metadata(
     bake_config *config,
     bake_project *project)
