@@ -231,8 +231,9 @@ void compile_src(
             ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
                 project->path, pch_dir, project->id_base);
         } else {
-            char *tmp_dir = driver->get_attr_string("tmp-dir");
-            ut_strbuf_append(&cmd, " -I%s", tmp_dir);
+            /* Disable PCH for gcc for now, as it seems to slow down builds */
+            //char *tmp_dir = driver->get_attr_string("tmp-dir");
+            //ut_strbuf_append(&cmd, " -I%s", tmp_dir);
         }
     }
 
