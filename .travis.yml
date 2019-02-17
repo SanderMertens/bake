@@ -39,5 +39,8 @@ script:
   - bake new foo
   - bake run foo
   - bake run foo --cfg release
+  - bake new my_template --template
+  - bake new my_tmpl_app -t my_template
+  - bake run my_tmpl_app
 
   
