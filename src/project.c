@@ -1716,7 +1716,7 @@ int16_t bake_project_setup_w_template(
         goto error;
     }
 
-    template_path = ut_asprintf("%s/%s", template_root, project->language);
+    template_path = ut_asprintf("%s"UT_OS_PS"%s", template_root, project->language);
     if (ut_file_test(template_path) != 1) {
         ut_throw("template '%s' not available for language '%s'",
             template_id, project->language);
@@ -1737,7 +1737,7 @@ int16_t bake_project_setup_w_template(
         }
 
         bool is_template = bake_is_template_file(file);
-        char *src_path = ut_asprintf("%s/%s", template_path, file);
+        char *src_path = ut_asprintf("%s"UT_OS_PS"%s", template_path, file);
 
         char *real = file;
         
@@ -1745,7 +1745,7 @@ int16_t bake_project_setup_w_template(
             real = bake_project_template_filename(config, project, file);
         }
 
-        char *dst_path = ut_asprintf("%s/%s", project->path, real);
+        char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", project->path, real);
 
         if (!ut_isdir(src_path)) {
             if (is_template) {
@@ -1764,7 +1764,7 @@ int16_t bake_project_setup_w_template(
     }
 
     /* Load JSON from template, tailor to project */
-    char *template_json = ut_asprintf("%s/project.json", template_path);
+    char *template_json = ut_asprintf("%s"UT_OS_PS"project.json", template_path);
     JSON_Value *value = json_parse_file_with_comments(template_json);
     if (!value) {
         ut_throw("failed to load project.json of template '%s", template_id);
@@ -1783,7 +1783,7 @@ int16_t bake_project_setup_w_template(
     json_object_set_string(root, "type", bake_project_type_str(project->type));
 
     /* Write to project.json of project */
-    char *project_json = ut_asprintf("%s/project.json", project->path);
+    char *project_json = ut_asprintf("%s"UT_OS_PS"project.json", project->path);
     json_serialize_to_file_pretty(value, project_json);
     free(project_json);
 
