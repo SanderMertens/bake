@@ -1,28 +1,11 @@
 
 #include <bake>
 
-#define OBJ_DIR ".bake_cache\\obj"
-
-/* -- Mappings -- */
-
-/* Obtain object name from source file */
 static
-char* src_to_obj(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
+char* obj_ext() 
 {
-    const char *cfg = config->configuration;
-    char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
-    sprintf(result, OBJ_DIR "\\%s-%s\\%s", UT_PLATFORM_STRING, cfg, in);
-    char *ext = strrchr(result, '.');
-    strcpy(ext + 1, "obj");
-    return result;
+    return ".obj";
 }
-
-/* -- Actions -- */
-
 
 /* Get compiler */
 static

@@ -1,45 +1,9 @@
 #include <bake>
 
-#define OBJ_DIR ".bake_cache/obj"
-
-/* -- Mappings -- */
-
-/* Obtain object name from source file */
 static
-char* src_to_obj(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
+char* obj_ext() 
 {
-    const char *cfg = config->configuration;
-    char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
-    sprintf(result, OBJ_DIR "/%s-%s/%s", UT_PLATFORM_STRING, cfg, in);
-    char *ext = strrchr(result, '.');
-    strcpy(ext + 1, "o");
-    return result;
-}
-
-/* -- Actions -- */
-
-
-/* Is current OS Darwin */
-static
-bool is_darwin(void)
-{
-    if (stricmp(UT_OS_STRING, "Darwin")) {
-        return false;
-    }
-    return true;
-}
-
-static
-bool is_linux(void)
-{
-    if (stricmp(UT_OS_STRING, "Linux")) {
-        return false;
-    }
-    return true;
+    return ".o";
 }
 
 /* Get compiler */
@@ -262,8 +226,14 @@ void compile_src(
 
     /* Add precompiled header */
     if (driver->get_attr_bool("precompile-header")) {
-        ut_strbuf_append(&cmd, " -include %s/include/%s.h", 
-            project->path, project->id_base);
+        if (is_clang(cpp)) {
+            char *pch_dir = driver->get_attr_string("pch-dir");
+            ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
+                project->path, pch_dir, project->id_base);
+        } else {
+            char *tmp_dir = driver->get_attr_string("tmp-dir");
+            ut_strbuf_append(&cmd, " -I%s", tmp_dir);
+        }
     }
 
     /* Add include directories */

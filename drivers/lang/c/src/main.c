@@ -1,6 +1,8 @@
 
 #include <bake>
 
+#define CACHE_DIR ".bake_cache"
+
 /* Is language C++ */
 static
 bool is_cpp(
@@ -13,11 +15,48 @@ bool is_cpp(
     }
 }
 
+/* Is current OS Darwin */
+static
+bool is_darwin(void)
+{
+    if (stricmp(UT_OS_STRING, "Darwin")) {
+        return false;
+    }
+    return true;
+}
+
+static
+bool is_linux(void)
+{
+    if (stricmp(UT_OS_STRING, "Linux")) {
+        return false;
+    }
+    return true;
+}
+
+/* Include compiler-specific implementation. Eventually this should be made
+ * pluggable instead of being determined by the host platform. */
 #ifdef _WIN32
 #include "msvc/driver.c"
 #else
 #include "gcc/driver.c"
 #endif
+
+/* Obtain object name from source file */
+static
+char* src_to_obj(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *in)
+{
+    char *obj_dir = driver->get_attr_string("obj-dir");
+    /* Add some dummy characters (__) to make room for the extension */
+    char *result = ut_asprintf("%s/%s__", obj_dir, in);
+    char *ext = strrchr(result, '.');
+    strcpy(ext, obj_ext());
+    return result;
+}
 
 /* Initialize project defaults */
 static
@@ -56,13 +95,25 @@ void init(
     }
 
     bool cpp = is_cpp(project);
-    driver->set_attr_string("compiler", cc(cpp));
-
     if (is_clang(cpp)) {
         driver->set_attr_string("ext-pch", "pch");
     } else {
         driver->set_attr_string("ext-pch", "gch");
     }
+
+    char *tmp_dir  = ut_asprintf(
+        CACHE_DIR"/%s-%s", UT_PLATFORM_STRING, config->configuration);
+    driver->set_attr_string("tmp-dir", tmp_dir);
+    
+    char *obj_dir = ut_asprintf("%s/obj", tmp_dir);
+    driver->set_attr_string("obj-dir", obj_dir);
+    free(obj_dir);
+
+    char *pch_dir = ut_asprintf("%s/include", tmp_dir);
+    driver->set_attr_string("pch-dir", pch_dir);
+    free(pch_dir);
+    
+    free(tmp_dir);
 }
 
 /* Initialize directory with new project */
@@ -247,7 +298,7 @@ int bakemain(bake_driver_api *driver)
 
     /* Create pattern matching main header and precompiled header */
     driver->pattern("main_header", "include/${id base}.h");
-    driver->file("pch", "include/${id base}.h.${driver-attr ext-pch}");
+    driver->file("pch", "${driver-attr pch-dir}/${id base}.h.${driver-attr ext-pch}");
 
     /* Create rule for generating precompiled header from main header */
     driver->rule("h_to_pch", "$main_header", driver->target_file("$pch"), precompile_h);
