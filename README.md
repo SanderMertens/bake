@@ -23,11 +23,12 @@ Bake depends on git for its package management features, and does _not_ have a s
   * [Project configuration](#project-configuration)
   * [Template functions](#template-functions)
   * [Templates](#templates)
+  * [Build configurations](#build-configurations)
+  * [Configuring Bake](#configuring-bake)
   * [Installing Miscellaneous Files](#installing-miscellaneous-files)
   * [Integrating Non-bake Projects](#integrating-non-bake-projects)
   * [The Bake Environment](#the-bake-environment)
   * [Environment Variables](#environment-variables)
-  * [Configuring Bake](#configuring-bake)
   * [Command line interface](#command-line-interface)
   * [Writing drivers](#writing-drivers)
 * [Authors](#authors)
@@ -722,6 +723,83 @@ This is equivalent to the template function:
 ${id base}.c
 ```
 
+### Build configurations
+Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a buidl configuration with the `--cfg` flag:
+
+```
+bake my_project --cfg release
+```
+
+The default configuration is `debug`. The difference between `debug` and `release` is that `debug` disables optimizations and enables debugging code (release adds the `-DNDEBUG` flag). Furthermore, `debug` builds add compiler debugging information (like `-g` in gcc).
+
+Bake never mixes binaries between build configurations. Therefore, if you build a project in `release` mode, but its dependencies haven't been built in `release` mode yet, the build will fail. To ease the process of doing builds for multiple configurations, you can use recorsive builds, which rebuild all the project dependencies for the specified configuration:
+
+```
+bake my_project --cfg release -r
+```
+
+### Configuring Bake
+Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
+
+A bake configuration file consists out of an `environment` and a `configuration` section. The `configuration` section contains parameters that are not specific to a project, but influence how code is built. The `environment` section contains a list of environment variables and their values which are loaded when bake is started.
+
+The `bake env` command prints the bake environment to the command line in a format that can be used with the `export` bash command, so that the bake environment can be easily exported to the current shell, like so:
+
+```
+export `bake env`
+```
+
+```note
+Bake automatically adds `$BAKE_HOME/bin` to the `PATH` environment variable. This ensures that even when applications (tools) are not installed to a global location, such as `/usr/local/bin`, they can still be directly accessed from a shell when the bake environment is exported.
+```
+
+The following table is a list of the configuration parameters:
+
+Parameter | Type | Description
+----------|------|------------
+symbols | bool | Enable or disable symbols in binaries
+debug | bool | Enable or disable debugging (defines NDEBUG if `false`)
+optimizations | bool | Enable or disable optimizations
+coverage | bool | Enable or disable coverage
+strict | bool | Enable or disable strict building
+
+```note
+It is up to plugins to provide implementations for the above parameters. Not all parameters may be implemented. Refer to the plugin documentation for specifics.
+```
+
+This is an example configuration file:
+
+```json
+{
+    "configuration":{
+        "debug":{
+            "symbols":true,
+            "debug":true,
+            "optimizations":false,
+            "coverage":false,
+            "strict":false
+        },
+        "release":{
+            "symbols":false,
+            "debug":false,
+            "optimizations":true,
+            "coverage":false,
+            "strict":false
+        }
+    },
+    "environment":{
+        "default":{
+            "PATH": ["/my/path"],
+            "FOO": "Some value"
+        }
+    }
+}
+```
+
+Note that environment variables configured as a JSON array (as shown with the `PATH` variable), are appended to their current value. Elements in the array are separated by a `:` or `;`, depending on the platform.
+
+With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
+
 ### Installing Miscellaneous Files
 Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to a location where other projects can also access it, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
 
@@ -1001,68 +1079,6 @@ BAKE_ENVIRONMENT | The current build environment used by bake (`default` by defa
 BAKE_VERBOSITY | Specify the bake logging level (`INFO` by default)
 BAKE_ARCHITECTURE | Specify the processor architecture (default is the host architecture)
 BAKE_OS | Specify the operating system (default is the host operating system)
-
-### Configuring Bake
-Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
-
-A bake configuration file consists out of an `environment` and a `configuration` section. The `configuration` section contains parameters that are not specific to a project, but influence how code is built. The `environment` section contains a list of environment variables and their values which are loaded when bake is started.
-
-The `bake env` command prints the bake environment to the command line in a format that can be used with the `export` bash command, so that the bake environment can be easily exported to the current shell, like so:
-
-```
-export `bake env`
-```
-
-```note
-Bake automatically adds `$BAKE_HOME/bin` to the `PATH` environment variable. This ensures that even when applications (tools) are not installed to a global location, such as `/usr/local/bin`, they can still be directly accessed from a shell when the bake environment is exported.
-```
-
-The following table is a list of the configuration parameters:
-
-Parameter | Type | Description
-----------|------|------------
-symbols | bool | Enable or disable symbols in binaries
-debug | bool | Enable or disable debugging (defines NDEBUG if `false`)
-optimizations | bool | Enable or disable optimizations
-coverage | bool | Enable or disable coverage
-strict | bool | Enable or disable strict building
-
-```note
-It is up to plugins to provide implementations for the above parameters. Not all parameters may be implemented. Refer to the plugin documentation for specifics.
-```
-
-This is an example configuration file:
-
-```json
-{
-    "configuration":{
-        "debug":{
-            "symbols":true,
-            "debug":true,
-            "optimizations":false,
-            "coverage":false,
-            "strict":false
-        },
-        "release":{
-            "symbols":false,
-            "debug":false,
-            "optimizations":true,
-            "coverage":false,
-            "strict":false
-        }
-    },
-    "environment":{
-        "default":{
-            "PATH": ["/my/path"],
-            "FOO": "Some value"
-        }
-    }
-}
-```
-
-Note that environment variables configured as a JSON array (as shown with the `PATH` variable), are appended to their current value. Elements in the array are separated by a `:` or `;`, depending on the platform.
-
-With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
 
 ### Command line usage
 The following is the output of `bake --help`
