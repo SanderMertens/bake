@@ -40,7 +40,8 @@ int16_t cmd(
     }
     
     if (sig || ret) {
-        ut_error("'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
+        ut_catch();
+        bake_message(UT_ERROR, "error", "'%s' (%s %d)", cmd, sig ? "sig" : "result", sig ? sig : ret);
         return -1;
     }
 
@@ -99,11 +100,12 @@ int16_t bake_create_script(void)
     free(vc_shell_cmd);
 
     /* Copy file to global location, may ask for password */
-    ut_log("#[yellow]ATTENTION#[reset] copying script to '" GLOBAL_PATH "', setup may request password\n");
+    bake_message(UT_WARNING, "WARNING", 
+        "#[normal]copying script to '" GLOBAL_PATH "', #[yellow]requires administrator privileges");
 
     if (ut_cp(script_path, GLOBAL_PATH)) {
         printf("\n");
-        ut_warning(
+        bake_message(UT_WARNING, "",
             "Failed to instal bake script to %s. Setup will continue, but you will\n"
             "need to manually add %%USERPROFILE%%\\bake to the %%PATH%% environment variable.\n"
             "Alternatively, you can retry the setup with administrator privileges.\n",
@@ -184,15 +186,15 @@ int16_t bake_create_script(void)
 
     /* Copy file to global location, may ask for password */
     bake_message(UT_WARNING, "WARNING", "#[normal]copying script to '" GLOBAL_PATH "', #[yellow]setup may request password");
+    bake_message(UT_LOG, "", " for local-only install, just press Enter until setup continues");
 
     char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, GLOBAL_PATH);
 
     if(cmd(cp_cmd)) {
-        printf("\n");
-        ut_warning(
+        bake_message(UT_WARNING, "",
             "Failed to instal bake script to %s. Setup will continue, but\n"
-            "      before you can use bake, you now first need to run:\n"
-            "        export $(~/bake/"BAKE_EXEC" env)\n", GLOBAL_PATH
+            "          before you can use bake, you need to run:\n"
+            "            #[normal]export PATH=$PATH:$HOME/bake\n", GLOBAL_PATH
         );
     } else {
         bake_message(UT_OK, "done", "install bake script to '" GLOBAL_PATH "'");
