@@ -24,7 +24,7 @@ Bake is supported on the following platforms:
 * [FAQ](#faq)
 * [Manual](#manual)
   * [Introduction](#introduction)
-  * [Building projects](#running-code)
+  * [Building projects](#building-projects)
   * [Running projects](#running-projects)
   * [Project kinds](#project-kinds)
   * [Project layout](#project-layout)
