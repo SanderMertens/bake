@@ -540,7 +540,7 @@ Bake will not attempt to discover projects in subdirectories of projects if thos
 Additionally, bake will skip any directories that start with a `.`.
 
 #### Build configurations
-Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a buidl configuration with the `--cfg` flag:
+Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a build configuration with the `--cfg` flag:
 
 ```
 bake my_project --cfg release
