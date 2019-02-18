@@ -84,8 +84,6 @@ After you've installed bake once, you can upgrade to the latest version with:
 bake upgrade
 ```
 
-We will add support for package managers like brew in the future. Bake is currently only supported on Linux and MacOS.
-
 ## Getting started
 
 The following commands are useful for getting started with bake. Also, check out the `bake --help` command, which lists all the options and commands available in the bake tool.
