@@ -419,7 +419,7 @@ bake --env clang_env
 To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
 
 ### Where does bake store my binaries?
-Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_HOME/arch-os/config/bin` or `$BAKE_HOME/bake/arch-os-config/lib`. By default, `$BAKE_HOME` is set to `~/bake`.
+Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_HOME/arch-os/config/bin` or `$BAKE_HOME/bake/arch-os/config/lib`. By default, `$BAKE_HOME` is set to `~/bake`.
 
 To prevent a project from being stored in the bake environment, add this to the `project.json`:
 
@@ -428,6 +428,8 @@ To prevent a project from being stored in the bake environment, add this to the 
     "public": false
 }
 ```
+
+Usually you do not need to know where binaries are stored, as you can run applications with `bake run`, and specify dependencies by using their logical name.
 
 ### How do I do a release build?
 By default, binaries are built with the default debug configuration. To build a release configuration, add `--cfg release` to your bake command. You can add/change configurations in the bake configuration file. See "Configuring Bake" for more details.
