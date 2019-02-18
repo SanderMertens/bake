@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SanderMertens/bake.svg?branch=master)](https://travis-ci.org/SanderMertens/bake) [![Build status](https://ci.appveyor.com/api/projects/status/or9nqredss604c39/branch/master?svg=true)](https://ci.appveyor.com/project/SanderMertens/bake/branch/master)
+
 # bake
 The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated, this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, so let's try to make it as easy and painless as possible.
 
