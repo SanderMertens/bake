@@ -82,9 +82,9 @@ char* ut_file_load(
 
     /* Load contents in memory */
     content = malloc (size + 1);
-    if (fread(content, 1, size, file) != (unsigned int)size) {
+    if (!(size = fread(content, 1, size, file))) {
+        ut_throw("ut_file_load('%s') read zero bytes instead of %d", filename, size);
         free(content);
-        content = NULL;
     } else {
         content[size] = '\0';
     }
@@ -100,7 +100,7 @@ int16_t ut_file_test(
     const char* filefmt,
     ...)
 {
-    FILE* exists = NULL;
+    bool exists = false;
     va_list arglist;
 
     va_start(arglist, filefmt);
@@ -108,16 +108,22 @@ int16_t ut_file_test(
     va_end(arglist);
 
     if (file) {
+#ifndef _WIN32
         errno = 0;
-        exists = fopen(file, "rb");
-        if (exists) {
-            fclose(exists);
+        FILE *f = fopen(file, "rb");
+        if (f) {
+            exists = true;
+            fclose(f);
         } else if ((errno != ENOENT) && (errno != ENOTDIR)) {
             ut_throw("%s: %s", file, strerror(errno));
             return -1;
         } else {
             errno = 0;
         }
+#else
+        DWORD dwAttrib = GetFileAttributes(file);
+        exists = (dwAttrib != INVALID_FILE_ATTRIBUTES);
+#endif
     }
 
     free(file);
@@ -278,7 +284,7 @@ char* ut_file_path(char* file, char* buffer) {
     strcpy(buffer, file);
     i = strlen(buffer);
     while (i >= 0) {
-        if ((buffer[i] == '/') || (buffer[i] == '\\')) {
+        if (buffer[i] == UT_OS_PS[0]) {
             buffer[i] = '\0';
             break;
         }

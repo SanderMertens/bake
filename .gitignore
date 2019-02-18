@@ -4,4 +4,9 @@ bin
 .DS_Store
 *.so
 *.dylib
+*.exe
+*.lib
+*.dll
 bake
+*.obj
+*.exp

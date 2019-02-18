@@ -21,6 +21,8 @@
 
 #include "bake.h"
 
+extern ut_tls BAKE_DRIVER_KEY;
+
 static
 bake_attr* bake_attr_parse_value(
     bake_config *config,
@@ -51,19 +53,24 @@ int16_t bake_project_func_locate(
 
     if (!strcmp(argument, "package")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_PROJECT);
+    } else if (!strcmp(argument, "template")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_TEMPLATE);
     } else if (!strcmp(argument, "include")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_INCLUDE);
     } else if (!strcmp(argument, "etc")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_ETC);
-    } else if (!strcmp(argument, "env")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_ENV);
     } else if (!strcmp(argument, "lib")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_LIB);
     } else if (!strcmp(argument, "app")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_APP);
     } else if (!strcmp(argument, "bin")) {
         value = ut_locate(package_id, NULL, UT_LOCATE_BIN);
+    } else if (!strcmp(argument, "src")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_SOURCE);
+    } else if (!strcmp(argument, "devsrc")) {
+        value = ut_locate(package_id, NULL, UT_LOCATE_DEVSRC);
     }
+    
     if (value) {
         ut_strbuf_appendstr(buffer, value);
         return 0;
@@ -168,14 +175,14 @@ int16_t bake_project_func_id(
 {
     if (!argument) {
         ut_strbuf_appendstr(buffer, package_id);
-    } else if (!strcmp(argument, "short")) {
-        const char *short_id = strrchr(package_id, '.');
-        if (!short_id) {
-            short_id = package_id;
+    } else if (!strcmp(argument, "base")) {
+        const char *base_id = strrchr(package_id, '.');
+        if (!base_id) {
+            base_id = package_id;
         } else {
-            short_id ++;
+            base_id ++;
         }
-        ut_strbuf_appendstr(buffer, short_id);
+        ut_strbuf_appendstr(buffer, base_id);
     } else if (!strcmp(argument, "upper")) {
         char *upper = ut_strdup(package_id);
         char *ptr, ch;
@@ -210,6 +217,44 @@ int16_t bake_project_func_id(
     return 0;
 }
 
+static
+int16_t bake_project_func_driver_attr(
+    bake_project *project,
+    const char *package_id,
+    ut_strbuf *buffer,
+    const char *argument)
+{
+    if (!argument) {
+        ut_throw("argument is mandatory for driver-attr function");
+        goto error;
+    }
+
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    if (!driver) {
+        ut_throw("cannot get driver-attr '%s', no driver active", argument);
+        goto error;
+    }
+
+    bake_attr *attr = bake_project_get_attr(project, driver->id, argument);
+    if (!attr) {
+        ut_throw("attribute '%s' not found in driver configuration '%s'",
+            argument, driver->id);
+        goto error;
+    }
+
+    if (attr->kind == BAKE_BOOLEAN) {
+        ut_strbuf_append(buffer, "%s", attr->is.boolean ? "true" : "false");
+    } else if (attr->kind == BAKE_NUMBER) {
+        ut_strbuf_append(buffer, "%d", attr->is.number);
+    } else if (attr->kind == BAKE_STRING) {
+        ut_strbuf_appendstr(buffer, attr->is.string);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /** Forward a function call from project.json to the right implementation. */
 static
 int16_t bake_attr_func(
@@ -228,6 +273,8 @@ int16_t bake_attr_func(
         return bake_project_func_language(project, package_id, buffer, argument);
     } else if (!strcmp(function, "id")) {
         return bake_project_func_id(project, package_id, buffer, argument);
+    } else if (!strcmp(function, "driver-attr")) {
+        return bake_project_func_driver_attr(project, package_id, buffer, argument);
     } else {
         ut_throw("unknown function '%s'", function);
         return -1;
@@ -279,10 +326,10 @@ char* bake_attr_replace(
             }
 
             /* Obtain identifier & check if it contains invalid characters */
-            ut_id func_id = {0}, arg_id = {0};
+            char func_id[512] = {0}, arg_id[512] = {0};
             const char *ptr;
             for (ptr = start; ptr < end; ptr ++) {
-                if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
+                if (!isalpha(*ptr) && *ptr != '_' && *ptr != '-' && !isdigit(*ptr)) {
                     ut_throw("invalid function identifier in '%s'", input);
                     ut_strbuf_reset(&output);
                     goto error;
@@ -296,11 +343,6 @@ char* bake_attr_replace(
                 start = end + 1;
                 end = func_end;
                 for (ptr = start; ptr < end; ptr ++) {
-                    if (!isalpha(*ptr) && *ptr != '_' && !isdigit(*ptr)) {
-                        ut_throw("invalid function argument in '%s'", input);
-                        ut_strbuf_reset(&output);
-                        goto error;
-                    }
                     arg_id[ptr - start] = *ptr;
                 }
                 arg_id[ptr - start] = '\0';

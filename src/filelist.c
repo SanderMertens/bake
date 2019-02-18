@@ -70,10 +70,10 @@ bake_file* bake_filelist_add_intern(
     bfile->name = ut_strdup(filename);
     bfile->path = ut_strdup(path);
 
-    if (filename[0] == '/') {
+    if (!ut_path_is_relative(filename)) {
         bfile->file_path = ut_strdup(filename);
     } else {
-        bfile->file_path = ut_asprintf("%s/%s", path, filename);
+        bfile->file_path = ut_asprintf("%s%c%s", path, UT_OS_PS[0],  filename);
     }
     bfile->timestamp = timestamp;
 
@@ -104,7 +104,7 @@ int16_t bake_filelist_populate(
 
     while (ut_iter_hasNext(&it)) {
         const char *file = ut_iter_next(&it);
-        char *file_path = ut_asprintf("%s/%s", path, file);
+        char *file_path = ut_asprintf("%s"UT_OS_PS"%s", path, file);
 
         time_t last_modified = ut_lastmodified(file_path);
         if (last_modified == -1) {
@@ -186,17 +186,21 @@ bake_file* bake_filelist_add_file(
         filepath = fl->path;
     }
 
-    if ((file && file[0] == '/') || (fl->path && !strcmp(fl->path, "."))) {
+    if ((file && !ut_path_is_relative(file)) || (fl->path && !strcmp(fl->path, "."))) {
         path = ut_strdup(file);
     } else {
-        path = ut_asprintf("%s/%s", filepath, file);
+        path = ut_asprintf("%s"UT_OS_PS"%s", filepath, file);
+    }
+
+    if (!path) {
+        return NULL;
     }
 
     if (ut_file_test(path) == 1) {
         lastmodified = ut_lastmodified(path);
     }
 
-    char *name = strrchr(path, '/');
+    char *name = strrchr(path, UT_OS_PS[0]);
     if (name) {
         *name = '\0';
         name ++;
@@ -218,7 +222,7 @@ int16_t bake_filelist_add_pattern(
 {
     char *search_path = (char*)path;
     if (fl->path) {
-        search_path = ut_asprintf("%s/%s", fl->path, path);
+        search_path = ut_asprintf("%s"UT_OS_PS"%s", fl->path, path);
     }
     int16_t result = bake_filelist_populate(fl, search_path, pattern);
     if (search_path != path) free(search_path);
@@ -239,7 +243,7 @@ error:
     return -1;
 }
 
-uint64_t bake_filelist_count(
+int bake_filelist_count(
     bake_filelist *fl)
 {
     return ut_ll_count(fl->files);

@@ -30,14 +30,18 @@
 #include "crawler.h"
 #include "project.h"
 
+void bake_message(
+    int kind,
+    const char *bracket_txt,
+    const char *fmt,
+    ...);
+
 /* -- Configuration functions -- */
 
 /** Find bake config file(s), load specified configuration & environment */
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *cfg_id,
-    const char *env_id,
-    bool build_to_home);
+    const char *env_id);
 
 /** Export variable to bake configuration */
 int16_t bake_config_export(
@@ -137,13 +141,18 @@ int16_t bake_install_postbuild(
 int16_t bake_install_clear(
     bake_config *config,
     bake_project *project,
+    const char *project_id,
     bool uninstall);
 
-/** Remove files from config->target for project */
+/** Uninstall project from bake environment */
 int16_t bake_install_uninstall(
     bake_config *config,
     const char *project_id);
 
+/** Uninstall template from bake environment */
+int16_t bake_install_uninstall_template(
+    bake_config *config,
+    const char *project_id);
 
 /* -- Driver functions -- */
 
@@ -281,7 +290,7 @@ int16_t bake_filelist_merge(
     bake_filelist *src);
 
 /** Return number of files in filelist */
-uint64_t bake_filelist_count(
+int bake_filelist_count(
     bake_filelist *fl);
 
 /* -- Rule API -- */
@@ -331,6 +340,11 @@ bake_node* bake_node_find(
 
 /** Create new pattern */
 bake_pattern* bake_pattern_new(
+    const char *name,
+    const char *pattern);
+
+/* Create a new file pattern */
+bake_pattern* bake_file_pattern_new(
     const char *name,
     const char *pattern);
 

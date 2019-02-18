@@ -1,68 +1,7 @@
 
 #include <bake>
 
-#define OBJ_DIR ".bake_cache/obj"
-
-/* -- Mappings -- */
-
-/* Obtain object name from source file */
-static
-char* src_to_obj(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    const char *cfg = config->configuration;
-    char *result = malloc(strlen(in) + strlen(OBJ_DIR) + strlen(UT_PLATFORM_STRING) + strlen(cfg) + 4);
-    sprintf(result, OBJ_DIR "/%s-%s/%s", UT_PLATFORM_STRING, cfg, in);
-    char *ext = strrchr(result, '.');
-    strcpy(ext + 1, "o");
-    return result;
-}
-
-/* TODO - used for header dependencies */
-char* src_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-char* obj_to_dep(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *in)
-{
-    return NULL;
-}
-
-
-/* -- Actions -- */
-
-/* TODO - used for header dependencies */
-static
-void generate_deps(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-}
-
-/* Is current OS Darwin */
-static
-bool is_darwin(void)
-{
-    if (strcmp(UT_OS_STRING, "darwin")) {
-        return false;
-    }
-    return true;
-}
+#define CACHE_DIR ".bake_cache"
 
 /* Is language C++ */
 static
@@ -76,456 +15,47 @@ bool is_cpp(
     }
 }
 
-/* Get compiler */
+/* Is current OS Darwin */
 static
-const char *cc(
-    bool is_cpp)
+bool is_darwin(void)
 {
-    const char *cxx = ut_getenv("CXX");
-    const char *cc = ut_getenv("CC");
-
-    if (!is_darwin()) {
-        if (is_cpp) {
-            if (!cxx)
-                cxx = "g++";
-            return cxx;
-        } else {
-            if (!cc)
-                cc = "gcc";
-            return cc;
-        }
-    } else {
-        if (is_cpp) {
-            if (!cxx)
-                cxx = "clang++";
-            return cxx;
-        } else {
-            if (!cc)
-                cc = "gcc";
-            return cc;
-        }
-    }
-}
-
-/* Compile source file */
-static
-void compile_src(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-    ut_strbuf cmd = UT_STRBUF_INIT;
-    char *ext = strrchr(source, '.');
-    bool cpp = is_cpp(project);
-
-    if (ext && strcmp(ext, ".c")) {
-        /* If extension is not c, treat as a C++ file */
-        cpp = true;
-    }
-
-    /* In obscure cases with static libs, stack protector can cause trouble */
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC -fno-stack-protector", cc(cpp));
-
-    /* Set standard for C or C++ */
-    if (cpp) {
-        ut_strbuf_append(&cmd, " -std=%s",
-            driver->get_attr_string("cpp-standard"));
-    } else {
-        ut_strbuf_append(&cmd, " -std=%s -D_XOPEN_SOURCE=600",
-            driver->get_attr_string("c-standard"));
-    }
-
-    /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " -DBAKE_PROJECT_ID=\"%s\"", project->id);
-
-    /* This macro is only set for source files of this project, and can be used
-     * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" -D%s_IMPL", project->id_underscore);
-    strupper(building_macro);
-    ut_strbuf_appendstr(&cmd, building_macro);
-    free(building_macro);
-
-    /* Include symbols */
-    if (config->symbols) {
-        ut_strbuf_appendstr(&cmd, " -g");
-    }
-
-    /* Enable debugging code */
-    if (!config->debug) {
-        ut_strbuf_appendstr(&cmd, " -DNDEBUG");
-    }
-
-    /* Enable full optimizations, including cross-file */
-    if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3 -flto");
-    } else {
-        ut_strbuf_appendstr(&cmd, " -O0");
-    }
-
-    /* If strict, enable lots of warnings & treat warnings as errors */
-    if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " -Werror -Wextra -pedantic");
-    }
-
-    if (!cpp) {
-        /* CFLAGS for c projects */
-        bake_attr *flags_attr = driver->get_attr("cflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *flag = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", flag->is.string);
-            }
-        }
-    } else {
-        /* CXXFLAGS for c4cpp projects */
-        bake_attr *flags_attr = driver->get_attr("cxxflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *flag = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", flag->is.string);
-            }
-        }
-    }
-
-    /* Add configured include paths */
-    bake_attr *include_attr = driver->get_attr("include");
-    if (include_attr) {
-        ut_iter it = ut_ll_iter(include_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *include = ut_iter_next(&it);
-            char* file = include->is.string;
-
-            if (file[0] == '/' || file[0] == '$') {
-                ut_strbuf_append(&cmd, " -I%s", file);
-            } else {
-                ut_strbuf_append(&cmd, " -I%s/%s", project->path, file);
-            }
-        }
-    }
-
-    /* Add BAKE_TARGET to include path */
-    ut_strbuf_append(&cmd, " -I %s/include", config->target);
-
-    /* Add BAKE_HOME to include path if it's different from BAKE_TARGET */
-    if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " -I %s/include", config->home);
-    }
-
-    /* Add project root to include path */
-    ut_strbuf_append(&cmd, " -I%s", project->path);
-
-    /* Add source file and object file */
-    ut_strbuf_append(&cmd, " -c %s -o %s", source, target);
-
-    /* Execute command */
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
-}
-
-static
-void obj_deps(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-}
-
-/* A better mechanism is needed to abstract away from the difference between
- * Linux-ish systems. */
-static
-const char* lib_map(
-    const char *lib)
-{
-    /* On darwin, librt does not exist */
-    if (!strcmp(lib, "rt")) {
-        if (is_darwin()) {
-            return NULL;
-        }
-    }
-
-    return lib;
-}
-
-/* Find a static library from a logical name */
-static
-char* find_static_lib(
-    bake_driver_api *driver,
-    bake_project *project,
-    bake_config *config,
-    const char *lib)
-{
-    int ret;
-
-    /* Find static library in environment libpath */
-    char *file = ut_asprintf("%s/lib%s.a", config->target_lib, lib);
-    if ((ret = ut_file_test(file)) == 1) {
-        return file;
-    } else if (ret != 0) {
-        free(file);
-        ut_error("could not access '%s'", file);
-        return NULL;
-    }
-
-    free(file);
-
-    /* If static library is not found in environment, try project libpath */
-    bake_attr *libpath_attr = driver->get_attr("libpath");
-    if (libpath_attr) {
-        ut_iter it = ut_ll_iter(libpath_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *lib_attr = ut_iter_next(&it);
-            file = ut_asprintf("%s/lib%s.a", lib_attr->is.string, lib);
-
-            if ((ret = ut_file_test(file)) == 1) {
-                return file;
-            } else if (ret != 0) {
-                free(file);
-                ut_error("could not access '%s'", file);
-                return NULL;
-            }
-
-            free(file);
-        }
-    }
-
-    return NULL;
-}
-
-/* Is binary a dylib */
-static
-bool is_dylib(
-    bake_driver_api *driver,
-    bake_project *project)
-{
-    if (is_darwin() && project->type == BAKE_PACKAGE) {
-        return true;
-    } else {
+    if (stricmp(UT_OS_STRING, "Darwin")) {
         return false;
     }
+    return true;
 }
 
-/* Link a binary */
 static
-void link_dynamic_binary(
+bool is_linux(void)
+{
+    if (stricmp(UT_OS_STRING, "Linux")) {
+        return false;
+    }
+    return true;
+}
+
+/* Include compiler-specific implementation. Eventually this should be made
+ * pluggable instead of being determined by the host platform. */
+#ifdef _WIN32
+#include "msvc/driver.c"
+#else
+#include "gcc/driver.c"
+#endif
+
+/* Obtain object name from source file */
+static
+char* src_to_obj(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    char *source,
-    char *target)
+    const char *in)
 {
-    ut_strbuf cmd = UT_STRBUF_INIT;
-    bool hide_symbols = false;
-    ut_ll static_object_paths = NULL;
-
-    bool cpp = is_cpp(project);
-    bool export_symbols = driver->get_attr_bool("export-symbols");
-
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
-
-    if (project->type == BAKE_PACKAGE) {
-        /* Set symbol visibility */
-        if (!export_symbols && !is_darwin()) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-fvisibility=hidden");
-            hide_symbols = true;
-        }
-
-        ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
-
-        /* Fail when symbols are not found in library */
-        if (!is_darwin()) {
-            ut_strbuf_appendstr(&cmd, " -Wl,-z,defs");
-        }
-    }
-
-    /* Set optimizations */
-    if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3");
-    } else {
-        ut_strbuf_appendstr(&cmd, " -O0");
-    }
-
-    /* When strict, warnings are errors */
-    if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " -Werror -pedantic");
-    }
-
-    /* Create a dylib when on MacOS */
-    if (is_dylib(driver, project)) {
-        ut_strbuf_appendstr(&cmd, " -dynamiclib");
-    }
-
-    /* Compiler flags provided to linker step */
-    bake_attr *flags_attr = driver->get_attr("ldflags");
-    if (flags_attr) {
-        ut_iter it = ut_ll_iter(flags_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *flag = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " %s", flag->is.string);
-        }
-    }
-
-    /* Add object files */
-    ut_strbuf_append(&cmd, " %s", source);
-
-    /* Link static library */
-    bake_attr *static_lib_attr = driver->get_attr("static-lib");
-
-    if (static_lib_attr) {
-        if (static_lib_attr->kind != BAKE_ARRAY) {
-            ut_error("attribute 'static-lib' is not of type array");
-            project->error = true;
-            return;
-        }
-
-        ut_iter it = ut_ll_iter(static_lib_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *lib = ut_iter_next(&it);
-
-            if (!hide_symbols) {
-                ut_strbuf_append(&cmd, " -l%s", lib->is.string);
-            } else {
-                /* If hiding symbols and linking with static library, unpack
-                 * library objects to temp directory. If the library would be
-                 * linked as-is, symbols would be exported, even though
-                 * fvisibility is set to hidden */
-                char *static_lib = find_static_lib(
-                    driver, project, config, lib->is.string);
-                if (!static_lib) {
-                    continue;
-                }
-
-                /* Unpack objects in static lib to temporary directory */
-                char *cwd = strdup(ut_cwd());
-                char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, UT_PLATFORM_STRING, config->configuration);
-                char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
-
-                /* The ar command doesn't have an option to output files to a
-                 * specific directory, so have to use chdir. This will be an
-                 * issue for multithreaded builds. */
-                ut_mkdir(obj_path);
-                ut_chdir(obj_path);
-                driver->exec(unpack_cmd);
-                free(unpack_cmd);
-                free(static_lib);
-                ut_chdir(cwd);
-                free(cwd);
-                ut_strbuf_append(&cmd, " %s/*", obj_path);
-
-                if (!static_object_paths) {
-                    static_object_paths = ut_ll_new();
-                }
-
-                /* Add path with object files to static_object_paths. These will
-                 * be cleaned up after the compile command */
-                ut_ll_append(static_object_paths, obj_path);
-            }
-        }
-    }
-
-    /* Add BAKE_TARGET to library path */
-    if (ut_file_test(config->target_lib)) {
-        ut_strbuf_append(&cmd, " -L%s", config->target_lib);
-    }
-
-    /* Add BAKE_HOME to library path if it's different */
-    if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " -L%s/lib", config->home);
-    }
-
-    /* Add libraries in 'link' attribute */
-    ut_iter it = ut_ll_iter(project->link);
-    while (ut_iter_hasNext(&it)) {
-        char *dep = ut_iter_next(&it);
-        ut_strbuf_append(&cmd, " -l%s", dep);
-    }
-
-    /* Add project libpath */
-    bake_attr *libpath_attr = driver->get_attr("libpath");
-    if (libpath_attr) {
-        ut_iter it = ut_ll_iter(libpath_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *lib = ut_iter_next(&it);
-            ut_strbuf_append(&cmd, " -L%s", lib->is.string);
-
-            if (is_darwin()) {
-                ut_strbuf_append(
-                    &cmd, " -Xlinker -rpath -Xlinker %s", lib->is.string);
-            }
-        }
-    }
-
-    /* Add project libraries */
-    bake_attr *lib_attr = driver->get_attr("lib");
-    if (lib_attr) {
-        ut_iter it = ut_ll_iter(lib_attr->is.array);
-        while (ut_iter_hasNext(&it)) {
-            bake_attr *lib = ut_iter_next(&it);
-            const char *mapped = lib_map(lib->is.string);
-            if (mapped) {
-                ut_strbuf_append(&cmd, " -l%s", mapped);
-            }
-        }
-    }
-
-    /* Specify output */
-    ut_strbuf_append(&cmd, " -o %s", target);
-
-    /* Execute command */
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
-
-    /* If static libraries were unpacked, cleanup temporary directories */
-    it = ut_ll_iter(static_object_paths);
-    while (ut_iter_hasNext(&it)) {
-        char *obj_path = ut_iter_next(&it);
-        ut_rm(obj_path);
-        free(obj_path);
-    }
-
-    ut_ll_free(static_object_paths);
-}
-
-/* Link a static library */
-static
-void link_static_binary(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-    ut_strbuf cmd = UT_STRBUF_INIT;
-    ut_strbuf_append(&cmd, "ar rcs %s %s", target, source);
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
-}
-
-/* Link a library */
-static
-void link_binary(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-    bool link_static = driver->get_attr_bool("static");
-
-    if (link_static) {
-        link_static_binary(driver, config, project, source, target);
-    } else {
-        link_dynamic_binary(driver, config, project, source, target);
-    }
+    char *obj_dir = driver->get_attr_string("obj-dir");
+    /* Add some dummy characters (__) to make room for the extension */
+    char *result = ut_asprintf("%s"UT_OS_PS"%s__", obj_dir, in);
+    char *ext = strrchr(result, '.');
+    strcpy(ext, obj_ext());
+    return result;
 }
 
 /* Initialize project defaults */
@@ -541,15 +71,49 @@ void init(
     if (!driver->get_attr("c-standard")) {
         driver->set_attr_string("c-standard", "c99");
     }
-}
+    if (!driver->get_attr("precompile-header")) {
+#ifndef _WIN32
+        char *main_header = ut_asprintf("%s/include/%s.h", 
+            project->path, project->id_base);
 
-/* Specify files to clean */
-static
-void clean(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
+        if (ut_file_test(main_header) == 1) {
+            driver->set_attr_bool("precompile-header", true);
+        } else {
+            driver->set_attr_bool("precompile-header", false);
+        }
+        free(main_header);
+#else
+        /* TODO: support precompiled headers on Windows */
+        driver->set_attr_bool("precompile-header", false);
+#endif
+    }
+    if (!driver->get_attr("static")) {
+        driver->set_attr_bool("static", false);
+    }
+    if (!driver->get_attr("export-symbols")) {
+        driver->set_attr_bool("export-symbols", false);
+    }
+
+    bool cpp = is_cpp(project);
+    if (is_clang(cpp)) {
+        driver->set_attr_string("ext-pch", "pch");
+    } else {
+        driver->set_attr_string("ext-pch", "gch");
+    }
+
+    char *tmp_dir  = ut_asprintf(
+        CACHE_DIR UT_OS_PS "%s-%s", UT_PLATFORM_STRING, config->configuration);
+    driver->set_attr_string("tmp-dir", tmp_dir);
+    
+    char *obj_dir = ut_asprintf("%s"UT_OS_PS"obj", tmp_dir);
+    driver->set_attr_string("obj-dir", obj_dir);
+    free(obj_dir);
+
+    char *pch_dir = ut_asprintf("%s"UT_OS_PS"include", tmp_dir);
+    driver->set_attr_string("pch-dir", pch_dir);
+    free(pch_dir);
+    
+    free(tmp_dir);
 }
 
 /* Initialize directory with new project */
@@ -559,10 +123,12 @@ void setup_project(
     bake_config *config,
     bake_project *project)
 {
+    bool is_template = project->type == BAKE_TEMPLATE;
+
     /* Get short project id */
     const char *id = project->id;
     bake_project_type kind = project->type;
-    const char *short_id = project->id_short;
+    const char *short_id = project->id_base;
 
     /* Create directories */
     ut_mkdir("src");
@@ -577,30 +143,34 @@ void setup_project(
         return;
     }
 
-    fprintf(f,
-        "#include <include/%s.h>\n"
-        "\n"
-        "int main(int argc, char *argv[]) {\n"
-        "    return 0;\n"
-        "}\n",
-        short_id
-    );
+    if (is_template) {
+        fprintf(f,
+            "#include <include/${id base}.h>\n"
+            "\n"
+            "int main(int argc, char *argv[]) {\n"
+            "    return 0;\n"
+            "}\n");
+    } else {
+        fprintf(f,
+            "#include <include/%s.h>\n"
+            "\n"
+            "int main(int argc, char *argv[]) {\n"
+            "    return 0;\n"
+            "}\n",
+            short_id);
+    }
 
     fclose(f);
     free(source_filename);
 
-    /* Create upper-case id for defines in header file */
-    char *id_upper = strdup(id);
-    strupper(id_upper);
-    char *ptr, ch;
-    for (ptr = id_upper; (ch = *ptr); ptr ++) {
-        if (ch == '/' || ch == '.') {
-            ptr[0] = '_';
-        }
-    }
-
     /* Create main header file */
-    char *header_filename = ut_asprintf("include/%s.h", short_id);
+    char *header_filename;
+    if (is_template) {
+        header_filename = ut_asprintf("include/__id_base.h", short_id);
+    } else {
+        header_filename = ut_asprintf("include/%s.h", short_id);
+    }
+    
     f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open '%s'", header_filename);
@@ -608,13 +178,33 @@ void setup_project(
         return;
     }
 
-    fprintf(f,
-        "#ifndef %s_H\n"
-        "#define %s_H\n\n"
-        "/* This generated file contains includes for project dependencies */\n"
-        "#include \"bake_config.h\"\n",
-        id_upper,
-        id_upper);
+    if (is_template) {
+        fprintf(f,
+            "#ifndef ${id upper}_H\n"
+            "#define ${id upper}_H\n\n"
+            "/* This generated file contains includes for project dependencies */\n"
+            "#include \"bake_config.h\"\n");
+    } else {
+        /* Create upper-case id for defines in header file */
+        char *id_upper = strdup(id);
+        strupper(id_upper);
+        char *ptr, ch;
+        for (ptr = id_upper; (ch = *ptr); ptr ++) {
+            if (ch == '/' || ch == '.') {
+                ptr[0] = '_';
+            }
+        }
+
+        fprintf(f,
+            "#ifndef %s_H\n"
+            "#define %s_H\n\n"
+            "/* This generated file contains includes for project dependencies */\n"
+            "#include \"bake_config.h\"\n",
+            id_upper,
+            id_upper);
+
+        free(id_upper);
+    }
 
     if (kind != BAKE_PACKAGE) {
         fprintf(f, "%s",
@@ -636,158 +226,6 @@ void setup_project(
     fclose(f);
 }
 
-/* -- Misc functions -- */
-
-/* Return name of project artefact */
-static
-char* artefact_name(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    char *result;
-    char *id = project->id_underscore;
-
-    if (project->type == BAKE_PACKAGE) {
-        bool link_static = driver->get_attr_bool("static");
-
-        if (link_static) {
-            result = ut_asprintf("lib%s.a", id);
-        } else {
-            if (is_dylib(driver, project)) {
-                result = ut_asprintf("lib%s.dylib", id);
-            } else {
-                result = ut_asprintf("lib%s.so", id);
-            }
-        }
-    } else {
-        result = ut_strdup(id);
-    }
-
-    return result;
-}
-
-/* Get filename for library */
-static
-char *link_to_lib(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    const char *name)
-{
-    char *result = NULL;
-
-    /* If link points to hardcoded filename, return as is */
-    if (ut_file_test(name)) {
-        return ut_strdup(name);
-    }
-
-    /* If not found, check if provided name has an extension */
-    char *ext = strrchr(name, '.');
-    if (ext && !strchr(name, '/')) {
-        /* Hardcoded filename was provided but not found */
-        return NULL;
-    }
-
-    /* Try finding a library called lib*.so or lib*.dylib (OSX only) */
-    char *full_path = strdup(name);
-    char *lib_name = strrchr(full_path, '/');
-    if (lib_name) {
-        lib_name[0] = '\0';
-        lib_name ++;
-    } else {
-        lib_name = full_path;
-        full_path = NULL;
-    }
-
-    /* Try .so */
-    if (full_path) {
-        char *so = ut_asprintf("%s/lib%s.so", full_path, lib_name);
-        if (ut_file_test(so)) {
-            result = so;
-        }
-    } else {
-        char *so = ut_asprintf("lib%s.so", lib_name);
-        if (ut_file_test(so)) {
-            result = so;
-        }
-    }
-
-    /* Try .dylib */
-    if (!result && !strcmp(UT_OS_STRING, "darwin")) {
-        if (full_path) {
-            char *dylib = ut_asprintf("%s/lib%s.dylib", full_path, lib_name);
-            if (ut_file_test(dylib)) {
-                result = dylib;
-            }
-        } else {
-            char *dylib = ut_asprintf("lib%s.dylib", lib_name);
-            if (ut_file_test(dylib)) {
-                result = dylib;
-            }
-        }
-    }
-
-    /* Try .a */
-    if (!result) {
-        if (full_path) {
-            char *a = ut_asprintf("%s/lib%s.a", full_path, lib_name);
-            if (ut_file_test(a)) {
-                result = a;
-            }
-        } else {
-            char *a = ut_asprintf("lib%s.a", lib_name);
-            if (ut_file_test(a)) {
-                result = a;
-            }
-        }
-    }
-
-    if (full_path) {
-        free(full_path);
-    } else if (lib_name) {
-        free(lib_name);
-    }
-
-    return result;
-}
-
-/* Generate list of include files used in bake_config.h */
-static
-void add_dependency_includes(
-    bake_config *config,
-    FILE *f,
-    ut_ll dependencies)
-{
-    uint32_t count = 0;
-    ut_iter it = ut_ll_iter(dependencies);
-    while (ut_iter_hasNext(&it)) {
-        char *project_id = ut_iter_next(&it);
-
-        bool include_found = false;
-        char *file = ut_asprintf("%s/include/%s", config->home, project_id);
-        if (ut_file_test(file) != 1) {
-            free(file);
-            file = ut_asprintf("%s/include/%s", config->target, project_id);
-            if (ut_file_test(file) == 1) {
-                include_found = true;
-            }
-        } else {
-            include_found = true;
-        }
-        if (include_found) {
-            fprintf(f, "#include <%s>\n", project_id);
-            count ++;
-        }
-
-        free(file);
-    }
-
-    if (!count) {
-        fprintf(f, "/* No dependencies */\n");
-    }
-}
-
 /* Generate bake_config.h */
 static
 void generate(
@@ -795,7 +233,7 @@ void generate(
     bake_config *config,
     bake_project *project)
 {
-    const char *short_id = project->id_short;
+    const char *short_id = project->id_base;
 
     /* Create upper-case id for defines in header file */
     char *id_upper = ut_strdup(project->id_underscore);
@@ -859,23 +297,50 @@ void generate(
     fclose(f);
 }
 
-/* -- Rules */
-int bakemain(bake_driver_api *driver) {
+static
+bool pch_is_enabled(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->get_attr_bool("precompile-header")) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
+/* -- Rules */
+UT_EXPORT 
+int bakemain(bake_driver_api *driver) 
+{
     ut_init("driver/bake/c");
 
     /* Create pattern that matches source files */
     driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
 
-    /* Create rule for dynamically generating dep files from source files */
-    driver->rule("deps", "$SOURCES", driver->target_map(src_to_dep), generate_deps);
+
+    /* -- Precompiled headers -- */
+
+    /* Create pattern matching main header and precompiled header */
+    driver->pattern("main_header", "include/${id base}.h");
+    driver->file("pch", "${driver-attr pch-dir}/${id base}.h.${driver-attr ext-pch}");
+
+    /* Create rule for generating precompiled header from main header */
+    driver->rule("h_to_pch", "$main_header", driver->target_file("$pch"), precompile_h);
+
+    /* Create rule for dependency from sources on precompiled header */
+    driver->rule("pch_for_src", "$pch", driver->target_pattern("$SOURCES"), NULL);
+
+    /* Only evaluate precompiled header rules when feature is enabled */
+    driver->condition("h_to_pch", pch_is_enabled);
+    driver->condition("pch_for_src", pch_is_enabled);
+
+
+    /* -- Compiling and linking source code -- */
 
     /* Create rule for dynamically generating object files from source files */
     driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), compile_src);
-
-    /* Create rule for dynamically generating dependencies for every object in
-     * $objects, using the generated dependency files. */
-    driver->dependency_rule("$objects", "$deps", driver->target_map(obj_to_dep), obj_deps);
 
     /* Create rule for creating binary from objects */
     driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);

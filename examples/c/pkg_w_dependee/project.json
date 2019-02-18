@@ -1,9 +1,9 @@
 {
-    "id":"pkg_w_dependee",
+    "id":"examples.c.pkg_w_dependee",
     "type":"package",
     "dependee": {
         "value": {
-            "use": ["pkg_helloworld"]
+            "use": ["examples.c.pkg_helloworld"]
         },
         "lang.c": {
             "lib": ["m"]

@@ -1,7 +1,7 @@
 {
-    "id":"pkg_dependee",
+    "id":"examples.c.pkg_dependee",
     "type":"package",
     "value": {
-        "use": ["pkg_w_dependee"]
+        "use": ["examples.c.pkg_w_dependee"]
     }
 }

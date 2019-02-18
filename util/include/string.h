@@ -30,6 +30,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifndef _WIN32
+
 
 /** Compare strings insensitive of case.
  *
@@ -54,6 +56,7 @@ int strnicmp(
     const char *str1,
     int length,
     const char *str2);
+#endif // !_WIN32
 
 /** Compare strings insensitive of case until specified character is found.
  * This function is useful when comparing tokens in a string that are separated
@@ -147,7 +150,7 @@ size_t stresc(
  * @param str Input string.
  */
 UT_EXPORT
-void strset(
+void ut_strset(
     char **out,
     const char *str);
 

@@ -1,0 +1,30 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+build_script:
+- cmd: >-
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+    cd build-Windows\
+
+    nmake
+
+    cd ..\
+
+init:
+  - 
+    
+test_script:
+- cmd: bake.exe setup
+- cmd: bake build examples
+- cmd: bake build examples --cfg release
+- cmd: bake list
+- cmd: bake clone SanderMertens/example
+- cmd: bake run example
+- cmd: bake run example --cfg release
+- cmd: bake new foo
+- cmd: bake run foo
+- cmd: bake run foo --cfg release
+- cmd: bake new my_template --template
+- cmd: bake new my_tmpl_app -t my_template
+- cmd: bake run my_tmpl_app
+

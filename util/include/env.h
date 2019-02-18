@@ -43,6 +43,20 @@ int16_t ut_setenv(
     const char *value, 
     ...);
 
+/** Append a value to an environment variable.
+ * 
+ * Used for appending to PATH-like variables. A separator (':', ';') will be
+ * added to the value.
+ * 
+ * @param varname Name of environment variable
+ * @param value Value to append to environment variable.
+ * @return 0 if success, non-zero if failed.
+ */
+int16_t ut_appendenv(
+    const char *varname, 
+    const char *value, 
+    ...);
+
 /** Get environment variable.
  * 
  * @param varname Name of environment variable

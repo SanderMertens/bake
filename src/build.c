@@ -124,7 +124,7 @@ int bake_do_build_intern(
     /* Step 8: clear environment of old project files */
     ut_log_push("clear");
     if (project->public && project->type != BAKE_TOOL)
-        ut_try (bake_install_clear(config, project, false), NULL);
+        ut_try (bake_install_clear(config, project, project->id, false), NULL);
     ut_log_pop();
 
     /* Step 9: export project files to environment */

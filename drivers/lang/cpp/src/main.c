@@ -10,14 +10,14 @@ void setup_project(
     /* Get short project id */
     const char *id = project->id;
     bake_project_type kind = project->type;
-    const char *short_id = project->id_short;
+    const char *short_id = project->id_base;
 
     /* Create directories */
     ut_mkdir("src");
     ut_mkdir("include");
 
     /* Create main source file */
-    char *source_filename = ut_asprintf("src/main.cpp");
+    char *source_filename = ut_asprintf("src"UT_OS_PS"main.cpp");
     FILE *f = fopen(source_filename, "w");
 
     fprintf(f,
@@ -59,7 +59,7 @@ void setup_project(
     fclose(f);
 }
 
-int bakemain(bake_driver_api *driver) {
+UT_EXPORT int bakemain(bake_driver_api *driver) {
 
     driver->import("lang.c");
 

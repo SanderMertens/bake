@@ -1,5 +1,5 @@
 {
-    "id":"app_clib",
+    "id":"examples.c.app_clib",
     "type":"application",
     "lang.c": {
         "lib": ["m"]

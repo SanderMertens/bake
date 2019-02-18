@@ -466,7 +466,7 @@ bool ut_expr_runExpr(
         case UT_EXPR_TOKEN_FILTER: {
             const char *elem = (*elements)[0];
             if (elem && strcmp(elem, ".")) {
-                result = !fnmatch(cur->start, (*elements)[0], 0);
+                result = !ut_fnmatch(cur->start, (*elements)[0]);
             } else {
                 result = false;
                 done = true;
@@ -562,7 +562,7 @@ bool ut_expr_run(
         const char *elements[UT_MAX_SCOPE_DEPTH + 1];
         ut_exprOp *op = program->ops;
         const char **elem = elements;
-        ut_id id;
+        char id[512];
         if (str) {
             strcpy(id, str);
             strlower(id);

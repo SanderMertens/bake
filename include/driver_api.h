@@ -80,11 +80,13 @@ char* (*bake_rule_map_cb)(
  * specify different kinds of targets as argument type. */
 
 /* A PATTERN is a list of files matched against a pattern (string expression
- * that contains wildcards). A  map is a function that transforms input
- * files to output files (like foo.c => foo.o) */
+ * that contains wildcards). A MAP is a function that transforms input
+ * files to output files (like foo.c => foo.o). A FILE returns a single file,
+ * regardless of whether this file exists. */
 typedef enum bake_rule_targetKind {
     BAKE_RULE_TARGET_MAP,
-    BAKE_RULE_TARGET_PATTERN
+    BAKE_RULE_TARGET_PATTERN,
+    BAKE_RULE_TARGET_FILE
 } bake_rule_targetKind;
 
 /* A rule target specifies the expected list of files as result of a rule. When
@@ -111,7 +113,8 @@ typedef struct bake_rule_target {
  * file (typical example: a .c file and .o file). */
 typedef enum bake_rule_kind {
     BAKE_RULE_PATTERN,
-    BAKE_RULE_RULE
+    BAKE_RULE_RULE,
+    BAKE_RULE_FILE
 } bake_rule_kind;
 
 /* The driver API is a struct that is passed to the bakemain function, which is
@@ -133,6 +136,11 @@ struct bake_driver_api {
         const char *name,
         const char *pattern);
 
+    /* Create a pattern */
+    void (*file)(
+        const char *name,
+        const char *file);
+
     /* Create a rule */
     void (*rule)(
         const char *name,
@@ -150,6 +158,10 @@ struct bake_driver_api {
     /* Create a pattern target (n-to-1 rule) */
     bake_rule_target (*target_pattern)(
         const char *pattern);
+
+    /* Create a file target (n-to-1 rule) */
+    bake_rule_target (*target_file)(
+        const char *file);        
 
     /* Create a map target (n-to-n rule) */
     bake_rule_target (*target_map)(

@@ -1,4 +1,4 @@
-#include <include/${id short}.h>
+#include <include/${id base}.h>
 #include <iostream>
 
 int main(int argc, char *argv[]) try {

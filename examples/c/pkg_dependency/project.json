@@ -1,7 +1,7 @@
 {
-    "id":"pkg_dependency",
+    "id":"examples.c.pkg_dependency",
     "type":"package",
     "value": {
-        "use": ["pkg_helloworld"]
+        "use": ["examples.c.pkg_helloworld"]
     }
 }

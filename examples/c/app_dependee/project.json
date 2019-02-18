@@ -1,7 +1,7 @@
 {
-    "id":"app_dependee",
+    "id":"examples.c.app_dependee",
     "type":"application",
     "value": {
-        "use": ["pkg_w_dependee"]
+        "use": ["examples.c.pkg_w_dependee"]
     }
 }

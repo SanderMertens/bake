@@ -79,7 +79,8 @@ struct bake_project {
     char *cache_path;       /* Project path containing temporary build files */
     char *id_underscore;    /* Id with underscores instead of dots */
     char *id_dash;          /* Id with dashes instead of dots */
-    char *id_short;         /* Last element of id */
+    char *id_base;          /* Last element of id */
+    bool bake_extension;    /* Is package a bake extension (install to HOME) */
 
     /* Direct access to the parson JSON data */
     void *json;

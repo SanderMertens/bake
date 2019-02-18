@@ -25,9 +25,15 @@ struct bake_crawler {
     ut_rb nodes; /* tree optimizes looking up dependencies */
     ut_ll leafs; /* projects that cannot act as dependencies */
     uint32_t count;
+    bool recursive;
 };
 
 static bake_crawler *crawler;
+
+typedef int16_t (*bake_dependency_action)(
+    bake_config *cfg,
+    bake_project *project,
+    const char *dependency);
 
 static
 int project_cmp(
@@ -38,10 +44,12 @@ int project_cmp(
     return strcmp(key1, key2);
 }
 
+/* Build the list of dependees during project finalization */
 static
-void bake_crawler_addDependency(
+int16_t bake_crawler_addDependency(
+    bake_config *config,
     bake_project *p,
-    char *use)
+    const char *use)
 {
     bake_project *dep = ut_rb_find(crawler->nodes, use);
     if (!dep) {
@@ -58,6 +66,43 @@ void bake_crawler_addDependency(
     }
 
     ut_ll_append(dep->dependents, p);
+
+    return 0;
+}
+
+/* Lookup a dependency in the bake environment (used for recursive builds) */
+static
+int16_t bake_crawler_lookupDependency(
+    bake_config *config,
+    bake_project *p,
+    const char *use)
+{
+    /* Don't try to rebuild bake dependencies (like bake.util) */
+    if (!strncmp(use, "bake.", 5)) {
+        return 0;
+    }
+
+    bake_project *dep = ut_rb_find(crawler->nodes, use);
+
+    if (!dep || !dep->path) {
+        const char *src = ut_locate(use, NULL, UT_LOCATE_DEVSRC);
+        if (!src) {
+            src = ut_locate(use, NULL, UT_LOCATE_SOURCE);
+        }
+
+        if (src) {
+            dep = bake_project_new(src, config);
+            if (!dep) {
+                ut_warning("ignoring '%s' because of errors", src);
+            } else {
+                if (bake_crawler_add(config, dep)) {
+                    ut_warning("ignoring '%s' because of errors", src);
+                }
+            }
+        }
+    }
+
+    return 0;
 }
 
 bake_project* bake_crawler_get(
@@ -132,12 +177,11 @@ error:
 }
 
 static
-int16_t bake_crawler_finalize_project(
+int16_t bake_crawler_walk_dependencies(
     bake_config *config,
-    bake_project *p)
+    bake_project *p,
+    bake_dependency_action action)
 {
-    ut_try (bake_do_post_discovery(config, p), NULL);
-
     /* Add dependency information */
     p->unresolved_dependencies = ut_ll_count(p->use);
     p->unresolved_dependencies += ut_ll_count(p->use_build);
@@ -147,22 +191,37 @@ int16_t bake_crawler_finalize_project(
     ut_iter it = ut_ll_iter(p->use);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(p, use);
+        ut_try( action(config, p, use), NULL);
     }
 
     /* Add project to dependent lists of private dependencies */
     it = ut_ll_iter(p->use_private);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(p, use);
+        ut_try( action(config, p, use), NULL);
     }
 
     /* Add project to dependent lists of build dependencies */
     it = ut_ll_iter(p->use_build);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
-        bake_crawler_addDependency(p, use);
+        ut_try( action(config, p, use), NULL);
     }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_crawler_finalize_project(
+    bake_config *config,
+    bake_project *p)
+{
+    ut_try (bake_do_post_discovery(config, p), NULL);
+
+    ut_try( bake_crawler_walk_dependencies(
+        config, p, bake_crawler_addDependency), NULL);
 
     ut_trace("initialized project '%s' in '%s'", p->id, p->path);
 
@@ -172,11 +231,8 @@ error:
 }
 
 static
-int16_t bake_crawler_finalize(
-    bake_config *config)
+ut_ll bake_crawler_collect_projects()
 {
-    /* Collect projects in list before finalizing. Finalization step may mutate
-     * the tree, and cannot mutate tree while walking over it. */
     ut_ll projects = ut_ll_new();
     ut_iter it = ut_rb_iter(crawler->nodes);
     while (ut_iter_hasNext(&it)) {
@@ -188,8 +244,19 @@ int16_t bake_crawler_finalize(
         ut_ll_append(projects, p);
     }
 
+    return projects;
+}
+
+static
+int16_t bake_crawler_finalize(
+    bake_config *config)
+{
+    /* Collect projects in list before finalizing. Finalization step may mutate
+     * the tree, and cannot mutate tree while walking over it. */
+    ut_ll projects = bake_crawler_collect_projects();
+
     /* Now finalize projects */
-    it = ut_ll_iter(projects);
+    ut_iter it = ut_ll_iter(projects);
     while (ut_iter_hasNext(&it)) {
         bake_project *p = ut_iter_next(&it);
         ut_try(bake_crawler_finalize_project(config, p), NULL);
@@ -216,8 +283,8 @@ int16_t bake_crawler_crawl(
 {
     char *prev = strdup(ut_cwd());
     char *fullpath;
-    if (path[0] != '/') {
-        fullpath = ut_asprintf("%s/%s", wd, path);
+    if (ut_path_is_relative(path)) {
+        fullpath = ut_asprintf("%s"UT_OS_PS"%s", wd, path);
         ut_path_clean(fullpath, fullpath);
     } else {
         fullpath = ut_strdup(path);
@@ -226,7 +293,7 @@ int16_t bake_crawler_crawl(
     bool isProject = false;
     bake_project *p = NULL;
 
-    if (ut_file_test(strarg("%s/project.json", fullpath))) {
+    if (ut_file_test(strarg("%s"UT_OS_PS"project.json", fullpath))) {
         isProject = true;
 
         p = bake_project_new(fullpath, config);
@@ -252,7 +319,7 @@ int16_t bake_crawler_crawl(
             continue;
         }
 
-        if (ut_isdir(strarg("%s/%s", fullpath, file))) {
+        if (ut_isdir(strarg("%s"UT_OS_PS"%s", fullpath, file))) {
 
             /* If this is a bake project, filter out directories that have
              * special meaning. */
@@ -300,9 +367,44 @@ error:
     return -1;
 }
 
-void bake_crawler_init(void)
+static
+int16_t bake_crawler_recursive(
+    bake_config *config)
+{
+
+    /* First collect unresolved dependencies for leafs (applications) */
+    ut_iter it = ut_ll_iter(crawler->leafs);
+    while (ut_iter_hasNext(&it)) {
+        bake_project *project = ut_iter_next(&it);
+        ut_try( 
+            bake_crawler_walk_dependencies(
+                config, project, bake_crawler_lookupDependency), NULL);
+
+    }
+
+    /* Collect packages in tree before search, as it may mutate
+     * the tree, and cannot mutate tree while walking over it. */
+    ut_ll projects = bake_crawler_collect_projects();
+
+    it = ut_ll_iter(projects);
+    while (ut_iter_hasNext(&it)) {
+        bake_project *project = ut_iter_next(&it);
+        ut_try( 
+            bake_crawler_walk_dependencies(
+                config, project, bake_crawler_lookupDependency), NULL);
+    }
+
+    ut_ll_free(projects);
+
+    return 0;
+error:
+    return -1;
+}
+
+void bake_crawler_init(bool recursive)
 {
     crawler = ut_calloc(sizeof(bake_crawler));
+    crawler->recursive = recursive;
 }
 
 void bake_crawler_free(void)
@@ -339,6 +441,14 @@ uint32_t bake_crawler_search(
 
     if (ut_file_test(path)) {
         ut_try( bake_crawler_crawl(config, ".", path), NULL);
+
+        /* If crawling recursively, discover unresolved depdendencies. Do this
+         * after discovering projects in the provided directory, so these take
+         * precedence (in case one project is found in two locations). */
+        if (crawler->recursive) {
+            ut_trace("recursively looking for dependencies");
+            ut_try( bake_crawler_recursive(config), NULL);
+        }
     } else {
         ut_throw("path '%s' not found", path);
         goto error;
@@ -378,23 +488,14 @@ int16_t bake_crawler_build_project(
     bake_project *p,
     ut_ll readyForBuild)
 {
-    ut_ok(
-        "#[grey]begin %s of %s '%s' in '%s'",
-        action_name, bake_project_type_str(p->type), p->id, p->path);
-
-    if (action(config, p)) {
-        ut_throw("bake interrupted by '%s' in '%s'", p->id, p->path);
-        goto error;
+    if (!ut_getenv("BAKE_SETUP")) {
+        bake_message(UT_LOG, action_name, "#[green]%s#[reset] %s #[grey]=>#[reset] '%s'", 
+            bake_project_type_str(p->type), p->id, p->path);
     }
 
-    if (p->changed) {
-        ut_log(
-            "%s '%s' in '%s'\n",
-            action_name, p->id, p->path);
-    } else if (p->language && strcmp(action_name, "foreach") && p->type != BAKE_TEMPLATE) {
-        ut_log(
-            "#[grey]ready '%s'\n",
-            p->id);
+    if (action(config, p)) {
+        bake_message(UT_ERROR, "error", "bake interrupted by %s in %s", p->id, p->path);
+        goto error;
     }
 
     /* Decrease unresolved_dependencies of dependents */
@@ -406,7 +507,7 @@ error:
 }
 
 static
-void bake_crawler_collect_projects(
+void bake_crawler_collect_ready_for_build(
     ut_iter *it,
     ut_ll readyForBuild)
 {
@@ -444,12 +545,12 @@ int16_t bake_crawler_walk(
     /* Collect initial projects */
     if (crawler->nodes) {
         ut_iter it = ut_rb_iter(crawler->nodes);
-        bake_crawler_collect_projects(&it, readyForBuild);
+        bake_crawler_collect_ready_for_build(&it, readyForBuild);
     }
 
     if (crawler->leafs) {
         ut_iter it = ut_ll_iter(crawler->leafs);
-        bake_crawler_collect_projects(&it, readyForBuild);
+        bake_crawler_collect_ready_for_build(&it, readyForBuild);
     }
 
     /* Walk projects (when dependencies are resolved the list will populate) */

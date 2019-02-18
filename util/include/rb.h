@@ -53,14 +53,6 @@ void ut_rb_set(
     const void* key,
     void* value);
 
-UT_EXPORT
-void* jsw_rbinsert (
-    jsw_rbtree_t *tree,
-    void* key,
-    void *data,
-    bool overwrite,
-    bool returnPtr );
-
 #define ut_rb_findOrSet(tree, key, value)\
     jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, FALSE, FALSE)
 

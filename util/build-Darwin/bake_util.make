@@ -81,7 +81,6 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/dl.o \
 	$(OBJDIR)/env.o \
 	$(OBJDIR)/expr.o \
 	$(OBJDIR)/file.o \
@@ -95,11 +94,13 @@ OBJECTS := \
 	$(OBJDIR)/os.o \
 	$(OBJDIR)/parson.o \
 	$(OBJDIR)/path.o \
+	$(OBJDIR)/dl.o \
+	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
+	$(OBJDIR)/thread.o \
 	$(OBJDIR)/rb.o \
 	$(OBJDIR)/strbuf.o \
 	$(OBJDIR)/string.o \
-	$(OBJDIR)/thread.o \
 	$(OBJDIR)/time.o \
 	$(OBJDIR)/util.o \
 	$(OBJDIR)/version.o \
@@ -161,9 +162,6 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/dl.o: ../src/dl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/env.o: ../src/env.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -203,7 +201,16 @@ $(OBJDIR)/parson.o: ../src/parson.c
 $(OBJDIR)/path.o: ../src/path.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/proc.o: ../src/proc.c
+$(OBJDIR)/dl.o: ../src/posix/dl.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/fs1.o: ../src/posix/fs.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/proc.o: ../src/posix/proc.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/thread.o: ../src/posix/thread.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rb.o: ../src/rb.c
@@ -213,9 +220,6 @@ $(OBJDIR)/strbuf.o: ../src/strbuf.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/string.o: ../src/string.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/thread.o: ../src/thread.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/time.o: ../src/time.c

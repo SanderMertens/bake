@@ -50,7 +50,7 @@ char* ut_path_clean(char *buf, char *path) {
         buf = tempbuf;
     }
 
-    cp = strchr(path, '/');
+    cp = strchr(path, UT_OS_PS[0]);
 
     /* no '/' characters - return as-is */
     if (cp == NULL) {
@@ -59,20 +59,20 @@ char* ut_path_clean(char *buf, char *path) {
 
     /* copy leading slash if present */
     if (cp == path) {
-        strcpy(buf, "/");
+        strcpy(buf, UT_OS_PS);
     } else {
         buf[0] = '\0';
     }
 
     /* tokenization */
     strcpy(work, path);
-    while ((thisp = __strsepr(&nextp, '/')) != NULL) {
+    while ((thisp = __strsepr(&nextp, UT_OS_PS[0])) != NULL) {
         if (*thisp == '\0') continue;
 
         if (strcmp(thisp, ".") == 0) continue;
 
         if (strcmp(thisp, "..") == 0) {
-            cp = strrchr(buf, '/');
+            cp = strrchr(buf, UT_OS_PS[0]);
 
              /* "/" or "/foo" */
             if (cp == buf) {
@@ -94,8 +94,8 @@ char* ut_path_clean(char *buf, char *path) {
             }
         }
 
-        if (buf[0] != '\0' && buf[strlen(buf) - 1] != '/') {
-            strcat(buf, "/");
+        if (buf[0] != '\0' && buf[strlen(buf) - 1] != UT_OS_PS[0]) {
+            strcat(buf, UT_OS_PS);
         }
 
         strcat(buf, thisp);
@@ -121,7 +121,7 @@ char* ut_path_dirname(
 {
     char *result = strdup(path);
 
-    char *ptr = strrchr(result, '/');
+    char *ptr = strrchr(result, UT_OS_PS[0]);
     if (ptr) {
         ptr[0] = '\0';
     } else {
@@ -138,14 +138,14 @@ char* ut_path_tok(
 {
     char *id_ptr = *id_ptr_ptr;
     if (!id_ptr) {
-        id_ptr = strrchr(full_id, '/');
+        id_ptr = strrchr(full_id, UT_OS_PS[0]);
         if (!id_ptr) {
             id_ptr = full_id;
         }
     } else {
-        char *next_ptr = strrchr(full_id, '/');
+        char *next_ptr = strrchr(full_id, UT_OS_PS[0]);
         if (next_ptr) {
-            id_ptr[-1] = '/';
+            id_ptr[-1] = UT_OS_PS[0];
             id_ptr = next_ptr;
         } else {
             id_ptr = full_id;
@@ -153,10 +153,10 @@ char* ut_path_tok(
     }
 
     if (id_ptr == full_id) {
-        if (full_id[0] == '/') {
+        if (full_id[0] == UT_OS_PS[0]) {
             *id_ptr_ptr = full_id + 1;
         }
-        *parent_id = "/";
+        *parent_id = UT_OS_PS;
         return NULL;
     } else {
         id_ptr[0] = '\0';
@@ -171,18 +171,18 @@ void ut_path_combine(
     const char *parent,
     const char *id)
 {
-    if (id[0] == '/') {
+    if (id[0] == UT_OS_PS[0]) {
         strcpy(full_id, id);
     } else {
-        if (parent[0] == '/' && !parent[1]) {
-            full_id[0] = '/';
+        if (parent[0] == UT_OS_PS[0] && !parent[1]) {
+            full_id[0] = UT_OS_PS[0];
             strcpy(full_id + 1, id);
         } else if (parent[0] == '.' && !parent[1]) {
             strcpy(full_id, id);
         } else {
             int len = strlen(parent);
             strcpy(full_id, parent);
-            full_id[len] = '/';
+            full_id[len] = UT_OS_PS[0];
             strcpy(&full_id[len + 1], id);
         }
     }
@@ -231,24 +231,24 @@ void ut_path_offset(
      * out + '/' + id to create the full path. If 'to' is pointing to root, do
      * not append root, as out + '/' + id would then result in a double '/' */
     if (!from || !from[0]) {
-        bool to_isRoot = to && (to[0] == '/') && !to[1];
+        bool to_isRoot = to && (to[0] == UT_OS_PS[0]) && !to[1];
         if (!to_isRoot) {
-            (outptr ++)[0] = '/';
+            (outptr ++)[0] = UT_OS_PS[0];
             firstid++;
         } else {
             /* If to is root, and from is empty return an empty string */
             if (travel) {
                 (outptr++)[0] = '\0';
             } else {
-                (outptr++)[0] = '/';
+                (outptr++)[0] = UT_OS_PS[0];
                 outptr[0] = '\0';
             }
             return;
         }
     }
 
-    const char *fptr = from ? from[0] == '/' ? &from[1] : from : "";
-    const char *tptr = to ? to[0] == '/' ? &to[1] : to : "";
+    const char *fptr = from ? from[0] == UT_OS_PS[0] ? &from[1] : from : "";
+    const char *tptr = to ? to[0] == UT_OS_PS[0] ? &to[1] : to : "";
 
     /* First, move ptrs until paths diverge */
     while (fptr[0] && chicmp(fptr[0], tch)) {
@@ -261,13 +261,13 @@ void ut_path_offset(
         (outptr++)[0] = '.';
     } else if (fptr[0]) {
         /* If fptr was split on a '/', don't insert a '..' for that */
-        if (fptr[0] == '/') fptr ++;
+        if (fptr[0] == UT_OS_PS[0]) fptr ++;
 
         if (travel) {
             /* Next, for every identifier in 'from', add '..' */
             while (fptr[0]) {
-                if (fptr[0] == '/') {
-                    if (outptr != firstid) (outptr++)[0] = '/';
+                if (fptr[0] == UT_OS_PS[0]) {
+                    if (outptr != firstid) (outptr++)[0] = UT_OS_PS[0];
                     (outptr++)[0] = '.';
                     (outptr++)[0] = '.';
                 }
@@ -275,7 +275,7 @@ void ut_path_offset(
             }
 
             /* Add '..' for last identifier */
-            if (outptr != firstid) (outptr++)[0] = '/';
+            if (outptr != firstid) (outptr++)[0] = UT_OS_PS[0];
             (outptr++)[0] = '.';
             (outptr++)[0] = '.';
         } else {
@@ -287,8 +287,8 @@ void ut_path_offset(
 
     /* Finally, append remaining elements from to */
     if (tch) {
-        if (tch == '/') tptr ++;
-        if (outptr != firstid) (outptr++)[0] = '/';
+        if (tch == UT_OS_PS[0]) tptr ++;
+        if (outptr != firstid) (outptr++)[0] = UT_OS_PS[0];
         while (tch) {
             (outptr++)[0] = tch;
             tptr ++;
@@ -304,7 +304,25 @@ void ut_package_to_path(
     char *ptr, ch;
     for (ptr = package; (ch = *ptr); ptr ++) {
         if (ch == '.') {
-            *ptr = '/';
+            *ptr = UT_OS_PS[0];
         }
     }
+}
+
+bool ut_path_is_relative(
+    const char *path)
+{
+#ifdef _WIN32
+    if (path[0] && path[1] == ':') {
+        return false;
+    } else {
+        return true;
+    }
+#else
+    if (path[0] == UT_OS_PS[0]) {
+        return false;
+    } else {
+        return true;
+    }
+#endif
 }

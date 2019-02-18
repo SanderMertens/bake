@@ -1,6 +1,6 @@
 // a project.json file with comments
 {
-    "id": "app_w_comments",
+    "id": "examples.c.app_w_comments",
     "type": "application",
     "value": {
         /* Project metadata */
