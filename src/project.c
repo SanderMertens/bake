@@ -1723,12 +1723,15 @@ int16_t bake_project_setup_w_template(
         goto error;
     }
 
+    ut_debug("start iterating over template path '%s'", template_path);
+
     ut_iter it;
     ut_try( ut_dir_iter(template_path, "//", &it), NULL);
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         if (file[0] == '.') {
+            ut_debug("ignoring hidden file '%s'", file);
             continue;
         }
 
@@ -1738,7 +1741,6 @@ int16_t bake_project_setup_w_template(
 
         bool is_template = bake_is_template_file(file);
         char *src_path = ut_asprintf("%s"UT_OS_PS"%s", template_path, file);
-
         char *real = file;
         
         if (is_template) {
@@ -1747,15 +1749,21 @@ int16_t bake_project_setup_w_template(
 
         char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", project->path, real);
 
+        ut_debug("copy '%s' to '%s' (project path = '%s', old filename = '%s', template = %d)", 
+            src_path, dst_path, project->path, file, is_template);
+
         if (!ut_isdir(src_path)) {
             if (is_template) {
+                ut_debug("copy template file '%s' to '%s'", src_path, dst_path);
                 ut_try( bake_project_file_from_template(
                     config, project, src_path, dst_path),
                     NULL);
             } else {
+                ut_debug("copy regular file '%s' to '%s'", src_path, dst_path);
                 ut_try( ut_cp(src_path, dst_path), NULL);
             }
         } else {
+            ut_debug("create directory '%s'", dst_path);
             ut_try( ut_mkdir(dst_path), NULL);
         }
 

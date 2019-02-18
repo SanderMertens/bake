@@ -12,11 +12,32 @@ Bake's main features are:
 
 Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
 
+Bake is supported on the following platforms:
+
+- Linux
+- MacOS
+- Windows (validated on Windows 10)
+
 ## Contents
 * [Installation](#installation)
 * [Getting Started](#getting-started)
 * [FAQ](#faq)
 * [Manual](#manual)
+  * [Introduction](#introduction)
+  * [Building projects](#building-projects)
+  * [Running projects](#running-projects)
+  * [Project kinds](#project-kinds)
+  * [Project layout](#project-layout)
+  * [Project configuration](#project-configuration)
+  * [Template functions](#template-functions)
+  * [Templates](#templates)
+  * [Configuring Bake](#configuring-bake)
+  * [Installing Miscellaneous Files](#installing-miscellaneous-files)
+  * [Integrating Non-bake Projects](#integrating-non-bake-projects)
+  * [The Bake Environment](#the-bake-environment)
+  * [Environment Variables](#environment-variables)
+  * [Command line interface](#command-line-interface)
+  * [Writing drivers](#writing-drivers)
 * [Authors](#authors)
 * [Legal stuff](#legal-stuff)
 
@@ -31,6 +52,30 @@ make -C bake/build-$(uname)
 bake/bake setup
 ```
 
+On Windows:
+```
+git clone https://github.com/SanderMertens/bake
+cd build-Windows
+nmake
+cd ..
+bake setup
+```
+On Windows, make sure to open a visual studio command prompt, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
+
+Bake installs a script to a location that is accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This however often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press Enter untill the setup resumes.
+ 
+In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%/bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
+
+On Linux:
+```
+export PATH=$PATH:$HOME/bake
+```
+
+On Windows:
+```
+set PATH=%PATH%;%USERPROFILE%/bake
+```
+ 
 After you've installed bake once, you can upgrade to the latest version with:
 
 ```demo
@@ -414,6 +459,128 @@ Bake is therefore not just a build tool like `make` that can automatically gener
 
 A secondary goal is to create a zero-dependency build tool that can be easily ported to other platforms. Whereas other build tools exist, like `make`, `premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations. Bake's only dependency is the C runtime.
 
+### Creating a new Project
+You can create a new bake project with the `bake new` command. This command has a few options, which lets you create different kinds of projects (see "Project Kinds"). By default, bake creates an "application" project, which is a standard executable. To create a new application project called `my_app`, run the following command:
+
+```
+bake new my_app
+```
+
+This will create a new directory called `my_app` with the contents of a basic bake application project. If you want to create a bake package (a shared library), you can simply add `--package` to the command:
+
+```
+bake new my_pkg --package
+```
+
+When a new project is created, its metadata is also stored in the bake environment. That means that the project is now discoverable by bake, and can be used as dependency of other projects. You can inspect the bake environment with this command:
+
+```
+bake list
+```
+
+Your new project should show up in the list of projects.
+
+Bake lets you create projects with nested identifiers, like `foo.bar`. This lets you create hierarchies of projects. The `.` notation is used to denote different elements in the project identifier. To use nested identfiers, simply specify their name with bake new:
+
+```
+bake new foo.bar
+```
+
+This will create a new directory `foo-bar`. The project will appear as `foo.bar` when you do `bake list`.
+
+### Building Projects
+Bake's primary task is to build the code in your projects, and generate binaries in a reliable and reproducible way. You can simply build a bake project by invoking the `bake` command:
+
+```
+bake
+```
+
+This will recursively discover and build all bake projects in the current directory. The command is synonymous for running bake with the `build` action:
+
+```
+bake build
+```
+
+Alternatively you can also specify a directory to build, like so:
+
+```
+bake my_directory
+bake build my_directory
+```
+
+Bake has a number of actions, of which the following are related to building your project:
+
+```
+bake build
+bake rebuild
+bake clean
+```
+
+The `build` action incrementally builds your project, and will reuse artefacts from previous builds, like object files and binaries. The `rebuild` action cleans artefacts from previous builds, and is then followed by a regular build. The `clean` action cleans all build artefacts for the project.
+
+Bake allows you to build for multiple platforms and build configurations from the same source tree, as it stores build artefacts in locations that are platform/configuration specific. When you do a `bake rebuild`, only the artefacts for the current platform / configuration are cleaned, whereas `bake clean` cleans artefacts for all platforms / configurations.
+
+#### Discovery
+Bake automatically discovers projects in the provided path, or current directory if no path was specified. It will then order the discovered projects based on their dependencies, so that they are built in the correct order. This removes the need for building makefiles in which you explicitly have to maintain the build order for your projects. Bake uses the information in the `use` attribute of your project configuration (see [Project Configuration](#project-configuration)).
+
+Bake will not attempt to discover projects in subdirectories of projects if those subdirectories have special meaning. The following directories are skipped, _only_ if they are found inside a bake project directory:
+
+- src
+- include
+- config
+- data
+- test
+- etc
+- lib
+- bin
+- install
+- examples
+- .bake_cache
+
+Additionally, bake will skip any directories that start with a `.`.
+
+#### Build configurations
+Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a build configuration with the `--cfg` flag:
+
+```
+bake my_project --cfg release
+```
+
+The default configuration is `debug`. The difference between `debug` and `release` is that `debug` disables optimizations and enables debugging code (release adds the `-DNDEBUG` flag). Furthermore, `debug` builds add compiler debugging information (like `-g` in gcc).
+
+Bake never mixes binaries between build configurations. Therefore, if you build a project in `release` mode, but its dependencies haven't been built in `release` mode yet, the build will fail. 
+
+#### Recursive builds
+To make working across configurations easier, bake lets you do so called "recursive builds". These builds don't just build the current project, but also all dependencies for a project (and dependencies of dependencies, hence recursive builds). When building a project in `release` mode, but all dependencies have been built in `debug` mode, you can simply do:
+
+```
+bake my_project --cfg release -r
+```
+
+The `-r` flag enables recursive building, which will, in addition to the current project, rebuild all dependencies in release mode as well. Recursive builds work for any dependency that is available in the bake environment. Bake keeps track of where the source files of your projects are located on disk, which is how it can start a build for a dependency, even when it is not discoverable from the location where bake was invoked from.
+
+### Running Projects
+You can run bake projects by using `bake run`, followed by either a folder or a project id:
+
+```
+bake run foo.bar
+bake run my_directory
+```
+
+This only works for application projects (see [Project Kinds](#project-kinds)). Bake will automatically start the executable and monitor its status. Before running the project, bake will first attempt to do a recursive build (see [Recursive builds](#recursive-builds)) so that the project and all its dependencies are built and are available for the right configuration. You can specify a configuration just like you would when building:
+
+```
+bake run foo.bar --cfg release
+```
+
+Additionally, bake lets you do interactive builds, which monitor changes from your project, and rebuild the project when a change occurs. To start an interactive build, add the `--interactive` flag:
+
+```
+bake run foo.bar --interactive
+```
+
+Currently bake does not monitor changes in the source code of dependencies, though it may do so in the future.
+
 ### Project Kinds
 Bake supports different project kinds which are configured in the `type` property of a `project.json` file. The project kind determines whether a project is a library or executable, whether a project is installed to a bake environment and whether a project is managed or not. The following table shows an overview of the different project kinds:
 
@@ -421,6 +588,7 @@ Project Kind | Description
 -------------|----------
 application  | Executable
 package      | Shared object
+template     | Template for new bake projects
 
 #### Public vs private projects
 A public project is a project that is installed to the bake environment. In this environment, bake knows where to find include files, binaries and other project resources. This allows other projects to refer to these resources by the logical project name, and makes specifying dependencies between projects a lot easier.
@@ -428,19 +596,32 @@ A public project is a project that is installed to the bake environment. In this
 Private projects are projects that are not installed to a bake environment. Because of this, these projects cannot be located by other projects. Private projects may depend on public projects, but public projects cannot depend on private projects. Binaries of private objects are only stored in the bin folder in the project root.
 
 ### Project Layout
-Each bake project uses the same layout. This makes it very easy to build bake projects, as bake always knows where to find project configuration, include files, source files and so on. Bake will look for the following directories and files in a project:
+Each bake project uses the same layout. This makes it very easy to build bake projects, as bake always knows where to find project configuration, include files, source files and so on. A bake project has at least three files:
 
 Directory / File | Description
 -----------------|------------
 project.json | Contains build configuration for the project
 src | Contains the project source files
 include | Contains the project header files
-etc | Contains miscellaneous files (optional)
-install | Contains files that are installed to environment (optional)
-bin | Contains binary build artefacts (created by bake)
-.bake_cache | Contains temporary build artefacts, such as object files and generated code
 
-Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment.
+In addition, a bake project can contain the following optional directories:
+
+Directory / File | Description
+-----------------|------------
+etc | Miscellaneous project-specific files
+install | Miscellaneous files that can be used by all projects in bake environment
+templates | Template projects that are automatically installed when building the project
+
+Bake will by default build any source file that is in the `src` directory. If the project is public, files in the `include`, `etc` and `install` folders will be soft-linked to the bake environment on Linux/MacOS, and copied when using Windows.
+
+When bake builds a project, build artefacts are stored in these directories:
+
+Directory / File | Description
+-----------------|------------
+bin | Contains project binaries
+.bake_cache | Contains temporary files, like object files and precompiled headers
+
+Bake stores temporary files in platform- and configuration specific directories, so that you can safely do debug/release builds, and builds for different operating systems from the same source directory.
 
 ### Project Configuration
 A bake project file is located in the root of a project, and must be called `project.json`. This file contains of an `id` describing the logical project name, a `type` describing the kind of project, and a `value` property which contains properties that customize how the project should be built.
@@ -485,6 +666,23 @@ includes | list(string) | List of paths that contain include files.
 keep_binary | bool | Do not clean binary files when doing bake clean. When a binary for the target platform is present, bake will skip the project. To force a rebuild, a user has to explicitly use the `bake rebuild` command.
 
 The `cflags` attribute is specified inside the `lang.c` property. This is because `cflags` is a property specific to the C driver. For documentation on which properties are valid for which drivers, see the driver documentation.
+
+#### Private dependencies
+When projects depend on other projects that require additional library paths or include paths, it may not be desirable to require having these properties propagate to dependees. For example, `bar` depends on `foo`, and `foo` requires adding an `include` path to the build configuration. Now, `helloworld` depends on `bar`, but it does not need to know about `foo`.
+
+To prevent the `foo` build settings from propagating to `helloworld`, `bar` will need to configure `foo` as a "private dependency". The following configuration shows how to do this:
+
+```json
+{
+    "id": "bar",
+    "type": "package",
+    "value": {
+        "use_private": ["foo"]
+    }
+}
+```
+
+This way, `foo` is still added as a dependency to `bar`, but `helloworld` will not be exposed to `foo`, nor inherit any of its build settings.
 
 ### Template Functions
 Bake property values may contain calls to template functions, which in many cases allows project configuration files to be more generic or less complex. Additionally, template functions can be used to parameterize bake template projects. Template functions take the following form:
@@ -614,13 +812,134 @@ To obtain the id in other formats, the following arguments can be passed to the 
 Parameter | Description | Example
 ----------|-------------
 no parameter | | foo.bar
-short | Last element of an id | bar
-upper | Upper case, replace '.' with '_'. Used for macro's | FOO_BAR
+base | Last element of an id | bar
+upper | Upper case, replace '.' with '\_'. Used for macro's | FOO_BAR
 dash | Replace '.' with '-'. Used for repository names | foo-bar
-underscore | Replace '.' with '_'. Used for variable names | foo_bar
+underscore | Replace '.' with '\_'. Used for variable names | foo_bar
+
+### Templates
+Bake lets you create template projects which contain boilerplate code for common types of applications. Template projects look like regular projects, with two exceptions:
+
+- The project type is set to `template`
+- Files may contain template functions that are resolved when instantiating a template
+
+You can create a new template project by specifying the `--template` flag when using the `bake new` command:
+
+```
+bake new my_template --template
+```
+
+This will create a new template project which is ready to instantiate, like this:
+
+```
+bake new my_app -t my_template
+```
+
+A template project can be parameterized using bake template functions (see previous chapter), like so:
+
+```c
+int main(int argc, char *argv[]) {
+
+    printf("Hello ${id}!");
+
+    return 0;
+}
+```
+
+Template functions may occur at any point in your files. Not all files in a project are parsed. Only files with the following extensions are considered by the template parser:
+
+- c, cpp, h, hpp, html, js, css, json, md, sh, bat, lua, python, java, cs, make
+
+Additionally, files with the following filename will be considered:
+
+- Makefile
+
+These lists may be extended with additional extensions and filenames.
+
+Additionally, filenames may also be parameterized with bake template functions. The syntax for doing so is (`xxx` is a placeholder for parts of the filename):
+
+```
+xxx__<template function>.<file extension>
+xxx__<template function>_<template argument>.<file extension>
+xxx__<template function>__xxx.<file extension>
+xxx__<template function>_<template argument>__xxx.<file extension>
+```
+
+For example, if you want a source file in your template project to have the base name of the instantiated project, you can name it like this:
+
+```
+__id_base.c
+```
+
+This is equivalent to the template function:
+```
+${id base}.c
+```
+
+### Configuring Bake
+Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
+
+A bake configuration file consists out of an `environment` and a `configuration` section. The `configuration` section contains parameters that are not specific to a project, but influence how code is built. The `environment` section contains a list of environment variables and their values which are loaded when bake is started.
+
+The `bake env` command prints the bake environment to the command line in a format that can be used with the `export` bash command, so that the bake environment can be easily exported to the current shell, like so:
+
+```
+export `bake env`
+```
+
+```note
+Bake automatically adds `$BAKE_HOME/bin` to the `PATH` environment variable. This ensures that even when applications (tools) are not installed to a global location, such as `/usr/local/bin`, they can still be directly accessed from a shell when the bake environment is exported.
+```
+
+The following table is a list of the configuration parameters:
+
+Parameter | Type | Description
+----------|------|------------
+symbols | bool | Enable or disable symbols in binaries
+debug | bool | Enable or disable debugging (defines NDEBUG if `false`)
+optimizations | bool | Enable or disable optimizations
+coverage | bool | Enable or disable coverage
+strict | bool | Enable or disable strict building
+
+```note
+It is up to plugins to provide implementations for the above parameters. Not all parameters may be implemented. Refer to the plugin documentation for specifics.
+```
+
+This is an example configuration file:
+
+```json
+{
+    "configuration":{
+        "debug":{
+            "symbols":true,
+            "debug":true,
+            "optimizations":false,
+            "coverage":false,
+            "strict":false
+        },
+        "release":{
+            "symbols":false,
+            "debug":false,
+            "optimizations":true,
+            "coverage":false,
+            "strict":false
+        }
+    },
+    "environment":{
+        "default":{
+            "PATH": ["/my/path"],
+            "FOO": "Some value"
+        }
+    }
+}
+```
+
+Note that environment variables configured as a JSON array (as shown with the `PATH` variable), are appended to their current value. Elements in the array are separated by a `:` or `;`, depending on the platform.
+
+With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
 
 ### Installing Miscellaneous Files
-Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to the bake environment, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
+Files in the `install` and `etc` directories are automatically copied to the project-specific locations in the bake environment, so they can be accessed from anywhere (see below). The `install` folder installs files directly to a location where other projects can also access it, whereas files in `etc` install to the project-specific location in the bake environment. For example, the following files:
 
 ```
 my_app
@@ -637,10 +956,10 @@ my_app
 would be installed to the following locations:
 
 ```
-$BAKE_TARGET/platform-config/etc/my_app/index.html
-$BAKE_TARGET/platform-config/etc/my_app/style.html
-$BAKE_TARGET/platform-config/etc/image.jpg
-$BAKE_TARGET/platform-config/etc/manual.pdf
+$BAKE_HOME/platform/config/etc/my_app/index.html
+$BAKE_HOME/platform/config/etc/my_app/style.html
+$BAKE_HOME/platform/config/etc/image.jpg
+$BAKE_HOME/platform/config/etc/manual.pdf
 ```
 
 Bake allows projects to differentiate between different platforms when installing files from the `etc` and `install` directories. This can be useful when for example distributing binaries for different architectures and operating systems. By default, all files from these directories installed. However, bake will look for subdirectories that match the platform string. Files in those directories will only be installed to that platform. For example, consider the following tree:
@@ -746,7 +1065,7 @@ Because bake does not automatically add project-specific include paths to the in
 The `${locate include}` part of the include path will be substituted by the project-specific include folder when the `project.json` is parsed.
 
 #### Link external files from global environment
-When a project needs to link with an external binary, one option is to install it to a global location, like `/usr/local/lib`. The bake equivalent is to install it to the `lib` root directory. That way, the library will be installed to `$BAKE_TARGET/lib`. Thus when `$BAKE_TARGET` is set to `/usr/local`, the library will be installed to `/usr/local/lib`.
+When a project needs to link with an external binary, one option is to install it to a global location. The bake equivalent is to install it to the `lib` directory in the bake environment. That way, the library will be installed to `$BAKE_TARGET/lib`.
 
 To install the library to this location, it needs to be added to the project folder. Add the library to this location:
 
@@ -849,27 +1168,10 @@ project.json:
 }
 ```
 
-### Private dependencies
-When projects depend on other projects that require additional library paths or include paths, it may not be desirable to require having these properties propagate to dependees. For example, `bar` depends on `foo`, and `foo` requires adding an `include` path to the build configuration. Now, `helloworld` depends on `bar`, but it does not need to know about `foo`.
-
-To prevent the `foo` build settings from propagating to `helloworld`, `bar` will need to configure `foo` as a "private dependency". The following configuration shows how to do this:
-
-```json
-{
-    "id": "bar",
-    "type": "package",
-    "value": {
-        "use_private": ["foo"]
-    }
-}
-```
-
-This way, `foo` is still added as a dependency to `bar`, but `helloworld` will not be exposed to `foo`, nor inherit any of its build settings.
-
 ### The Bake Environment
-Bake allows projects to be installed to a so called "bake environment". A bake environment is a location configured in the `$BAKE_HOME` and `$BAKE_TARGET` environment variables. Projects that are built to the bake environment are called "public" projects.
+Bake installs projects to the "bake environment". The bake environment is located in a location specified by the `BAKE_HOME` environment variable, and contains all the metadata and binaries for public projects, miscellaneous files and templates. By default, the bake environment is located in `~/bake`. A different location can be specified by changing the value of the `BAKE_HOME` environment variable.
 
-Public projects can be automatically discovered, looked up, loaded and linked with by using their logical name. Here is an example of two public projects, one `application` and one `package`, where the `application` depends on the `package`:
+Projects in the bake environment can be automatically discovered and linked with by using their logical name. Here is an example of two public projects, one `application` and one `package`, where the `application` depends on the `package`:
 
 ```json
 {
@@ -890,105 +1192,36 @@ Public projects can be automatically discovered, looked up, loaded and linked wi
 
 Note that neither project configuration specifies where they are built to, or where to find the `my_lib` project. This is automatically managed by the bake environment.
 
-The `$BAKE_TARGET` environment variable specifies the location where new projects are built to. The `$BAKE_HOME` environment variable specifies where the bake environment is located. Typically these variables are set to the same location. Dependencies are looked up in both `$BAKE_TARGET` as well as `$BAKE_HOME`.
-
-By default, both `$BAKE_TARGET` and `$BAKE_HOME` are set to `~/bake`. Inside this directory, a number of directories are commonly found. The following table describes their function:
-
-Directory | Description
-----------|-------------
-bin | Contains executable binaries
-lib | Contains shared libraries
-include | Contains include files of projects
-java | Contains Java JARs
-etc | Contains miscellaneous files used by projects at runtime
-meta | Contains project metadata
-src | Contains downloaded sources (when using bake clone)
-
-The contents of `$BAKE_TARGET` are split up by project, to prevent name-clashes between projects. For the two aforementioned example projects, miscellaneous files would be stored in the following directories:
+To get an overview of the projects stored in the bake environment, you can do:
 
 ```
-$BAKE_TARGET/platform-config/etc/my_app
-$BAKE_TARGET/platform-config/etc/my_lib
+bake list
 ```
-Platform and config here are replaced respectively with the platform that bake is running on, and the current configuration (for example `debug` or `release`).
 
-When `$BAKE_HOME` and `$BAKE_TARGET` are set to different locations, it can happen that a project appears twice in the environment. This typically happens when a package is both installed to a public location (`/usr/local`) and a local location (`~/bake`). In that case, bake will link with the latest version of the project, which is determined by comparing timestamps of the binaries.
+The bake environment stores platform-specific data (such as binaries) in a location that is specific to a platform and build configuration. For example, if you are doing a debug build on Windows, you will find a directory in `$BAKE_HOME` called:
+
+```
+x64-Windows/debug
+```
+
+During a build, this directory is accessible through the `BAKE_TARGET` environment variable. This will contain all binaries (in `bin` and `lib` directories) for projects built for this platform and build configuration. The `bake list` command shows which projects have been built for which build configuration.
 
 ### Environment Variables
 Bake uses the following environment variables:
 
 Variable | Description
 ---------|------------
-BAKE_HOME | Location where bake looks for projects specified in `use`.
-BAKE_TARGET | Location where bake installs projects. Usually the same as `$BAKE_HOME`.
+BAKE_HOME | Location of the bake environment
 BAKE_CONFIG | The current build configuration used by bake (`debug` by default)
 BAKE_ENVIRONMENT | The current build environment used by bake (`default` by default)
-
-### Configuring Bake
-Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
-
-A bake configuration file consists out of an `environment` and a `configuration` section. The `configuration` section contains parameters that are not specific to a project, but influence how code is built. The `environment` section contains a list of environment variables and their values which are loaded when bake is started.
-
-The `bake env` command prints the bake environment to the command line in a format that can be used with the `export` bash command, so that the bake environment can be easily exported to the current shell, like so:
-
-```
-export `bake env`
-```
-
-```note
-Bake automatically adds `$BAKE_HOME/bin` to the `PATH` environment variable. This ensures that even when applications (tools) are not installed to a global location, such as `/usr/local/bin`, they can still be directly accessed from a shell when the bake environment is exported.
-```
-
-The following table is a list of the configuration parameters:
-
-Parameter | Type | Description
-----------|------|------------
-symbols | bool | Enable or disable symbols in binaries
-debug | bool | Enable or disable debugging (defines NDEBUG if `false`)
-optimizations | bool | Enable or disable optimizations
-coverage | bool | Enable or disable coverage
-strict | bool | Enable or disable strict building
-
-```note
-It is up to plugins to provide implementations for the above parameters. Not all parameters may be implemented. Refer to the plugin documentation for specifics.
-```
-
-This is an example configuration file:
-
-```json
-{
-    "configuration":{
-        "debug":{
-            "symbols":true,
-            "debug":true,
-            "optimizations":false,
-            "coverage":false,
-            "strict":false
-        },
-        "release":{
-            "symbols":false,
-            "debug":false,
-            "optimizations":true,
-            "coverage":false,
-            "strict":false
-        }
-    },
-    "environment":{
-        "default":{
-            "PATH": ["/my/path"],
-            "FOO": "Some value"
-        }
-    }
-}
-```
-
-Note that environment variables configured as a JSON array (as shown with the `PATH` variable), are appended to their current value. Elements in the array are separated by a `:` or `;`, depending on the platform.
-
-With the `--cfg` and `--env` flags the respective configuration or environment can be selected.
+BAKE_VERBOSITY | Specify the bake logging level (`INFO` by default)
+BAKE_ARCHITECTURE | Specify the processor architecture (default is the host architecture)
+BAKE_OS | Specify the operating system (default is the host operating system)
 
 ### Command line usage
 The following is the output of `bake --help`
 
+```
 Usage: bake [options] <command> <path>
 
 Options:
@@ -997,24 +1230,26 @@ Options:
 
   --cfg <configuration>        Specify configuration id
   --env <environment>          Specify environment id
-  --build-to-home              Build to BAKE_HOME instead of BAKE_TARGET
   --strict                     Manually enable strict compiler options
   --optimize                   Manually enable compiler optimizations
 
+  --package                    Set the project type to package
+  --template                   Set the project type to template
+
   --id <project id>            Manually specify a project id
   --type <package|template>    Manually specify a project type (default = "application")
-  --package                    Manually set the project type to package
   --language <language>        Manually specify a language for project (default = "c")
   --artefact <binary>          Manually specify a binary file for project
-  --includes <include path>    Manually specify an include path for project
+  -i,--includes <include path> Manually specify an include path for project
 
   --interactive                Rebuild project when files change (use w/run)
+  -r,--recursive               Recursively build all dependencies of discovered projects
   -a,--args [arguments]        Pass arguments to application (use w/run)
-  -t,--template [id]            Specify template for new project
-  --missing                    Uninstall projects with missing binaries or errors (use w/uninstall)
+  -t [id]                      Specify template for new project
 
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
   --trace                      Set verbosity to TRACE
+  --debug                      Set verbosity to DEBUG (highest verbosity)
 
 Commands:
   new [path]                   Initialize new bake project
@@ -1022,6 +1257,7 @@ Commands:
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
+  cleanup                      Cleanup bake environment by removing dead or invalid projects
   publish <patch|minor|major>  Publish new project version
   install [path]               Install project to bake environment
   uninstall [project id]       Remove project from bake environment
@@ -1039,16 +1275,18 @@ Commands:
 Examples:
   bake                         Build all projects discovered in current directory
   bake my_app                  Build all projects discovered in my_app directory
-  bake new                     Initialize new application project in current directory
-  bake new my_app              Initialize new application project in directory my_app
-  bake new my_lib --package    Initialize new package project in directory my_lib
-  bake run my_app -a hello     Run my_app project, pass 'hello' as argument
+  bake new                     Create new application project in current directory
+  bake new my_app              Create new application project in directory my_app
+  bake new my_lib --package    Create new package project in directory my_lib
+  bake new my_tmpl --template  Create new template project in directory my_tmpl
   bake new game -t sdl2.basic  Create new project from the sdl2.basic template
+  bake run my_app -a hello     Run my_app project, pass 'hello' as argument
   bake publish major           Increase major project version, create git tag
   bake info foo.bar            Show information about package foo.bar
   bake list foo.*              List all packages that start with foo.
+```
 
-### Writing Plugins
+### Writing Drivers
 Bake has a plugin architecture, where a plugin describes how code should be built for a particular language. Bake plugins are essentially parameterized makefiles, with the only difference that they are written in C, and that they use the bake build engine. Plugins allow you to define how projects should be built once, and then reuse it for every project. Plugins can be created for any language.
 
 The bake build engine has a design that is similar to other build engines in that it uses rules that depend on other rules. Rules have rule-actions, which get executed when a rule is outdated. Whether a rule is outdated or not is determined by comparing timestamps of the rule dependencies with the timestamps of the rule output.
