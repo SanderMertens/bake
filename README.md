@@ -62,11 +62,11 @@ nmake
 cd ..
 bake setup
 ```
-On Windows, make sure to open a visual studio command prompt, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
+On Windows, make sure to open a **visual studio command prompt**, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
 
 Bake installs a script to a location that is accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This however often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press Enter untill the setup resumes.
  
-In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%/bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
+In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%\bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
 
 On Linux:
 ```
@@ -75,7 +75,7 @@ export PATH=$PATH:$HOME/bake
 
 On Windows:
 ```
-set PATH=%PATH%;%USERPROFILE%/bake
+set PATH=%PATH%;%USERPROFILE%\bake
 ```
  
 After you've installed bake once, you can upgrade to the latest version with:
