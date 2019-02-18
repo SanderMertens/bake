@@ -348,7 +348,7 @@ If you want to build a C++ project, instead of using the `"lang.c"` attribute, y
 ```
 
 ### For C++ projects, should I specify cpp or c++ for the language attribute?
-You can use either.
+You can use either, but for specifying driver-specific configuration you always have to use `lang.cpp`.
 
 ### How can I see a list of the available drivers?
 The following command will show you a list of the available drivers:
