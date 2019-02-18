@@ -31,7 +31,6 @@ Bake is supported on the following platforms:
   * [Project configuration](#project-configuration)
   * [Template functions](#template-functions)
   * [Templates](#templates)
-  * [Build configurations](#build-configurations)
   * [Configuring Bake](#configuring-bake)
   * [Installing Miscellaneous Files](#installing-miscellaneous-files)
   * [Integrating Non-bake Projects](#integrating-non-bake-projects)
@@ -63,7 +62,7 @@ bake setup
 ```
 On Windows, make sure to open a visual studio command prompt, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
 
-Bake installs a script to a location that is globally accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This lets you invoke bake from anywhere without any prior setup, however it often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press <Enter> untill the setup resumes. On Windows the setup will automatically continue if you did not start the command prompt as administrator.
+Bake installs a script to a location that is accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This however often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press Enter untill the setup resumes.
  
 In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%/bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
 
@@ -460,10 +459,127 @@ Bake is therefore not just a build tool like `make` that can automatically gener
 
 A secondary goal is to create a zero-dependency build tool that can be easily ported to other platforms. Whereas other build tools exist, like `make`, `premake`, `rake` and `gradle`, they all rely on their respective ecosystems (`unix`, `lua`, `ruby`, `java`) which complicates writing platform-independent build configurations. Bake's only dependency is the C runtime.
 
+### Creating a new Project
+You can create a new bake project with the `bake new` command. This command has a few options, which lets you create different kinds of projects (see "Project Kinds"). By default, bake creates an "application" project, which is a standard executable. To create a new application project called `my_app`, run the following command:
+
+```
+bake new my_app
+```
+
+This will create a new directory called `my_app` with the contents of a basic bake application project. If you want to create a bake package (a shared library), you can simply add `--package` to the command:
+
+```
+bake new my_pkg --package
+```
+
+When a new project is created, its metadata is also stored in the bake environment. That means that the project is now discoverable by bake, and can be used as dependency of other projects. You can inspect the bake environment with this command:
+
+```
+bake list
+```
+
+Your new project should show up in the list of projects.
+
+Bake lets you create projects with nested identifiers, like `foo.bar`. This lets you create hierarchies of projects. The `.` notation is used to denote different elements in the project identifier. To use nested identfiers, simply specify their name with bake new:
+
+```
+bake new foo.bar
+```
+
+This will create a new directory `foo-bar`. The project will appear as `foo.bar` when you do `bake list`.
+
 ### Building Projects
-Bakes primary task is to build the code in your projects, and generate binaries in a reliable and reproducible way. It
+Bake's primary task is to build the code in your projects, and generate binaries in a reliable and reproducible way. You can simply build a bake project by invoking the `bake` command:
+
+```
+bake
+```
+
+This will recursively discover and build all bake projects in the current directory. The command is synonymous for running bake with the `build` action:
+
+```
+bake build
+```
+
+Alternatively you can also specify a directory to build, like so:
+
+```
+bake my_directory
+bake build my_directory
+```
+
+Bake has a number of actions, of which the following are related to building your project:
+
+```
+bake build
+bake rebuild
+bake clean
+```
+
+The `build` action incrementally builds your project, and will reuse artefacts from previous builds, like object files and binaries. The `rebuild` action cleans artefacts from previous builds, and is then followed by a regular build. The `clean` action cleans all build artefacts for the project.
+
+Bake allows you to build for multiple platforms and build configurations from the same source tree, as it stores build artefacts in locations that are platform/configuration specific. When you do a `bake rebuild`, only the artefacts for the current platform / configuration are cleaned, whereas `bake clean` cleans artefacts for all platforms / configurations.
+
+#### Discovery
+Bake automatically discovers projects in the provided path, or current directory if no path was specified. It will then order the discovered projects based on their dependencies, so that they are built in the correct order. This removes the need for building makefiles in which you explicitly have to maintain the build order for your projects. Bake uses the information in the `use` attribute of your project configuration (see [Project Configuration](#project-configuration)).
+
+Bake will not attempt to discover projects in subdirectories of projects if those subdirectories have special meaning. The following directories are skipped, _only_ if they are found inside a bake project directory:
+
+- src
+- include
+- config
+- data
+- test
+- etc
+- lib
+- bin
+- install
+- examples
+- .bake_cache
+
+Additionally, bake will skip any directories that start with a `.`.
+
+#### Build configurations
+Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a buidl configuration with the `--cfg` flag:
+
+```
+bake my_project --cfg release
+```
+
+The default configuration is `debug`. The difference between `debug` and `release` is that `debug` disables optimizations and enables debugging code (release adds the `-DNDEBUG` flag). Furthermore, `debug` builds add compiler debugging information (like `-g` in gcc).
+
+Bake never mixes binaries between build configurations. Therefore, if you build a project in `release` mode, but its dependencies haven't been built in `release` mode yet, the build will fail. 
+
+#### Recursive builds
+To make working across configurations easier, bake lets you do so called "recursive builds". These builds don't just build the current project, but also all dependencies for a project (and dependencies of dependencies, hence recursive builds). When building a project in `release` mode, but all dependencies have been built in `debug` mode, you can simply do:
+
+```
+bake my_project --cfg release -r
+```
+
+The `-r` flag enables recursive building, which will, in addition to the current project, rebuild all dependencies in release mode as well. Recursive builds work for any dependency that is available in the bake environment. Bake keeps track of where the source files of your projects are located on disk, which is how it can start a build for a dependency, even when it is not discoverable from the location where bake was invoked from.
 
 ### Running Projects
+You can run bake projects by using `bake run`, followed by either a folder or a project id:
+
+```
+bake run foo.bar
+bake run my_directory
+```
+
+This only works for application projects (see [Project Kinds](#project-kinds)). Bake will automatically start the executable and monitor its status. Before running the project, bake will first attempt to do a recursive build (see [Recursive builds](#recursive-builds)) so that the project and all its dependencies are built and are available for the right configuration. You can specify a configuration just like you would when building:
+
+```
+bake run foo.bar --cfg release
+```
+
+Additionally, bake lets you do interactive builds, which monitor changes from your project, and rebuild the project when a change occurs. To start an interactive build, add the `--interactive` flag:
+
+```
+bake run foo.bar --interactive
+```
+
+Currently bake does not monitor changes in the source code of dependencies, though it may do so in the future.
 
 ### Project Kinds
 Bake supports different project kinds which are configured in the `type` property of a `project.json` file. The project kind determines whether a project is a library or executable, whether a project is installed to a bake environment and whether a project is managed or not. The following table shows an overview of the different project kinds:
@@ -758,21 +874,6 @@ __id_base.c
 This is equivalent to the template function:
 ```
 ${id base}.c
-```
-
-### Build configurations
-Bake lets you build projects with different build configurations, like `debug` and `release`. By default, bake has built-in settings for `debug` and `release` configurations. You can specify a buidl configuration with the `--cfg` flag:
-
-```
-bake my_project --cfg release
-```
-
-The default configuration is `debug`. The difference between `debug` and `release` is that `debug` disables optimizations and enables debugging code (release adds the `-DNDEBUG` flag). Furthermore, `debug` builds add compiler debugging information (like `-g` in gcc).
-
-Bake never mixes binaries between build configurations. Therefore, if you build a project in `release` mode, but its dependencies haven't been built in `release` mode yet, the build will fail. To ease the process of doing builds for multiple configurations, you can use recorsive builds, which rebuild all the project dependencies for the specified configuration:
-
-```
-bake my_project --cfg release -r
 ```
 
 ### Configuring Bake
