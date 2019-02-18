@@ -418,13 +418,10 @@ bake --env clang_env
 
 To export `CC` or `CXX` to the default environment, simply leave out the `--env` argument.
 
-### What is the difference between BAKE_HOME and BAKE_TARGET?
-`BAKE_HOME` is where all the installed projects are stored. These are projects that you did not build on your machine, but installed from a git repository. `BAKE_TARGET` is the location where all the projects you built are stored. By default, `BAKE_HOME` and `BAKE_TARGET` are set to the same location, which is `BAKE_HOME`. Whereas bake installs projects directly to `BAKE_HOME`, when building your own projects, they are stored in `$BAKE_TARGET/arch-os-config` (for example: `x64-darwin-debug`).
-
 ### Where does bake store my binaries?
-Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_TARGET/arch-os-config/bin` or `$BAKE_TARGET/arch-os-config/lib`. By default, `$BAKE_TARGET` is set to `$HOME/bake`, just like `$BAKE_HOME`.
+Bake always stores binaries in the `bin/arch-os-config` directory of your project. When your project is a public project (this is the default) binaries are also copied to the target bake environment, which by default is `$BAKE_HOME/arch-os/config/bin` or `$BAKE_HOME/bake/arch-os-config/lib`. By default, `$BAKE_HOME` is set to `~/bake`.
 
-To prevent a project from being stored in `BAKE_TARGET`, add this to the `project.json`:
+To prevent a project from being stored in the bake environment, add this to the `project.json`:
 
 ```json
 "value": {
