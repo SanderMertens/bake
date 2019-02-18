@@ -82,8 +82,6 @@ int ut_mkdir(const char *fmt, ...) {
         return 0;
     }
 
-    ut_trace("#[cyan]mkdir %s", name);
-
     if (__mkdir(name)) {
         local_errno = errno;
 
@@ -119,6 +117,8 @@ int ut_mkdir(const char *fmt, ...) {
             goto error;
         }
     }
+
+    ut_trace("#[cyan]mkdir %s", name);
 
     free(name);
 
@@ -215,6 +215,8 @@ int ut_cp_file(
         goto error;
     }
 
+    ut_trace("#[cyan]cp %s %s", src, dst);
+
     if (fullDst != dst) free(fullDst);
     free(buffer);
     fclose(sourceFile);
@@ -251,7 +253,7 @@ int16_t ut_cp_dir(
         char *src_path = ut_asprintf("%s"UT_OS_PS"%s", src, file);
 
         if (ut_isdir(src_path)) {
-            char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", dst, src_path);
+            char *dst_path = ut_asprintf("%s"UT_OS_PS"%s", dst, file);
             if (ut_cp_dir(src_path, dst_path)) {
                 goto error;
             }
@@ -291,17 +293,17 @@ int16_t ut_cp(
 
     if (ut_isdir(src)) {
         result = ut_cp_dir(src_parsed, dst_parsed);
+        ut_trace("#[cyan]cp %s %s", src, dst);
     } else {
         result = ut_cp_file(src_parsed, dst_parsed);
     }
-
-    ut_trace("#[cyan]cp %s %s", src, dst);
 
     free(src_parsed);
     free(dst_parsed);
 
     return result;
 error:
+    ut_throw("failed to copy '%s' to '%s'", src, dst);
     return -1;
 }
 
