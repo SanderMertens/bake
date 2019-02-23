@@ -494,14 +494,12 @@ void add_dependency_includes(
 }
 
 static
-void precompile_h(
+void generate_precompiled_header(
     bake_driver_api *driver,
     bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
+    bake_project *project)
 {
-    /* TODO: support precompiled headers on Windows */
+    /* TODO: implement PCHs for msvc */
 }
 
 /* Is current compiler clang */
