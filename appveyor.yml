@@ -15,8 +15,10 @@ init:
     
 test_script:
 - cmd: bake.exe setup
-- cmd: bake build examples
-- cmd: bake build examples --cfg release
+- cmd: bake examples
+- cmd: bake examples
+- cmd: bake examples --cfg release
+- cmd: bake examples --cfg release
 - cmd: bake list
 - cmd: bake clone SanderMertens/example
 - cmd: bake run example

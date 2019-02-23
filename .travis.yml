@@ -31,6 +31,8 @@ install:
 
 script:
   - bake examples
+  - bake examples
+  - bake examples --cfg release
   - bake examples --cfg release
   - bake list
   - bake clone SanderMertens/example
