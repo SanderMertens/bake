@@ -295,18 +295,9 @@ void generate(
 
     fprintf(f, "%s", "\n#endif\n\n");
     fclose(f);
-}
 
-static
-bool pch_is_enabled(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
     if (driver->get_attr_bool("precompile-header")) {
-        return true;
-    } else {
-        return false;
+        generate_precompiled_header(driver, config, project);
     }
 }
 
@@ -318,23 +309,6 @@ int bakemain(bake_driver_api *driver)
 
     /* Create pattern that matches source files */
     driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-
-
-    /* -- Precompiled headers -- */
-
-    /* Create pattern matching main header and precompiled header */
-    driver->pattern("main_header", "include/${id base}.h");
-    driver->file("pch", "${driver-attr pch-dir}/${id base}.h.${driver-attr ext-pch}");
-
-    /* Create rule for generating precompiled header from main header */
-    driver->rule("h_to_pch", "$main_header", driver->target_file("$pch"), precompile_h);
-
-    /* Create rule for dependency from sources on precompiled header */
-    driver->rule("pch_for_src", "$pch", driver->target_pattern("$SOURCES"), NULL);
-
-    /* Only evaluate precompiled header rules when feature is enabled */
-    driver->condition("h_to_pch", pch_is_enabled);
-    driver->condition("pch_for_src", pch_is_enabled);
 
 
     /* -- Compiling and linking source code -- */

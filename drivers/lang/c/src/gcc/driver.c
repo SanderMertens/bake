@@ -250,15 +250,23 @@ void compile_src(
 }
 
 static
-void precompile_h(
+void generate_precompiled_header(
     bake_driver_api *driver,
     bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
+    bake_project *project)
 {   
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool cpp = is_cpp(project);
+
+    char *source = ut_asprintf("%s/include/%s.h",
+        project->path,
+        project->id_base);
+
+    char *target = ut_asprintf("%s/%s/%s.h.%s",
+        project->path,
+        driver->get_attr_string("pch-dir"),
+        project->id_base,
+        driver->get_attr_string("ext-pch"));
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, 
@@ -266,6 +274,9 @@ void precompile_h(
         cc(cpp), 
         cpp ? "c++" : "c",
         source, target);
+
+    free(target);
+    free(source);
 
     /* Add misc options */
     add_misc(driver, config, project, cpp, &cmd);
