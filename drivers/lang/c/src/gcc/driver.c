@@ -258,13 +258,16 @@ void generate_precompiled_header(
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool cpp = is_cpp(project);
 
+    char *pch_dir = ut_asprintf("%s/%s", 
+        project->path, 
+        driver->get_attr_string("pch-dir"));
+
     char *source = ut_asprintf("%s/include/%s.h",
         project->path,
         project->id_base);
 
-    char *target = ut_asprintf("%s/%s/%s.h.%s",
-        project->path,
-        driver->get_attr_string("pch-dir"),
+    char *target = ut_asprintf("%s/%s.h.%s",
+        pch_dir,
         project->id_base,
         driver->get_attr_string("ext-pch"));
 
@@ -292,6 +295,11 @@ void generate_precompiled_header(
 
     /* Add include directories */
     add_includes(driver, config, project, &cmd);
+
+    /* Make sure PCH directory exists */
+    ut_mkdir(pch_dir);
+
+    free(pch_dir);
 
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
