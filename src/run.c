@@ -619,6 +619,12 @@ int bake_run(
         if ((sig = ut_proc_wait(pid, &result)) || result) {
             if (sig > 0) {
                 ut_throw("process crashed (%d)", sig);
+                ut_raise();
+                printf("\n");
+                bake_message(UT_LOG, "", "to debug your application, do:\n");
+                ut_log("export $(bake env)\n");
+                ut_log("%s\n", app_bin);
+                printf("\n");
                 goto error;
             } else {
                 ut_throw("process returned %d", result);
