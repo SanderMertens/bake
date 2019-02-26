@@ -255,8 +255,13 @@ void generate_precompiled_header(
     bake_config *config,
     bake_project *project)
 {   
-    ut_strbuf cmd = UT_STRBUF_INIT;
     bool cpp = is_cpp(project);
+
+    if (!is_clang(cpp)) {
+        return;
+    }
+
+    ut_strbuf cmd = UT_STRBUF_INIT;
 
     char *pch_dir = ut_asprintf("%s/%s", 
         project->path, 
