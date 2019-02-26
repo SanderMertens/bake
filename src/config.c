@@ -56,16 +56,32 @@ static
 void bake_config_add_var(
     bake_config *config,
     const char *var,
-    const char *val)
+    const char *value,
+    bool append)
 {
     int32_t index = bake_config_var_is_set(config, var);
     if (index == -1) {
-        if (!val) val = "";
+        /* Variable hasn't been set yet */
+        if (!value) value = "";
         ut_ll_append(config->env_variables, ut_strdup(var));
-        ut_ll_append(config->env_values, ut_strdup(val));
-    } else if (val) {
-        ut_ll_set(config->env_variables, index, ut_strdup(var));
-        ut_ll_set(config->env_values, index, ut_strdup(val));
+        ut_ll_append(config->env_values, ut_strdup(value));
+    } else if (value) {
+        /* Previous value has been set */
+        if (append) {
+            char *old_value = ut_ll_get(config->env_values, index);
+            if (old_value) {
+                char *new_value = ut_asprintf("%s"UT_ENV_PATH_SEPARATOR"%s",
+                    value, old_value);
+                    
+                ut_ll_set(config->env_values, index, new_value);
+
+                free(old_value);
+            } else {
+                ut_ll_set(config->env_values, index, ut_strdup(value));
+            }
+        } else {
+            ut_ll_set(config->env_values, index, ut_strdup(value));
+        }
     }
 }
 
@@ -88,6 +104,8 @@ int16_t bake_config_loadEnvironment(
         /* Accept both arrays and strings */
         const char *j_str = json_object_get_string(envcfg, var);
         char *value = (char*)j_str;
+        bool append = false;
+
         if (!value) {
             JSON_Value *j_value = json_object_get_value(envcfg, var);
             if (json_value_get_type(j_value) == JSONArray) {
@@ -97,18 +115,22 @@ int16_t bake_config_loadEnvironment(
                 for (i = 0; i < count; i ++) {
                     const char *el = json_array_get_string(j_array, i);
                     if (i) {
-                        ut_strbuf_appendstr(&buf, ":");
+                        ut_strbuf_appendstr(&buf, UT_ENV_PATH_SEPARATOR);
                     }
                     ut_strbuf_appendstr(&buf, el);
                 }
                 value = ut_strbuf_get(&buf);
+
+                /* Append to, not replace previous value (if any) */
+                append = true;
             } else {
                 ut_throw("invalid value for environment variable '%s'", var);
                 goto error;
             }
         }
 
-        bake_config_add_var(cfg_out, var, value);
+        bake_config_add_var(cfg_out, var, value, append);
+
         if (j_str != value) {
             free(value);
         }
@@ -440,27 +462,27 @@ int16_t bake_config_load(
     }
 
     /* Ensure these environment variables are part of the bake environment */
-    bake_config_add_var(cfg_out, "BAKE_HOME", ut_getenv("BAKE_HOME"));
-    bake_config_add_var(cfg_out, "BAKE_TARGET", ut_getenv("BAKE_TARGET"));
-    bake_config_add_var(cfg_out, "BAKE_CONFIG", UT_CONFIG);
-    bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id);
-    bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING);
-    bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"));
-    bake_config_add_var(cfg_out, "CLASSPATH", ut_getenv("CLASSPATH"));
+    bake_config_add_var(cfg_out, "BAKE_HOME", ut_getenv("BAKE_HOME"), false);
+    bake_config_add_var(cfg_out, "BAKE_TARGET", ut_getenv("BAKE_TARGET"), false);
+    bake_config_add_var(cfg_out, "BAKE_CONFIG", UT_CONFIG, false);
+    bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id, false);
+    bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING, false);
+    bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"), true);
+    bake_config_add_var(cfg_out, "CLASSPATH", ut_getenv("CLASSPATH"), true);
     if (!ut_os_match("windows")) {
-        bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", ut_getenv("LD_LIBRARY_PATH"));
+        bake_config_add_var(cfg_out, "LD_LIBRARY_PATH", ut_getenv("LD_LIBRARY_PATH"), true);
     }
     if (ut_os_match("darwin")) {
-        bake_config_add_var(cfg_out, "DYLD_LIBRARY_PATH", ut_getenv("DYLD_LIBRARY_PATH"));
+        bake_config_add_var(cfg_out, "DYLD_LIBRARY_PATH", ut_getenv("DYLD_LIBRARY_PATH"), true);
     }
 
     /* Ensure that these environment variables are set, so no errors are thrown
      * when they are referenced by the configuration */
-    if (!ut_getenv("PATH"))            ut_setenv("PATH", "");
+    if (!ut_getenv("PATH")) ut_setenv("PATH", "");
     if (!ut_os_match("windows")) {
         if (!ut_getenv("LD_LIBRARY_PATH")) ut_setenv("LD_LIBRARY_PATH", "");
     }
-    if (!ut_getenv("CLASSPATH"))       ut_setenv("CLASSPATH", "");
+    if (!ut_getenv("CLASSPATH")) ut_setenv("CLASSPATH", "");
     if (ut_os_match("darwin")) {
         if (!ut_getenv("DYLD_LIBRARY_PATH")) ut_setenv("DYLD_LIBRARY_PATH", "");
     }
