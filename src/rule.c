@@ -171,7 +171,7 @@ bake_filelist* bake_node_eval_pattern(
         if (n->kind == BAKE_RULE_PATTERN) {
             targets = bake_filelist_new(p->path, pattern);
             if (!targets || !bake_filelist_count(targets)) {
-                ut_error(
+                ut_trace(
                     "pattern %s didn't match anything (relative path = '%s')",
                     pattern, p->path);
 
