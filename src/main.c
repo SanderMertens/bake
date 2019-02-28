@@ -1029,7 +1029,7 @@ int main(int argc, const char *argv[]) {
     ut_try (bake_config_load(&config, env), NULL);
     ut_log_pop();
 
-#ifdef UT_OS_DARWIN
+#ifndef UT_OS_WINDOWS
     if (!ut_getenv("BAKE_CHILD")) {
         ut_setenv("BAKE_CHILD", "TRUE");
 
