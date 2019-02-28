@@ -940,7 +940,6 @@ void bake_message(
     free(msg);
 }
 
-
 int main(int argc, const char *argv[]) {
 
     if (ut_getenv("BAKE_ENVIRONMENT")) {
@@ -1029,6 +1028,34 @@ int main(int argc, const char *argv[]) {
     ut_log_push("config");
     ut_try (bake_config_load(&config, env), NULL);
     ut_log_pop();
+
+#ifdef UT_OS_DARWIN
+    if (!ut_getenv("BAKE_CHILD")) {
+        ut_setenv("BAKE_CHILD", "TRUE");
+
+        ut_trace("fork bake to export environment");
+
+        /* Fork bake, to ensure that the environment gets propagated for
+         * functions like dlopen */
+        ut_proc pid = ut_proc_run(argv[0], argv);
+        if (!pid) {
+            ut_error("failed to spawn bake child process");
+            return -1;
+        } else {
+            int8_t rc = 0;
+            int sig = ut_proc_wait(pid, &rc);
+            if (sig || rc) {
+                if (sig) {
+                    ut_error("bake child crashed with signal %d", sig);
+                } else {
+                    ut_error("bake child quit with error code %d", rc);
+                }
+                return -1;
+            }
+            return 0;
+        }
+    }
+#endif
 
     /* Initialize crawler */
     bake_crawler_init(recursive);

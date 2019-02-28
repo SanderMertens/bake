@@ -71,7 +71,7 @@ void bake_config_add_var(
             char *old_value = ut_ll_get(config->env_values, index);
             if (old_value) {
                 char *new_value = ut_asprintf("%s"UT_ENV_PATH_SEPARATOR"%s",
-                    value, old_value);
+                    old_value, value);
                     
                 ut_ll_set(config->env_values, index, new_value);
 

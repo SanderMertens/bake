@@ -179,7 +179,6 @@ int16_t bake_create_script(void)
     fprintf(f, "    build_bake\n");
     fprintf(f, "    install_bake\n");
     fprintf(f, "else\n");
-    fprintf(f, "    export `$HOME/bake/"BAKE_EXEC" env`\n");
     fprintf(f, "    exec $HOME/bake/"BAKE_EXEC" \"$@\"\n");
     fprintf(f, "fi\n");
     fclose(f);
@@ -345,11 +344,15 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
-    ut_try(cmd("bake libraries"), NULL);
+    char *cmdstr = ut_asprintf("%s libraries", bake_cmd);
+    ut_try(cmd(cmdstr), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
+    free(cmdstr);
 
-    ut_try(cmd("bake templates"), NULL);
+    cmdstr = ut_asprintf("%s templates", bake_cmd);
+    ut_try(cmd(cmdstr), NULL);
     bake_message(UT_OK, "done", "install template packages");
+    free(cmdstr);
 
     /*
 

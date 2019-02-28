@@ -41,7 +41,7 @@ extern "C" {
 #elif defined(__linux__)
 #define UT_OS_LINUX
 #elif defined(__APPLE__) && defined(__MACH__)
-#define UT_OS_OSX
+#define UT_OS_DARWIN
 #else
 #warning "Unsupported operating system"
 #endif
@@ -82,7 +82,7 @@ extern "C" {
 #define UT_ENV_BINPATH "PATH"
 #define UT_ENV_PATH_SEPARATOR ":"
 #define UT_LINUX
-#elif defined(UT_OS_OSX)
+#elif defined(UT_OS_DARWIN)
 #define UT_OS_STRING "Darwin"
 #define UT_OS_LIB_EXT ".dylib"
 #define UT_OS_STATIC_LIB_EXT ".a"
