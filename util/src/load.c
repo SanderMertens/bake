@@ -1098,13 +1098,12 @@ int16_t ut_load_init(
     /* Set system environment variables */
     ut_appendenv(UT_ENV_BINPATH, "~"UT_OS_PS"bake");
     ut_appendenv(UT_ENV_BINPATH, "%s", UT_BIN_PATH);
-    ut_appendenv(UT_ENV_BINPATH, ".");
-    ut_appendenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
+    ut_setenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
     ut_appendenv(UT_ENV_LIBPATH, "%s", UT_HOME_LIB_PATH);
-    ut_appendenv("CLASSPATH", "%s", UT_JAVA_PATH);
+    ut_setenv("CLASSPATH", "%s", UT_JAVA_PATH);
 
 #ifdef UT_ENV_DYLIBPATH
-    ut_appendenv(UT_ENV_DYLIBPATH, "%s", UT_LIB_PATH);
+    ut_setenv(UT_ENV_DYLIBPATH, "%s", UT_LIB_PATH);
     ut_appendenv(UT_ENV_DYLIBPATH, "%s", UT_HOME_LIB_PATH);
 #endif
 

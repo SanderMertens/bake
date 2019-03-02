@@ -95,7 +95,7 @@ int16_t ut_appendenv(
         if (orig_value) {
             if (!path_included(orig_value, buff)) {
                 new_value = ut_asprintf(
-                    "%s" UT_ENV_PATH_SEPARATOR "%s", orig_value, buff);
+                    "%s" UT_ENV_PATH_SEPARATOR "%s", buff, orig_value);
             }
         } else {
             new_value = buff;
