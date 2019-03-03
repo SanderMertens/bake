@@ -21,7 +21,7 @@
 
 #include "bake.h"
 
-#define BAKE_VERSION "2.3.1"
+#define BAKE_VERSION "2.3.2"
 
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
