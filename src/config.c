@@ -475,8 +475,6 @@ int16_t bake_config_load(
     /* Ensure these environment variables are part of the bake environment */
     bake_config_add_var(cfg_out, "BAKE_HOME", ut_getenv("BAKE_HOME"), false);
     bake_config_add_var(cfg_out, "BAKE_TARGET", ut_getenv("BAKE_TARGET"), false);
-    bake_config_add_var(cfg_out, "BAKE_CONFIG", UT_CONFIG, false);
-    bake_config_add_var(cfg_out, "BAKE_ENVIRONMENT", env_id, false);
     bake_config_add_var(cfg_out, "BAKE_PLATFORM", UT_PLATFORM_STRING, false);
     bake_config_add_var(cfg_out, "PATH", ut_getenv("PATH"), true);
     bake_config_add_var(cfg_out, "CLASSPATH", ut_getenv("CLASSPATH"), true);
