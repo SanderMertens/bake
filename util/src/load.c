@@ -1098,7 +1098,14 @@ int16_t ut_load_init(
     /* Set system environment variables */
     ut_appendenv(UT_ENV_BINPATH, "~"UT_OS_PS"bake");
     ut_appendenv(UT_ENV_BINPATH, "%s", UT_BIN_PATH);
+
+#ifdef UT_ENV_WINDOWS
+    /* Don't reset LIBPATH on Windows, as it contains the visual studio
+     * environment. */
+    ut_appendenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
+#else
     ut_setenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
+#endif
     ut_appendenv(UT_ENV_LIBPATH, "%s", UT_HOME_LIB_PATH);
     ut_setenv("CLASSPATH", "%s", UT_JAVA_PATH);
 
