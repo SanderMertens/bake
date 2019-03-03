@@ -457,42 +457,6 @@ char *link_to_lib(
     return result;
 }
 
-/* Generate list of include files used in bake_config.h */
-static
-void add_dependency_includes(
-    bake_config *config,
-    FILE *f,
-    ut_ll dependencies)
-{
-    uint32_t count = 0;
-    ut_iter it = ut_ll_iter(dependencies);
-    while (ut_iter_hasNext(&it)) {
-        char *project_id = ut_iter_next(&it);
-
-        bool include_found = false;
-        char *file = ut_asprintf("%s\\include\\%s", config->home, project_id);
-        if (ut_file_test(file) != 1) {
-            free(file);
-            file = ut_asprintf("%s\\include\\%s", config->target, project_id);
-            if (ut_file_test(file) == 1) {
-                include_found = true;
-            }
-        } else {
-            include_found = true;
-        }
-        if (include_found) {
-            fprintf(f, "#include <%s>\n", project_id);
-            count ++;
-        }
-
-        free(file);
-    }
-
-    if (!count) {
-        fprintf(f, "/* No dependencies */\n");
-    }
-}
-
 static
 void generate_precompiled_header(
     bake_driver_api *driver,
