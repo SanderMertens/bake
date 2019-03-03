@@ -705,7 +705,7 @@ They are used like this:
 The following functions are currently supported:
 
 Function | Description
----------|------|------
+---------|-------------
 locate | Locate project paths in the bake environment
 os | Match or return operating system
 language | Match or return target language
