@@ -945,15 +945,8 @@ int16_t bake_project_generate(
     bake_config *config,
     bake_project *project)
 {
-    /* Invoke generate action for all drivers */
-    ut_iter it = ut_ll_iter(project->drivers);
-    while (ut_iter_hasNext(&it)) {
-        bake_project_driver *driver = ut_iter_next(&it);
-        ut_try( bake_driver__generate(driver->driver, config, project), NULL);
-    }
-
     /* Evaluate GENERATED-SOURCES nodes if there are any */
-    it = ut_ll_iter(project->drivers);
+    ut_iter it = ut_ll_iter(project->drivers);
     while (ut_iter_hasNext(&it)) {
         bake_project_driver *driver = ut_iter_next(&it);
         bake_node *node = bake_node_find(driver->driver, "GENERATED-SOURCES");
@@ -973,6 +966,13 @@ int16_t bake_project_generate(
 
         ut_tls_set(BAKE_DRIVER_KEY, old_driver);
         ut_tls_set(BAKE_PROJECT_KEY, old_project);
+    }
+
+    /* Invoke generate action for all drivers */
+    it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        ut_try( bake_driver__generate(driver->driver, config, project), NULL);
     }
 
     return 0;
@@ -1242,6 +1242,13 @@ int16_t bake_project_build(
     /* Add use dependencies to the link attribute */
     if (bake_project_add_dependencies(project)) {
         goto error;
+    }
+
+    /* Run driver actions for build stage */
+    ut_iter it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        ut_try( bake_driver__build(driver->driver, config, project), NULL);
     }
 
     /* Run the top-level ARTEFACT rule */

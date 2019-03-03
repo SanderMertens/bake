@@ -165,8 +165,9 @@ typedef struct bake_driver_impl {
     bake_link_to_lib_cb link_to_lib; /* Convert logical name to library name */
     bake_driver_cb setup;           /* Initialize directory with new project */
     bake_driver_cb generate;    /* Generate code or run code generation rules */
-    bake_driver_cb prebuild;        /* Initializes driver for project */
-    bake_driver_cb postbuild;       /* Initializes driver for project */
+    bake_driver_cb prebuild;        /* Stage before build stage */
+    bake_driver_cb build;           /* Called at build stage, before rules */
+    bake_driver_cb postbuild;       /* Stage after build */
     bake_driver_cb clean;           /* Specify files to clean */
 } bake_driver_impl;
 
@@ -227,6 +228,12 @@ int16_t bake_driver__generate(
 
 /* Prebuild step */
 int16_t bake_driver__prebuild(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
+/* Prebuild step */
+int16_t bake_driver__build(
     bake_driver *driver,
     bake_config *config,
     bake_project *project);

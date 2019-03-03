@@ -196,6 +196,10 @@ struct bake_driver_api {
     void (*prebuild)(
         bake_driver_cb action);
 
+    /* Callback called at build stage */
+    void (*build)(
+        bake_driver_cb action);        
+
     /* Callback called after build */
     void (*postbuild)(
         bake_driver_cb action);
