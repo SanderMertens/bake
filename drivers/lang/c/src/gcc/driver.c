@@ -186,8 +186,8 @@ void add_misc(
     /* In obscure cases with static libs, stack protector can cause unresolved symbols */
     ut_strbuf_append(cmd, " -fPIC -fno-stack-protector");
 
-    /* Include symbols */
-    if (config->symbols) {
+    /* Include debugging information */
+    if (config->debug) {
         ut_strbuf_appendstr(cmd, " -g");
     }
 }
