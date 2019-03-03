@@ -21,6 +21,9 @@
 
 #include "bake.h"
 
+static bool env_found = false;
+static bool cfg_found = false;
+
 static
 bool bake_config_var_is_valid(
     const char *var)
@@ -270,6 +273,9 @@ int16_t bake_config_load_file (
         if (!section) {
             goto not_found;
         }
+
+        env_found = true;
+
         if (bake_config_loadEnvironment(cfg_out, section)) {
             goto error;
         }
@@ -287,6 +293,9 @@ int16_t bake_config_load_file (
         if (!section) {
             goto not_found;
         }
+
+        cfg_found = true;
+
         if (bake_config_loadConfiguration(section, cfg_out)) {
             goto error;
         }
@@ -423,15 +432,17 @@ int16_t bake_config_load(
         {
             goto error;
         }
-    } else {
+    }
+
+    if (!cfg_found) {
         if (!strcmp(UT_CONFIG, "debug")) {
-            ut_ok("no configuration file found, use defaults for debug");
+            ut_ok("debug configuration not found in bake settings file, using defaults");
         } else if (!strcmp(UT_CONFIG, "release")) {
-            ut_ok("no configuration file found, use defaults for release");
+            ut_ok("release configuration not found in bake settings file, using defaults");
             cfg_out->optimizations = true;
             cfg_out->debug = false;
         } else {
-            ut_throw("no configuration file found, unknown configuration '%s'",
+            ut_throw("unknown configuration '%s'",
                 UT_CONFIG);
             goto error;
         }
