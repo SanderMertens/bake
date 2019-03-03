@@ -331,6 +331,14 @@ void bake_driver_prebuild_cb(
 }
 
 static
+void bake_driver_build_cb(
+    bake_driver_cb build)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    driver->impl.build = build;
+}
+
+static
 void bake_driver_postbuild_cb(
     bake_driver_cb postbuild)
 {
@@ -575,6 +583,7 @@ bake_driver_api bake_driver_api_impl = {
     .setup = bake_driver_setup_cb,
     .generate = bake_driver_generate_cb,
     .prebuild = bake_driver_prebuild_cb,
+    .build = bake_driver_build_cb,
     .postbuild = bake_driver_postbuild_cb,
     .artefact = bake_driver_artefact_cb,
     .link_to_lib = bake_driver_link_to_lib_cb,
@@ -763,6 +772,31 @@ int16_t bake_driver__prebuild(
 
     return 0;
 }
+
+int16_t bake_driver__build(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->impl.build) {
+        bake_driver *old_driver = ut_tls_get(BAKE_DRIVER_KEY);
+        ut_tls_set(BAKE_DRIVER_KEY, driver);
+        bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
+        ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        driver->impl.build(&bake_driver_api_impl, config, project);
+
+        ut_tls_set(BAKE_DRIVER_KEY, old_driver);
+        ut_tls_set(BAKE_PROJECT_KEY, old_project);
+
+        if (project->error) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 
 int16_t bake_driver__postbuild(
     bake_driver *driver,

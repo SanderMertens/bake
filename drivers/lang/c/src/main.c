@@ -226,6 +226,19 @@ void setup_project(
     fclose(f);
 }
 
+
+/* Generate bake_config.h */
+static
+void build(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (driver->get_attr_bool("precompile-header")) {
+        generate_precompiled_header(driver, config, project);
+    }
+}
+
 /* Generate bake_config.h */
 static
 void generate(
@@ -295,10 +308,6 @@ void generate(
 
     fprintf(f, "%s", "\n#endif\n\n");
     fclose(f);
-
-    if (driver->get_attr_bool("precompile-header")) {
-        generate_precompiled_header(driver, config, project);
-    }
 }
 
 /* -- Rules */
@@ -321,6 +330,9 @@ int bakemain(bake_driver_api *driver)
 
     /* Generate header file that automatically includes project dependencies */
     driver->generate(generate);
+
+    /* Always build precompiled header right before rules are executed */
+    driver->build(build);
 
     /* Callback that initializes projects with the right build dependencies */
     driver->init(init);
