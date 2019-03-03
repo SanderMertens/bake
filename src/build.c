@@ -87,6 +87,12 @@ int bake_do_build_intern(
         return 0;
     }
 
+    /* If any of the steps invoke bake, they may invoke the bake script, which
+     * can reset the LD_LIBRARY_PATH environment variable. Setting this variable
+     * to false will cause bake to fork itself again after the environment is
+     * set correctly. */
+    ut_setenv("BAKE_CHILD", "FALSE");
+
     /* Step 5: if rebuilding, clean project cache for current platform/config */
     if (rebuild) {
         ut_log_push("clean-cache");
@@ -154,6 +160,9 @@ int bake_do_build_intern(
     if (project->public && project->artefact)
         ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
+
+    /* Reset environment variable */
+    ut_setenv("BAKE_CHILD", "TRUE");
 
     return 0;
 error:

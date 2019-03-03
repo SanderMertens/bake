@@ -1030,7 +1030,7 @@ int main(int argc, const char *argv[]) {
     ut_log_pop();
 
 #ifndef UT_OS_WINDOWS
-    if (!ut_getenv("BAKE_CHILD")) {
+    if (!ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE")) {
         ut_setenv("BAKE_CHILD", "TRUE");
 
         ut_trace("fork bake to export environment");
