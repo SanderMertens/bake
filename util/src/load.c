@@ -318,6 +318,7 @@ int16_t ut_locate_binary(
 
     /* Test for dynamic library */
     bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_SHARED_LIB_EXT);
+    ut_debug("test for shared library file '%s'", bin);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
         if (loaded) {
@@ -338,6 +339,7 @@ int16_t ut_locate_binary(
     /* Test for static library */
     if (ret == 0) {
         bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_STATIC_LIB_EXT);
+        ut_debug("test for static library file '%s'", bin);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
             if (loaded) {
@@ -360,6 +362,7 @@ int16_t ut_locate_binary(
     /* Test for executable */
     if (ret == 0) {
         bin = ut_asprintf("%s"UT_OS_PS"%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
+        ut_debug("test for executable file '%s'", bin);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
             if (loaded) {
@@ -453,6 +456,7 @@ const char* ut_locate(
     /* If package has been loaded already, don't resolve it again */
     loaded = ut_loaded_find(id);
     if (!loaded) {
+        ut_debug("first time locating '%s'", id);
         loaded = ut_loaded_add(id);
         loaded->loading = 0; /* locate is not going to load project */
     }
@@ -548,6 +552,7 @@ const char* ut_locate(
     case UT_LOCATE_APP:
     case UT_LOCATE_BIN:
         if (!loaded->tried_binary) {
+            ut_debug("try locating binary for '%s'", id);
             ut_try (ut_locate_binary(id, UT_CONFIG, loaded, NULL), NULL);
             loaded->tried_binary = true;
         }
