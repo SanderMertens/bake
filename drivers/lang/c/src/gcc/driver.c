@@ -204,10 +204,12 @@ void compile_src(
     ut_strbuf cmd = UT_STRBUF_INIT;
     char *ext = strrchr(source, '.');
     bool cpp = is_cpp(project);
+    bool file_has_different_language = false;
 
     if (ext && strcmp(ext, ".c")) {
         /* If extension is not c, treat as a C++ file */
         cpp = true;
+        file_has_different_language = true;
     }
 
     ut_strbuf_append(&cmd, "%s", cc(cpp));
@@ -224,16 +226,21 @@ void compile_src(
     /* Add CFLAGS */
     add_flags(driver, config, project, cpp, &cmd);
 
-    /* Add precompiled header */
-    if (driver->get_attr_bool("precompile-header")) {
-        if (is_clang(cpp)) {
-            char *pch_dir = driver->get_attr_string("pch-dir");
-            ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
-                project->path, pch_dir, project->id_base);
-        } else {
-            /* Disable PCH for gcc for now, as it seems to slow down builds */
-            //char *tmp_dir = driver->get_attr_string("tmp-dir");
-            //ut_strbuf_append(&cmd, " -I%s", tmp_dir);
+    /* Add precompiled header.
+     * Only add the precompiled header if the source file is of the same
+     * language as the project configuration. Header compiled with different
+     * compiler settings cannot be included */
+    if (!file_has_different_language) {
+        if (driver->get_attr_bool("precompile-header")) {
+            if (is_clang(cpp)) {
+                char *pch_dir = driver->get_attr_string("pch-dir");
+                ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
+                    project->path, pch_dir, project->id_base);
+            } else {
+                /* Disable PCH for gcc for now, as it seems to slow down builds */
+                //char *tmp_dir = driver->get_attr_string("tmp-dir");
+                //ut_strbuf_append(&cmd, " -I%s", tmp_dir);
+            }
         }
     }
 
