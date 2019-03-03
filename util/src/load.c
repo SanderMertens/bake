@@ -1099,7 +1099,7 @@ int16_t ut_load_init(
     ut_appendenv(UT_ENV_BINPATH, "~"UT_OS_PS"bake");
     ut_appendenv(UT_ENV_BINPATH, "%s", UT_BIN_PATH);
 
-#ifdef UT_ENV_WINDOWS
+#ifdef UT_OS_WINDOWS
     /* Don't reset LIBPATH on Windows, as it contains the visual studio
      * environment. */
     ut_appendenv(UT_ENV_LIBPATH, "%s", UT_LIB_PATH);
