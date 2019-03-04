@@ -35,7 +35,86 @@ bool is_cpp(
 }
 
 static
-void generate_testmain(
+int generate_testcase_fwd_decls(
+    ut_code *src,
+    JSON_Array *suites)
+{
+    uint32_t i, count = json_array_get_count(suites);
+
+    /* The JSON structure has already been validated, so no need to do error
+     * checking again. */
+
+    for (i = 0; i < count; i ++) {
+        JSON_Object *suite = json_array_get_object(suites, i);
+        const char *id = json_object_get_string(suite, "id");
+
+        ut_code_write(src, "// Testsuite '%s'\n", id);
+
+        JSON_Array *testcases = json_object_get_array(suite, "testcases");
+        uint32_t t, count = json_array_get_count(testcases);
+
+        for (t = 0; t < count; t ++) {
+            const char *testcase = json_array_get_string(testcases, t);
+            ut_code_write(src, "void %s_%s(void);\n", id, testcase);
+        }
+
+        ut_code_write(src, "\n");
+    }
+
+    return 0;
+}
+
+static
+int generate_suite_data(
+    ut_code *src,
+    JSON_Array *suites)
+{
+    uint32_t i, count = json_array_get_count(suites);
+
+    /* The JSON structure has already been validated, so no need to do error
+     * checking again. */
+
+    for (i = 0; i < count; i ++) {
+        JSON_Object *suite = json_array_get_object(suites, i);
+        const char *id = json_object_get_string(suite, "id");
+
+        JSON_Array *testcases = json_object_get_array(suite, "testcases");
+        uint32_t t, count = json_array_get_count(testcases);
+
+        ut_code_write(src, "{\n");
+        ut_code_indent(src);
+        ut_code_write(src, ".id = \"%s\",\n", id);
+        ut_code_write(src, ".testcase_count = %d,\n", count);
+        ut_code_write(src, ".testcases = (bake_test_case[]){");
+        ut_code_indent(src);
+
+        for (t = 0; t < count; t ++) {
+            const char *testcase = json_array_get_string(testcases, t);
+            if (t) {
+                ut_code_write(src, ",");
+            }
+            ut_code_write(src, "\n");
+            ut_code_write(src, "{\n");
+            ut_code_indent(src);
+            ut_code_write(src, ".id = \"%s\",\n", testcase);
+            ut_code_write(src, ".function = %s_%s\n", id, testcase);
+            ut_code_dedent(src);
+            ut_code_write(src, "}");
+        }
+        ut_code_write(src, "\n");
+
+        ut_code_dedent(src);
+        ut_code_write(src, "}\n");
+    }
+
+    ut_code_dedent(src);
+    ut_code_write(src, "}\n");
+
+    return 0;
+}
+
+static
+int generate_testmain(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -46,18 +125,38 @@ void generate_testmain(
         ext = "cpp";
     }
 
-    char *file = ut_asprintf("%s/src/main.%s", project->path, ext);
-    FILE *main_c = fopen(file, "w");
-    if (!main_c) {
-        fprintf(stderr, "failed to open %s", file);
+    ut_code *src = ut_code_open("%s/src/main.%s", project->path, ext);
+    if (!src) {
+        fprintf(stderr, "failed to open %s/src/main.%s", project->path, ext);
         project->error = true;
-        free(file);
+        return -1;
     }
 
+    ut_code_write(src, "#include <include/%s.h>\n", project->id_base);
+    ut_code_write(src, "\n");
+
+    generate_testcase_fwd_decls(src, suites);
+
+    ut_code_write(src, "static bake_test_suite suites[] = {\n");
+    ut_code_indent(src);
+
+    generate_suite_data(src, suites);
+
+    ut_code_dedent(src);
+    ut_code_write(src, "};\n");
+    ut_code_write(src, "\n");
     
+    ut_code_write(src, "int main(int argc, char *argv[]) {\n");
+    ut_code_indent(src);
+    ut_code_write(src, "return bake_test_run(\"%s\", argc, argv, suites, %d);\n",
+        project->id,
+        json_array_get_count(suites));
+    ut_code_dedent(src);
+    ut_code_write(src, "}\n");
 
+    ut_code_close(src);
 
-    fclose(main_c);
+    return 0;
 }
 
 static
@@ -65,13 +164,14 @@ void generate_testcase(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
+    const char *suite,
     const char *testcase,
     cdiff_file suite_file)
 {
-    cdiff_file_elemBegin(suite_file, testcase);
+    cdiff_file_elemBegin(suite_file, "%s_%s", suite, testcase);
 
     cdiff_file_headerBegin(suite_file);
-    cdiff_file_write(suite_file, "void %s() {", testcase);
+    cdiff_file_write(suite_file, "void %s_%s() {", suite, testcase);
     cdiff_file_headerEnd(suite_file);
 
     if (!cdiff_file_bodyBegin(suite_file)) {
@@ -115,7 +215,7 @@ int generate_suite(
         return -1;
     }
 
-    cdiff_file_write(suite_file, "#include <include/test.h>\n");
+    cdiff_file_write(suite_file, "#include <include/%s.h>\n", project->id_base);
 
     JSON_Array *cases = json_object_get_array(suite, "testcases");
     if (cases) {
@@ -124,7 +224,7 @@ int generate_suite(
             const char *testcase = json_array_get_string(cases, i);
             if (testcase) {
                 generate_testcase(
-                    driver, config, project, testcase, suite_file);
+                    driver, config, project, id, testcase, suite_file);
             }
         }
     }
