@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -653,6 +653,15 @@ bake_attr* bake_project_get_attr(
     } else {
         return NULL;
     }
+}
+
+/* Get JSON object of driver configuration */
+JSON_Object* bake_project_get_json(
+    bake_project *project,
+    const char *driver_id)
+{
+    bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+    return driver->json;
 }
 
 /* Set attribute for project-specific driver configuration */

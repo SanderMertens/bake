@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1048,7 +1048,8 @@ int main(int argc, const char *argv[]) {
                 if (sig) {
                     ut_error("bake child crashed with signal %d", sig);
                 } else {
-                    ut_error("bake child quit with error code %d", rc);
+                    /* If this was a clean exit with an error code, no need to
+                     * repeat the error since the bake child already did */
                 }
                 return -1;
             }

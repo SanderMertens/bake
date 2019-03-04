@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -422,6 +422,34 @@ char* bake_driver_get_string_attr_cb(
 }
 
 static
+ut_ll bake_driver_get_array_attr_cb(
+    const char *name)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    bake_attr *attr = bake_project_get_attr(project, driver->id, name);
+    if (!attr) {
+        return NULL;
+    }
+
+    if (attr->kind == BAKE_ARRAY) {
+        return attr->is.array ? attr->is.array : NULL;
+    } else {
+        project->error = true;
+        ut_throw("attribute '%s' is not of type array", name);
+        return NULL;
+    }
+}
+
+static
+JSON_Object* bake_driver_get_json_cb(void)
+{
+    bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+    bake_project *project = ut_tls_get(BAKE_PROJECT_KEY);
+    return bake_project_get_json(project, driver->id);
+}
+
+static
 void bake_driver_set_attr_array_cb(
     const char *name,
     const char *value)
@@ -597,6 +625,8 @@ bake_driver_api bake_driver_api_impl = {
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,
     .get_attr_string = bake_driver_get_string_attr_cb,
+    .get_attr_array = bake_driver_get_array_attr_cb,
+    .get_json = bake_driver_get_json_cb,
     .set_attr_bool = bake_driver_set_attr_bool_cb,
     .set_attr_string = bake_driver_set_attr_string_cb,
     .set_attr_array = bake_driver_set_attr_array_cb
