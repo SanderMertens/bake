@@ -271,6 +271,7 @@ const char* ut_appname();
 #include "os.h"
 #include "time.h"
 #include "dl.h"
+#include "code.h"
 #include "fs.h"
 
 #ifdef _WIN32

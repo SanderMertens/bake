@@ -35,6 +35,32 @@ bool is_cpp(
 }
 
 static
+void generate_testmain(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    JSON_Array *suites)
+{
+    const char *ext = "c";
+    if (is_cpp(project)) {
+        ext = "cpp";
+    }
+
+    char *file = ut_asprintf("%s/src/main.%s", project->path, ext);
+    FILE *main_c = fopen(file, "w");
+    if (!main_c) {
+        fprintf(stderr, "failed to open %s", file);
+        project->error = true;
+        free(file);
+    }
+
+    
+
+
+    fclose(main_c);
+}
+
+static
 void generate_testcase(
     bake_driver_api *driver,
     bake_config *config,
@@ -134,6 +160,8 @@ void generate(
                     break;
                 }
             }
+
+            generate_testmain(driver, config, project, suites);
         } else {
             fprintf(stderr, "no 'testsuites' array in test configuration\n");
             project->error = true;
@@ -149,7 +177,12 @@ void init(
     bake_config *config,
     bake_project *project)
 {
-
+    if (project->type != BAKE_APPLICATION) {
+        fprintf(stderr, "test projects must be of type application\n");
+        project->error = true;
+    } else {
+        driver->use("bake.test");
+    }
 }
 
 UT_EXPORT 
