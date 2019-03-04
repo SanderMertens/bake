@@ -148,6 +148,7 @@ int generate_testmain(
     
     ut_code_write(src, "int main(int argc, char *argv[]) {\n");
     ut_code_indent(src);
+    ut_code_write(src, "ut_init(argv[0]);\n");
     ut_code_write(src, "return bake_test_run(\"%s\", argc, argv, suites, %d);\n",
         project->id,
         json_array_get_count(suites));
@@ -281,6 +282,7 @@ void init(
         fprintf(stderr, "test projects must be of type application\n");
         project->error = true;
     } else {
+        driver->use("bake.util");
         driver->use("bake.test");
     }
 }
