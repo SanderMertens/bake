@@ -273,7 +273,7 @@ void _test_assert(
     }
 }
 
-void _test_assert_int(
+void _test_int(
     uint64_t v1,
     uint64_t v2,
     const char *str_v1,
@@ -305,7 +305,7 @@ void _test_assert_int(
     }
 }
 
-void _test_assert_flt(
+void _test_flt(
     double v1,
     double v2,
     const char *str_v1,
@@ -337,7 +337,7 @@ void _test_assert_flt(
     }
 }
 
-void _test_assert_str(
+void _test_str(
     const char *v1,
     const char *v2,
     const char *str_v1,
