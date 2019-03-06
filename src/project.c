@@ -1552,9 +1552,10 @@ int16_t bake_project_create_project_json(
 
         ut_code_dedent(f);
         ut_code_write(f, "\n");
-        ut_code_write(f, "]\n");
+        ut_code_write(f, "]");
     }
 
+    ut_code_write(f, "\n");
     ut_code_dedent(f);
     ut_code_write(f, "}");
 
@@ -1567,12 +1568,12 @@ int16_t bake_project_create_project_json(
         ut_code_write(f, "\"id\": \"my_suite\",\n");
         ut_code_write(f, "\"testcases\": []\n");
         ut_code_dedent(f);
-        ut_code_write(f, "}]");
+        ut_code_write(f, "}]\n");
+        ut_code_dedent(f);
+        ut_code_write(f, "}");
     }
 
-    ut_code_dedent(f);
     ut_code_write(f, "\n");
-    ut_code_write(f, "}\n");
     ut_code_dedent(f);
     ut_code_write(f, "}\n");
 
