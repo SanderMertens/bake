@@ -81,7 +81,8 @@ int16_t bake_project_clean(
 /* Initialize files for a new bake project */
 int16_t bake_project_setup(
     bake_config *config,
-    bake_project *project);
+    bake_project *project,
+    bool is_test);
 
 /* Initialize files for a new bake project from template */
 int16_t bake_project_setup_w_template(

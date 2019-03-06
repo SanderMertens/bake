@@ -83,8 +83,8 @@ void print_dbg_command(
     const char *testcase) 
 {
     printf("  To run/debug your test, do:\n");
-    ut_log("#[cyan]  export $(bake env)#[reset]\n");
-    ut_log("#[cyan]  %s %s#[reset]\n", exec, testcase);
+    ut_log("    export $(bake env)#[reset]\n");
+    ut_log("    %s %s#[reset]\n", exec, testcase);
     printf("\n");
 }
 
@@ -167,16 +167,22 @@ int bake_test_run_all_tests(
                         fprintf(stderr, 
                             "Testcase '%s' failed with return code %d\n", 
                             test_id, rc);
+
                         result = -1;
+                        fail ++;
+                    } else {
+                        /* Normal test failure */
                         fail ++;
                     }
                 }
 
                 ut_catch();
                 print_dbg_command(exec, test_id);
-            } else if (ut_log_verbosityGet() <= UT_OK) {
-                ut_log("#[green]PASS#[reset] %s.%s\n", 
-                    suite->id, test->id);
+            } else {
+                if (ut_log_verbosityGet() <= UT_OK) {
+                    ut_log("#[green]PASS#[reset] %s.%s\n", 
+                        suite->id, test->id);
+                }
                 pass ++;
             }
         }

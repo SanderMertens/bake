@@ -469,9 +469,14 @@ int bake_env(
 int bake_new_project(
     bake_config *config)
 {
+    bool is_test = false;
+    
     if (path && strcmp(path, ".")) {
         /* Project id was parsed as path */
         char *project_path = ut_strdup(path);
+
+        /* Is this a test project for an existing bake project */
+        is_test = !strcmp(path, "test") && (ut_file_test("project.json") == 1);
 
         /* Replace '.' with '-' for path */
         char *ptr = project_path, ch;
@@ -518,23 +523,60 @@ int bake_new_project(
         goto error;
     }
 
-    if (!project->language) {
-        free(project->language);
-        project->language = ut_strdup("c");
+    /* If id is test and we're in a bake project folder, create test project */
+    if (is_test) {
+        if (project->type != BAKE_APPLICATION) {
+            ut_throw("test projects must be applications");
+            goto error;
+        }
+
+        /* Load settings of project in current directory */
+        bake_project *cwproject = bake_project_new("..", config);
+        if (!cwproject) {
+            ut_throw("cannot create test project, failed to load project.json");
+            goto error;
+        }
+
+        if (cwproject->author) {
+            project->author = ut_strdup(cwproject->author);
+        }
+
+        project->description = ut_asprintf(
+            "Test project for %s", cwproject->id);
+
+        /* Language of test project is the same as main project */
+        project->language = ut_strdup(cwproject->language);
+
+        /* Add dependency to project if package */
+        if (cwproject->type == BAKE_PACKAGE) {
+            ut_ll_append(project->use, ut_strdup(cwproject->id));
+        }
+
+        /* Test projects are not public */
+        project->public = false;
+    } else {
+        if (!project->language) {
+            free(project->language);
+            project->language = ut_strdup("c");
+        }
+
+        project->public = true;
     }
 
     /* Setup all project files, include invoking driver */
     if (template) {
         ut_try( bake_project_setup_w_template(config, project, template), NULL);
     } else {
-        ut_try( bake_project_setup(config, project), NULL);
+        ut_try( bake_project_setup(config, project, is_test), NULL);
     }
 
     /* Install project metadata to bake env so it is discoverable by id */
-    if (project->type == BAKE_TEMPLATE) {
-        ut_try( bake_install_template(config, project), NULL);
-    } else {
-        ut_try (bake_install_metadata(config, project), NULL);
+    if (project->public) {
+        if (project->type == BAKE_TEMPLATE) {
+            ut_try( bake_install_template(config, project), NULL);
+        } else {
+            ut_try (bake_install_metadata(config, project), NULL);
+        }
     }
 
     return 0;

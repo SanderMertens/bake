@@ -1491,39 +1491,92 @@ const char* bake_project_type_str(
 /* Create project.json file for new project */
 static
 int16_t bake_project_create_project_json(
-    bake_project *project)
+    bake_project *project,
+    bool is_test)
 {
-    char *description = bake_random_description();
+    char *author = project->author;
+    if (!author) {
+        if (rand() % 2 == 1) {
+            author = "John Doe";
+        } else {
+            author = "Jane Doe";
+        }
+    }
+    
+    char *description = project->description;
+    if (!description) {
+        description = bake_random_description();
+    }
 
     /* Create project.json */
-    FILE *f = fopen("project.json", "w");
+    ut_code *f = ut_code_open("project.json");
     if (!f) {
         ut_throw("failed to open 'project.json");
         goto error;
     }
 
-    fprintf(f,
-        "{\n"
-        "    \"id\": \"%s\",\n"
-        "    \"type\": \"%s\",\n"
-        "    \"value\": {\n"
-        "        \"author\": \"John Doe\",\n"
-        "        \"description\": \"%s\",\n"
-        "        \"version\": \"0.0.0\",\n"
-        "        \"repository\": null,\n"
-        "        \"license\": null",
-            project->id,
-            bake_project_type_str(project->type),
-            description);
+    ut_code_write(f, "{\n");
+    ut_code_indent(f);
+    ut_code_write(f, "\"id\": \"%s\",\n", project->id);
+    ut_code_write(f, "\"type\": \"%s\",\n", bake_project_type_str(project->type));
+    ut_code_write(f, "\"value\": {\n");
+    ut_code_indent(f);
+    ut_code_write(f, "\"author\": \"%s\",\n", author);
+    ut_code_write(f, "\"description\": \"%s\"", description);
 
     if (strcmp(project->language, "c")) {
-        fprintf(f,
-        ",\n        \"language\": \"%s\"", project->language);
+        ut_code_write(f, ",\n");
+        ut_code_write(f, "\"language\": \"%s\"", project->language);
     }
 
-    fprintf(f, "\n    }\n}\n");
+    if (!project->public) {
+        ut_code_write(f, ",\n");
+        ut_code_write(f, "\"public\": false");
+    }
 
-    fclose(f);
+    if (project->use && ut_ll_count(project->use)) {
+        int count = 0;
+
+        ut_code_write(f, ",\n");
+        ut_code_write(f, "\"use\": [");
+        ut_code_indent(f);
+        
+        ut_iter it = ut_ll_iter(project->use);
+        while (ut_iter_hasNext(&it)) {
+            const char *pkg = ut_iter_next(&it);
+            if (count) ut_code_write(f, ",");
+            ut_code_write(f, "\n");
+            ut_code_write(f, "\"%s\"", pkg);
+            count ++;
+        }
+
+        ut_code_dedent(f);
+        ut_code_write(f, "\n");
+        ut_code_write(f, "]\n");
+    }
+
+    ut_code_dedent(f);
+    ut_code_write(f, "}");
+
+    if (is_test) {
+        ut_code_write(f, ",\n");
+        ut_code_write(f, "\"test\": {\n");
+        ut_code_indent(f);
+        ut_code_write(f, "\"testsuites\": [{\n");
+        ut_code_indent(f);
+        ut_code_write(f, "\"id\": \"my_suite\",\n");
+        ut_code_write(f, "\"testcases\": []\n");
+        ut_code_dedent(f);
+        ut_code_write(f, "}]");
+    }
+
+    ut_code_dedent(f);
+    ut_code_write(f, "\n");
+    ut_code_write(f, "}\n");
+    ut_code_dedent(f);
+    ut_code_write(f, "}\n");
+
+    ut_code_close(f);
 
     return 0;
 error:
@@ -1556,7 +1609,8 @@ error:
 /* Setup a new project */
 int16_t bake_project_setup(
     bake_config *config,
-    bake_project *project)
+    bake_project *project,
+    bool is_test)
 {
     bake_driver *driver = project->language_driver->driver;
 
@@ -1564,7 +1618,7 @@ int16_t bake_project_setup(
         ut_proc_runRedirect("git", (const char*[]){"git", "init", NULL}, stdin, stdout, stderr),
         "failed to initialize git repository");
 
-    ut_try( bake_project_create_project_json(project), NULL);
+    ut_try( bake_project_create_project_json(project, is_test), NULL);
 
     ut_try( bake_project_create_gitignore(project), NULL);
 

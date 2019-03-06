@@ -200,6 +200,14 @@ int generate_suite(
         return -1;
     }
 
+    JSON_Array *cases = json_object_get_array(suite, "testcases");
+    if (!json_array_get_count(cases)) {
+        fprintf(stdout, 
+            "Testsuite '%s' is empty, add testcases to the 'testcases' array\n",
+            id);
+        return 0;
+    }
+
     const char *ext = "c";
     if (is_cpp(project)) {
         ext = "cpp";
@@ -218,7 +226,6 @@ int generate_suite(
 
     cdiff_file_write(suite_file, "#include <include/%s.h>\n", project->id_base);
 
-    JSON_Array *cases = json_object_get_array(suite, "testcases");
     if (cases) {
         uint32_t i, count = json_array_get_count(cases);
         for (i = 0; i < count; i ++) {
