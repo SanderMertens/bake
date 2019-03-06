@@ -97,7 +97,7 @@ void bake_test_report(
     uint32_t pass)
 {
     if (!pass && !fail && !empty) {
-        printf("%s.%s: no testcases to run\n", test_id, suite_id);
+        printf("no testcases to run (%s.%s)\n", test_id, suite_id);
     } else {
         if (fail) {
             if (empty) {
