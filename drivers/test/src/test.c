@@ -101,24 +101,22 @@ void bake_test_report(
     } else {
         if (fail) {
             if (empty) {
-                ut_log("#[]%s.%s: PASS:%d, #[red]FAIL#[normal]:%d, #[yellow]EMPTY#[normal]:%d\n",
-                    test_id, suite_id, pass, fail, empty);
+                ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s)\n",
+                    pass, fail, empty, test_id, suite_id);
                 } else {
-                    ut_log("#[]%s.%s: PASS:%d, #[red]FAIL#[normal]:%d, EMPTY:%d\n",
-                        test_id, suite_id, pass, fail, empty);
+                    ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, EMPTY:%3d (%s.%s)\n",
+                        pass, fail, empty, test_id, suite_id);
                 }
         } else {
             if (empty) {
-                ut_log("#[]%s.%s: #[green]PASS#[normal]:%d, FAIL:%d, #[yellow]EMPTY#[normal]:%d\n",
-                    test_id, suite_id, pass, fail, empty);
+                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s)\n",
+                    pass, fail, empty, test_id, suite_id);
             } else {
-                ut_log("#[]%s.%s: #[green]PASS#[normal]:%d, FAIL:%d, EMPTY:%d\n",
-                    test_id, suite_id, pass, fail, empty);
+                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, EMPTY:%3d (%s.%s)\n",
+                    pass, fail, empty, test_id, suite_id);
             }
         }
     }
-
-    printf("\n");
 }
 
 static
@@ -139,6 +137,14 @@ int bake_test_run_all_tests(
     for (i = 0; i < suite_count; i ++) {
         bake_test_suite *suite = &suites[i];
 
+        if (i && (fail || empty)) {
+            printf("\n");
+        }
+
+        fail = 0;
+        empty = 0;
+        pass = 0;
+
         for (t = 0; t < suite->testcase_count; t ++) {
             bake_test_case *test = &suite->testcases[t];
 
@@ -154,8 +160,17 @@ int bake_test_run_all_tests(
             int sig = ut_proc_wait(proc, &rc);
             if (sig || rc) {
                 if (sig) {
-                    fprintf(stderr, 
-                        "Testcase '%s' crashed with signal %d\n", test_id, sig);
+                    if (sig == 6) {
+                        ut_log(
+                            "#[red]FAIL#[reset] %s aborted\n", test_id);
+                    } else if (sig == 11) {
+                        ut_log(
+                            "#[red]FAIL#[reset] %s segfaulted\n", test_id);
+                    } else {
+                        ut_log(
+                            "#[red]FAIL#[reset] %s crashed with signal %d\n", 
+                            test_id, sig);
+                    }
                     result = -1;
                     fail ++;
                 } else {
@@ -194,15 +209,11 @@ int bake_test_run_all_tests(
         total_fail += fail;
         total_empty += empty;
         total_pass += pass;
-
-        fail = 0;
-        empty = 0;
-        pass = 0;
     }
 
-    printf("===\n\n");
-
-    bake_test_report(test_id, "totals", total_fail, total_empty, total_pass);
+    printf("-----------------------------\n");
+    bake_test_report(test_id, "all", total_fail, total_empty, total_pass);
+    printf("\n");
 
     return result;
 }
