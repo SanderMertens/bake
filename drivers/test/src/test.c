@@ -19,7 +19,7 @@ void test_empty(void)
 
     ut_raise();
 
-    ut_log("#[yellow]EMPTY#[reset] %s.%s\n", 
+    ut_log("#[yellow]EMPTY#[reset] %s.%s (add test statements)\n", 
         current_testsuite->id, current_testcase->id);
 
     exit(1);
@@ -91,28 +91,29 @@ void print_dbg_command(
 static
 void bake_test_report(
     const char *test_id,
+    const char *suite_id,
     uint32_t fail,
     uint32_t empty,
     uint32_t pass)
 {
     if (!pass && !fail && !empty) {
-        printf("No testcases to run\n");
+        printf("%s.%s: no testcases to run\n", test_id, suite_id);
     } else {
         if (fail) {
             if (empty) {
-                ut_log("#[]%s: PASS:%d, #[red]FAIL#[normal]:%d, #[yellow]EMPTY#[normal]:%d\n",
-                    test_id, pass, fail, empty);
+                ut_log("#[]%s.%s: PASS:%d, #[red]FAIL#[normal]:%d, #[yellow]EMPTY#[normal]:%d\n",
+                    test_id, suite_id, pass, fail, empty);
                 } else {
-                    ut_log("#[]%s: PASS:%d, #[red]FAIL#[normal]:%d, EMPTY:%d\n",
-                        test_id, pass, fail, empty);
+                    ut_log("#[]%s.%s: PASS:%d, #[red]FAIL#[normal]:%d, EMPTY:%d\n",
+                        test_id, suite_id, pass, fail, empty);
                 }
         } else {
             if (empty) {
-                ut_log("#[]%s: #[green]PASS#[normal]:%d, FAIL:%d, #[yellow]EMPTY#[normal]:%d\n",
-                    test_id, pass, fail, empty);
+                ut_log("#[]%s.%s: #[green]PASS#[normal]:%d, FAIL:%d, #[yellow]EMPTY#[normal]:%d\n",
+                    test_id, suite_id, pass, fail, empty);
             } else {
-                ut_log("#[]%s: #[green]PASS#[normal]:%d, FAIL:%d, EMPTY:%d\n",
-                    test_id, pass, fail, empty);
+                ut_log("#[]%s.%s: #[green]PASS#[normal]:%d, FAIL:%d, EMPTY:%d\n",
+                    test_id, suite_id, pass, fail, empty);
             }
         }
     }
@@ -129,6 +130,7 @@ int bake_test_run_all_tests(
 {
     int result = 0;
 
+    uint32_t total_fail = 0, total_empty = 0, total_pass = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
 
     printf("\n");
@@ -186,9 +188,21 @@ int bake_test_run_all_tests(
                 pass ++;
             }
         }
+
+        bake_test_report(test_id, suite->id, fail, empty, pass);
+
+        total_fail += fail;
+        total_empty += empty;
+        total_pass += pass;
+
+        fail = 0;
+        empty = 0;
+        pass = 0;
     }
 
-    bake_test_report(test_id, fail, empty, pass);
+    printf("===\n\n");
+
+    bake_test_report(test_id, "totals", total_fail, total_empty, total_pass);
 
     return result;
 }

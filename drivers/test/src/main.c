@@ -81,6 +81,10 @@ int generate_suite_data(
         JSON_Array *testcases = json_object_get_array(suite, "testcases");
         uint32_t t, count = json_array_get_count(testcases);
 
+        if (i) {
+            ut_code_write(src, ",\n");
+        }
+
         ut_code_write(src, "{\n");
         ut_code_indent(src);
         ut_code_write(src, ".id = \"%s\",\n", id);
@@ -105,10 +109,12 @@ int generate_suite_data(
 
         ut_code_dedent(src);
         ut_code_write(src, "}\n");
+
+        ut_code_dedent(src);
+        ut_code_write(src, "}");
     }
 
-    ut_code_dedent(src);
-    ut_code_write(src, "}\n");
+    ut_code_write(src, "\n");
 
     return 0;
 }
