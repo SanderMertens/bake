@@ -38,6 +38,7 @@ bool build = true;
 bool local_setup = false;
 bool strict = false;
 bool optimize = false;
+bool is_test = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -89,6 +90,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
+    printf("  --test                       Create a test project\n");
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
     printf("  --type <package|template>    Manually specify a project type (default = \"application\")\n");
@@ -271,6 +273,7 @@ int bake_parse_args(
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "template", type = BAKE_TEMPLATE);
+            ARG(0, "test", is_test = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
@@ -468,15 +471,20 @@ int bake_env(
 /* Initialize a new bake project */
 int bake_new_project(
     bake_config *config)
-{
-    bool is_test = false;
-    
+{    
+    char *orig_path = ut_strdup(ut_cwd());
+
     if (path && strcmp(path, ".")) {
         /* Project id was parsed as path */
         char *project_path = ut_strdup(path);
 
         /* Is this a test project for an existing bake project */
-        is_test = !strcmp(path, "test") && (ut_file_test("project.json") == 1);
+        if (!is_test) {
+            is_test = !strcmp(path, "test") && (ut_file_test("project.json") == 1);
+        } else if (ut_file_test("project.json") != 1) {
+            ut_throw("must create test project in existing project directory");
+            goto error;
+        }
 
         /* Replace '.' with '-' for path */
         char *ptr = project_path, ch;
@@ -492,7 +500,9 @@ int bake_new_project(
         free(project_path);
 
         /* Project id is provided path */
-        id = path;
+        if (!id) {
+            id = path;
+        }
 
         /* When creating project from path, use current directory */
         path = ".";
@@ -531,7 +541,7 @@ int bake_new_project(
         }
 
         /* Load settings of project in current directory */
-        bake_project *cwproject = bake_project_new("..", config);
+        bake_project *cwproject = bake_project_new(orig_path, config);
         if (!cwproject) {
             ut_throw("cannot create test project, failed to load project.json");
             goto error;
@@ -578,6 +588,8 @@ int bake_new_project(
             ut_try (bake_install_metadata(config, project), NULL);
         }
     }
+
+    free(orig_path);
 
     return 0;
 error:
