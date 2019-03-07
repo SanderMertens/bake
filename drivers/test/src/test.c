@@ -291,10 +291,10 @@ void _test_int(
             sv1 = ut_asprintf("%s (%lld)", str_v1, v1);
         }
 
-        if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv2 = strdup(str_v1);
+        if (isdigit(*str_v2) || (*str_v2 == '-')) {
+            sv2 = strdup(str_v2);
         } else {
-            sv2 = ut_asprintf("%s (%lld)", str_v1, v2);
+            sv2 = ut_asprintf("%s (%lld)", str_v2, v2);
         }
 
         char *msg = ut_asprintf("%s != %s", sv1, sv2);
@@ -323,10 +323,10 @@ void _test_flt(
             sv1 = ut_asprintf("%s (%f)", str_v1, v1);
         }
 
-        if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv2 = strdup(str_v1);
+        if (isdigit(*str_v2) || (*str_v2 == '-')) {
+            sv2 = strdup(str_v2);
         } else {
-            sv2 = ut_asprintf("%s (%f)", str_v1, v2);
+            sv2 = ut_asprintf("%s (%f)", str_v2, v2);
         }
 
         char *msg = ut_asprintf("%s != %s", sv1, sv2);
