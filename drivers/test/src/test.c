@@ -97,7 +97,7 @@ void bake_test_report(
     uint32_t pass)
 {
     if (!pass && !fail && !empty) {
-        printf("no testcases to run (%s.%s)\n", test_id, suite_id);
+        printf("    : no testcases to run     (%s.%s)\n", test_id, suite_id);
     } else {
         if (fail) {
             if (empty) {
@@ -365,7 +365,7 @@ void _test_str(
     }
 }
 
-void _test_assert_null(
+void _test_null(
     void *v,
     const char *str_v,
     const char *file,
@@ -380,7 +380,7 @@ void _test_assert_null(
     }
 }
 
-void _test_assert_not_null(
+void _test_not_null(
     void *v,
     const char *str_v,
     const char *file,
@@ -390,6 +390,23 @@ void _test_assert_not_null(
 
     if (!v) {
         char *msg = ut_asprintf("%s is null", v);
+        test_fail(file, line, msg);
+        free(msg);
+    }
+}
+
+void _test_ptr(
+    void *v1,
+    void *v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    current_testsuite->assert_count ++;
+
+    if (v1 != v2) {
+        char *msg = ut_asprintf("%s (%p) != %s (%p)", str_v1, v1, str_v2, v2);
         test_fail(file, line, msg);
         free(msg);
     }

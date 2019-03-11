@@ -70,12 +70,21 @@ void _test_not_null(
     const char *file,
     int line);
 
+void _test_ptr(
+    void *v1,
+    void *v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line);
+
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_int(v1, v2) _test_int(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_flt(v1, v2) _test_flt(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_str(v1, v2) _test_str(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_null(v) _test_null(v, #v, __FILE__, __LINE__)
 #define test_not_null(v) _test_not_null(v, #v, __FILE__, __LINE__)
+#define test_ptr(v1, v2) _test_ptr(v1, v2, #v1, #v2, __FILE__, __LINE__)
 
 #ifdef __cplusplus
 }

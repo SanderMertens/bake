@@ -138,6 +138,16 @@ int generate_testmain(
         return -1;
     }
 
+    ut_code_write(src, "\n");
+    ut_code_write(src, "/* A friendly warning from bake.test\n");
+    ut_code_write(src, " * ----------------------------------------------------------------------------\n");
+    ut_code_write(src, " * This file is generated. To add/remove testcases modify the 'project.json' of\n");
+    ut_code_write(src, " * the test project. ANY CHANGE TO THIS FILE IS LOST AFTER (RE)BUILDING!\n");
+    ut_code_write(src, " * ----------------------------------------------------------------------------\n");
+    ut_code_write(src, " */\n");
+
+    ut_code_write(src, "\n");
+
     ut_code_write(src, "#include <include/%s.h>\n", project->id_base);
     ut_code_write(src, "\n");
 
