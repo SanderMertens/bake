@@ -344,20 +344,14 @@ int16_t bake_setup(
 
     ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
-    char *cmdstr = ut_asprintf("%s drivers/test", bake_cmd);
-    ut_try(cmd(cmdstr), NULL);
+    ut_try(cmd("./bake drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
-    free(cmdstr);
 
-    cmdstr = ut_asprintf("%s libraries", bake_cmd);
-    ut_try(cmd(cmdstr), NULL);
+    ut_try(cmd("./bake libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
-    free(cmdstr);
 
-    cmdstr = ut_asprintf("%s templates", bake_cmd);
-    ut_try(cmd(cmdstr), NULL);
+    ut_try(cmd("./bake templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
-    free(cmdstr);
 
     /*
 
