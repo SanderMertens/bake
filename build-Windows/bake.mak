@@ -71,6 +71,7 @@ UTIL_SOURCE= ..\util\src\win\dl.c \
 			..\util\src\win\thread.c \
 			..\util\src\win\proc.c \
 			..\util\src\win\err.c \
+			..\util\src\code.c \
 			..\util\src\env.c \
 			..\util\src\expr.c \
 			..\util\src\file.c \
