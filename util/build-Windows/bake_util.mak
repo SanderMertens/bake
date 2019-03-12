@@ -55,6 +55,7 @@ CPP_SOURCE= ..\src\win\dl.c \
 			..\src\win\thread.c \
 			..\src\win\proc.c \
 			..\src\win\err.c \
+			..\src\code.c \
 			..\src\env.c \
 			..\src\expr.c \
 			..\src\file.c \

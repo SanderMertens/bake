@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -271,6 +271,7 @@ const char* ut_appname();
 #include "os.h"
 #include "time.h"
 #include "dl.h"
+#include "code.h"
 #include "fs.h"
 
 #ifdef _WIN32

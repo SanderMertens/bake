@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -244,6 +244,10 @@ struct bake_driver_api {
     char* (*get_attr_string)(
         const char *name);
 
+    /* Get a driver-specific array attribute */
+    ut_ll (*get_attr_array)(
+        const char *name);        
+
     /* Get a driver-specific attribute */
     void (*set_attr_string)(
         const char *name,
@@ -258,6 +262,9 @@ struct bake_driver_api {
     void (*set_attr_array)(
         const char *name,
         const char *value);
+
+    /* Get direct access to parson data */
+    JSON_Object* (*get_json)(void);
 };
 
 #endif

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -81,7 +81,8 @@ int16_t bake_project_clean(
 /* Initialize files for a new bake project */
 int16_t bake_project_setup(
     bake_config *config,
-    bake_project *project);
+    bake_project *project,
+    bool is_test);
 
 /* Initialize files for a new bake project from template */
 int16_t bake_project_setup_w_template(
@@ -104,6 +105,10 @@ bake_attr* bake_project_get_attr(
     bake_project *project,
     const char *driver_id,
     const char *attr);
+
+JSON_Object* bake_project_get_json(
+    bake_project *project,
+    const char *driver_id);
 
 /* Set string attribute value */
 bake_attr* bake_project_set_attr_string(

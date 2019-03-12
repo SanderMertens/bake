@@ -620,19 +620,29 @@ int bake_run(
             if (sig > 0) {
                 ut_throw("process crashed (%d)", sig);
                 ut_raise();
+
+                ut_strbuf cmd_args = UT_STRBUF_INIT;
+                int i;
+                for (i = 1; i < argc; i ++) {
+                    ut_strbuf_appendstr(&cmd_args, argv[i]);
+                }
+
+                char *args = ut_strbuf_get(&cmd_args);
+
                 printf("\n");
-                bake_message(UT_LOG, "", "to debug your application, do:\n");
-                ut_log("export $(bake env)\n");
-                ut_log("%s\n", app_bin);
+                printf("to debug your application, do:\n");
+                ut_log("  export $(bake env)\n");
+                ut_log("  %s %s\n", app_bin, cmd_args);
                 printf("\n");
-                goto error;
-            } else {
-                ut_throw("process returned %d", result);
-                goto error;
+
+                free(args);
             }
+
+            goto error;
         }
 
-        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, app_bin);
+        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] '%s'", 
+            app_id, pid, app_bin);
     }
 
     return 0;

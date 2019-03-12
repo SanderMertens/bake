@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018 Sander Mertens
+/* Copyright (c) 2010-2019 Sander Mertens
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ bool build = true;
 bool local_setup = false;
 bool strict = false;
 bool optimize = false;
+bool is_test = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -89,6 +90,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
+    printf("  --test                       Create a test project\n");
     printf("\n");
     printf("  --id <project id>            Manually specify a project id\n");
     printf("  --type <package|template>    Manually specify a project type (default = \"application\")\n");
@@ -271,6 +273,7 @@ int bake_parse_args(
             ARG(0, "type", ut_try(!(type = bake_parse_project_type(argv[i + 1])), NULL); i ++);
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "template", type = BAKE_TEMPLATE);
+            ARG(0, "test", is_test = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
@@ -468,10 +471,20 @@ int bake_env(
 /* Initialize a new bake project */
 int bake_new_project(
     bake_config *config)
-{
+{    
+    char *orig_path = ut_strdup(ut_cwd());
+
     if (path && strcmp(path, ".")) {
         /* Project id was parsed as path */
         char *project_path = ut_strdup(path);
+
+        /* Is this a test project for an existing bake project */
+        if (!is_test) {
+            is_test = !strcmp(path, "test") && (ut_file_test("project.json") == 1);
+        } else if (ut_file_test("project.json") != 1) {
+            ut_throw("must create test project in existing project directory");
+            goto error;
+        }
 
         /* Replace '.' with '-' for path */
         char *ptr = project_path, ch;
@@ -487,7 +500,9 @@ int bake_new_project(
         free(project_path);
 
         /* Project id is provided path */
-        id = path;
+        if (!id) {
+            id = path;
+        }
 
         /* When creating project from path, use current directory */
         path = ".";
@@ -518,24 +533,63 @@ int bake_new_project(
         goto error;
     }
 
-    if (!project->language) {
-        free(project->language);
-        project->language = ut_strdup("c");
+    /* If id is test and we're in a bake project folder, create test project */
+    if (is_test) {
+        if (project->type != BAKE_APPLICATION) {
+            ut_throw("test projects must be applications");
+            goto error;
+        }
+
+        /* Load settings of project in current directory */
+        bake_project *cwproject = bake_project_new(orig_path, config);
+        if (!cwproject) {
+            ut_throw("cannot create test project, failed to load project.json");
+            goto error;
+        }
+
+        if (cwproject->author) {
+            project->author = ut_strdup(cwproject->author);
+        }
+
+        project->description = ut_asprintf(
+            "Test project for %s", cwproject->id);
+
+        /* Language of test project is the same as main project */
+        project->language = ut_strdup(cwproject->language);
+
+        /* Add dependency to project if package */
+        if (cwproject->type == BAKE_PACKAGE) {
+            ut_ll_append(project->use, ut_strdup(cwproject->id));
+        }
+
+        /* Test projects are not public */
+        project->public = false;
+    } else {
+        if (!project->language) {
+            free(project->language);
+            project->language = ut_strdup("c");
+        }
+
+        project->public = true;
     }
 
     /* Setup all project files, include invoking driver */
     if (template) {
         ut_try( bake_project_setup_w_template(config, project, template), NULL);
     } else {
-        ut_try( bake_project_setup(config, project), NULL);
+        ut_try( bake_project_setup(config, project, is_test), NULL);
     }
 
     /* Install project metadata to bake env so it is discoverable by id */
-    if (project->type == BAKE_TEMPLATE) {
-        ut_try( bake_install_template(config, project), NULL);
-    } else {
-        ut_try (bake_install_metadata(config, project), NULL);
+    if (project->public) {
+        if (project->type == BAKE_TEMPLATE) {
+            ut_try( bake_install_template(config, project), NULL);
+        } else {
+            ut_try (bake_install_metadata(config, project), NULL);
+        }
     }
+
+    free(orig_path);
 
     return 0;
 error:
@@ -1048,7 +1102,8 @@ int main(int argc, const char *argv[]) {
                 if (sig) {
                     ut_error("bake child crashed with signal %d", sig);
                 } else {
-                    ut_error("bake child quit with error code %d", rc);
+                    /* If this was a clean exit with an error code, no need to
+                     * repeat the error since the bake child already did */
                 }
                 return -1;
             }
