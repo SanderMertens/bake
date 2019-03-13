@@ -632,7 +632,7 @@ int bake_run(
                 printf("\n");
                 printf("to debug your application, do:\n");
                 ut_log("  export $(bake env)\n");
-                ut_log("  %s %s\n", app_bin, cmd_args);
+                ut_log("  %s %s\n", app_bin, args ? args : "");
                 printf("\n");
 
                 free(args);
