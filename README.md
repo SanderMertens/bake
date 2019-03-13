@@ -161,7 +161,7 @@ export `bake env`
 ## FAQ
 
 ### Bake is built under the GPL3.0 license. Does this mean I cannot use it for commercial projects?
-No. As long as you do not distribute bake (either as source or binary) as part of your product, you can use bake for building your projects. This is no different than when you would use make for your projects, which is also GPL licensed.
+No. As long as you do not distribute bake (either as source or binary) as part of your (closed source) deliverable, you can use bake for building your projects. This is no different than when you would use make for your projects, which is also GPL licensed.
 
 ### I want my customers to use bake. Does the license allow for this?
 Yes. As long as your customers use the open source version of bake, and you do not distribute bake binaries or source files with your product, your customers can use bake.
@@ -435,19 +435,19 @@ Usually you do not need to know where binaries are stored, as you can run applic
 By default, binaries are built with the default debug configuration. To build a release configuration, add `--cfg release` to your bake command. You can add/change configurations in the bake configuration file. See "Configuring Bake" for more details.
 
 ### How to use different versions of the same package?
-Bake does not support having different versions of a package in the same environment. If you want to use different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_TARGET` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_TARGET` in a new environment called `my_env` (for example) with this command:
+Bake does not support having different versions of a package in the same environment. If you want to use different versions of the same package on a machine, you have to use different bake environments. You can do this by setting the `BAKE_HOME` environment variable. By default, this variable is set to `$HOME/bake`, but you can override it to any path you want. You can set `BAKE_HOME` in a new environment called `my_env` (for example) with this command:
 
 ```
-bake export BAKE_TARGET=/home/user/my_path --env my_env
+bake export BAKE_HOME=/home/user/my_path --env my_env
 ```
 
 To set the variables in this environment, add `--env my_env` to any bake command, like this:
+
 ```demo
 bake --env my_env
 ```
 
 ## Manual
-[everything there is to know about bake]
 
 ### Introduction
 The goal of bake is to bring a level of abstraction to building software that is comparable with `npm`. Tools like `make`, `cmake` and `premake` abstract away from writing your own compiler commands by hand, but still require users to create their own build system, with proprietary mechanisms for specifying dependencies, build configurations etc.
