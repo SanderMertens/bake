@@ -161,7 +161,7 @@ export `bake env`
 ## FAQ
 
 ### Bake is built under the GPL3.0 license. Does this mean I cannot use it for commercial projects?
-No. As long as you do not distribute bake (either as source or binary) as part of your product, you can use bake for building your projects. This is no different than when you would use make for your projects, which is also GPL licensed.
+No. As long as you do not distribute bake (either as source or binary) as part of your (closed source) deliverable, you can use bake for building your projects. This is no different than when you would use make for your projects, which is also GPL licensed.
 
 ### I want my customers to use bake. Does the license allow for this?
 Yes. As long as your customers use the open source version of bake, and you do not distribute bake binaries or source files with your product, your customers can use bake.
