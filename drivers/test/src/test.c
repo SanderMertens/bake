@@ -70,7 +70,7 @@ int bake_test_run_single_test(
     }
 
     if (!found) {
-        fprintf(stderr, "testcase '%s' not found", testcase_id);
+        fprintf(stderr, "testcase '%s' not found\n", testcase_id);
         return -1;
     }
 
