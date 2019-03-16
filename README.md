@@ -828,7 +828,7 @@ You can create a new template project by specifying the `--template` flag when u
 bake new my_template --template
 ```
 
-This will create a new template project which is ready to instantiate, like this:
+This creates a new template project which can be instantiated like this:
 
 ```
 bake new my_app -t my_template
@@ -836,6 +836,7 @@ bake new my_app -t my_template
 
 A template project can be parameterized using bake template functions (see previous chapter), like so:
 
+#### Using template functions 
 ```c
 int main(int argc, char *argv[]) {
 
@@ -874,6 +875,15 @@ This is equivalent to the template function:
 ```
 ${id base}.c
 ```
+
+#### Running templates
+If you are developing a new template, you'll often find yourself wanting to instantiate it to test modifications to the template. To make this process easier, bake lets you instantiate templates directly. Simply do:
+
+```
+bake run my_template --template
+```
+
+where `my_template` is the template name. This will cause bake to automatically instantiate a new temporary project with the template.
 
 ### Configuring Bake
 Bake can be optionally configured with configuration files that specify the environment in which bake should run and the build configuration that should be used. Bake locates a bake configuration file by traveling upwards from the current working directory, and looking for a `bake.json` file. If multiple files are found, they are applied in reverse order, so that the file that is "closest" to the project takes precedence.
@@ -1234,17 +1244,20 @@ Options:
 
   --package                    Set the project type to package
   --template                   Set the project type to template
+  --test                       Create a test project
 
-  --id <project id>            Manually specify a project id
-  --type <package|template>    Manually specify a project type (default = "application")
-  --language <language>        Manually specify a language for project (default = "c")
-  --artefact <binary>          Manually specify a binary file for project
-  -i,--includes <include path> Manually specify an include path for project
+  --id <project id>            Specify a project id
+  --type <package|template>    Specify a project type (default = "application")
+  --language <language>        Specify a language for project (default = "c")
+  --artefact <binary>          Specify a binary file for project
+  -i,--includes <include path> Specify an include path for project
+  --private                    Specify a project to be private (not discoverable)
 
   --interactive                Rebuild project when files change (use w/run)
   -r,--recursive               Recursively build all dependencies of discovered projects
   -a,--args [arguments]        Pass arguments to application (use w/run)
   -t [id]                      Specify template for new project
+  -o [path]                    Specify output directory for new projects
 
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
   --trace                      Set verbosity to TRACE

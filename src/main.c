@@ -975,6 +975,53 @@ void bake_dump_env() {
     ut_log_pop();
 }
 
+int bake_run_template(
+    bake_config *config,
+    const char *path,
+    bool interactive,
+    const char *bake_exec,
+    int argc,
+    const char *argv[])
+{
+    const char *tmpl_path = ut_locate(path, NULL, UT_LOCATE_TEMPLATE);
+    if (!tmpl_path) {
+        ut_throw("cannot find template '%s'", path);
+        goto error;
+    }
+
+    /* Check temporary path, remove if already exists */
+    char *tmp_path = ut_envparse("$BAKE_HOME/temp/%s", path);
+    char ch, *ptr = tmp_path;
+    for (ptr = tmp_path; (ch = *ptr); ptr ++) {
+        if (ch == '.') *ptr = '-';
+    }
+
+    if (ut_file_test(tmp_path) == 1) {
+        printf("delete tmp path %s\n", tmp_path);
+        ut_rm(tmp_path);
+    }
+
+    /* Create temporary template instance */
+    char *cmd = ut_envparse(
+        "%s new %s -o $BAKE_HOME/temp -t %s --private", bake_exec, path, path);
+    int8_t rc = 0;
+    int sig = ut_proc_cmd(cmd, &rc);
+    if (rc || sig) {
+        ut_throw(
+            "failed to create temporary project based on template '%s'", path);
+        goto error;
+    }
+
+    ut_try (
+        bake_run(config, tmp_path, interactive, run_argc, run_argv), NULL);
+
+    free(tmp_path);
+
+    return 0;
+error:
+    return -1;
+}
+
 void bake_message(
     int kind,
     const char *bracket_txt,
@@ -1167,8 +1214,16 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "new")) {
             ut_try (bake_new_project(&config), NULL);
         } else if (!strcmp(action, "run")) {
-            ut_try (
-              bake_run(&config, path, interactive, run_argc, run_argv), NULL);
+            if (type == BAKE_TEMPLATE) {
+                ut_try(
+                  bake_run_template(
+                    &config, path, interactive, argv[0], run_argc, run_argv), 
+                    NULL);
+            } else {
+                ut_try (
+                    bake_run(&config, path, interactive, run_argc, run_argv), 
+                    NULL);
+            }
         } else if (!strcmp(action, "publish")) {
             ut_try (bake_publish_project(&config), NULL);
         } else if (!strcmp(action, "uninstall")) {
