@@ -43,6 +43,7 @@ bool is_test = false;
 /* Command line project configuration */
 const char *id = NULL;
 bake_project_type type = BAKE_APPLICATION;
+bool private = false;
 const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
@@ -93,11 +94,12 @@ void bake_usage(void)
     printf("  --template                   Set the project type to template\n");
     printf("  --test                       Create a test project\n");
     printf("\n");
-    printf("  --id <project id>            Manually specify a project id\n");
-    printf("  --type <package|template>    Manually specify a project type (default = \"application\")\n");
-    printf("  --language <language>        Manually specify a language for project (default = \"c\")\n");
-    printf("  --artefact <binary>          Manually specify a binary file for project\n");
-    printf("  -i,--includes <include path> Manually specify an include path for project\n");
+    printf("  --id <project id>            Specify a project id\n");
+    printf("  --type <package|template>    Specify a project type (default = \"application\")\n");
+    printf("  --language <language>        Specify a language for project (default = \"c\")\n");
+    printf("  --artefact <binary>          Specify a binary file for project\n");
+    printf("  -i,--includes <include path> Specify an include path for project\n");
+    printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
@@ -276,6 +278,7 @@ int bake_parse_args(
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "template", type = BAKE_TEMPLATE);
             ARG(0, "test", is_test = true);
+            ARG(0, "private", private = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG('o', NULL, output_dir = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
@@ -379,7 +382,7 @@ bake_project *bake_project_from_cmdline(
     project->type = type;
     project->artefact = ut_strdup(artefact);
     project->path = ut_strdup(path);
-    project->public = true;
+    project->public = !private;
     project->freshly_baked = true;
     project->language = ut_strdup(language);
     if (includes) {
@@ -577,8 +580,6 @@ int bake_new_project(
             free(project->language);
             project->language = ut_strdup("c");
         }
-
-        project->public = true;
     }
 
     /* Setup all project files, include invoking driver */
