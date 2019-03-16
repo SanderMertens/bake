@@ -47,6 +47,7 @@ const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
 const char *template = NULL;
+const char *output_dir = NULL;
 
 /* Command specific parameters */
 const char *export_expr = NULL;
@@ -102,6 +103,7 @@ void bake_usage(void)
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
     printf("  -t [id]                      Specify template for new project\n");
+    printf("  -o [path]                    Specify output directory for new projects\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -275,6 +277,7 @@ int bake_parse_args(
             ARG(0, "template", type = BAKE_TEMPLATE);
             ARG(0, "test", is_test = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
+            ARG('o', NULL, output_dir = argv[i + 1]; i ++);
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
@@ -476,7 +479,12 @@ int bake_new_project(
 
     if (path && strcmp(path, ".")) {
         /* Project id was parsed as path */
-        char *project_path = ut_strdup(path);
+        char *project_path;
+        if (output_dir) {
+            project_path = ut_asprintf("%s"UT_OS_PS"%s", output_dir, path);
+        } else {
+            project_path = ut_strdup(path);
+        }
 
         /* Is this a test project for an existing bake project */
         if (!is_test) {
