@@ -997,7 +997,6 @@ int bake_run_template(
     }
 
     if (ut_file_test(tmp_path) == 1) {
-        printf("delete tmp path %s\n", tmp_path);
         ut_rm(tmp_path);
     }
 
