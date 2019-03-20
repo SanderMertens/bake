@@ -248,7 +248,7 @@ extern int8_t UT_LOG_BACKTRACE;
 
 UT_EXPORT
 void ut_init(
-    char *appName);
+    const char *appName);
 
 UT_EXPORT
 void ut_deinit(void);

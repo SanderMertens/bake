@@ -847,15 +847,17 @@ void* ut_load_sym(
     void *result = NULL;
     bool used_dlopen = false;
 
-    if (!*dl_out) {
-        const char *lib = ut_locate(package, dl_out, UT_LOCATE_LIB);
-        if (!*dl_out) {
+    ut_dl dl = dl_out ? *dl_out : NULL;
+
+    if (!dl) {
+        const char *lib = ut_locate(package, &dl, UT_LOCATE_LIB);
+        if (!dl) {
             if (lib) {
-                *dl_out = ut_dl_open(lib);
+                dl = ut_dl_open(lib);
                 used_dlopen = true;
             }
         }
-        if (!*dl_out) {
+        if (!dl) {
             if (used_dlopen) {
                 char *err = (char*)ut_dl_error();
                 ut_throw("failed to load library '%s': %s", lib, err);
@@ -866,8 +868,8 @@ void* ut_load_sym(
         }
     }
 
-    if (*dl_out) {
-        result = ut_dl_sym(*dl_out, symbol);
+    if (dl) {
+        result = ut_dl_sym(dl, symbol);
         if (!result) {
             char *err = (char*)ut_dl_error();
             if (err) {
@@ -878,6 +880,10 @@ void* ut_load_sym(
         }
     } else {
         ut_throw("failed to load '%s'", package);
+    }
+
+    if (dl_out) {
+        *dl_out = dl;
     }
 
     return result;

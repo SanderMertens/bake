@@ -28,12 +28,12 @@ int8_t UT_LOG_BACKTRACE = 0;
 ut_mutex_s ut_log_lock;
 ut_mutex_s UT_LOAD_LOCK;
 
-extern char *ut_log_appName;
+extern const char *ut_log_appName;
 
 ut_tls UT_KEY_THREAD_STRING;
 
 void ut_init(
-    char *appName)
+    const char *appName)
 {
     ut_log_appName = appName;
 
