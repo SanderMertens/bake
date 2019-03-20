@@ -85,6 +85,10 @@ void init(
     bake_config *config,
     bake_project *project)
 {
+    /* Let code detect whether it is being built by bake or not */
+    driver->set_attr_array("cflags", "-D__BAKE__");
+    driver->set_attr_array("cxxflags", "-D__BAKE__");
+
     if (!driver->get_attr("cpp-standard")) {
         driver->set_attr_string("cpp-standard", "c++0x");
     }
