@@ -305,7 +305,7 @@ ut_proc run_exec(
 
         if (argc) {
             if (argv) {
-                for (i = 0; i < argc; i ++) {
+                for (i = 1; i < argc; i ++) {
                     local_argv[i] = argv[i - 1];
                 }
             }
