@@ -160,22 +160,27 @@ int16_t bake_update_dependency_list(
             }
         }
 
-        const char *src = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
-        if (src) {
+        const char *src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        if (src_path) {
             /* If source is in bake environment, pull latest version */
-            bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src);
-            git_pull(src);
+            bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src_path);
+            git_pull(src_path);
         } else {
             /* If source is a project under development, just build it */
-            src = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
-            if (src) {
-                bake_message(UT_LOG, "note", "#[green]package#[reset] %s found in '%s' (in dev tree, not pulling)", dep, src);
+            src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
+            if (src_path) {
+                bake_message(UT_LOG, 
+                    "note", 
+                    "#[green]package#[reset] %s found in '%s' (in dev tree, not pulling)", 
+                    dep, src_path);
             }
         }
 
-        if (src) {
-            bake_project *dep_project = bake_project_new(src, config);
-            bake_crawler_add(config, dep_project);
+        if (src_path) {
+            bake_project *dep_project = bake_project_new(src_path, config);
+            if (bake_crawler_search(config, src_path) == -1) {
+                goto error;
+            }           
             ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
         } else {
             if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
@@ -233,7 +238,9 @@ int16_t bake_update(
 
     ut_try(bake_update_dependencies(config, base_url, project), NULL);
 
-    bake_crawler_add(config, project);
+    if (bake_crawler_search(config, src_path) == -1) {
+        goto error;
+    }
 
     free(full_url);
     free(base_url);
@@ -270,7 +277,10 @@ int16_t bake_clone(
     }
 
     ut_try( bake_update_dependencies(config, base_url, project), NULL);
-    ut_try( bake_crawler_add(config, project), NULL);
+
+    if (bake_crawler_search(config, src_path) == -1) {
+        goto error;
+    }
 
     free(full_url);
     free(base_url);
