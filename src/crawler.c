@@ -334,6 +334,7 @@ int16_t bake_crawler_crawl(
                     !strcmp(file, "bin") ||
                     !strcmp(file, "install") ||
                     !strcmp(file, "examples") ||
+                    !strcmp(file, "bake") ||
                     !strcmp(file, ".bake_cache") ||
                     (p && bake_project_should_ignore(p, file)))
                 {
