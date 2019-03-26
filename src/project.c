@@ -704,6 +704,13 @@ bake_attr* bake_project_set_attr_array(
         attr->name = ut_strdup(name);
         attr->kind = BAKE_ARRAY;
         attr->is.array = ut_ll_new();
+
+        bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+        if (!driver->attributes) {
+            driver->attributes = ut_ll_new();
+        }
+
+        ut_ll_append(driver->attributes, attr);
     }
 
     if (attr->kind != BAKE_ARRAY) {
