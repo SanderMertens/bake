@@ -16,6 +16,8 @@ typedef struct bake_test_case {
 
 typedef struct bake_test_suite {
     const char *id;
+    void (*setup)(void);
+    void (*teardown)(void);
     uint32_t testcase_count;
     uint32_t assert_count;
     bake_test_case *testcases;

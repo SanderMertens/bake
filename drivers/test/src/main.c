@@ -50,6 +50,16 @@ int generate_testcase_fwd_decls(
 
         ut_code_write(src, "// Testsuite '%s'\n", id);
 
+        int has_setup = json_object_get_boolean(suite, "setup");
+        if (has_setup && has_setup != -1) {
+            ut_code_write(src, "void %s_setup(void);\n", id);
+        }
+
+        int has_teardown = json_object_get_boolean(suite, "teardown");
+        if (has_teardown && has_teardown != -1) {
+            ut_code_write(src, "void %s_teardown(void);\n", id);
+        }    
+
         JSON_Array *testcases = json_object_get_array(suite, "testcases");
         uint32_t t, count = json_array_get_count(testcases);
 
@@ -89,6 +99,17 @@ int generate_suite_data(
         ut_code_indent(src);
         ut_code_write(src, ".id = \"%s\",\n", id);
         ut_code_write(src, ".testcase_count = %d,\n", count);
+
+        int has_setup = json_object_get_boolean(suite, "setup");
+        if (has_setup && has_setup != -1) {
+            ut_code_write(src, ".setup = %s_setup,\n", id);
+        }
+
+        int has_teardown = json_object_get_boolean(suite, "teardown");
+        if (has_teardown && has_teardown != -1) {
+            ut_code_write(src, ".teardown = %s_teardown,\n", id);
+        }    
+
         ut_code_write(src, ".testcases = (bake_test_case[]){");
         ut_code_indent(src);
 
@@ -241,6 +262,16 @@ int generate_suite(
     }
 
     cdiff_file_write(suite_file, "#include <include/%s.h>\n", project->id_base);
+
+    int has_setup = json_object_get_boolean(suite, "setup");
+    if (has_setup && has_setup != -1) {
+        generate_testcase(driver, config, project, id, "setup", suite_file);
+    }
+
+    int has_teardown = json_object_get_boolean(suite, "teardown");
+    if (has_teardown && has_teardown != -1) {
+        generate_testcase(driver, config, project, id, "teardown", suite_file);
+    }    
 
     if (cases) {
         uint32_t i, count = json_array_get_count(cases);

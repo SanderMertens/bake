@@ -57,6 +57,10 @@ int bake_test_run_single_test(
             bake_test_case *test = &suite->testcases[t];
 
             if (!strcmp(test->id, case_id)) {
+                if (suite->setup) {
+                    suite->setup();
+                }
+
                 current_testsuite = suite;
                 current_testcase = test;
                 suite->assert_count = 0;
@@ -65,6 +69,10 @@ int bake_test_run_single_test(
                     test_empty();
                 }
                 found = true;
+
+                if (suite->teardown) {
+                    suite->teardown();
+                }
             }
         }
     }
