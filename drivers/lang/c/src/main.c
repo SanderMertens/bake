@@ -111,6 +111,7 @@ void init(
         driver->set_attr_bool("precompile-header", false);
 #endif
     }
+
     if (!driver->get_attr("static")) {
         driver->set_attr_bool("static", false);
     }
@@ -136,6 +137,10 @@ void init(
     char *pch_dir = ut_asprintf("%s"UT_OS_PS"include", tmp_dir);
     driver->set_attr_string("pch-dir", pch_dir);
     free(pch_dir);
+
+    if (!strcmp(driver->get_attr("c-standard")->is.string, "c89")) {
+        driver->set_attr_array("cflags", "-D__BAKE_LEGACY__");
+    }
     
     free(tmp_dir);
 }

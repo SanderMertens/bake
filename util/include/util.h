@@ -262,13 +262,11 @@ const char* ut_appname();
 
 /* Base includes */
 #include "parson.h"
-#include "os.h"
 #include "strbuf.h"
 #include "iter.h"
 #include "ll.h"
 #include "rb.h"
 #include "string.h"
-#include "os.h"
 #include "time.h"
 #include "dl.h"
 #include "code.h"
@@ -285,12 +283,16 @@ const char* ut_appname();
 #include "file.h"
 #include "env.h"
 #include "memory.h"
-#include "log.h"
 #include "proc.h"
 #include "expr.h"
 #include "jsw_rbtree.h"
 #include "path.h"
 #include "load.h"
 #include "version.h"
+
+#ifndef __BAKE_LEGACY__
+#include "log.h"
+#include "os.h"
+#endif
 
 #endif /* UT_BASE_H */

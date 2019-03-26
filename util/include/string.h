@@ -56,7 +56,7 @@ int strnicmp(
     const char *str1,
     int length,
     const char *str2);
-#endif // !_WIN32
+#endif
 
 /** Compare strings insensitive of case until specified character is found.
  * This function is useful when comparing tokens in a string that are separated
