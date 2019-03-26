@@ -318,6 +318,15 @@ UT_EXPORT
 int ut_cond_signal(
     ut_cond cond);
 
+/** Broadcast condition variable.
+ *
+ * @param cond Pointer to initialized condition variable.
+ * @return 0 if success, non-zero if failed.
+ */
+UT_EXPORT
+int ut_cond_broadcast(
+    ut_cond cond);
+
 /** Wait for condition variable.
  *
  * @param cond Pointer to initialized condition variable.

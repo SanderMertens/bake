@@ -350,6 +350,16 @@ int ut_cond_signal(
     return result;
 }
 
+int ut_cond_broadcast(
+    ut_cond cond)
+{
+    int result = 0;
+    if ((result = pthread_cond_broadcast(&cond->cond))) {
+        ut_throw("cond_broadcast failed: %s", strerror(result));
+    }
+    return result;
+}
+
 /* Wait for condition variable */
 int ut_cond_wait(
     ut_cond cond,

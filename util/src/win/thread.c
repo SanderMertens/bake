@@ -286,6 +286,14 @@ int ut_cond_signal(
     return 0;
 }
 
+/* Broadcast condition variable */
+int ut_cond_broadcast(
+    ut_cond cond)
+{
+    WakeAllConditionVariable(cond->cond);
+    return 0;
+}
+
 /* Wait for condition variable */
 int ut_cond_wait(
     ut_cond cond, ut_mutex mutex)
