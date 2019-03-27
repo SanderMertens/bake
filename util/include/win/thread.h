@@ -23,10 +23,6 @@ typedef struct pthread_tag {
     HANDLE handle;
 } pthread_t;
 
-typedef struct pthread_mutex_tag {
-    HANDLE handle;
-} pthread_mutex_t;
-
 /* stub */
 typedef struct pthread_attr_tag {
     int attr;
@@ -37,26 +33,24 @@ typedef struct pthread_mutexattr_tag {
 } pthread_mutexattr_t;
 
 typedef DWORD pthread_key_t;
-typedef PSRWLOCK pthread_rwlock_t;
-typedef PCONDITION_VARIABLE pthread_cond_t;
 
 typedef pthread_key_t ut_tls;
 
 typedef struct ut_mutex_s {
-    pthread_mutex_t mutex;
+    CRITICAL_SECTION mutex;
 } ut_mutex_s;
 
 typedef struct ut_rwmutex_s {
-    pthread_rwlock_t mutex;
+    SRWLOCK mutex;
 } ut_rwmutex_s;
 
 typedef struct ut_cond_s {
-    pthread_cond_t cond;
+    CONDITION_VARIABLE cond;
 } ut_cond_s;
 
 typedef struct ut_sem_s {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    ut_mutex_s mutex;
+    ut_cond_s cond;
     int value;
 } ut_sem_s;
 
