@@ -162,79 +162,40 @@ int ut_mutex_new(
     struct ut_mutex_s *m)
 {
     int result = 0;
-    m->mutex.handle = CreateMutex(NULL, FALSE, NULL);
-    if (m->mutex.handle == NULL) {
-#ifdef NDEBUG
-        ut_throw("mutex_new failed");
-#else
-        ut_critical("mutex_new failed");
-#endif
-    }
+    InitializeCriticalSection(&m->mutex);
     return result;
-}
-
-int win_mutex_lock(
-    pthread_mutex_t *mutex)
-{
-    DWORD retvalue = WaitForSingleObject(mutex->handle, INFINITE);
-    if (retvalue == WAIT_OBJECT_0) {
-        return 0;
-    }
-    else {
-        return EINVAL;
-    }
 }
 
 int ut_mutex_lock(
     ut_mutex mutex)
 {
-    int result;
-    if ((result = win_mutex_lock(&mutex->mutex))) {
-#ifdef NDEBUG
-        ut_throw("mutex_lock failed");
-#else
-        ut_critical("mutex_lock failed");
-#endif
-    }
-    return result;
-}
-
-int win_mutex_unlock(
-    pthread_mutex_t *mutex)
-{
-    return !ReleaseMutex(mutex->handle);
+    EnterCriticalSection(&mutex->mutex);
+    return 0;
 }
 
 int ut_mutex_unlock(
-    ut_mutex mutex) {
-
-    return win_mutex_unlock(&mutex->mutex);
-}
-
-int win_mutex_destroy(
-    pthread_mutex_t *mutex)
+    ut_mutex mutex) 
 {
-    return !CloseHandle(mutex->handle);
+    LeaveCriticalSection(&mutex->mutex);
+    return 0;
 }
 
 int ut_mutex_free(
     ut_mutex mutex)
 {
-    return !CloseHandle(mutex->mutex.handle);
+    DeleteCriticalSection(&mutex->mutex);
+    return 0;
 }
 
 int ut_mutex_try(
     ut_mutex mutex)
 {
-    DWORD retvalue = WaitForSingleObject(mutex->mutex.handle, 0);
-    if (retvalue == WAIT_OBJECT_0) {
+    BOOL retvalue = TryEnterCriticalSection(&mutex->mutex);
+    if (retvalue) {
         return 0;
     }
-    else if (retvalue == WAIT_TIMEOUT) {
-        return EBUSY;
-    }
     else {
-        return EINVAL;
+        return EBUSY;
     }
 }
 
@@ -242,7 +203,7 @@ int ut_mutex_try(
 int ut_rwmutex_new(
     struct ut_rwmutex_s *m)
 {
-    InitializeSRWLock(m->mutex);
+    InitializeSRWLock(&m->mutex);
     return 0;
 }
 
@@ -258,7 +219,7 @@ int ut_rwmutex_free(
 int ut_rwmutex_read(
     ut_rwmutex mutex)
 {
-    AcquireSRWLockShared((PSRWLOCK)&mutex->mutex);
+    AcquireSRWLockShared(&mutex->mutex);
     return 0;
 }
 
@@ -266,7 +227,7 @@ int ut_rwmutex_read(
 int ut_rwmutex_write(
     ut_rwmutex mutex)
 {
-    AcquireSRWLockExclusive((PSRWLOCK)&mutex->mutex);
+    AcquireSRWLockExclusive(&mutex->mutex);
     return 0;
 }
 
@@ -274,7 +235,7 @@ int ut_rwmutex_write(
 int ut_cond_new(
     struct ut_cond_s *cond)
 {
-    InitializeConditionVariable(cond->cond);
+    InitializeConditionVariable(&cond->cond);
     return 0;
 }
 
@@ -282,7 +243,7 @@ int ut_cond_new(
 int ut_cond_signal(
     ut_cond cond)
 {
-    WakeConditionVariable(cond->cond);
+    WakeConditionVariable(&cond->cond);
     return 0;
 }
 
@@ -290,7 +251,7 @@ int ut_cond_signal(
 int ut_cond_broadcast(
     ut_cond cond)
 {
-    WakeAllConditionVariable(cond->cond);
+    WakeAllConditionVariable(&cond->cond);
     return 0;
 }
 
@@ -300,7 +261,7 @@ int ut_cond_wait(
 {
     int result = 0;
 
-    if (!SleepConditionVariableCS(cond->cond, (PCRITICAL_SECTION)&mutex->mutex, INFINITE)) {
+    if (!SleepConditionVariableCS(&cond->cond, (PCRITICAL_SECTION)&mutex->mutex, INFINITE)) {
         ut_throw("cond_wait failed");
     }
     return result;
@@ -327,7 +288,7 @@ ut_sem ut_sem_new(
     semaphore = malloc (sizeof(ut_sem_s));
     memset(semaphore, 0, sizeof(ut_sem_s));
     if (semaphore) {
-        semaphore->mutex.handle = CreateSemaphore(NULL, MAX_SEM_COUNT, MAX_SEM_COUNT, NULL);
+        ut_mutex_new(&semaphore->mutex);
         semaphore->value = initValue;
     }
     return (ut_sem)semaphore;
@@ -337,12 +298,12 @@ ut_sem ut_sem_new(
 int ut_sem_post(
     ut_sem semaphore)
 {
-    win_mutex_lock(&semaphore->mutex);
+    ut_mutex_lock(&semaphore->mutex);
     semaphore->value++;
     if(semaphore->value > 0) {
-        WakeConditionVariable(semaphore->cond);
+        ut_cond_signal(&semaphore->cond);
     }
-    win_mutex_unlock(&semaphore->mutex);
+    ut_mutex_unlock(&semaphore->mutex);
     return 0;
 }
 
@@ -350,12 +311,12 @@ int ut_sem_post(
 int ut_sem_wait(
     ut_sem semaphore)
 {
-    win_mutex_lock(&semaphore->mutex);
+    ut_mutex_lock(&semaphore->mutex);
     while(semaphore->value <= 0) {
-        SleepConditionVariableCS(semaphore->cond, (PCRITICAL_SECTION)&semaphore->mutex, INFINITE);
+        ut_cond_wait(&semaphore->cond, &semaphore->mutex);
     }
     semaphore->value--;
-    win_mutex_unlock(&semaphore->mutex);
+    ut_mutex_free(&semaphore->mutex);
     return 0;
 }
 
@@ -364,7 +325,7 @@ int ut_sem_tryWait(
     ut_sem semaphore)
 {
     int result;
-    win_mutex_lock(&semaphore->mutex);
+    ut_mutex_lock(&semaphore->mutex);
     if(semaphore->value > 0) {
         semaphore->value--;
         result = 0;
@@ -372,7 +333,7 @@ int ut_sem_tryWait(
         errno = EAGAIN;
         result = -1;
     }
-    win_mutex_unlock(&semaphore->mutex);
+    ut_mutex_unlock(&semaphore->mutex);
     return result;
 }
 
@@ -387,7 +348,7 @@ int ut_sem_value(
 int ut_sem_free(
     ut_sem semaphore)
 {
-    CloseHandle(semaphore->mutex.handle);
+    ut_mutex_free(&semaphore->mutex);
     free(semaphore);
     return 0;
 }
