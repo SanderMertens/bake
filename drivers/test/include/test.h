@@ -23,6 +23,7 @@ typedef struct bake_test_suite {
     bake_test_case *testcases;
 } bake_test_suite;
 
+BAKE_TEST_EXPORT
 int bake_test_run(
     const char *test_id,
     int argc, 
@@ -30,12 +31,14 @@ int bake_test_run(
     bake_test_suite *suites,
     uint32_t suite_count);
 
+BAKE_TEST_EXPORT
 void _test_assert(
     bool cond,
     const char *cond_str,
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_int(
     uint64_t v1,
     uint64_t v2,
@@ -44,6 +47,7 @@ void _test_int(
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_flt(
     double v1,
     double v2,
@@ -52,6 +56,7 @@ void _test_flt(
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_str(
     const char *v1,
     const char *v2,
@@ -60,18 +65,21 @@ void _test_str(
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_null(
     void *v,
     const char *str_v,
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_not_null(
     void *v,
     const char *str_v,
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
 void _test_ptr(
     void *v1,
     void *v2,
