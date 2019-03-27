@@ -115,6 +115,13 @@ void init(
     if (!driver->get_attr("static")) {
         driver->set_attr_bool("static", false);
     }
+    if (driver->get_attr("static")->is.boolean) {
+        char *value = ut_asprintf("-D%s_STATIC", project->id_underscore);
+        driver->set_attr_array("cflags", value);
+        driver->set_attr_array("cxxflags", value);
+        free(value);
+    }
+
     if (!driver->get_attr("export-symbols")) {
         driver->set_attr_bool("export-symbols", false);
     }
@@ -367,15 +374,21 @@ void generate(
 
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
-      "#if %s_IMPL && defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllexport)\n"
-      "#elif %s_IMPL\n"
-      "#define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
-      "#elif defined _MSC_VER\n"
-      "#define %s_EXPORT __declspec(dllimport)\n"
-      "#else\n"
-      "#define %s_EXPORT\n"
-      "#endif\n", id_upper, id_upper, id_upper, id_upper, id_upper, id_upper);
+      "#ifndef %s_STATIC\n"
+      "  #if %s_IMPL && defined _MSC_VER\n"
+      "    #define %s_EXPORT __declspec(dllexport)\n"
+      "  #elif %s_IMPL\n"
+      "    #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
+      "  #elif defined _MSC_VER\n"
+      "    #define %s_EXPORT __declspec(dllimport)\n"
+      "  #else\n"
+      "    #define %s_EXPORT\n"
+      "  #endif\n"
+      "#elif\n"
+      "  #define %s_EXPORT\n"
+      "#endif\n",
+        id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, 
+        id_upper);
 
     fprintf(f, "%s", "\n#endif\n\n");
     fclose(f);
