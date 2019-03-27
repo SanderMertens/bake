@@ -384,7 +384,7 @@ void generate(
       "  #else\n"
       "    #define %s_EXPORT\n"
       "  #endif\n"
-      "#elif\n"
+      "#else\n"
       "  #define %s_EXPORT\n"
       "#endif\n",
         id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, 
