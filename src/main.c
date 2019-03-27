@@ -266,7 +266,7 @@ int bake_parse_args(
             bool parsed = false;
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
-            ARG(0, "strict", strict = true; i ++);
+            ARG(0, "strict", strict = true;);
             ARG(0, "optimize", optimize = true; i ++);
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
