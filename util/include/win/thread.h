@@ -60,8 +60,6 @@ typedef struct ut_sem_s {
     int value;
 } ut_sem_s;
 
-#define sleep(num) Sleep(1000*(num))
-
 #ifdef __cplusplus
 }
 #endif
