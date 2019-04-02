@@ -118,7 +118,8 @@ void add_flags(
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                ut_strbuf_append(cmd, " %s", ut_iter_next(&it));
+                bake_attr *el = ut_iter_next(&it);
+                ut_strbuf_append(cmd, " %s", el->is.string);
             }
         }
     } else {
@@ -127,7 +128,8 @@ void add_flags(
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                ut_strbuf_append(cmd, " %s", ut_iter_next(&it));
+                bake_attr *el = ut_iter_next(&it);
+                ut_strbuf_append(cmd, " %s", el->is.string);
             }
         }
     }

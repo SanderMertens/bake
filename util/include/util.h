@@ -54,7 +54,6 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +82,7 @@
 #include <pthread.h>
 #include <ftw.h>
 #include <fcntl.h>
+#include <stdint.h>
 
 #ifdef __MACH__
 #include <mach/clock.h>

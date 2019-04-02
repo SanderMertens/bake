@@ -41,7 +41,7 @@
   #else
     #define BAKE_TEST_EXPORT
   #endif
-#elif
+#else
   #define BAKE_TEST_EXPORT
 #endif
 

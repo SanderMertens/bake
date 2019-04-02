@@ -727,7 +727,10 @@ bake_attr* bake_project_set_attr_array(
         }
     }
 
-    ut_ll_append(attr->is.array, ut_strdup(value));
+    bake_attr *attr_el = ut_calloc(sizeof(bake_attr));
+    attr_el->kind = BAKE_STRING;
+    attr_el->is.string = ut_strdup(value);
+    ut_ll_append(attr->is.array, attr_el);
 
     return attr;
 }
