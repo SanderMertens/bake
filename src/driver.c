@@ -596,9 +596,39 @@ void bake_driver_import_cb(
     }
 }
 
+static
+bake_driver* bake_driver_lookup_driver_cb(
+    const char *id)
+{
+    bake_driver *requested_driver = bake_driver_get_intern(id, NULL);
+    if (!requested_driver) {
+        bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
+        driver->error = true;
+    }
+    return requested_driver;
+}
+
+static
+bake_driver* bake_driver_current_driver_cb(void)
+{
+    return ut_tls_get(BAKE_DRIVER_KEY);
+}
+
+static
+bake_driver* bake_driver_set_cb(
+    bake_driver *driver)
+{
+    bake_driver *result = ut_tls_get(BAKE_DRIVER_KEY);
+    ut_tls_set(BAKE_DRIVER_KEY, driver);
+    return result;
+}
+
 /* Initialize driver API */
 bake_driver_api bake_driver_api_impl = {
     .import = bake_driver_import_cb,
+    .lookup_driver = bake_driver_lookup_driver_cb,
+    .current_driver = bake_driver_current_driver_cb,
+    .set_driver = bake_driver_set_cb,
     .pattern = bake_driver_pattern_cb,
     .file = bake_driver_file_cb,
     .rule = bake_driver_rule_cb,

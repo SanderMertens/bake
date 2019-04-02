@@ -131,6 +131,17 @@ struct bake_driver_api {
     void (*import)(
         const char *driver);
 
+    /* Lookup another driver by name */
+    bake_driver* (*lookup_driver)(
+        const char *driver);
+    
+    /* Get pointer to current driver */
+    bake_driver* (*current_driver)(void);
+
+    /* Switch API to (temporarily) control another driver */
+    bake_driver* (*set_driver)(
+        bake_driver *driver);
+
     /* Create a pattern */
     void (*pattern)(
         const char *name,
