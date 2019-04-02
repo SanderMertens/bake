@@ -63,6 +63,7 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <versionhelpers.h>
+#include <win/stdint.h>
 #else
 #include <fnmatch.h>
 #include <inttypes.h>
