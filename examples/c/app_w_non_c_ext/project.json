@@ -1,0 +1,8 @@
+{
+    "id": "examples.c.app_w_non_c_ext",
+    "type": "application",
+    "value": {
+        "author": "John Doe",
+        "description": "Photo sharing for project managers"
+    }
+}
