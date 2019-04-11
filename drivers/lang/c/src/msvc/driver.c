@@ -107,7 +107,8 @@ void compile_src(
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                ut_strbuf_append(&cmd, " %s", ut_iter_next(&it));
+                bake_attr *attr = ut_iter_next(&it);
+                ut_strbuf_append(&cmd, " %s", attr->is.string);
             }
         }
     } else {
@@ -116,7 +117,8 @@ void compile_src(
         if (flags_attr) {
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
-                ut_strbuf_append(&cmd, " %s", ut_iter_next(&it));
+                bake_attr *attr = ut_iter_next(&it);
+                ut_strbuf_append(&cmd, " %s", attr->is.string);
             }
         }
     }
