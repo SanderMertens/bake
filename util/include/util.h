@@ -100,7 +100,7 @@ extern "C" {
 #ifndef _WIN32
 #define ut_fnmatch(pattern, string) fnmatch(pattern, string, 0)
 #else
-#define ut_fnmatch(pattern, string) PathMatchSpecA(string, pattern)
+#define ut_fnmatch(pattern, string) !PathMatchSpecA(string, pattern)
 #endif
 
 /*
