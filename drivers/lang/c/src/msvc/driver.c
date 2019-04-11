@@ -75,7 +75,7 @@ void compile_src(
     }
 
     /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\"%s\"", project->id);
+    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\\\"%s\\\"", project->id);
 
     /* This macro is only set for source files of this project, and can be used
      * to exclude header statements for dependencies */
