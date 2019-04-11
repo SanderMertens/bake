@@ -240,24 +240,7 @@ int bake_parse_args(
     const char *argv[])
 {
     int i = 1;
-
-    /* Parse action (if any) */
-
-    const char *arg = argv[i];
-    if (arg && arg[0] != '-') {
-        if (!strcmp(arg, "init")) {
-            ut_warning("bake init command deprecated, use bake new");
-            arg = "new";
-        } else if (!strcmp(arg, "locate")) {
-            ut_warning("bake locate command deprecated, use bake info");
-            arg = "info";
-        }
-        if (!bake_init_action(arg)) {
-            action = arg;
-            i ++;
-            arg = argv[i];
-        }
-    }
+    bool action_set = false;
 
     /* Parse remainder of arguments */
 
@@ -300,7 +283,22 @@ int bake_parse_args(
                 return -1;
             }
         } else {
-            if (!strcmp(action, "foreach")) {
+            if (!action_set) {
+                const char *arg = argv[i];
+                if (!strcmp(arg, "init")) {
+                    ut_warning("bake init command deprecated, use bake new");
+                    arg = "new";
+                } else if (!strcmp(arg, "locate")) {
+                    ut_warning("bake locate command deprecated, use bake info");
+                    arg = "info";
+                }
+                if (!bake_init_action(arg)) {
+                    action = arg;
+                    action_set = true;
+                } else {
+                    path = arg;
+                }
+            } else if (!strcmp(action, "foreach")) {
                  if (!foreach_cmd) {
                     foreach_cmd = argv[i];
                 } else if (!strcmp(path, ".")) {
