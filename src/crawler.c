@@ -495,7 +495,7 @@ int16_t bake_crawler_build_project(
     }
 
     if (action(config, p)) {
-        bake_message(UT_ERROR, "error", "bake interrupted by %s in %s", p->id, p->path);
+        bake_message(UT_ERROR, "error", "build interrupted for %s in %s", p->id, p->path);
         goto error;
     }
 
@@ -528,6 +528,7 @@ int16_t bake_crawler_walk(
 {
     ut_ll readyForBuild = ut_ll_new();
     uint32_t built = 0;
+    int16_t result = 0;
 
     /* Initialize dependency administration */
     ut_try( bake_crawler_finalize(config), NULL);
@@ -557,9 +558,12 @@ int16_t bake_crawler_walk(
     /* Walk projects (when dependencies are resolved the list will populate) */
     bake_project *p;
     while ((p = ut_ll_takeFirst(readyForBuild))) {
-        ut_try (
-            bake_crawler_build_project(
-                config, action_name, action, p, readyForBuild), NULL);
+        if (bake_crawler_build_project(
+                config, action_name, action, p, readyForBuild))
+        {
+            ut_error("project '%s' built with errors, skipping", p->id);
+            result = -1;
+        }
         built ++;
     }
 
@@ -573,7 +577,7 @@ int16_t bake_crawler_walk(
 
     ut_ll_free(readyForBuild);
 
-    return 0;
+    return result;
 error:
     return -1;
 }
