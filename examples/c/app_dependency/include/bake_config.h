@@ -17,6 +17,10 @@
 #ifndef EXAMPLES_C_APP_DEPENDENCY_BAKE_CONFIG_H
 #define EXAMPLES_C_APP_DEPENDENCY_BAKE_CONFIG_H
 
+/* Generated includes are specific to the bake environment. If a project is not
+ * built with bake, it will have to provide alternative methods for including
+ * its dependencies. */
+#ifdef __BAKE__
 /* Headers of public dependencies */
 #include <examples.c.pkg_helloworld>
 
@@ -24,16 +28,21 @@
 #ifdef EXAMPLES_C_APP_DEPENDENCY_IMPL
 /* No dependencies */
 #endif
+#endif
 
 /* Convenience macro for exporting symbols */
-#if EXAMPLES_C_APP_DEPENDENCY_IMPL && defined _MSC_VER
-#define EXAMPLES_C_APP_DEPENDENCY_EXPORT __declspec(dllexport)
-#elif EXAMPLES_C_APP_DEPENDENCY_IMPL
-#define EXAMPLES_C_APP_DEPENDENCY_EXPORT __attribute__((__visibility__("default")))
-#elif defined _MSC_VER
-#define EXAMPLES_C_APP_DEPENDENCY_EXPORT __declspec(dllimport)
+#ifndef EXAMPLES_C_APP_DEPENDENCY_STATIC
+  #if EXAMPLES_C_APP_DEPENDENCY_IMPL && defined _MSC_VER
+    #define EXAMPLES_C_APP_DEPENDENCY_EXPORT __declspec(dllexport)
+  #elif EXAMPLES_C_APP_DEPENDENCY_IMPL
+    #define EXAMPLES_C_APP_DEPENDENCY_EXPORT __attribute__((__visibility__("default")))
+  #elif defined _MSC_VER
+    #define EXAMPLES_C_APP_DEPENDENCY_EXPORT __declspec(dllimport)
+  #else
+    #define EXAMPLES_C_APP_DEPENDENCY_EXPORT
+  #endif
 #else
-#define EXAMPLES_C_APP_DEPENDENCY_EXPORT
+  #define EXAMPLES_C_APP_DEPENDENCY_EXPORT
 #endif
 
 #endif
