@@ -1094,8 +1094,6 @@ void ut_load_unload(
     ut_dl dl;
     ut_iter iter;
 
-    UT_UNUSED(ctx);
-
     /* Free loaded administration. Always happens from mainthread, so no lock
      * required. */
 
@@ -1115,10 +1113,12 @@ void ut_load_unload(
     }
 
     /* Free handlers */
-    while ((h = ut_ll_takeFirst(fileHandlers))) {
-        free(h);
+    if (fileHandlers) {
+        while ((h = ut_ll_takeFirst(fileHandlers))) {
+            free(h);
+        }
+        ut_ll_free(fileHandlers);
     }
-    ut_ll_free(fileHandlers);
 
     /* Free libraries */
     if (libraries) {
