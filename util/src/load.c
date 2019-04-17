@@ -840,9 +840,9 @@ error:
 }
 
 void* ut_load_sym(
-    char *package,
+    const char *package,
     ut_dl *dl_out,
-    char *symbol)
+    const char *symbol)
 {
     void *result = NULL;
     bool used_dlopen = false;
@@ -892,9 +892,9 @@ error:
 }
 
 void(*ut_load_proc(
-    char *package,
+    const char *package,
     ut_dl *dl_out,
-    char *symbol))(void)
+    const char *symbol))(void)
 {
     return (void(*)(void))(uintptr_t)ut_load_sym(package, dl_out, symbol);
 }
@@ -926,48 +926,6 @@ int ut_file_loader(
     }
 
     return result;
-}
-
-void ut_loaderOnExit(
-    void* ctx)
-{
-    struct ut_fileHandler* h;
-    ut_dl dl;
-    ut_iter iter;
-
-    UT_UNUSED(ctx);
-
-    /* Free loaded administration. Always happens from mainthread, so no lock
-     * required. */
-
-    if (loadedAdmin) {
-        iter = ut_ll_iter(loadedAdmin);
-         while(ut_iter_hasNext(&iter)) {
-             struct ut_loaded *loaded = ut_iter_next(&iter);
-             free(loaded->id);
-             if (loaded->lib) free(loaded->lib);
-             if (loaded->app) free(loaded->app);
-             if (loaded->etc) free(loaded->etc);
-             if (loaded->include) free(loaded->include);
-             if (loaded->meta) free(loaded->meta);
-             free(loaded);
-         }
-         ut_ll_free(loadedAdmin);
-    }
-
-    /* Free handlers */
-    while ((h = ut_ll_takeFirst(fileHandlers))) {
-        free(h);
-    }
-    ut_ll_free(fileHandlers);
-
-    /* Free libraries */
-    if (libraries) {
-        while ((dl = ut_ll_takeFirst(libraries))) {
-            ut_dl_close(dl);
-        }
-        ut_ll_free(libraries);
-    }
 }
 
 /* Load a package */
@@ -1128,9 +1086,54 @@ int16_t ut_load_init(
     return 0;
 }
 
+static
+void ut_load_unload(
+    void)
+{
+    struct ut_fileHandler* h;
+    ut_dl dl;
+    ut_iter iter;
+
+    UT_UNUSED(ctx);
+
+    /* Free loaded administration. Always happens from mainthread, so no lock
+     * required. */
+
+    if (loadedAdmin) {
+        iter = ut_ll_iter(loadedAdmin);
+         while(ut_iter_hasNext(&iter)) {
+             struct ut_loaded *loaded = ut_iter_next(&iter);
+             free(loaded->id);
+             if (loaded->lib) free(loaded->lib);
+             if (loaded->app) free(loaded->app);
+             if (loaded->etc) free(loaded->etc);
+             if (loaded->include) free(loaded->include);
+             if (loaded->meta) free(loaded->meta);
+             free(loaded);
+         }
+         ut_ll_free(loadedAdmin);
+    }
+
+    /* Free handlers */
+    while ((h = ut_ll_takeFirst(fileHandlers))) {
+        free(h);
+    }
+    ut_ll_free(fileHandlers);
+
+    /* Free libraries */
+    if (libraries) {
+        while ((dl = ut_ll_takeFirst(libraries))) {
+            ut_dl_close(dl);
+        }
+        ut_ll_free(libraries);
+    }
+}
+
 /* Initialize paths necessary for loader */
 void ut_load_deinit(void)
 {
+    ut_load_unload();
+
     free(UT_HOME_PATH);
     free(UT_TARGET_PATH);
     free(UT_PLATFORM_PATH);

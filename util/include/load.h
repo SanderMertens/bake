@@ -219,9 +219,9 @@ void ut_locate_reset(
  */
 UT_EXPORT
 void* ut_load_sym(
-    char *package,
+    const char *package,
     ut_dl *dl_out,
-    char *symbol);
+    const char *symbol);
 
 /** Same as ut_load_sym, but for procedures.
  *
@@ -229,9 +229,9 @@ void* ut_load_sym(
  */
 UT_EXPORT
 void (*ut_load_proc(
-    char *package,
+    const char *package,
     ut_dl *dl_out,
-    char *symbol))(void);
+    const char *symbol))(void);
 
 /** Register a load action.
  * The `ut_load_register` function registers a load action that needs to be
