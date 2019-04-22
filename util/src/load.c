@@ -1140,9 +1140,14 @@ void ut_load_deinit(void)
     free(UT_META_PATH);
     free(UT_SRC_PATH);
     free(UT_INCLUDE_PATH);
+    free(UT_ETC_PATH);
     free(UT_TEMPLATE_PATH);
     free(UT_BIN_PATH);
     free(UT_LIB_PATH);
+
+    free(UT_JAVA_PATH);
+    free(UT_HOME_LIB_PATH);
+    free(UT_HOME_BIN_PATH);
 
     free(UT_ARCH);
     free(UT_OS);
