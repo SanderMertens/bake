@@ -987,13 +987,10 @@ int bake_run_template(
         goto error;
     }
 
-    /* Check temporary path, remove if already exists */
-    char *tmp_path = ut_envparse("$BAKE_HOME/temp/%s", path);
-    char ch, *ptr = tmp_path;
-    for (ptr = tmp_path; (ch = *ptr); ptr ++) {
-        if (ch == '.') *ptr = '-';
-    }
+    const char *repo_id = ut_locate(path, NULL, UT_LOCATE_REPO_ID);
 
+    /* Check temporary path, remove if already exists */
+    char *tmp_path = ut_envparse("$BAKE_HOME/temp/%s", repo_id);
     if (ut_file_test(tmp_path) == 1) {
         ut_rm(tmp_path);
     }

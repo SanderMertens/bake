@@ -462,54 +462,51 @@ const char* ut_locate(
     }
 
     if (loaded && loaded->tried_locating) {
-        /* Templates don't occupy the same namespace as ordinary projects */
-        if (kind != UT_LOCATE_TEMPLATE) {
-            if (!loaded->meta) {
-                ut_debug("locating project '%s' failed before", id);
-                goto error;
-            }
-        } else {
-            if (!loaded->template) {
-                ut_debug("locating template '%s' failed before", id);
-                goto error;
-            }
+        if (!loaded->repo) {
+            ut_debug("locating project '%s' failed before", id);
+            goto error;
         }
     }
 
     /* Test whether project or template project exists */
-    if (kind == UT_LOCATE_TEMPLATE) {
-        if (!loaded->template) {
-            char *tmpl_path = ut_asprintf("%s"UT_OS_PS"%s", UT_TEMPLATE_PATH, id);
-            if (ut_file_test(tmpl_path) == 1) {
-                loaded->template = tmpl_path;
-            } else {
-                ut_trace("template path '%s' not found", tmpl_path);
-                free(tmpl_path);
-                goto error;
-            }
-        }
-    } else {
-        if (!loaded->meta) {
-            char *meta_path = ut_asprintf("%s"UT_OS_PS"%s", UT_META_PATH, id);
-            if (ut_file_test(meta_path) == 1) {
-                loaded->meta = meta_path;
-
-                /* Prepare repository identifier (replaces . with -) */
-                loaded->repo = ut_strdup(id);
-                char *ptr, ch;
-                for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
-                    if (ch == '.') {
-                        *ptr = '-';
-                    }
+    if (kind != UT_LOCATE_REPO_ID) {
+        if (kind != UT_LOCATE_TEMPLATE) {
+            if (!loaded->meta) {
+                char *meta_path = ut_asprintf("%s"UT_OS_PS"%s", UT_META_PATH, id);
+                if (ut_file_test(meta_path) == 1) {
+                    loaded->meta = meta_path;
+                } else {
+                    ut_trace("project path '%s' not found", meta_path);
+                    free(meta_path);
+                    goto error;
                 }
-            } else {
-                ut_trace("template path '%s' not found", meta_path);
-                free(meta_path);
-                goto error;
+            }
+        } else {
+            if (!loaded->template) {
+                char *tmpl_path = ut_asprintf("%s"UT_OS_PS"%s", UT_TEMPLATE_PATH, id);
+                if (ut_file_test(tmpl_path) == 1) {
+                    loaded->template = tmpl_path;
+                } else {
+                    ut_trace("template path '%s' not found", tmpl_path);
+                    free(tmpl_path);
+                    goto error;
+                }
             }
         }
     }
 
+
+    if (!loaded->repo) {
+        /* Prepare repository identifier (replaces . with -) */
+        loaded->repo = ut_strdup(id);
+        char *ptr, ch;
+        for (ptr = loaded->repo; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                *ptr = '-';
+            }
+        }
+    }
+    
     /* Only try to locate packages once (until reset is called) */
     loaded->tried_locating = true; 
 
@@ -546,6 +543,9 @@ const char* ut_locate(
             loaded->tried_src = true;
         }
         result = loaded->dev;
+        break;
+    case UT_LOCATE_REPO_ID:
+        result = loaded->repo;
         break;
     case UT_LOCATE_LIB:
     case UT_LOCATE_STATIC:
