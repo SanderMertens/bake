@@ -198,7 +198,7 @@ void ut_log_embedCategories(
 
 typedef void (*ut_log_handler_cb)(
     ut_log_verbosity level,
-    char *msg,
+    const char *msg,
     void *ctx);
 
 /** Register callback that catches log messages.
