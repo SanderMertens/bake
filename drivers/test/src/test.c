@@ -404,8 +404,8 @@ void _test_not_null(
 }
 
 void _test_ptr(
-    void *v1,
-    void *v2,
+    const void *v1,
+    const void *v2,
     const char *str_v1,
     const char *str_v2,
     const char *file,
