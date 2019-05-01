@@ -59,8 +59,12 @@ char *ut_log_appName = "";
 extern ut_mutex_s ut_log_lock;
 static ut_tls UT_KEY_LOG = 0;
 
-/* List of log handlers (protected by lock) */
-static ut_ll ut_log_handlers;
+typedef struct ut_log_handler {
+    void *ctx;
+    ut_log_handler_cb cb;
+} ut_log_handler;
+
+static ut_log_handler log_handler;
 
 /* These global variables are shared across threads and are *not* protected by
  * a mutex. Libraries should not invoke functions that touch these, and an
@@ -128,15 +132,6 @@ typedef struct ut_log_tlsData {
     void *stack_marker;
 } ut_log_tlsData;
 
-struct ut_log_handler {
-    ut_log_verbosity min_level, max_level;
-    char *category_filter;
-    ut_expr_program compiled_category_filter;
-    char *auth_token;
-    void *ctx;
-    ut_log_handler_cb cb;
-};
-
 static
 ut_log_tlsData* ut_getThreadData(void){
     ut_log_tlsData* result;
@@ -155,109 +150,24 @@ ut_log_tlsData* ut_getThreadData(void){
     return result;
 }
 
-ut_log_handler ut_log_handlerRegister(
-    ut_log_verbosity min_level,
-    ut_log_verbosity max_level,
-    char* category_filter,
-    char* auth_token,
+void ut_log_handlerRegister(
     ut_log_handler_cb callback,
     void *ctx)
 {
-    struct ut_log_handler* result = malloc(sizeof(struct ut_log_handler));
-
-    result->min_level = min_level;
-    result->max_level = max_level;
-    result->category_filter = category_filter ? ut_strdup(category_filter) : NULL;
-    result->auth_token = auth_token ? ut_strdup(auth_token) : NULL;
-    result->cb = callback;
-    result->ctx = ctx;
-
-    if (result->category_filter) {
-        result->compiled_category_filter =
-            ut_expr_compile(result->category_filter, TRUE, TRUE);
-        if (!result->compiled_category_filter) {
-            ut_throw("invalid filter");
-            goto error;
-        }
-    } else {
-        result->compiled_category_filter = NULL;
-    }
-
-    if (ut_mutex_lock(&ut_log_lock)) {
-        ut_throw(NULL);
-        goto error;
-    }
-    if (!ut_log_handlers) {
-        ut_log_handlers = ut_ll_new();
-    }
-    ut_ll_append(ut_log_handlers, result);
-    if (ut_mutex_unlock(&ut_log_lock)) {
-        ut_throw(NULL);
-        goto error;
-    }
-
-    return result;
-error:
-    if (result) free(result);
-    return NULL;
+    log_handler.cb = callback;
+    log_handler.ctx = ctx;
 }
 
-void ut_log_handlerUnregister(
-    ut_log_handler cb)
-{
-    struct ut_log_handler* callback = cb;
-    if (callback) {
-        if (ut_mutex_lock(&ut_log_lock)) {
-            ut_throw(NULL);
-            ut_raise();
-        }
-        ut_ll_remove(ut_log_handlers, callback);
-        if (!ut_ll_count(ut_log_handlers)) {
-            ut_ll_free(ut_log_handlers);
-            ut_log_handlers = NULL;
-        }
-        if (ut_mutex_unlock(&ut_log_lock)) {
-            ut_throw(NULL);
-            ut_raise();
-        }
-
-        if (callback->category_filter) free(callback->category_filter);
-        if (callback->auth_token) free(callback->auth_token);
-        if (callback->compiled_category_filter) ut_expr_free(callback->compiled_category_filter);
-        free(callback);
-    }
-}
-
-bool ut_log_handlersRegistered(void) {
-    return ut_log_handlers != NULL;
+bool ut_log_handlerRegistered(void) {
+    return log_handler.cb != NULL;
 }
 
 void ut_err_notifyCallkback(
-    ut_log_handler cb,
-    char *categories[],
     ut_log_verbosity level,
     char *msg)
 {
-    struct ut_log_handler* callback = cb;
-    bool filterMatch = TRUE;
-    if (level >= callback->min_level && level <= callback->max_level) {
-        if (callback->compiled_category_filter) {
-            ut_strbuf buff = UT_STRBUF_INIT;
-            int32_t i;
-            for (i = 0; categories[i]; i++) {
-                if (i) ut_strbuf_appendstr(&buff, "/");
-                ut_strbuf_appendstr(&buff, categories[i]);
-            }
-            char *str = ut_strbuf_get(&buff);
-            if (!ut_expr_run(callback->compiled_category_filter, str)) {
-                filterMatch = FALSE;
-            }
-            free(str);
-        }
-
-        if (filterMatch) {
-            callback->cb(level, categories, msg, callback->ctx);
-        }
+    if (log_handler.cb) {
+        log_handler.cb(level, msg, log_handler.ctx);
     }
 }
 
@@ -1347,7 +1257,7 @@ ut_log_verbosity ut_logv(
 
     if (kind >= UT_LOG_LEVEL ||
         (overwrite && (UT_LOG_LEVEL - kind == 1)) ||
-        ut_log_handlers)
+        ut_log_handlerRegistered())
     {
         char* alloc = NULL;
         char buff[UT_MAX_LOG + 1];
@@ -1392,27 +1302,8 @@ ut_log_verbosity ut_logv(
             }
         }
 
-        if (ut_log_handlers) {
-            if (ut_mutex_lock(&ut_log_lock)) {
-                ut_throw(NULL);
-                ut_raise();
-            }
-            if (ut_log_handlers) {
-                ut_iter it = ut_ll_iter(ut_log_handlers);
-                while (ut_iter_hasNext(&it)) {
-                    ut_log_handler callback = ut_iter_next(&it);
-                    ut_err_notifyCallkback(
-                        callback,
-                        categories,
-                        kind,
-                        msgBody);
-                }
-            }
-            if (ut_mutex_unlock(&ut_log_lock)) {
-                ut_throw(NULL);
-                ut_raise();
-            }
-        }
+
+        ut_err_notifyCallkback(kind, msgBody);
 
         if (alloc) {
             free(alloc);
