@@ -1326,4 +1326,4 @@ plugin is loaded, and must specify the rules and patterns.
 
 ## Legal stuff
 
-Bake is licensed under the GPL3.0 license.
+Bake is licensed under the GPL3.0 license. The bake runtime (all code under the `util` directory) is licensed under the MIT license.
