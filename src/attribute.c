@@ -176,42 +176,64 @@ int16_t bake_project_func_id(
     if (!argument) {
         ut_strbuf_appendstr(buffer, package_id);
     } else if (!strcmp(argument, "base")) {
-        const char *base_id = strrchr(package_id, '.');
-        if (!base_id) {
-            base_id = package_id;
+        const char *result = strrchr(package_id, '.');
+        if (!result) {
+            result = package_id;
         } else {
-            base_id ++;
+            result ++;
         }
-        ut_strbuf_appendstr(buffer, base_id);
+        ut_strbuf_appendstr(buffer, result);
     } else if (!strcmp(argument, "upper")) {
-        char *upper = ut_strdup(package_id);
+        char *result = ut_strdup(package_id);
         char *ptr, ch;
-        for (ptr = upper; (ch = *ptr); ptr ++) {
+        for (ptr = result; (ch = *ptr); ptr ++) {
             if (ch == '.') {
                 ptr[0] = '_';
             } else {
                 ptr[0] = toupper(ch);
             }
         }
-        ut_strbuf_appendstr(buffer, upper);
+        ut_strbuf_appendstr(buffer, result);
     } else if (!strcmp(argument, "dash")) {
-        char *dash = ut_strdup(package_id);
+        char *result = ut_strdup(package_id);
         char *ptr, ch;
-        for (ptr = dash; (ch = *ptr); ptr ++) {
+        for (ptr = result; (ch = *ptr); ptr ++) {
             if (ch == '.') {
                 ptr[0] = '-';
             }
         }
-        ut_strbuf_appendstr(buffer, dash);
+        ut_strbuf_appendstr(buffer, result);
     } else if (!strcmp(argument, "underscore")) {
-        char *underscore = ut_strdup(package_id);
+        char *result = ut_strdup(package_id);
         char *ptr, ch;
-        for (ptr = underscore; (ch = *ptr); ptr ++) {
+        for (ptr = result; (ch = *ptr); ptr ++) {
             if (ch == '.') {
                 ptr[0] = '_';
             }
         }
-        ut_strbuf_appendstr(buffer, underscore);
+        ut_strbuf_appendstr(buffer, result);
+    } else if (!strcmp(argument, "camelcase")) {
+        char *result = ut_strdup(package_id);
+        char *ptr, ch;
+        for (ptr = result; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                ptr[0] = toupper(ptr[1]);
+                ptr ++;
+            }
+        }
+        ut_strbuf_appendstr(buffer, result);
+    } else if (!strcmp(argument, "pascalcase")) {
+        char *result = ut_strdup(package_id);
+        char *ptr, ch;
+        for (ptr = result; (ch = *ptr); ptr ++) {
+            if (ch == '.') {
+                ptr[0] = toupper(ptr[1]);
+                ptr ++;
+            } else if (ptr == result) {
+                ptr[0] = toupper(ch);
+            }
+        }
+        ut_strbuf_appendstr(buffer, result);
     }
 
     return 0;
