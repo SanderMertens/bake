@@ -55,6 +55,7 @@ int16_t git_pull(
 
     return 0;
 error:
+    ut_raise();
     return -1;
 }
 
@@ -182,7 +183,7 @@ int16_t bake_update_dependency_list(
                 goto error;
             }           
             ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
-        } else {
+        } else if (base_url) {
             if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
                 bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
             }
@@ -194,7 +195,12 @@ int16_t bake_update_dependency_list(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
             }
+
             free(url);
+        } else {
+            ut_throw("cannot clone unresolved dependency '%s'", dep);
+            free(dep_tmp);
+            goto error;
         }
 
         free(dep_tmp);
@@ -218,34 +224,18 @@ error:
     return -1;
 }
 
-int16_t bake_update(
+int bake_update(
     bake_config *config,
-    const char *url)
+    bake_project *project)
 {
-    char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
-    bake_project *project = NULL;
-    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
+    char *git_path = ut_asprintf("%s/.git", project->path);
 
-    bake_message(UT_LOG, "update", "'%s' in '%s'", full_url, src_path);
-
-    git_pull(src_path);
-
-    project = bake_project_new(src_path, config);
-    if (!project) {
-        ut_throw("repository '%s' is not a valid bake project", full_url);
-        goto error;
+    if (ut_file_test(git_path)) {
+        git_pull(project->path);
     }
 
-    ut_try(bake_update_dependencies(config, base_url, project), NULL);
-
-    if (bake_crawler_search(config, src_path) == -1) {
-        goto error;
-    }
-
-    free(full_url);
-    free(base_url);
-    free(src_path);
-
+    free(git_path);
+    
     return 0;
 error:
     return -1;
@@ -260,10 +250,13 @@ int16_t bake_clone(
     ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
 
     if (ut_file_test(src_path) == 1) {
-        ut_trace("project '%s' already cloned, updating instead", name);
+        ut_error("project '%s' already cloned, try 'bake update'", name);
+
         free(full_url);
+        free(base_url);
         free(src_path);
-        return bake_update(config, url);
+
+        return -1;
     } else {
         bake_message(UT_LOG, "clone", "'%s' into '%s'", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);

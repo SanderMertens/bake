@@ -200,7 +200,6 @@ int16_t bake_init_action(
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
         !strcmp(arg, "install") ||
-        !strcmp(arg, "update") ||
         !strcmp(arg, "clone"))
     {
         discover = true;
@@ -226,7 +225,7 @@ int16_t bake_init_action(
         return 0;
     }
 
-    if (!strcmp(arg, "foreach")) {
+    if (!strcmp(arg, "foreach") || !strcmp(arg, "update")) {
         discover = true;
         build = false;
         return 0;
@@ -1172,8 +1171,6 @@ int main(int argc, const char *argv[]) {
 
         if (!strcmp(action, "clone")) {
             ut_try( bake_clone(&config, path), NULL);
-        } else if (!strcmp(action, "update")) {
-            ut_try( bake_update(&config, path), NULL);
         }
 
         uint32_t count = bake_crawler_count();
@@ -1196,6 +1193,9 @@ int main(int argc, const char *argv[]) {
                 if (!strcmp(action, "foreach")) {
                     ut_try( bake_crawler_walk(
                         &config, action, bake_foreach_action), NULL);
+                } else if (!strcmp(action, "update")) {
+                    ut_try( bake_crawler_walk(
+                        &config, action, bake_update), NULL);
                 }
             }
         }

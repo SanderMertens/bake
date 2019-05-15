@@ -103,9 +103,9 @@ int16_t bake_clone(
     const char *url);
 
 /* Update from remote repository */
-int16_t bake_update(
+int bake_update(
     bake_config *config,
-    const char *url);
+    bake_project *project);
 
 /* Publish new version for repository */
 int16_t bake_publish(
