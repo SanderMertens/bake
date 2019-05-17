@@ -32,7 +32,7 @@
 
 /* Convenience macro for exporting symbols */
 #ifndef BAKE_TEST_STATIC
-  #if BAKE_TEST_IMPL && defined _MSC_VER
+  #if BAKE_TEST_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))
     #define BAKE_TEST_EXPORT __declspec(dllexport)
   #elif BAKE_TEST_IMPL
     #define BAKE_TEST_EXPORT __attribute__((__visibility__("default")))

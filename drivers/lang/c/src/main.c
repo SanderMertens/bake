@@ -375,7 +375,7 @@ void generate(
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
       "#ifndef %s_STATIC\n"
-      "  #if %s_IMPL && defined _MSC_VER\n"
+      "  #if %s_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))\n"
       "    #define %s_EXPORT __declspec(dllexport)\n"
       "  #elif %s_IMPL\n"
       "    #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
