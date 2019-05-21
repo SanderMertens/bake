@@ -64,6 +64,15 @@ int16_t cmd(
 }
 
 #ifdef _WIN32
+int16_t bake_create_upgrade_script(void)
+{
+    return 0;
+}
+
+void bake_uninstall_old(void)
+{
+}
+
 /* Create bake script for Windows */
 int16_t bake_create_script(void)
 {
@@ -105,7 +114,7 @@ int16_t bake_create_script(void)
     fprintf(f, "    cd build-Windows\\\n");
     fprintf(f, "    nmake /f bake.mak\n");
     fprintf(f, "\n\n");
-    fprintf(f, "    bake.exe setup --local-setup\n");
+    fprintf(f, "    bake.exe setup --local\n");
     fprintf(f, "\n\n");
     fprintf(f, ") ELSE (\n");
     fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\"BAKE_EXEC".exe %%*\n");
@@ -362,7 +371,7 @@ int16_t bake_setup(
 
     /* Create the bake upgrade script, which can be invoked to upgrade bake to
      * the latest version */
-    ut_try(bake_create_upgrade_script(), NULL);
+    ut_try( bake_create_upgrade_script(), NULL);
 
     /* Create the global bake script, which allows for invoking bake without
      * first exporting the environment */
