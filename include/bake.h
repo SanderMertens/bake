@@ -28,7 +28,7 @@
 #include <bake.util>
 #endif
 
-#define BAKE_EXEC "bake2"
+#define BAKE_EXEC "bake"
 
 typedef struct bake_project bake_project;
 typedef struct bake_driver bake_driver;
