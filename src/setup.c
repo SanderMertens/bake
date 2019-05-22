@@ -155,11 +155,12 @@ int16_t bake_create_upgrade_script(void)
     }
 
     fprintf(f, "#!/bin/bash\n\n");
+
     fprintf(f, "UNAME=$(uname)\n\n");
 
     /* Create directory for bake repositories */
-    fprintf(f, "    mkdir -p $HOME/bake/src\n");
-    fprintf(f, "    cd $HOME/bake/src\n");
+    fprintf(f, "mkdir -p $HOME/bake/src\n");
+    fprintf(f, "cd $HOME/bake/src\n\n");
 
     /* If bake repository is cloned, fetch. Otherwise clone */
     fprintf(f, "if [ ! -d \"bake\" ]; then\n");
@@ -172,10 +173,12 @@ int16_t bake_create_upgrade_script(void)
     fprintf(f, "    git fetch -q origin\n");
     fprintf(f, "    git reset -q --hard origin/master\n");
     fprintf(f, "    git clean -q -xdf\n");
-    fprintf(f, "fi\n");
+    fprintf(f, "fi\n\n");
+
+    fprintf(f, "make -C build-$UNAME clean all\n\n");
 
     /* Install new version, local install if bake script is not installed */
-    fprintf(f, "if [ ! -d \"" GLOBAL_PATH "/bake\" ]; then\n");
+    fprintf(f, "if [ ! -d \"" GLOBAL_PATH "/bake.sh\" ]; then\n");
     fprintf(f, "    ./bake setup --local\n");
     fprintf(f, "else\n");
     fprintf(f, "    ./bake setup\n");
@@ -250,10 +253,13 @@ error:
 void bake_uninstall_old(void) {
     char *bake_exec = ut_envparse("~/bake/bake2");
     char *bake_script = ut_envparse("~/bake/bake.sh");
+    char *bake_tmp = ut_envparse("~/bake/bake-tmp.sh");
     ut_rm(bake_exec);
     ut_rm(bake_script);
+    ut_rm(bake_tmp);
     free(bake_exec);
     free(bake_script);
+    free(bake_tmp);
 }
 
 #endif
@@ -439,7 +445,7 @@ int16_t bake_setup(
     if (local) {
         printf("This is a local bake install. Before using bake, do:\n");
 #ifdef _WIN32
-        printf("  set PATH=%%USERPROFILE%%\bake;%%PATH%%\n");
+        printf("set PATH=%%USERPROFILE%%\bake;%%PATH%%\n");
 #else
         printf("export `~/bake/bake env`\n");
 #endif
