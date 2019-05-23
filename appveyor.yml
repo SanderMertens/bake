@@ -14,7 +14,7 @@ init:
   - 
     
 test_script:
-- cmd: bake.exe setup
+- cmd: bake.exe setup --local
 - cmd: bake examples
 - cmd: bake examples
 - cmd: bake examples --cfg release
