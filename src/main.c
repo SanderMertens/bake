@@ -21,7 +21,7 @@
 
 #include "bake.h"
 
-#define BAKE_VERSION "2.3.4"
+#define BAKE_VERSION "2.3.7"
 
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
@@ -267,7 +267,8 @@ int bake_parse_args(
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
 
-            ARG(0, "local-setup", local_setup = true);
+            ARG(0, "local", local_setup = true);
+            ARG(0, "local-setup", ); /* deprecated */
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);

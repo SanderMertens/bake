@@ -440,6 +440,12 @@ uint32_t bake_crawler_search(
 {
     int count = bake_crawler_count();
 
+    /* Test if in bake repository root. Bake should not attempt to build itself. */
+    if (ut_file_test("%s/bake", path) == 1 && ut_file_test("%s/include/bake.h", path)) {
+        ut_throw("you shall not build bake with bake");
+        goto error;
+    }
+
     if (ut_file_test(path)) {
         ut_try( bake_crawler_crawl(config, ".", path), NULL);
 
