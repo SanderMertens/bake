@@ -24,7 +24,11 @@
 #define BAKE_SCRIPT "~/bake/bake" UT_OS_SCRIPT_EXT
 #define BAKE_TEMP_SCRIPT "~/bake/bake-tmp" UT_OS_SCRIPT_EXT
 #define BAKE_UPGRADE_SCRIPT "~/bake/bake-upgrade" UT_OS_SCRIPT_EXT
+#ifdef _WIN32
 #define BAKE_GLOBAL_SCRIPT UT_GLOBAL_BIN_PATH "/bake" UT_OS_SCRIPT_EXT
+#else
+#define BAKE_GLOBAL_SCRIPT UT_GLOBAL_BIN_PATH "/bake"
+#endif
 #define BAKE_REPOSITORY "https://github.com/SanderMertens/bake"
 
 /* Utility function for running a setup command */
