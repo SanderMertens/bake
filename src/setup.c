@@ -21,11 +21,11 @@
 
 #include "bake.h"
 
-#ifndef _WIN32
-#define GLOBAL_PATH "/usr/local/bin"
-#else
-#define GLOBAL_PATH "C:\\Windows\\system32"
-#endif
+#define BAKE_SCRIPT "~/bake/bake" UT_OS_SCRIPT_EXT
+#define BAKE_TEMP_SCRIPT "~/bake/bake-tmp" UT_OS_SCRIPT_EXT
+#define BAKE_UPGRADE_SCRIPT "~/bake/bake-upgrade" UT_OS_SCRIPT_EXT
+#define BAKE_GLOBAL_SCRIPT UT_GLOBAL_BIN_PATH "/bake" UT_OS_SCRIPT_EXT
+#define BAKE_REPOSITORY "https://github.com/SanderMertens/bake"
 
 /* Utility function for running a setup command */
 int16_t cmd(
@@ -64,28 +64,62 @@ int16_t cmd(
 }
 
 #ifdef _WIN32
+
 int16_t bake_create_upgrade_script(void)
 {
-    return 0;
-}
+    char *script_path = ut_envparse(BAKE_UPGRADE_SCRIPT);
+    if (!script_path) {
+        ut_error("failed to open file '%s'", BAKE_UPGRADE_SCRIPT);
+        goto error;
+    }
 
-void bake_uninstall_old(void)
-{
+    FILE *f = fopen(script_path, "wb");
+    if (!f) {
+        ut_error("cannot open '%s': %s", script_path, strerror(errno));
+        goto error;
+    }
+
+    fprintf(f, "mkdir %%USERPROFILE%%\\bake\\src\n");
+    fprintf(f, "cd %%USERPROFILE%%\\bake\\src\n");
+    fprintf(f, "\n");
+    fprintf(f, "IF NOT EXIST \"bake\" (\n");
+    fprintf(f, "    echo \"Cloning bake repository...\"\n");
+    fprintf(f, "    git clone -q \"" BAKE_REPOSITORY "\"\n");
+    fprintf(f, "    cd \"bake\"\n");
+    fprintf(f, ") else (\n");
+    fprintf(f, "    cd \"bake\"\n");
+    fprintf(f, "    echo \"Reset bake repository...\"\n");
+    fprintf(f, "    git fetch -q origin\n");
+    fprintf(f, "    git reset -q --hard origin/master\n");
+    fprintf(f, "    git clean -q -xdf\n");
+    fprintf(f, ")\n");
+    fprintf(f, "\n\n");
+    fprintf(f, "cd build-Windows\\\n");
+    fprintf(f, "nmake /f bake.mak\n");
+    fprintf(f, "\n\n");
+    fprintf(f, "bake.exe setup --local\n");
+    fprintf(f, "\n\n");
+    fclose(f);
+
+    free(script_path);
+
+    return 0;
+error:
+    return -1;
 }
 
 /* Create bake script for Windows */
 int16_t bake_create_script(void)
 {
-    char *script_path = ut_envparse("$USERPROFILE\\bake\\bake.bat");
+    char *script_path = ut_envparse(BAKE_SCRIPT);
     if (!script_path) {
-        ut_error("missing $USERPROFILE environment variable");
+        ut_error("failed to open '%s'", BAKE_SCRIPT);
         goto error;
     }
 
     char *vc_shell_cmd = ut_get_vc_shell_cmd();
 
     FILE *f = fopen(script_path, "wb");
-
     if (!f) {
         ut_error("cannot open '%s': %s", script_path, strerror(errno));
         goto error;
@@ -96,33 +130,9 @@ int16_t bake_create_script(void)
     fprintf(f, "IF %%ERRORLEVEL%% == 1 (\n");
     fprintf(f, "    %s\n", vc_shell_cmd);
     fprintf(f, ")\n");
-    fprintf(f, "IF [%%1] == [upgrade] (\n");
-    fprintf(f, "    mkdir %%USERPROFILE%%\\bake\\src\n");
-    fprintf(f, "    cd %%USERPROFILE%%\\bake\\src\n\n");
-    fprintf(f, "    IF NOT EXIST \"bake\" (\n");
-    fprintf(f, "        echo \"Cloning bake repository...\"\n");
-    fprintf(f, "        git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
-    fprintf(f, "        cd \"bake\"\n");
-    fprintf(f, "    ) else (\n");
-    fprintf(f, "        cd \"bake\"\n");
-    fprintf(f, "        echo \"Reset bake repository...\"\n");
-    fprintf(f, "        git fetch -q origin\n");
-    fprintf(f, "        git reset -q --hard origin/master\n");
-    fprintf(f, "        git clean -q -xdf\n");
-    fprintf(f, "    )\n");
-    fprintf(f, "\n\n");
-    fprintf(f, "    cd build-Windows\\\n");
-    fprintf(f, "    nmake /f bake.mak\n");
-    fprintf(f, "\n\n");
-    fprintf(f, "    bake.exe setup --local\n");
-    fprintf(f, "\n\n");
-    fprintf(f, ") ELSE (\n");
-    fprintf(f, "    cmd /c %%USERPROFILE%%\\bake\\"BAKE_EXEC".exe %%*\n");
+    fprintf(f, "cmd /c %%USERPROFILE%%\\bake\\"BAKE_EXEC".exe %%*\n");
     fprintf(f, ")\n\n");
-
     fclose(f);
-
-    free(vc_shell_cmd);
 
     /* Copy file to global location, may ask for password */
     bake_message(UT_WARNING, "WARNING", 
@@ -132,18 +142,20 @@ int16_t bake_create_script(void)
 
     ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
 
+    free(vc_shell_cmd);
     free(script_path);
 
     return 0;
 error:
     return -1;
 }
+
 #else
 
 /* Create script that upgrades bake to new version */
 int16_t bake_create_upgrade_script(void)
 {
-    char *script_path = ut_envparse("~/bake/bake-upgrade.sh");
+    char *script_path = ut_envparse(BAKE_UPGRADE_SCRIPT);
     if (!script_path) {
         goto error;
     }
@@ -165,7 +177,7 @@ int16_t bake_create_upgrade_script(void)
     /* If bake repository is cloned, fetch. Otherwise clone */
     fprintf(f, "if [ ! -d \"bake\" ]; then\n");
     fprintf(f, "    echo \"Cloning bake repository...\"\n");
-    fprintf(f, "    git clone -q \"https://github.com/SanderMertens/bake.git\"\n");
+    fprintf(f, "    git clone -q \"" BAKE_REPOSITORY "\"\n");
     fprintf(f, "    cd \"bake\"\n");
     fprintf(f, "else\n");
     fprintf(f, "    cd \"bake\"\n");
@@ -178,7 +190,7 @@ int16_t bake_create_upgrade_script(void)
     fprintf(f, "make -C build-$UNAME clean all\n\n");
 
     /* Install new version, local install if bake script is not installed */
-    fprintf(f, "if [ ! -d \"" GLOBAL_PATH "/bake.sh\" ]; then\n");
+    fprintf(f, "if [ ! -d \"" BAKE_GLOBAL_SCRIPT "\" ]; then\n");
     fprintf(f, "    ./bake setup --local\n");
     fprintf(f, "else\n");
     fprintf(f, "    ./bake setup\n");
@@ -201,7 +213,7 @@ error:
 int16_t bake_create_script(void)
 {
     /* Create temporary script file in bake environment */
-    char *script_path = ut_envparse("~/bake/bake-tmp.sh");
+    char *script_path = ut_envparse(BAKE_TEMP_SCRIPT);
     if (!script_path) {
         goto error;
     }
@@ -227,14 +239,14 @@ int16_t bake_create_script(void)
 
     /* Copy file to global location, may ask for password */
     bake_message(UT_WARNING, "WARNING", 
-        "#[normal]copying script to '" GLOBAL_PATH "', #[yellow]setup may request password");
+        "#[normal]copying script to '" UT_GLOBAL_BIN_PATH "', #[yellow]setup may request password");
     bake_message(UT_LOG, "", "for local-only install, run setup with --local");
 
-    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, GLOBAL_PATH);
+    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
 
     ut_try( cmd(cp_cmd), NULL);
 
-    bake_message(UT_OK, "done", "install bake script to '" GLOBAL_PATH "'");
+    bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'");
 
     /* Free temporary script */
     ut_rm(script_path);
@@ -247,19 +259,6 @@ error:
     free(script_path);
     free(cp_cmd);
     return -1;
-}
-
-/* Uninstall deprecated files from old installation */
-void bake_uninstall_old(void) {
-    char *bake_exec = ut_envparse("~/bake/bake2");
-    char *bake_script = ut_envparse("~/bake/bake.sh");
-    char *bake_tmp = ut_envparse("~/bake/bake-tmp.sh");
-    ut_rm(bake_exec);
-    ut_rm(bake_script);
-    ut_rm(bake_tmp);
-    free(bake_exec);
-    free(bake_script);
-    free(bake_tmp);
 }
 
 #endif
@@ -337,6 +336,20 @@ error:
     return -1;
 }
 
+/* Uninstall deprecated files from old installation */
+void bake_uninstall_old_file(const char *file) {
+    char *f = ut_envparse(file);
+    ut_rm(f);
+    free(f);
+}
+
+void bake_uninstall_old_files(void) {
+    bake_uninstall_old_file("~/bake/bake2");
+    bake_uninstall_old_file(BAKE_SCRIPT);
+    bake_uninstall_old_file(BAKE_TEMP_SCRIPT);
+    bake_uninstall_old_file(BAKE_UPGRADE_SCRIPT);
+}
+
 /* Setup entry function */
 int16_t bake_setup(
     const char *bake_cmd,
@@ -373,7 +386,7 @@ int16_t bake_setup(
     free(cur_dir);
 
     /* Cleanup deprecated files from previous installations */
-    bake_uninstall_old();
+    bake_uninstall_old_files();
 
     /* Create the bake upgrade script, which can be invoked to upgrade bake to
      * the latest version */
