@@ -215,7 +215,7 @@ error:
 int16_t bake_create_script(bool local)
 {
     if (local) {
-        return;
+        return 0;
     }
 
     /* Create temporary script file in bake environment */
