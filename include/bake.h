@@ -28,7 +28,11 @@
 #include <bake.util>
 #endif
 
+#ifdef _WIN32
+#define BAKE_EXEC "bake2"
+#else
 #define BAKE_EXEC "bake"
+#endif
 
 typedef struct bake_project bake_project;
 typedef struct bake_driver bake_driver;

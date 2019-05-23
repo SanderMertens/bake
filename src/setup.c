@@ -109,7 +109,7 @@ error:
 }
 
 /* Create bake script for Windows */
-int16_t bake_create_script(void)
+int16_t bake_create_script(bool local)
 {
     char *script_path = ut_envparse(BAKE_SCRIPT);
     if (!script_path) {
@@ -135,12 +135,14 @@ int16_t bake_create_script(void)
     fclose(f);
 
     /* Copy file to global location, may ask for password */
-    bake_message(UT_WARNING, "WARNING", 
-        "#[normal]copying script to '" GLOBAL_PATH "', #[yellow]requires administrator privileges");
+    if (!local) {
+        bake_message(UT_WARNING, "WARNING", 
+            "#[normal]copying script to '" UT_GLOBAL_BIN_PATH "', #[yellow]requires administrator privileges");
 
-    ut_try( ut_cp(script_path, GLOBAL_PATH), NULL);
+        ut_try( ut_cp(script_path, UT_GLOBAL_BIN_PATH), NULL);
 
-    ut_log("#[green]OK#[reset]   install bake script to '" GLOBAL_PATH "'\n");
+        bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'\n");
+    }
 
     free(vc_shell_cmd);
     free(script_path);
@@ -210,8 +212,12 @@ error:
 }
 
 /* Install script to global location that invokes local bake executable */
-int16_t bake_create_script(void)
+int16_t bake_create_script(bool local)
 {
+    if (local) {
+        return;
+    }
+
     /* Create temporary script file in bake environment */
     char *script_path = ut_envparse(BAKE_TEMP_SCRIPT);
     if (!script_path) {
@@ -394,10 +400,8 @@ int16_t bake_setup(
 
     /* Create the global bake script, which allows for invoking bake without
      * first exporting the environment */
-    if (!local) {
-        ut_try( bake_create_script(), 
-            "failed to create global bake script, rerun setup with --local");
-    }
+    ut_try( bake_create_script(local), 
+        "failed to create global bake script, rerun setup with --local");
 
     /* Copy bake executable to bake environment in user working directory */
     ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/" BAKE_EXEC UT_OS_BIN_EXT),
@@ -458,7 +462,7 @@ int16_t bake_setup(
     if (local) {
         printf("This is a local bake install. Before using bake, do:\n");
 #ifdef _WIN32
-        printf("set PATH=%%USERPROFILE%%\bake;%%PATH%%\n");
+        printf("set PATH=%%USERPROFILE%%\\bake;%%PATH%%\n");
 #else
         printf("export `~/bake/bake env`\n");
 #endif
