@@ -673,8 +673,6 @@ int ut_logprint_file(
     }
 }
 
-#include <math.h>
-
 static
 int ut_logprint_line(
     ut_strbuf *buf,

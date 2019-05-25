@@ -21,7 +21,7 @@
 
 #include "bake.h"
 
-#define BAKE_VERSION "2.3.7"
+#define BAKE_VERSION "2.4.0"
 
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
@@ -35,6 +35,7 @@ const char *action = "build";
 const char *path = ".";
 bool discover = true;
 bool build = true;
+bool test = false;
 bool local_setup = false;
 bool strict = false;
 bool optimize = false;
@@ -117,6 +118,7 @@ void bake_usage(void)
     printf("  build [path]                 Build a project (default command)\n");
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
+    printf("  test [path]                  Run tests of project\n");
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
@@ -225,7 +227,11 @@ int16_t bake_init_action(
         return 0;
     }
 
-    if (!strcmp(arg, "foreach") || !strcmp(arg, "update")) {
+    if (!strcmp(arg, "foreach") || 
+        !strcmp(arg, "test") ||
+        !strcmp(arg, "runall") ||
+        !strcmp(arg, "update")) 
+    {
         discover = true;
         build = false;
         return 0;
@@ -327,6 +333,10 @@ int bake_parse_args(
             action = "install_remote";
             discover = false;
         }
+    }
+
+    if (!strcmp(action, "test")) {
+        test = true;
     }
 
     else if (!strcmp(action, "export") || !strcmp(action, "unset")) {
@@ -948,6 +958,44 @@ int bake_foreach_action(
     return result || ret;
 }
 
+/* Test all discovered projects */
+int bake_test_action(
+    bake_config *config,
+    bake_project *project)
+{
+    char *test_path = ut_asprintf("%s/test", project->path);
+    int result = 0;
+
+    if (ut_file_test(test_path) == 1) {
+        int8_t rc;
+
+        char *cmd = ut_asprintf("bake runall %s", test_path);
+        int sig = ut_proc_cmd(cmd, &rc);
+
+        if (sig || rc) {
+            ut_error("command '%s' failed", cmd);
+            result = -1;
+        }
+    }
+
+    free (test_path);
+    
+    return 0;
+error:
+    return -1;
+}
+
+/* Test all discovered projects */
+int bake_runall_action(
+    bake_config *config,
+    bake_project *project)
+{
+    ut_try( bake_run(config, project->path, false, run_argc, run_argv), NULL);
+    return 0;
+error:
+    return -1;
+}
+
 void bake_dump_env() {
     ut_log_push("env-dump");
     ut_iter it;
@@ -1196,7 +1244,13 @@ int main(int argc, const char *argv[]) {
                         &config, action, bake_foreach_action), NULL);
                 } else if (!strcmp(action, "update")) {
                     ut_try( bake_crawler_walk(
-                        &config, action, bake_update), NULL);
+                        &config, action, bake_update_action), NULL);
+                } else if (!strcmp(action, "test")) {
+                    ut_try( bake_crawler_walk(
+                        &config, action, bake_test_action), NULL);
+                } else if (!strcmp(action, "runall")) {
+                    ut_try( bake_crawler_walk(
+                        &config, action, bake_runall_action), NULL);
                 }
             }
         }

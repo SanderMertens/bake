@@ -103,7 +103,7 @@ int16_t bake_clone(
     const char *url);
 
 /* Update from remote repository */
-int bake_update(
+int bake_update_action(
     bake_config *config,
     bake_project *project);
 

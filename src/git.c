@@ -224,7 +224,7 @@ error:
     return -1;
 }
 
-int bake_update(
+int bake_update_action(
     bake_config *config,
     bake_project *project)
 {
