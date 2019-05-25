@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../../include/util.h"
+#include <bake_util.h>
 #include <io.h>
 
 static

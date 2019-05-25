@@ -24,7 +24,7 @@
  **/
 
 /* Public includes */
-#include "include/bake.h"
+#include <bake.h>
 
 /* Private includes */
 #include "crawler.h"

@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 int8_t UT_APP_STATUS = 3;
 int8_t UT_LOG_BACKTRACE = 0;

@@ -26,7 +26,7 @@
 #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 #include <stdio.h>
 #include <stdlib.h>

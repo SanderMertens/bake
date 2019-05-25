@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 extern ut_tls UT_KEY_THREAD_STRING;
 

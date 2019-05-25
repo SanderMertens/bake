@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 #ifndef _WIN32
 #define __mkdir(name) mkdir(name, 0755)

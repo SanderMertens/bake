@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <bake>
+#include <bake.h>
 
 static
 char* obj_ext() 

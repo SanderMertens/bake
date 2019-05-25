@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 void ut_sleep(unsigned int sec, unsigned int nanosec) {
 #ifndef _WIN32

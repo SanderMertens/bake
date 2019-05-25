@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 ut_rb ut_rb_new(ut_equals_cb compare, void *ctx) {
     return (ut_rb)jsw_rbnew(ctx, compare);

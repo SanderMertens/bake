@@ -29,7 +29,7 @@
     > Modified (Sander Mertens): 2010 - 2017
 */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 #ifdef __cplusplus
 #include <cstdlib>

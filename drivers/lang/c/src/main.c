@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <bake>
+#include <bake.h>
 
 #define CACHE_DIR ".bake_cache"
 
@@ -181,19 +181,19 @@ void setup_project(
 
     if (is_template) {
         fprintf(f,
-            "#include <include/${id base}.h>\n"
+            "#include <${id underscore}.h>\n"
             "\n"
             "int main(int argc, char *argv[]) {\n"
             "    return 0;\n"
             "}\n");
     } else {
         fprintf(f,
-            "#include <include/%s.h>\n"
+            "#include <%s.h>\n"
             "\n"
             "int main(int argc, char *argv[]) {\n"
             "    return 0;\n"
             "}\n",
-            short_id);
+            project->id_underscore);
     }
 
     fclose(f);
@@ -202,9 +202,9 @@ void setup_project(
     /* Create main header file */
     char *header_filename;
     if (is_template) {
-        header_filename = ut_asprintf("include/__id_base.h", short_id);
+        header_filename = ut_asprintf("include/__id_underscore.h", short_id);
     } else {
-        header_filename = ut_asprintf("include/%s.h", short_id);
+        header_filename = ut_asprintf("include/%s.h", project->id_underscore);
     }
     
     f = fopen(header_filename, "w");
@@ -219,7 +219,7 @@ void setup_project(
             "#ifndef ${id upper}_H\n"
             "#define ${id upper}_H\n\n"
             "/* This generated file contains includes for project dependencies */\n"
-            "#include \"bake_config.h\"\n");
+            "#include \"%s/bake_config.h\"\n", project->id_dash);
     } else {
         /* Create upper-case id for defines in header file */
         char *id_upper = strdup(id);
@@ -235,9 +235,10 @@ void setup_project(
             "#ifndef %s_H\n"
             "#define %s_H\n\n"
             "/* This generated file contains includes for project dependencies */\n"
-            "#include \"bake_config.h\"\n",
+            "#include \"%s/bake_config.h\"\n",
             id_upper,
-            id_upper);
+            id_upper,
+            project->id_dash);
 
         free(id_upper);
     }
@@ -275,6 +276,25 @@ void build(
     }
 }
 
+static
+char *project_header_file(
+    const char *project_id)
+{
+    char *project_header = malloc(strlen(project_id) + 3);
+    strcpy(project_header, project_id);
+
+    char *ptr, ch;
+    for (ptr = project_header; (ch = *ptr); ptr ++) {
+        if (ch == '.') {
+            *ptr = '_';
+        }
+    }
+
+    strcat(project_header, ".h");
+
+    return project_header;
+}
+
 /* Generate list of include files used in bake_config.h */
 static
 void add_dependency_includes(
@@ -284,26 +304,30 @@ void add_dependency_includes(
 {
     uint32_t count = 0;
     ut_iter it = ut_ll_iter(dependencies);
+
     while (ut_iter_hasNext(&it)) {
         char *project_id = ut_iter_next(&it);
+        char *project_header = project_header_file(project_id);
 
         bool include_found = false;
-        char *file = ut_asprintf("%s/include/%s", config->home, project_id);
+        char *file = ut_asprintf("%s/include/%s", config->home, project_header);
         if (ut_file_test(file) != 1) {
             free(file);
-            file = ut_asprintf("%s/include/%s", config->target, project_id);
+            file = ut_asprintf("%s/include/%s", config->target, project_header);
             if (ut_file_test(file) == 1) {
                 include_found = true;
             }
         } else {
             include_found = true;
         }
+
         if (include_found) {
-            fprintf(f, "#include <%s>\n", project_id);
+            fprintf(f, "#include <%s>\n", project_header);
             count ++;
         }
 
         free(file);
+        free(project_header);
     }
 
     if (!count) {
@@ -325,11 +349,11 @@ void generate(
     strupper(id_upper);
 
     /* Ensure include directory exists */
-    ut_mkdir("%s/include", project->path);
+    ut_mkdir("%s/include/%s", project->path, project->id_dash);
 
     /* Create main header file */
     char *header_filename = ut_asprintf(
-        "%s/include/bake_config.h", project->path);
+        "%s/include/%s/bake_config.h", project->path, project->id_dash);
     FILE *f = fopen(header_filename, "w");
     if (!f) {
         ut_error("failed to open file '%s'", header_filename);
@@ -362,14 +386,12 @@ void generate(
                " * built with bake, it will have to provide alternative methods for including\n"
                " * its dependencies. */\n");
 
-    fprintf(f, "#ifdef __BAKE__\n");
     fprintf(f, "/* Headers of public dependencies */\n");
     add_dependency_includes(config, f, project->use);
 
     fprintf(f, "\n/* Headers of private dependencies */\n");
     fprintf(f, "#ifdef %s_IMPL\n", id_upper);
     add_dependency_includes(config, f, project->use_private);
-    fprintf(f, "#endif\n");
     fprintf(f, "#endif\n");
 
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");

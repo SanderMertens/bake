@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/test.h>
+#include <bake_test.h>
 
 typedef char cdiff_identifier[512];
 

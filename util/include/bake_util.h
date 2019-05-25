@@ -47,6 +47,7 @@
 #else
 #include <alloca.h>
 #endif
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -263,38 +264,38 @@ const char* ut_appname();
 #endif
 
 /* Base includes */
-#include "parson.h"
-#include "strbuf.h"
-#include "iter.h"
-#include "ll.h"
-#include "rb.h"
-#include "string.h"
-#include "time.h"
-#include "dl.h"
-#include "code.h"
-#include "fs.h"
+#include "bake-util/parson.h"
+#include "bake-util/strbuf.h"
+#include "bake-util/iter.h"
+#include "bake-util/ll.h"
+#include "bake-util/rb.h"
+#include "bake-util/string.h"
+#include "bake-util/time.h"
+#include "bake-util/dl.h"
+#include "bake-util/code.h"
+#include "bake-util/fs.h"
 
 #ifdef _WIN32
-#include "win/thread.h"
-#include "win/vs.h"
+#include "bake-util/win/thread.h"
+#include "bake-util/win/vs.h"
 #else
-#include "posix/thread.h"
+#include "bake-util/posix/thread.h"
 #endif
 
-#include "thread.h"
-#include "file.h"
-#include "env.h"
-#include "memory.h"
-#include "proc.h"
-#include "expr.h"
-#include "jsw_rbtree.h"
-#include "path.h"
-#include "load.h"
-#include "version.h"
+#include "bake-util/thread.h"
+#include "bake-util/file.h"
+#include "bake-util/env.h"
+#include "bake-util/memory.h"
+#include "bake-util/proc.h"
+#include "bake-util/expr.h"
+#include "bake-util/jsw_rbtree.h"
+#include "bake-util/path.h"
+#include "bake-util/load.h"
+#include "bake-util/version.h"
 
 #ifndef __BAKE_LEGACY__
-#include "log.h"
-#include "os.h"
+#include "bake-util/log.h"
+#include "bake-util/os.h"
 #endif
 
 #endif /* UT_BASE_H */

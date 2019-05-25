@@ -2,8 +2,8 @@
 #define BAKE_TEST_H
 
 /* This generated file contains includes for project dependencies */
-#include "bake_config.h"
-#include "cdiff.h"
+#include "bake-test/bake_config.h"
+#include "bake-test/cdiff.h"
 
 #ifdef __cplusplus
 extern "C" {

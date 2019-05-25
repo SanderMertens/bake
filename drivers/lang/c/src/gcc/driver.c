@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <bake>
+#include <bake.h>
 
 static
 char* obj_ext() 
@@ -97,11 +97,11 @@ void add_includes(
         }
     }
 
-    /* Add BAKE_TARGET to include path */
-    ut_strbuf_append(cmd, " -I %s/include", config->home);
+    /* Add project include path */
+    ut_strbuf_append(cmd, " -I%s/include", project->path);
 
-    /* Add project root to include path */
-    ut_strbuf_append(cmd, " -I%s", project->path);
+    /* Add bake environment to include path */
+    ut_strbuf_append(cmd, " -I %s/include", config->home);
 }   
 
 static

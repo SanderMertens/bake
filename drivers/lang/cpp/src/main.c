@@ -1,5 +1,5 @@
 
-#include <bake>
+#include <bake.h>
 
 static
 void setup_project(

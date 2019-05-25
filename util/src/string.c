@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
- #include "../include/util.h"
+#include <bake_util.h>
 
 #ifndef _WIN32
 int stricmp(const char *str1, const char *str2) {

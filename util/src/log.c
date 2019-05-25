@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 #define UT_LOG_FILE_LEN (20)
 #define UT_MAX_LOG (1024)
@@ -672,6 +672,8 @@ int ut_logprint_file(
         return 0;
     }
 }
+
+#include <math.h>
 
 static
 int ut_logprint_line(

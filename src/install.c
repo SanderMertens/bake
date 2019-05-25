@@ -322,39 +322,17 @@ int16_t bake_install_prebuild(
         /* Install files to project-specific locations in $BAKE_TARGET */
         ut_iter it = ut_ll_iter(project->includes);
         while (ut_iter_hasNext(&it)) {
-            char *tmp_id = ut_asprintf("%s.dir", project->id);
             if (bake_install_dir(
                 config->home,
-                tmp_id,
+                ".",
                 project->path,
                 "include",
                 ut_iter_next(&it),
                 true))
             {
-                free(tmp_id);
                 goto error;
             }
-            free(tmp_id);
         }
-
-        /* Header that references main header file so projects can include
-         * packages using their logical name */
-        char *header_name = ut_asprintf("%s"UT_OS_PS"%s.dir"UT_OS_PS"%s.h",
-            UT_INCLUDE_PATH, project->id, project->id_base);
-        if (ut_file_test(header_name) == 1) {
-            char *hdr = ut_asprintf("%s"UT_OS_PS"%s", UT_INCLUDE_PATH, project->id);
-            FILE *f = fopen(hdr, "w");
-            if (!f) {
-                ut_throw("failed to open include file '%s' for writing", hdr);
-                free(hdr);
-                goto error;
-            }
-            fprintf(f, "#include \"%s.dir/%s.h\"\n", 
-                project->id, project->id_base);
-            fclose(f);
-            free(hdr);
-        }
-        free(header_name);
 
         if (bake_install_dir(
             config->target, project->id, project->path, "etc", NULL, true))
@@ -369,32 +347,6 @@ int16_t bake_install_prebuild(
                 goto error;
             }
         }
-
-        /* Install files to BAKE_TARGET directly from 'install' folder */
-        char *install_path = ut_asprintf("%s"UT_OS_PS"install", project->path);
-        if (install_path) {
-            if (bake_install_dir(
-                config->home, NULL, install_path, "include", NULL, true))
-            {
-                goto error;
-            }
-            if (bake_install_dir(
-                config->target, NULL, install_path, "lib", NULL, true))
-            {
-                goto error;
-            }
-            if (bake_install_dir(
-                config->target, NULL, install_path, "etc", NULL, true))
-            {
-                goto error;
-            }
-            if (bake_install_dir(
-                config->target, NULL, install_path, "java", NULL, true))
-            {
-                goto error;
-            }
-        }
-        free(install_path);
     }
 
     return 0;

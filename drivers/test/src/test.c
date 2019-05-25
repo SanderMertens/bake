@@ -1,5 +1,5 @@
 
-#include <include/test.h>
+#include <bake_test.h>
 
 static bake_test_suite *current_testsuite;
 static bake_test_case *current_testcase;
