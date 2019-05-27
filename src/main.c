@@ -119,6 +119,7 @@ void bake_usage(void)
     printf("  rebuild [path]               Clean and build a project\n");
     printf("  clean [path]                 Clean a project\n");
     printf("  test [path]                  Run tests of project\n");
+    printf("  coverage [path]              Run coverage analysis for project\n");
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
@@ -229,6 +230,7 @@ int16_t bake_init_action(
 
     if (!strcmp(arg, "foreach") || 
         !strcmp(arg, "test") ||
+        !strcmp(arg, "coverage") ||
         !strcmp(arg, "runall") ||
         !strcmp(arg, "update")) 
     {
@@ -969,7 +971,7 @@ int bake_test_action(
     if (ut_file_test(test_path) == 1) {
         int8_t rc;
 
-        char *cmd = ut_asprintf("bake runall %s", test_path);
+        char *cmd = ut_asprintf("bake runall %s --cfg test", test_path);
         int sig = ut_proc_cmd(cmd, &rc);
 
         if (sig || rc) {
@@ -991,6 +993,17 @@ int bake_runall_action(
     bake_project *project)
 {
     ut_try( bake_run(config, project->path, false, run_argc, run_argv), NULL);
+    return 0;
+error:
+    return -1;
+}
+
+/* Run coverage for all discovered projects */
+int bake_coverage_action(
+    bake_config *config,
+    bake_project *project)
+{
+    ut_try( bake_project_coverage(config, project), NULL);
     return 0;
 error:
     return -1;
@@ -1251,6 +1264,9 @@ int main(int argc, const char *argv[]) {
                 } else if (!strcmp(action, "runall")) {
                     ut_try( bake_crawler_walk(
                         &config, action, bake_runall_action), NULL);
+                } else if (!strcmp(action, "coverage")) {
+                    ut_try( bake_crawler_walk(
+                        &config, action, bake_coverage_action), NULL);
                 }
             }
         }
