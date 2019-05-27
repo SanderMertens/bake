@@ -168,16 +168,19 @@ char* ut_file_readln(
             break;
         }
 
-        *ptr = c;
-        ptr++;
-        if ((unsigned int)(ptr - buf) == (length - 1)) {
-            break;
+        if ((unsigned int)(ptr - buf) < (length - 1)) {
+            *ptr = c;
+            ptr++;
         }
     }
 
     *ptr = '\0';
 
-    return (c == EOF) ? 0 : buf;
+    if (ptr == buf) {
+        return NULL;
+    } else {
+        return buf;
+    }
 }
 
 static

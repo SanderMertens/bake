@@ -776,7 +776,130 @@ char *link_to_lib(
     return result;
 }
 
-//gcov --object-directory .bake_cache/x64-Darwin-test/obj src/*.c
+typedef struct file_coverage_t {
+    char *file;
+    int total_lines;
+    int uncovered_lines;
+} file_coverage_t;
+
+static const char *no_code =     "        -:";
+static const char *not_covered = "    #####:";
+
+static
+file_coverage_t parse_gcov(
+    bake_project *project, 
+    const char *file)
+{
+    char *path = ut_asprintf("%s/gcov/%s", project->path, file);
+    FILE *f = fopen(path, "r");
+
+    int total_lines = 0;
+    int uncovered_lines = 0;
+
+    char line[30];
+    while (ut_file_readln(f, line, 11)) {
+        if (!strcmp(line, no_code)) {
+            continue;
+        } else if (!strcmp(line, not_covered)) {
+            uncovered_lines ++;
+        }
+
+        total_lines ++;
+    }
+
+    char *c_file = ut_strdup(file);
+    char *gcov_ext = strrchr(c_file, '.');
+    *gcov_ext = '\0';
+
+    file_coverage_t result = {
+        .file = c_file,
+        .total_lines = total_lines,
+        .uncovered_lines = uncovered_lines
+    };
+
+    free(path);
+
+    return result;
+}
+
+static
+int coverage_compare(
+    const void *f1_ptr,
+    const void *f2_ptr)
+{
+    const file_coverage_t *f1 = f1_ptr;
+    const file_coverage_t *f2 = f2_ptr;
+
+    return f2->uncovered_lines - f1->uncovered_lines;
+}
+
+static
+void print_coverage(
+    const char *file,
+    int file_len_max,
+    int coverage,
+    int total_lines)
+{
+    if (coverage < 60) {
+        ut_log("%*s: #[red]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
+            coverage, total_lines);
+    } else if (coverage < 80) {
+        ut_log("%*s: #[yellow]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
+            coverage, total_lines);
+    } else {
+        ut_log("%*s: #[green]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
+            coverage, total_lines);
+    }
+}
+
+static
+void parse_coverage(
+    bake_project *project,
+    int total_files)
+{
+    file_coverage_t *data = malloc(total_files * sizeof(file_coverage_t));
+    char *gcov_dir = ut_asprintf("%s/gcov", project->path);
+
+    ut_iter it;
+    ut_dir_iter(gcov_dir, "*.gcov", &it);
+    int i = 0, file_len_max = 0;
+    int total_lines = 0;
+    int uncovered_lines = 0;
+    int coverage = 0;
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        data[i] = parse_gcov(project, file);
+        
+        int file_len = strlen(data[i].file);
+        if (file_len > file_len_max) {
+            file_len_max = file_len;
+        }
+
+        total_lines += data[i].total_lines;
+        uncovered_lines += data[i].uncovered_lines;
+
+        i ++;
+    }
+
+    qsort(data, total_files, sizeof(file_coverage_t), coverage_compare);
+
+    for (i = 0; i < total_files; i ++) {
+        coverage = 100 * (1.0 - 
+            (float)data[i].uncovered_lines / (float)data[i].total_lines);
+        print_coverage(data[i].file, file_len_max, coverage, 
+            data[i].total_lines);
+
+        free(data[i].file);
+    }
+
+    coverage = 100 * (1.0 - (float)uncovered_lines / total_lines);
+    print_coverage("total", file_len_max, coverage, total_lines);
+    printf("\n");
+
+    free(gcov_dir);
+    free(data);
+}
 
 static
 void coverage(
@@ -785,6 +908,7 @@ void coverage(
     bake_project *project)
 {
     ut_strbuf cmd = UT_STRBUF_INIT, src = UT_STRBUF_INIT;
+    int total_files = 0;
 
     char *tmp_dir = driver->get_attr_string("tmp-dir");
 
@@ -796,6 +920,7 @@ void coverage(
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         ut_strbuf_append(&src, " %s", file);
+        total_files ++;
     }
 
     char *srcstr = ut_strbuf_get(&src);
@@ -804,7 +929,13 @@ void coverage(
 
     char *cmdstr = ut_strbuf_get(&cmd);
 
-    driver->exec(cmdstr);
+    int8_t rc;
+    int sig = ut_proc_cmd_stderr_only(cmdstr, &rc);
+    if (sig || rc) {
+        ut_error("failed to run gcov command '%s'", cmdstr);
+        project->error = 1;
+        return;
+    }
 
     char *gcov_dir = ut_asprintf("%s/gcov", project->path);
     if (ut_mkdir(gcov_dir)) {
@@ -826,4 +957,6 @@ void coverage(
 
     free(cmdstr);
     free(srcstr);
+
+    parse_coverage(project, total_files);
 }
