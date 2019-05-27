@@ -219,7 +219,7 @@ void setup_project(
             "#ifndef ${id upper}_H\n"
             "#define ${id upper}_H\n\n"
             "/* This generated file contains includes for project dependencies */\n"
-            "#include \"%s/bake_config.h\"\n", project->id_dash);
+            "#include \"${id underscore}/bake_config.h\"\n");
     } else {
         /* Create upper-case id for defines in header file */
         char *id_upper = strdup(id);
