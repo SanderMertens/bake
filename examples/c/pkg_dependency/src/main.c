@@ -1,4 +1,4 @@
-#include <include/pkg_dependency.h>
+#include <examples_c_pkg_dependency.h>
 #include <stdio.h>
 
 void pkg_dependency() {

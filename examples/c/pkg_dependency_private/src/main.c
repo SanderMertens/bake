@@ -1,4 +1,4 @@
-#include <include/pkg_dependency_private.h>
+#include <examples_c_pkg_dependency_private.h>
 #include <stdio.h>
 
 void pkg_dependency_private() {

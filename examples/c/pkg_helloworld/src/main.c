@@ -1,4 +1,4 @@
-#include <include/pkg_helloworld.h>
+#include <examples_c_pkg_helloworld.h>
 #include <stdio.h>
 
 void pkg_helloworld(void) {
