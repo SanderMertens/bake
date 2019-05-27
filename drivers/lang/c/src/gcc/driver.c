@@ -211,6 +211,10 @@ void add_misc(
     if (config->debug) {
         ut_strbuf_appendstr(cmd, " -g");
     }
+
+    if (config->coverage) {
+        ut_strbuf_appendstr(cmd, " -fprofile-arcs -ftest-coverage");
+    }
 }
 
 /* Compile source file */
@@ -457,6 +461,10 @@ void link_dynamic_binary(
         }
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
+    }
+
+    if (config->coverage) {
+        ut_strbuf_appendstr(&cmd, " -fprofile-arcs -ftest-coverage");
     }
 
     /* When strict, warnings are errors */
@@ -768,4 +776,54 @@ char *link_to_lib(
     return result;
 }
 
+//gcov --object-directory .bake_cache/x64-Darwin-test/obj src/*.c
 
+static
+void coverage(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    ut_strbuf cmd = UT_STRBUF_INIT, src = UT_STRBUF_INIT;
+
+    char *tmp_dir = driver->get_attr_string("tmp-dir");
+
+    ut_iter it;
+    char *src_dir = ut_asprintf("%s/src", project->path);
+    ut_dir_iter(src_dir, "//*.c,*.cpp", &it);
+    free(src_dir);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        ut_strbuf_append(&src, " %s", file);
+    }
+
+    char *srcstr = ut_strbuf_get(&src);
+    ut_strbuf_append(&cmd, 
+        "gcov --object-directory %s/obj %s", tmp_dir, srcstr);
+
+    char *cmdstr = ut_strbuf_get(&cmd);
+
+    driver->exec(cmdstr);
+
+    char *gcov_dir = ut_asprintf("%s/gcov", project->path);
+    if (ut_mkdir(gcov_dir)) {
+        ut_error("failed to create gcov directory '%s'", gcov_dir);
+        project->error = 1;
+        free(gcov_dir);
+        return;
+    }
+    free(gcov_dir);
+
+    ut_dir_iter(project->path, "*.gcov", &it);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        char *dst_file = ut_asprintf("gcov/%s", file);
+        ut_rename(file, dst_file);
+        free(dst_file);
+    }
+
+    free(cmdstr);
+    free(srcstr);
+}

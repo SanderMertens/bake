@@ -443,6 +443,9 @@ int bakemain(bake_driver_api *driver)
     /* Callback that initializes projects with the right build dependencies */
     driver->init(init);
 
+    /* Coverage analysis */
+    driver->coverage(coverage);    
+
     /* Callback that specifies files to clean */
     driver->clean(clean);
 

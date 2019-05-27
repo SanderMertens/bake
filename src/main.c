@@ -378,6 +378,10 @@ int bake_parse_args(
         id = path;
     }
 
+    else if (!strcmp(action, "coverage")) {
+        cfg = "test";
+    }
+
     return 0;
 error:
     return -1;
@@ -1003,7 +1007,15 @@ int bake_coverage_action(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_project_coverage(config, project), NULL);
+    char *test_path = ut_asprintf("%s/test", project->path);
+
+    if (ut_file_test(test_path) == 1) {
+        ut_try( bake_project_coverage(config, project), NULL);
+    } else {
+        ut_ok("cannot run coverage for '%s', project has no tests", 
+            project->id);
+    }
+
     return 0;
 error:
     return -1;
