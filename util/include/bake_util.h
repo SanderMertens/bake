@@ -65,7 +65,7 @@
 #include <windows.h>
 #include <versionhelpers.h>
 #include <shlwapi.h>
-#include "win/stdint.h"
+#include "bake-util/win/stdint.h"
 #else
 #include <fnmatch.h>
 #include <inttypes.h>
