@@ -1627,6 +1627,7 @@ int16_t bake_project_create_gitignore(
     fprintf(f, ".bake_cache\n");
     fprintf(f, ".DS_Store\n");
     fprintf(f, ".vscode\n");
+    fprintf(f, "gcov\n");
     fprintf(f, "bin\n");
 
     fclose(f);
