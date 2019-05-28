@@ -313,21 +313,92 @@ error:
     return -1;
 }
 
+int16_t bake_check_includes(
+    bake_project *project,
+    const char *path)
+{
+    ut_iter it;
+    int16_t result = 0;
+    
+    if (ut_dir_iter(path, NULL, &it)) {
+        ut_catch();
+        return 0;
+    }
+
+    char *short_header = ut_asprintf("%s.h", project->id_base);
+    char *header = ut_asprintf("%s.h", project->id_underscore);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        char *file_path = ut_asprintf("%s/%s", path, file);
+
+        /* Clear bake_config.h include root (left by old bake install) */
+        if (!strcmp(file, "bake_config.h")) {            
+            ut_rm(file_path);
+        }
+
+        /* Rename header with project base name to header with full path */
+        else if (!strcmp(file, short_header)) {
+            if (strcmp(header, short_header)) {
+                char *header_path = ut_asprintf("%s/include/%s", project->path, header);
+                ut_rename(file_path, header_path);
+                free(header_path);
+            }
+        }
+        
+        /* If a directory is found, check if it has the right name */
+        else if (ut_isdir(file_path)) {
+            if (strcmp(file, project->id_dash)) {
+                ut_error(
+                    "project '%s' has directory with illegal name ('include/%s'), expected 'include/%s'",
+                    project->id, file, project->id_dash);
+                result = -1;
+            }
+        }
+
+        /* If filename is different from main header, throw error */
+        else if (strcmp(file, header)) {
+            ut_error("project '%s' has file with illegal name '%s' in include directory, expected '%s.h'",
+                project->id, file, project->id_underscore);
+            result = -1;
+        }
+
+        free(file_path);
+    }
+
+    free(header);
+
+    return result;
+error:
+    return -1;
+}
+
 int16_t bake_install_prebuild(
     bake_config *config,
     bake_project *project)
 {
     if (project->type != BAKE_TOOL) {
 
+        char *own_includes = ut_asprintf("%s/include", project->path);
+
+        if (bake_check_includes(project, own_includes)) {
+            free(own_includes);
+            goto error;
+        }
+
+        free(own_includes);
+
         /* Install files to project-specific locations in $BAKE_TARGET */
         ut_iter it = ut_ll_iter(project->includes);
         while (ut_iter_hasNext(&it)) {
+            char *include_path = ut_iter_next(&it);
+
             if (bake_install_dir(
                 config->home,
                 ".",
                 project->path,
                 "include",
-                ut_iter_next(&it),
+                include_path,
                 true))
             {
                 goto error;

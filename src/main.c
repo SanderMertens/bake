@@ -121,6 +121,7 @@ void bake_usage(void)
     printf("  test [path]                  Run tests of project\n");
     printf("  coverage [path]              Run coverage analysis for project\n");
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
+    printf("  reset                        Resets bake environment to initial state, save for bake configuration\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
@@ -213,6 +214,7 @@ int16_t bake_init_action(
     if (!strcmp(arg, "env") ||
         !strcmp(arg, "setup") ||
         !strcmp(arg, "cleanup") ||
+        !strcmp(arg, "reset") ||
         !strcmp(arg, "new") ||
         !strcmp(arg, "run") ||
         !strcmp(arg, "uninstall") ||
@@ -949,6 +951,54 @@ error:
     return -1;
 }
 
+int bake_reset_dir(
+    bake_config *cfg,
+    const char *path)
+{
+    ut_iter it;
+    ut_try( ut_dir_iter(path, NULL, &it), NULL);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+
+        if (strncmp(file, "bake", 4)) {
+            char *file_path = ut_asprintf("%s/%s", path, file);
+            ut_rm(file_path);
+            free(file_path);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int bake_reset(
+    bake_config *cfg)
+{
+    ut_iter it;
+    ut_try( ut_dir_iter(cfg->home, NULL, &it), NULL);
+
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        char *file_path = ut_asprintf("%s/%s", cfg->home, file);
+
+        if (ut_isdir(file_path)) {
+            if (!strcmp(file, "include") || !strcmp(file, "meta")) {
+                bake_reset_dir(cfg, file_path);
+            } else if (strcmp(file, "lib")) {
+                ut_rm(file_path);
+            }
+        } else if (strcmp(file, "bake.json") && strcmp(file, BAKE_EXEC)) {
+            ut_rm(file_path);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 int bake_foreach_action(
     bake_config *config,
     bake_project* project)
@@ -1311,6 +1361,8 @@ int main(int argc, const char *argv[]) {
             }
         } else if (!strcmp(action, "cleanup")) {
             ut_try (bake_list(&config, true), NULL);
+        } else if (!strcmp(action, "reset")) {
+            ut_try (bake_reset(&config), NULL);
         } else if (!strcmp(action, "info")) {
             bake_info(&config, path, NULL, true, true, NULL, false);
         } else if (!strcmp(action, "list")) {
