@@ -936,6 +936,8 @@ int bake_list(
             ut_info(
                 "#[reset]applications: %d, packages: %d, templates: %d, #[red]errors:#[reset] %d",
                 app_count, package_count, template_count, error_count);
+            printf("\n");
+            ut_info("run 'bake cleanup' to uninstall packages with errors");
         } else {
             ut_info("#[reset]applications: %d, packages: %d, templates: %d", 
                 app_count, package_count, template_count);
