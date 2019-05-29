@@ -348,7 +348,7 @@ int16_t bake_check_includes(
         
         /* If a directory is found, check if it has the right name */
         else if (ut_isdir(file_path)) {
-            if (strcmp(file, project->id_dash)) {
+            if (file[0] != '.' && strcmp(file, project->id_dash)) {
                 ut_error(
                     "project '%s' has directory with illegal name ('include/%s'), expected 'include/%s'",
                     project->id, file, project->id_dash);
@@ -357,7 +357,7 @@ int16_t bake_check_includes(
         }
 
         /* If filename is different from main header, throw error */
-        else if (strcmp(file, header)) {
+        else if (file[0] != '.' && strcmp(file, header)) {
             ut_error("project '%s' has file with illegal name '%s' in include directory, expected '%s.h'",
                 project->id, file, project->id_underscore);
             result = -1;
