@@ -1,4 +1,4 @@
-#include <include/app_clib.h>
+#include <examples_c_app_clib.h>
 #include <stdio.h>
 #include <math.h>
 

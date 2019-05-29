@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 int ut_iter_hasNext(ut_iter* iter) {
     if (iter->hasNext) {

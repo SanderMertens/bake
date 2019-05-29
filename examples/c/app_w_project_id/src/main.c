@@ -1,4 +1,4 @@
-#include <include/app_w_project_id.h>
+#include <examples_c_app_w_project_id.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {

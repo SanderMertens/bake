@@ -22,11 +22,7 @@
 #ifndef BAKE_H
 #define BAKE_H
 
-#ifdef BAKE_IMPL
-#include "util/include/util.h"
-#else
-#include <bake.util>
-#endif
+#include <bake_util.h>
 
 #ifdef _WIN32
 #define BAKE_EXEC "bake2"
@@ -38,9 +34,9 @@ typedef struct bake_project bake_project;
 typedef struct bake_driver bake_driver;
 typedef struct bake_config bake_config;
 
-#include "attribute.h"
-#include "project.h"
-#include "config.h"
-#include "driver_api.h"
+#include "bake/attribute.h"
+#include "bake/project.h"
+#include "bake/config.h"
+#include "bake/driver_api.h"
 
 #endif

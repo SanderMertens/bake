@@ -1,4 +1,4 @@
-#include <include/app_w_non_c_ext.h>
+#include <examples_c_app_w_non_c_ext.h>
 #include <stdio.h>
 #include "foo.inl"
 

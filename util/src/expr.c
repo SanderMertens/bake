@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "expr.h"
+#include <bake_util.h>
 
 static
 char* ut_exprTokenStr(

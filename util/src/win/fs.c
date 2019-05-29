@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../../include/util.h"
+#include <bake_util.h>
 
 int ut_symlink(
     const char *oldname,

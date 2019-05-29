@@ -1,4 +1,4 @@
-#include <include/app_dependee.h>
+#include <examples_c_app_dependee.h>
 #include <math.h>
 #include <stdio.h>
 

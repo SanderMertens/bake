@@ -1,4 +1,4 @@
-#include <include/${id base}.h>
+#include <${id base}.h>
 #include <iostream>
 
 #define WIDTH 50

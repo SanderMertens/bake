@@ -16,7 +16,7 @@ ifeq ($(config),debug)
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/debug
   DEFINES += -DBAKE_IMPL -DDEBUG
-  INCLUDES += -I.. -I../util
+  INCLUDES += -I../include -I../util/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -std=c99 -fPIC -D_XOPEN_SOURCE=600
@@ -43,7 +43,7 @@ ifeq ($(config),release)
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/release
   DEFINES += -DBAKE_IMPL -DNDEBUG
-  INCLUDES += -I.. -I../util
+  INCLUDES += -I../include -I../util/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -std=c99 -fPIC -D_XOPEN_SOURCE=600

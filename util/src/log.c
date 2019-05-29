@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../include/util.h"
+#include <bake_util.h>
 
 #define UT_LOG_FILE_LEN (20)
 #define UT_MAX_LOG (1024)

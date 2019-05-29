@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <bake>
+#include <bake.h>
 
 static
 char* obj_ext() 
@@ -491,4 +491,13 @@ static
 bool is_clang(bool is_cpp)
 {
     return false;
+}
+
+static
+void coverage(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    /* TODO */
 }

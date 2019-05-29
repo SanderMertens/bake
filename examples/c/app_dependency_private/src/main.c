@@ -1,4 +1,4 @@
-#include <include/app_dependency_private.h>
+#include <examples_c_app_dependency_private.h>
 
 int main(int argc, char *argv[]) {
     pkg_helloworld();

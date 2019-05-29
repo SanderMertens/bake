@@ -441,6 +441,9 @@ int16_t bake_config_load(
             ut_ok("release configuration not found in bake settings file, using defaults");
             cfg_out->optimizations = true;
             cfg_out->debug = false;
+        } else if (!strcmp(UT_CONFIG, "test")) {
+            ut_ok("test configuration not found in bake settings file, using defaults");
+            cfg_out->coverage = true;
         } else {
             ut_throw("unknown configuration '%s'",
                 UT_CONFIG);

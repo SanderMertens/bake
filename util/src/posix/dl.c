@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../../include/util.h"
+#include <bake_util.h>
 
 typedef void*(*dlproc)(void);
 

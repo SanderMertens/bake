@@ -1,4 +1,4 @@
-#include <include/pkg_dependee.h>
+#include <examples_c_pkg_dependee.h>
 #include <stdio.h>
 #include <math.h>
 

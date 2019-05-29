@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "../../include/util.h"
+#include <bake_util.h>
 
 ut_proc ut_proc_run(
     const char* exec,

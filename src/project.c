@@ -1331,6 +1331,25 @@ error:
     return -1;
 }
 
+/* Postbuild build step */
+int16_t bake_project_coverage(
+    bake_config *config,
+    bake_project *project)
+{
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+            ut_try(
+              bake_driver__coverage(driver->driver, config, project), NULL);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Clean project, for all platforms or only the current platform */
 int16_t bake_project_clean_intern(
     bake_config *config,
@@ -1608,6 +1627,7 @@ int16_t bake_project_create_gitignore(
     fprintf(f, ".bake_cache\n");
     fprintf(f, ".DS_Store\n");
     fprintf(f, ".vscode\n");
+    fprintf(f, "gcov\n");
     fprintf(f, "bin\n");
 
     fclose(f);

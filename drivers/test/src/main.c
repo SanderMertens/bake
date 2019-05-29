@@ -19,9 +19,8 @@
  * THE SOFTWARE.
  */
 
-#include <bake>
-
-#include <include/test.h>
+#include <bake.h>
+#include <bake_test.h>
 
 static
 bool is_cpp(
@@ -169,7 +168,7 @@ int generate_testmain(
 
     ut_code_write(src, "\n");
 
-    ut_code_write(src, "#include <include/%s.h>\n", project->id_base);
+    ut_code_write(src, "#include <%s.h>\n", project->id_base);
     ut_code_write(src, "\n");
 
     generate_testcase_fwd_decls(src, suites);

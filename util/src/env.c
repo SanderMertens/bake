@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
- #include "../include/util.h"
+#include <bake_util.h>
 
 #ifndef _WIN32
 #define _setenv(var, val) setenv(var, val, 1)

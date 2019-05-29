@@ -1,4 +1,4 @@
-#include <include/pkg_clib.h>
+#include <examples_c_pkg_clib.h>
 #include <stdio.h>
 #include <math.h>
 

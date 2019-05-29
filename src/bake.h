@@ -24,7 +24,7 @@
  **/
 
 /* Public includes */
-#include "include/bake.h"
+#include <bake.h>
 
 /* Private includes */
 #include "crawler.h"
@@ -103,7 +103,7 @@ int16_t bake_clone(
     const char *url);
 
 /* Update from remote repository */
-int bake_update(
+int bake_update_action(
     bake_config *config,
     bake_project *project);
 
@@ -134,6 +134,10 @@ int16_t bake_install_prebuild(
 
 /** Copy artefact to config->target (post build) */
 int16_t bake_install_postbuild(
+    bake_config *config,
+    bake_project *project);
+
+int16_t bake_project_coverage(
     bake_config *config,
     bake_project *project);
 
@@ -168,6 +172,7 @@ typedef struct bake_driver_impl {
     bake_driver_cb prebuild;        /* Stage before build stage */
     bake_driver_cb build;           /* Called at build stage, before rules */
     bake_driver_cb postbuild;       /* Stage after build */
+    bake_driver_cb coverage;        /* Coverage analysis */
     bake_driver_cb clean;           /* Specify files to clean */
 } bake_driver_impl;
 
@@ -240,6 +245,12 @@ int16_t bake_driver__build(
 
 /* Postbuild step */
 int16_t bake_driver__postbuild(
+    bake_driver *driver,
+    bake_config *config,
+    bake_project *project);
+
+/* Coverage analysis */
+int16_t bake_driver__coverage(
     bake_driver *driver,
     bake_config *config,
     bake_project *project);

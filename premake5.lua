@@ -11,8 +11,11 @@ workspace "bake"
     language "C"
     targetdir "."
 
-    files { "include/*.h", "src/*.c", "util/include/*.h", "util/src/*.c", "util/include/posix/*.h", "util/src/posix/*.c"}
-    includedirs { ".", "util" }
+    files { "include/*.h", "src/*.c", "util/src/*.c", "util/src/posix/*.c", "util/include/*.h", 
+      "util/include/bake-util/*.h", "util/include/bake-util/posix/*.h"
+    }
+
+    includedirs { "include", "util/include" }
 
     objdir (".bake_cache")
 
