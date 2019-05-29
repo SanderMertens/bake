@@ -440,5 +440,10 @@ JSON_Object* bake_json_find_or_create_object(
 
 /* Install bake */
 int16_t bake_setup(
+    bake_config *cfg,
     const char *cmd,
     bool local);
+
+/* Reset bake environment */
+int bake_reset(
+    bake_config *cfg);

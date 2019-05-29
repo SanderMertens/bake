@@ -988,7 +988,8 @@ int bake_reset(
         if (ut_isdir(file_path)) {
             if (!strcmp(file, "include") || !strcmp(file, "meta")) {
                 bake_reset_dir(cfg, file_path);
-            } else if (strcmp(file, "lib")) {
+
+            } else if (strcmp(file, "lib") && strcmp(file, "src")) {
                 ut_rm(file_path);
             }
         } else if (strcmp(file, "bake.json") && strcmp(file, BAKE_EXEC)) {
@@ -1339,7 +1340,7 @@ int main(int argc, const char *argv[]) {
         if (!strcmp(action, "env")) {
             ut_try( bake_env(&config), NULL);
         } else if (!strcmp(action, "setup")) {
-            ut_try (bake_setup(argv[0], local_setup), NULL);
+            ut_try (bake_setup(&config, argv[0], local_setup), NULL);
         } else if (!strcmp(action, "new")) {
             ut_try (bake_new_project(&config), NULL);
         } else if (!strcmp(action, "run")) {

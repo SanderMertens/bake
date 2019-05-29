@@ -362,6 +362,7 @@ void bake_uninstall_old_files(void) {
 
 /* Setup entry function */
 int16_t bake_setup(
+    bake_config *config,
     const char *bake_cmd,
     bool local)
 {
@@ -412,6 +413,10 @@ int16_t bake_setup(
         "failed to copy bake executable");
 
     bake_message(UT_OK, "done", "copy bake executable");
+
+    /* Reset bake environment */
+    ut_try (bake_reset(config), NULL);
+    bake_message(UT_OK, "done", "bake environment reset");
 
     /* Install bake header files to bake environment */
     ut_try( cmd("."UT_OS_PS"bake install --id bake --includes include"),
