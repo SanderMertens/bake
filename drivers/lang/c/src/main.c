@@ -388,10 +388,6 @@ void generate(
         id_upper,
         id_upper);
 
-    fprintf(f, "/* Generated includes are specific to the bake environment. If a project is not\n"
-               " * built with bake, it will have to provide alternative methods for including\n"
-               " * its dependencies. */\n");
-
     fprintf(f, "/* Headers of public dependencies */\n");
     add_dependency_includes(config, f, project->use);
 
