@@ -322,7 +322,13 @@ void add_dependency_includes(
         }
 
         if (include_found) {
+            if (!strcmp(project_id, "bake.util")) {
+                fprintf(f, "#ifdef __BAKE__\n");
+            }
             fprintf(f, "#include <%s>\n", project_header);
+            if (!strcmp(project_id, "bake.util")) {
+                fprintf(f, "#endif\n");
+            }
             count ++;
         }
 
