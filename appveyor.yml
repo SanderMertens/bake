@@ -29,5 +29,5 @@ test_script:
 - cmd: bake new my_template --template
 - cmd: bake new my_tmpl_app -t my_template
 - cmd: bake run my_tmpl_app
-- cmd: bake upgrade
+- cmd: bake upgrade --local
 
