@@ -88,6 +88,9 @@ void _test_ptr(
     const char *file,
     int line);
 
+BAKE_TEST_EXPORT
+void test_expect_abort(void);
+
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_int(v1, v2) _test_int(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_flt(v1, v2) _test_flt(v1, v2, #v1, #v2, __FILE__, __LINE__)

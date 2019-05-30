@@ -4,6 +4,8 @@
 static bake_test_suite *current_testsuite;
 static bake_test_case *current_testcase;
 
+static bool test_expect_abort_signal = false;
+
 static
 void test_empty(void)
 {
@@ -20,6 +22,15 @@ void test_empty(void)
     ut_raise();
 
     ut_log("#[yellow]EMPTY#[reset] %s.%s (add test statements)\n", 
+        current_testsuite->id, current_testcase->id);
+
+    exit(1);
+}
+
+static
+void test_no_abort(void)
+{
+    ut_log("#[red]FAIL#[reset] %s.%s (expected abort signal)\n", 
         current_testsuite->id, current_testcase->id);
 
     exit(1);
@@ -65,9 +76,15 @@ int bake_test_run_single_test(
                 current_testcase = test;
                 suite->assert_count = 0;
                 test->function();
+
+                if (test_expect_abort_signal) {
+                    test_no_abort();
+                }
+
                 if (!suite->assert_count) {
                     test_empty();
                 }
+
                 found = true;
 
                 if (suite->teardown) {
@@ -418,4 +435,19 @@ void _test_ptr(
         test_fail(file, line, msg);
         free(msg);
     }
+}
+
+static
+void abort_handler(int sig)
+{
+    if (test_expect_abort_signal) {
+        exit(0);
+    } else {
+        exit(-1);
+    }
+}
+
+void test_expect_abort(void) {
+    test_expect_abort_signal = true;
+    signal(SIGABRT, abort_handler);
 }
