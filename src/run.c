@@ -295,6 +295,7 @@ static
 ut_proc run_exec(
     const char *exec,
     const char *app_id,
+    const char *prefix,
     bool is_package,
     int argc,
     const char *argv[])
@@ -303,15 +304,24 @@ ut_proc run_exec(
         const char *local_argv[1024] = {(char*)exec};
         int i = 1;
 
+        if (prefix) {
+            local_argv[0] = prefix;
+            local_argv[1] = exec;
+            i ++;
+            exec = prefix;
+        }
+
         if (argc) {
             if (argv) {
-                for (i = 1; i < argc; i ++) {
+                for (;i < argc; i ++) {
                     local_argv[i] = argv[i - 1];
                 }
             }
         }
 
         local_argv[i] = NULL;
+
+        printf("run %s (args = %d)\n", exec, i);
 
         ut_proc pid = ut_proc_run(exec, local_argv);
 
@@ -329,6 +339,7 @@ int16_t run_interactive(
     const char *project_dir,
     const char *app_bin,
     const char *app_id,
+    const char *prefix,
     bool is_package,
     int argc,
     const char *argv[])
@@ -368,7 +379,7 @@ int16_t run_interactive(
             if (!pid) {
                 /* Run process, ensure process binary is first argument */
                 {
-                    pid = run_exec(app_bin, app_id, is_package, argc, argv);
+                    pid = run_exec(app_bin, app_id, prefix, is_package, argc, argv);
                     last_pid = pid;
                 }
             }
@@ -478,6 +489,7 @@ void str_strip(
 int bake_run(
     bake_config *config,
     const char *app_id,
+    const char *prefix,
     bool interactive,
     int argc,
     const char *argv[])
@@ -591,7 +603,7 @@ int bake_run(
 
     if (interactive) {
         /* Run process & monitor source for changes */
-        if (run_interactive(project_dir, app_bin, app_id, is_package, argc, argv)) {
+        if (run_interactive(project_dir, app_bin, app_id, prefix, is_package, argc, argv)) {
             goto error;
         }
     } else {
@@ -604,10 +616,10 @@ int bake_run(
         }
 
         if (argc) {
-            pid = run_exec(app_bin, app_id, is_package, argc, argv);
+            pid = run_exec(app_bin, app_id, prefix, is_package, argc, argv);
         } else {
             pid = run_exec(
-              app_bin, app_id, is_package, 1, (const char*[]){
+              app_bin, app_id, prefix, is_package, 1, (const char*[]){
                   (char*)app_bin, NULL});
         }
         if (!pid) {

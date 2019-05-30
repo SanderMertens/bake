@@ -54,6 +54,7 @@ const char *output_dir = NULL;
 /* Command specific parameters */
 const char *export_expr = NULL;
 const char *publish_cmd = NULL;
+const char *run_prefix = NULL;
 bool interactive = false;
 bool recursive = false;
 int run_argc = 0;
@@ -102,9 +103,10 @@ void bake_usage(void)
     printf("  -i,--includes <include path> Specify an include path for project\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
-    printf("  --interactive                Rebuild project when files change (use w/run)\n");
-    printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
+    printf("  --interactive                Rebuild project when files change (use w/run)\n");
+    printf("  --run-prefix                 Specify prefix command for bake run\n");
+    printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
     printf("\n");
@@ -279,6 +281,7 @@ int bake_parse_args(
 
             ARG(0, "local", local_setup = true);
             ARG(0, "local-setup", ); /* deprecated */
+            ARG(0, "run-prefix", run_prefix = argv[i + 1]; i++);
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
@@ -1049,7 +1052,7 @@ int bake_runall_action(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_run(config, project->path, false, run_argc, run_argv), NULL);
+    ut_try( bake_run(config, project->path, run_prefix, false, run_argc, run_argv), NULL);
     return 0;
 error:
     return -1;
@@ -1133,7 +1136,7 @@ int bake_run_template(
     }
 
     ut_try (
-        bake_run(config, tmp_path, interactive, run_argc, run_argv), NULL);
+        bake_run(config, tmp_path, run_prefix, interactive, run_argc, run_argv), NULL);
 
     free(tmp_path);
 
@@ -1351,7 +1354,7 @@ int main(int argc, const char *argv[]) {
                     NULL);
             } else {
                 ut_try (
-                    bake_run(&config, path, interactive, run_argc, run_argv), 
+                    bake_run(&config, path, run_prefix, interactive, run_argc, run_argv), 
                     NULL);
             }
         } else if (!strcmp(action, "publish")) {

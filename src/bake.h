@@ -91,6 +91,7 @@ int bake_do_install(
 int bake_run(
     bake_config *config,
     const char *app_id,
+    const char *run_prefix,
     bool interactive,
     int argc,
     const char *argv[]);
