@@ -1884,7 +1884,12 @@ int16_t ut_log_init(void) {
     ut_enable_console_color(STD_ERROR_HANDLE);
     #endif
 #endif
-    return ut_tls_new(&UT_KEY_LOG, ut_lasterrorFree);
+
+    if (UT_KEY_LOG) {
+        return  0;
+    } else {
+        return ut_tls_new(&UT_KEY_LOG, ut_lasterrorFree);
+    }
 }
 
 char *ut_lasterr(void) {

@@ -47,8 +47,10 @@ void ut_init(
 
     void ut_threadStringDealloc(void *data);
 
-    if (ut_tls_new(&UT_KEY_THREAD_STRING, ut_threadStringDealloc)) {
-        ut_critical("failed to obtain tls key for thread admin");
+    if (!UT_KEY_THREAD_STRING) {
+        if (ut_tls_new(&UT_KEY_THREAD_STRING, ut_threadStringDealloc)) {
+            ut_critical("failed to obtain tls key for thread admin");
+        }
     }
 
     if (ut_log_init()) {
@@ -97,6 +99,14 @@ void ut_deinit(void) {
     ut_tls_free();
     ut_load_deinit();
     ut_log_deinit();
+
+    if (ut_mutex_free(&ut_log_lock)) {
+        ut_critical("failed to delete mutex for logging framework");
+    }
+
+    if (ut_mutex_free(&UT_LOAD_LOCK)) {
+        ut_critical("failed to delete mutex for package loader");
+    }    
 }
 
 const char* ut_appname() {

@@ -145,7 +145,7 @@ void ut_tls_free(void) {
         ut_tls_set(ut_threadTlsAdmin[i].key, NULL);
     }
 
-    ut_threadTlsCount = 0;
+    ut_threadTlsCount = -1;
 }
 
 int ut_mutex_new(
