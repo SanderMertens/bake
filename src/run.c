@@ -321,8 +321,6 @@ ut_proc run_exec(
 
         local_argv[i] = NULL;
 
-        printf("run %s (args = %d)\n", exec, i);
-
         ut_proc pid = ut_proc_run(exec, local_argv);
 
         bake_message(UT_LOG, "run", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, exec);
