@@ -269,7 +269,7 @@ void test(
     bake_config *config,
     bake_project *project)
 {
-    if (config->coverage) {
+    if (config->coverage && project->coverage) {
         clean_coverage(driver, config, project);
     }
 }

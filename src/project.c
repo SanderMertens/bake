@@ -65,6 +65,9 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "public")) {
            ut_try (bake_json_set_boolean(&p->public, member, v), NULL);
         } else
+        if (!strcmp(member, "coverage")) {
+           ut_try (bake_json_set_boolean(&p->coverage, member, v), NULL);
+        } else        
         if (!strcmp(member, "author")) {
             ut_try (bake_json_set_string(&p->author, member, v), NULL);
         } else
@@ -599,6 +602,7 @@ bake_project* bake_project_new(
 
     result->path = path ? strdup(path) : NULL;
     result->public = true;
+    result->coverage = true;
 
     /* Parse project.json if available */
     if (path) {
@@ -1581,6 +1585,11 @@ int16_t bake_project_create_project_json(
     if (!project->public) {
         ut_code_write(f, ",\n");
         ut_code_write(f, "\"public\": false");
+    }
+
+    if (is_test) {
+        ut_code_write(f, ",\n");
+        ut_code_write(f, "\"coverage\": false");
     }
 
     if (project->use && ut_ll_count(project->use)) {

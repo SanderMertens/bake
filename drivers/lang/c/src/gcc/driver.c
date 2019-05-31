@@ -212,7 +212,7 @@ void add_misc(
         ut_strbuf_appendstr(cmd, " -g");
     }
 
-    if (config->coverage) {
+    if (config->coverage && project->coverage) {
         ut_strbuf_appendstr(cmd, " -fprofile-arcs -ftest-coverage");
     }
 }
@@ -463,7 +463,7 @@ void link_dynamic_binary(
         ut_strbuf_appendstr(&cmd, " -O0");
     }
 
-    if (config->coverage) {
+    if (config->coverage && project->coverage) {
         ut_strbuf_appendstr(&cmd, " -fprofile-arcs -ftest-coverage");
     }
 

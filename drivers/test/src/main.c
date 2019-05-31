@@ -260,7 +260,7 @@ int generate_suite(
         return -1;
     }
 
-    cdiff_file_write(suite_file, "#include <include/%s.h>\n", project->id_base);
+    cdiff_file_write(suite_file, "#include <%s.h>\n", project->id_underscore);
 
     int has_setup = json_object_get_boolean(suite, "setup");
     if (has_setup && has_setup != -1) {
