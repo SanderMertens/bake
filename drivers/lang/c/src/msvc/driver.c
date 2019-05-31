@@ -501,3 +501,12 @@ void coverage(
 {
     /* TODO */
 }
+
+static
+void clean_coverage(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    /* TODO */
+}

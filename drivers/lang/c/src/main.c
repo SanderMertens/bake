@@ -263,8 +263,17 @@ void setup_project(
     fclose(f);
 }
 
+static
+void prebuild(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    if (config->coverage) {
+        clean_coverage(driver, config, project);
+    }
+}
 
-/* Generate bake_config.h */
 static
 void build(
     bake_driver_api *driver,
@@ -438,6 +447,9 @@ int bakemain(bake_driver_api *driver)
 
     /* Generate header file that automatically includes project dependencies */
     driver->generate(generate);
+
+    /* Cleanup files specific to a binary, like coverage data files */
+    driver->prebuild(prebuild);
 
     /* Always build precompiled header right before rules are executed */
     driver->build(build);

@@ -960,3 +960,31 @@ void coverage(
 
     parse_coverage(project, total_files);
 }
+
+static
+void clean_coverage(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project)
+{
+    char *tmp_dir = driver->get_attr_string("tmp-dir");
+    char *obj_dir = ut_asprintf("%s/%s/obj", project->path, tmp_dir);
+
+    if (ut_file_test(obj_dir) == 1) {
+        ut_iter it;
+        if (ut_dir_iter(obj_dir, "/*.gcda,*.gcno", &it)) {
+            ut_raise();
+            project->error = 1;
+            return;
+        }
+
+        while (ut_iter_hasNext(&it)) {
+            char *file = ut_iter_next(&it);
+            char *file_path = ut_asprintf("%s/%s", obj_dir, file);
+            ut_rm(file_path);
+            free(file_path);
+        }
+    }
+
+    free(obj_dir);
+}
