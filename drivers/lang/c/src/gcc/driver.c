@@ -972,7 +972,7 @@ void clean_coverage(
 
     if (ut_file_test(obj_dir) == 1) {
         ut_iter it;
-        if (ut_dir_iter(obj_dir, "/*.gcda,*.gcno", &it)) {
+        if (ut_dir_iter(obj_dir, "/*.gcda", &it)) {
             ut_raise();
             project->error = 1;
             return;

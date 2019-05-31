@@ -264,7 +264,7 @@ void setup_project(
 }
 
 static
-void prebuild(
+void test(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -448,14 +448,14 @@ int bakemain(bake_driver_api *driver)
     /* Generate header file that automatically includes project dependencies */
     driver->generate(generate);
 
-    /* Cleanup files specific to a binary, like coverage data files */
-    driver->prebuild(prebuild);
-
     /* Always build precompiled header right before rules are executed */
     driver->build(build);
 
     /* Callback that initializes projects with the right build dependencies */
     driver->init(init);
+
+    /* Cleanup files specific to a binary, like coverage data files */
+    driver->test(test);
 
     /* Coverage analysis */
     driver->coverage(coverage);    

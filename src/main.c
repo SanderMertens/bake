@@ -344,6 +344,7 @@ int bake_parse_args(
 
     if (!strcmp(action, "test")) {
         test = true;
+        cfg = "test";
     }
 
     else if (!strcmp(action, "export") || !strcmp(action, "unset")) {
@@ -1030,6 +1031,8 @@ int bake_test_action(
 
     if (ut_file_test(test_path) == 1) {
         int8_t rc;
+        
+        bake_project_test(config, project);
 
         char *cmd = ut_asprintf("bake runall %s --cfg test", test_path);
         int sig = ut_proc_cmd(cmd, &rc);

@@ -215,6 +215,10 @@ struct bake_driver_api {
     void (*postbuild)(
         bake_driver_cb action);
 
+    /* Callback called before test */
+    void (*test)(
+        bake_driver_cb action);
+
     /* Callback called for doing coverage analysis */
     void (*coverage)(
         bake_driver_cb action);

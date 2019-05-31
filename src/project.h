@@ -73,6 +73,11 @@ int16_t bake_project_build(
     bake_config *config,
     bake_project *project);
 
+/* Test project */
+int16_t bake_project_test(
+    bake_config *config,
+    bake_project *project);
+
 /* Clean project */
 int16_t bake_project_clean(
     bake_config *config,

@@ -1331,6 +1331,26 @@ error:
     return -1;
 }
 
+/* Test build step */
+int16_t bake_project_test(
+    bake_config *config,
+    bake_project *project)
+{
+    if (project->drivers) {
+        ut_iter it = ut_ll_iter(project->drivers);
+        while (ut_iter_hasNext(&it)) {
+            bake_project_driver *driver = ut_iter_next(&it);
+            ut_try(
+              bake_driver__test(driver->driver, config, project), NULL);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+
 /* Postbuild build step */
 int16_t bake_project_coverage(
     bake_config *config,
