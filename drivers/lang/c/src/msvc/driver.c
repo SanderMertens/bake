@@ -139,16 +139,11 @@ void compile_src(
         }
     }
 
-    /* Add BAKE_TARGET to include path */
-    ut_strbuf_append(&cmd, " /I %s\\include", config->target);
-
     /* Add BAKE_HOME to include path if it's different from BAKE_TARGET */
-    if (strcmp(config->target, config->home)) {
-        ut_strbuf_append(&cmd, " /I %s\\include", config->home);
-    }
+    ut_strbuf_append(&cmd, " /I %s\\include", config->home);
 
-    /* Add project root to include path */
-    ut_strbuf_append(&cmd, " /I%s", project->path);
+    /* Add project include path */
+    ut_strbuf_append(&cmd, " /I %s\\include", project->path);
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
