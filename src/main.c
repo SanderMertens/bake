@@ -996,9 +996,15 @@ int bake_reset(
             } else if (strcmp(file, "lib") && strcmp(file, "src")) {
                 ut_rm(file_path);
             }
-        } else if (strcmp(file, "bake.json") && strcmp(file, BAKE_EXEC)) {
+        } else if (strcmp(file, "bake.json") && 
+                   strcmp(file, BAKE_EXEC UT_OS_BIN_EXT) &&
+                   strcmp(file, "bake" UT_OS_SCRIPT_EXT) &&
+                   strcmp(file, "bake-upgrade" UT_OS_SCRIPT_EXT)) 
+        {
             ut_rm(file_path);
         }
+
+        free(file_path);
     }
 
     return 0;
