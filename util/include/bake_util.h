@@ -60,6 +60,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <signal.h>
+
 /* OS-specific headers */
 #if defined(_WIN32)
 #include <windows.h>
@@ -81,7 +83,6 @@
 #include <sys/ptrace.h>
 #include <dirent.h>
 #include <unistd.h>
-#include <signal.h>
 #include <pthread.h>
 #include <ftw.h>
 #include <fcntl.h>

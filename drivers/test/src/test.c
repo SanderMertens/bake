@@ -33,7 +33,7 @@ void test_no_abort(void)
     ut_log("#[red]FAIL#[reset] %s.%s (expected abort signal)\n", 
         current_testsuite->id, current_testcase->id);
 
-    exit(1);
+    exit(-1);
 }
 
 static
