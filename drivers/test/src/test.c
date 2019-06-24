@@ -298,6 +298,50 @@ void _test_assert(
     }
 }
 
+void _test_bool(
+    bool v1,
+    bool v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    current_testsuite->assert_count ++;
+
+    if (v1 && v1 != true) {
+        char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v1, v1);
+        test_fail(file, line, msg);
+        free(msg);
+    }
+
+    if (v2 && v1 != true) {
+        char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v2, v2);
+        test_fail(file, line, msg);
+        free(msg);
+    }
+
+    if (v1 != v2) {
+        char *sv1, *sv2;
+        if (isdigit(*str_v1) || (*str_v1 == '-')) {
+            sv1 = strdup(str_v1);
+        } else {
+            sv1 = ut_asprintf("%s (%s)", str_v1, v1 ? "true" : "false");
+        }
+
+        if (isdigit(*str_v2) || (*str_v2 == '-')) {
+            sv2 = strdup(str_v2);
+        } else {
+            sv2 = ut_asprintf("%s (%s)", str_v2, v2 ? "true" : "false");
+        }
+
+        char *msg = ut_asprintf("%s != %s", sv1, sv2);
+        test_fail(file, line, msg);
+        free(msg);
+        free(sv1);
+        free(sv2);
+    }
+}
+
 void _test_int(
     uint64_t v1,
     uint64_t v2,
