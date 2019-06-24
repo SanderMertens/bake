@@ -185,7 +185,7 @@ void add_optimization(
 {
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        if (!is_clang(cpp) || !is_linux()) {
+        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
             ut_strbuf_appendstr(cmd, " -O3 -flto");
         } else {
             /* On some Linux versions clang has trouble loading the LTO plugin */
@@ -208,7 +208,7 @@ void add_misc(
     ut_strbuf_append(cmd, " -fPIC -fno-stack-protector");
 
     /* Include debugging information */
-    if (config->debug) {
+    if (config->symbols) {
         ut_strbuf_appendstr(cmd, " -g");
     }
 
@@ -453,7 +453,7 @@ void link_dynamic_binary(
 
     /* Set optimizations */
     if (config->optimizations) {
-        if (!is_clang(cpp) || !is_linux()) {
+        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
             ut_strbuf_appendstr(&cmd, " -O3 -flto");
         } else {
             /* On some Linux versions clang has trouble loading the LTO plugin */
