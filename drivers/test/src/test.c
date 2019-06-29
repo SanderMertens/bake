@@ -107,9 +107,9 @@ void print_dbg_command(
     const char *exec,
     const char *testcase) 
 {
-    printf("  To run/debug your test, do:\n");
-    ut_log("    export $(bake env)#[reset]\n");
-    ut_log("    %s %s#[reset]\n", exec, testcase);
+    printf("To run/debug your test, do:\n");
+    ut_log("export $(bake env)#[reset]\n");
+    ut_log("%s %s#[reset]\n", exec, testcase);
     printf("\n");
 }
 
@@ -155,6 +155,7 @@ int bake_test_run_all_tests(
 
     uint32_t total_fail = 0, total_empty = 0, total_pass = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
+    const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
 
     printf("\n");
 
@@ -174,15 +175,36 @@ int bake_test_run_all_tests(
             bake_test_case *test = &suite->testcases[t];
 
             char *test_id = ut_asprintf("%s.%s", suite->id, test->id);
-
-            ut_proc proc = ut_proc_run(exec, (const char*[]){
-                exec, 
-                test_id, 
-                NULL
-            });
-
+            ut_proc proc;
             int8_t rc;
-            int sig = ut_proc_wait(proc, &rc);
+            int sig;
+
+            if (prefix) {
+                char *has_space = strchr(prefix, ' ');
+                if (has_space) {
+                    ut_strbuf cmd = UT_STRBUF_INIT;
+                    ut_strbuf_append(&cmd, "%s %s %s", prefix, exec, test_id);
+                    char *cmd_str = ut_strbuf_get(&cmd);
+                    sig = ut_proc_cmd(cmd_str, &rc);
+                    free(cmd_str);
+                } else {
+                    proc = ut_proc_run(prefix, (const char*[]){
+                        prefix,
+                        exec,
+                        test_id, 
+                        NULL
+                    }); 
+                }               
+            } else {
+                proc = ut_proc_run(exec, (const char*[]){
+                    exec, 
+                    test_id, 
+                    NULL
+                });
+
+                sig = ut_proc_wait(proc, &rc);
+            }
+
             if (sig || rc) {
                 if (sig) {
                     if (sig == 6) {

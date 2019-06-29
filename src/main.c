@@ -55,6 +55,7 @@ const char *output_dir = NULL;
 const char *export_expr = NULL;
 const char *publish_cmd = NULL;
 const char *run_prefix = NULL;
+const char *test_prefix = NULL;
 bool interactive = false;
 bool recursive = false;
 int run_argc = 0;
@@ -106,6 +107,7 @@ void bake_usage(void)
     printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
     printf("  --interactive                Rebuild project when files change (use w/run)\n");
     printf("  --run-prefix                 Specify prefix command for bake run\n");
+    printf("  --test-prefix                Specify prefix command for tests run by bake test\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
@@ -282,6 +284,7 @@ int bake_parse_args(
             ARG(0, "local", local_setup = true);
             ARG(0, "local-setup", ); /* deprecated */
             ARG(0, "run-prefix", run_prefix = argv[i + 1]; i++);
+            ARG(0, "test-prefix", test_prefix = argv[i + 1]; i++);
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
@@ -1336,6 +1339,9 @@ int main(int argc, const char *argv[]) {
                     ut_try( bake_crawler_walk(
                         &config, action, bake_update_action), NULL);
                 } else if (!strcmp(action, "test")) {
+                    if (test_prefix) {
+                        ut_setenv("BAKE_TEST_PREFIX", test_prefix);
+                    }
                     ut_try( bake_crawler_walk(
                         &config, action, bake_test_action), NULL);
                 } else if (!strcmp(action, "runall")) {
