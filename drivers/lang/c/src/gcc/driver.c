@@ -923,6 +923,12 @@ void coverage(
         total_files ++;
     }
 
+    if (!total_files) {
+        ut_error("no source files to analyze for coverage report");
+        project->error = true;
+        return;
+    }
+
     char *srcstr = ut_strbuf_get(&src);
     ut_strbuf_append(&cmd, 
         "gcov --object-directory %s/obj %s", tmp_dir, srcstr);
@@ -949,16 +955,42 @@ void coverage(
     free(gcov_dir);
 
     ut_dir_iter(project->path, "*.gcov", &it);
+    int total_gcov_files = 0;
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *dst_file = ut_asprintf("gcov/%s", file);
-        ut_rename(file, dst_file);
+
+        if (ut_rename(file, dst_file)) {
+            ut_error(
+                "failed to move file '%s'", 
+                file);
+        }
+
         free(dst_file);
+        total_gcov_files ++;
     }
 
     free(cmdstr);
     free(srcstr);
+
+    if (!total_gcov_files) {
+        ut_error("no gcov files");
+        project->error = true;
+        return;
+    }
+
+    if (total_gcov_files < total_files) {
+        ut_error("found %d source files, but only %d gcov files",
+            total_files, total_gcov_files);
+        project->error = true;
+        return;
+    } else if (total_gcov_files > total_files) {
+        ut_error("found %d gcov files, but only %d source files",
+            total_files, total_gcov_files);
+        project->error = true;
+        return;
+    }
 
     parse_coverage(project, total_files);
 }
