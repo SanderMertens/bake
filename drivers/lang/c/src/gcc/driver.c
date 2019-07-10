@@ -938,6 +938,8 @@ void coverage(
     }
 
     char *gcov_dir = ut_asprintf("%s/gcov", project->path);
+    ut_rm(gcov_dir);
+    
     if (ut_mkdir(gcov_dir)) {
         ut_error("failed to create gcov directory '%s'", gcov_dir);
         project->error = 1;
