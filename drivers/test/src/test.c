@@ -515,7 +515,11 @@ void abort_handler(int sig)
     }
 }
 
+void test_abort(void) {
+    abort_handler(SIGABRT);
+}
+
 void test_expect_abort(void) {
     test_expect_abort_signal = true;
-    signal(SIGABRT, abort_handler);
+    signal(SIGABRT, &abort_handler);
 }
