@@ -30,7 +30,7 @@ void test_empty(void)
 static
 void test_no_abort(void)
 {
-    ut_log("#[red]FAIL#[reset] %s.%s (expected abort signal)\n", 
+    ut_log("#[red]FAIL#[reset]: %s.%s (expected abort signal)\n", 
         current_testsuite->id, current_testcase->id);
 
     exit(-1);
@@ -211,13 +211,13 @@ int bake_test_run_all_tests(
                 if (sig) {
                     if (sig == 6) {
                         ut_log(
-                            "#[red]FAIL#[reset] %s aborted\n", test_id);
+                            "#[red]FAIL#[reset]: %s aborted\n", test_id);
                     } else if (sig == 11) {
                         ut_log(
-                            "#[red]FAIL#[reset] %s segfaulted\n", test_id);
+                            "#[red]FAIL#[reset]: %s segfaulted\n", test_id);
                     } else {
                         ut_log(
-                            "#[red]FAIL#[reset] %s crashed with signal %d\n", 
+                            "#[red]FAIL#[reset]: %s crashed with signal %d\n", 
                             test_id, sig);
                     }
                     result = -1;
@@ -301,7 +301,7 @@ void test_fail(
 
     ut_raise();
 
-    ut_log("#[red]FAIL#[reset] %s.%s:%d: %s\n", 
+    ut_log("#[red]FAIL#[reset]: %s.%s:%d: %s\n", 
         current_testsuite->id, current_testcase->id, line, err);
 
     exit(-1);
@@ -522,4 +522,10 @@ void test_abort(void) {
 void test_expect_abort(void) {
     test_expect_abort_signal = true;
     signal(SIGABRT, &abort_handler);
+}
+
+void test_quarantine(const char *date) {
+    ut_log("#[yellow]SKIP#[reset]: %s.%s: test was quarantined on %s\n", 
+        current_testsuite->id, current_testcase->id, date);
+    exit(0);
 }

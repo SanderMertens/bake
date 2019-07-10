@@ -98,6 +98,9 @@ void _test_ptr(
     int line);
 
 BAKE_TEST_EXPORT
+void test_quarantine(const char *date);
+
+BAKE_TEST_EXPORT
 void test_expect_abort(void);
 
 /* On platforms that do not support proper signal handling
