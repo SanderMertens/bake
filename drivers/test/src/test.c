@@ -194,6 +194,8 @@ int bake_test_run_all_tests(
                         test_id, 
                         NULL
                     }); 
+
+                    sig = ut_proc_wait(proc, &rc);
                 }               
             } else {
                 proc = ut_proc_run(exec, (const char*[]){
