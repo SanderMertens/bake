@@ -338,7 +338,7 @@ void _test_bool(
         free(msg);
     }
 
-    if (v2 && v1 != true) {
+    if (v2 && v2 != true) {
         char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v2, v2);
         test_fail(file, line, msg);
         free(msg);

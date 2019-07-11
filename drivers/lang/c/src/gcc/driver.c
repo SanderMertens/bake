@@ -838,17 +838,18 @@ void print_coverage(
     const char *file,
     int file_len_max,
     int coverage,
-    int total_lines)
+    int total_lines,
+    int missed_lines)
 {
     if (coverage < 60) {
-        ut_log("%*s: #[red]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[red]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     } else if (coverage < 80) {
-        ut_log("%*s: #[yellow]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[yellow]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     } else {
-        ut_log("%*s: #[green]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[green]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     }
 }
 
@@ -888,13 +889,13 @@ void parse_coverage(
         coverage = 100 * (1.0 - 
             (float)data[i].uncovered_lines / (float)data[i].total_lines);
         print_coverage(data[i].file, file_len_max, coverage, 
-            data[i].total_lines);
+            data[i].total_lines, data[i].uncovered_lines);
 
         free(data[i].file);
     }
 
     coverage = 100 * (1.0 - (float)uncovered_lines / total_lines);
-    print_coverage("total", file_len_max, coverage, total_lines);
+    print_coverage("total", file_len_max, coverage, total_lines, uncovered_lines);
     printf("\n");
 
     free(gcov_dir);
