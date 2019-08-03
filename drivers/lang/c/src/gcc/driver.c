@@ -837,18 +837,18 @@ static
 void print_coverage(
     const char *file,
     int file_len_max,
-    int coverage,
+    float coverage,
     int total_lines,
     int missed_lines)
 {
     if (coverage < 60) {
-        ut_log("%*s: #[red]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+        ut_log("%*s: #[red]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
             coverage, total_lines, missed_lines);
     } else if (coverage < 80) {
-        ut_log("%*s: #[yellow]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+        ut_log("%*s: #[yellow]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
             coverage, total_lines, missed_lines);
     } else {
-        ut_log("%*s: #[green]%3d%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+        ut_log("%*s: #[green]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
             coverage, total_lines, missed_lines);
     }
 }
@@ -866,7 +866,7 @@ void parse_coverage(
     int i = 0, file_len_max = 0;
     int total_lines = 0;
     int uncovered_lines = 0;
-    int coverage = 0;
+    float coverage = 0;
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
@@ -886,7 +886,7 @@ void parse_coverage(
     qsort(data, total_files, sizeof(file_coverage_t), coverage_compare);
 
     for (i = 0; i < total_files; i ++) {
-        coverage = 100 * (1.0 - 
+        coverage = 100.0 * (1.0 - 
             (float)data[i].uncovered_lines / (float)data[i].total_lines);
         print_coverage(data[i].file, file_len_max, coverage, 
             data[i].total_lines, data[i].uncovered_lines);
@@ -894,7 +894,7 @@ void parse_coverage(
         free(data[i].file);
     }
 
-    coverage = 100 * (1.0 - (float)uncovered_lines / total_lines);
+    coverage = 100.0 * (1.0 - (float)uncovered_lines / total_lines);
     print_coverage("total", file_len_max, coverage, total_lines, uncovered_lines);
     printf("\n");
 
