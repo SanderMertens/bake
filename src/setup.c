@@ -172,7 +172,7 @@ int16_t bake_create_upgrade_script(void)
         goto error;
     }
 
-    fprintf(f, "#!/bin/bash\n\n");
+    fprintf(f, "#!/usr/bin/env bash\n\n");
 
     fprintf(f, "UNAME=$(uname)\n\n");
 
@@ -233,6 +233,8 @@ int16_t bake_create_script(bool local)
         ut_error("cannot open '%s': %s", script_path, strerror(errno));
         goto error;
     }
+
+    fprintf(f, "#!/usr/bin/env bash\n\n");
 
     fprintf(f, "if [ \"$1\" = \"upgrade\" ]; then\n");
     fprintf(f, "   exec $HOME/bake/bake-upgrade.sh\n");
