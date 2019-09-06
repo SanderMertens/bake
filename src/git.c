@@ -25,7 +25,10 @@ static
 int16_t bake_update_dependencies(
     bake_config *config,
     const char *base_url,
-    bake_project *project);
+    bake_project *project,
+    bool to_env,
+    bool override_env,
+    bake_notify_state *notify_state);
 
 static
 int16_t cmd(
@@ -65,7 +68,8 @@ int16_t bake_parse_repo_url(
     char **full_url_out,
     char **base_url_out,
     char **name_out,
-    char **src_out)
+    char **src_out,
+    bool to_env)
 {
     bool has_protocol = false;
     bool has_url = false;
@@ -114,7 +118,12 @@ int16_t bake_parse_repo_url(
           url);
     }
 
-    char *src_path = ut_envparse("%s"UT_OS_PS"%s", UT_SRC_PATH, name);
+    char *src_path;
+    if (to_env) {
+        src_path = ut_envparse("%s"UT_OS_PS"%s", UT_SRC_PATH, name);
+    } else {
+        src_path = ut_envparse("."UT_OS_PS"%s", name);
+    }
 
     char *last_elem = strrchr(full_url, '/');
     char *base_url = NULL;
@@ -138,14 +147,17 @@ static
 int16_t bake_update_dependency_list(
     bake_config *config,
     const char *base_url,
-    ut_ll dependencies)
+    ut_ll dependencies,
+    bool to_env,
+    bool override_env,
+    bake_notify_state *notify_state)
 {
     ut_iter it = ut_ll_iter(dependencies);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
 
-        if (!strcmp(dep, "bake.util")) {
-            /* Skip bootstrapped bake.util dependency */
+        if (ut_project_is_buildtool(dep)) {
+            /* Skip build utility dependencies */
             continue;
         }
 
@@ -161,19 +173,31 @@ int16_t bake_update_dependency_list(
             }
         }
 
-        const char *src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        const char *src_path = NULL;
+        if (to_env) {
+            src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        }
+
         if (src_path) {
             /* If source is in bake environment, pull latest version */
             bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src_path);
             git_pull(src_path);
-        } else {
+        } else if (!override_env) {
             /* If source is a project under development, just build it */
             src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
             if (src_path) {
                 bake_message(UT_LOG, 
-                    "note", 
+                    "skip", 
                     "#[green]package#[reset] %s found in '%s' (in dev tree, not pulling)", 
                     dep, src_path);
+
+                if (!notify_state->override_env) {
+                    bake_message(UT_LOG, 
+                        "note", 
+                        "to pull anyway, add --override-env to the bake clone command", 
+                        dep, src_path);
+                    notify_state->override_env = true;                    
+                }
             }
         }
 
@@ -182,14 +206,16 @@ int16_t bake_update_dependency_list(
             if (bake_crawler_search(config, src_path) == -1) {
                 goto error;
             }           
-            ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
+            ut_try( bake_update_dependencies(config, base_url, dep_project, to_env, override_env, notify_state), NULL);
         } else if (base_url) {
-            if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
-                bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
+            if (!override_env && to_env) {
+                if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
+                    bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
+                }
             }
 
             char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-            if (bake_clone(config, url)) {
+            if (bake_clone(config, url, to_env, override_env, notify_state)) {
                 ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
@@ -215,10 +241,13 @@ static
 int16_t bake_update_dependencies(
     bake_config *config,
     const char *base_url,
-    bake_project *project)
+    bake_project *project,
+    bool to_env,
+    bool override_env,
+    bake_notify_state *notify_state)
 {
-    ut_try(bake_update_dependency_list(config, base_url, project->use), NULL);
-    ut_try(bake_update_dependency_list(config, base_url, project->use_private), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use, to_env, override_env, notify_state), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use_private, to_env, override_env, notify_state), NULL);
     return 0;
 error:
     return -1;
@@ -243,20 +272,23 @@ error:
 
 int16_t bake_clone(
     bake_config *config,
-    const char *url)
+    const char *url,
+    bool to_env,
+    bool override_env,
+    bake_notify_state *notify_state)
 {
     char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
     bake_project *project = NULL;
-    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
+    bake_notify_state notify_state_var = {0};
+    if (!notify_state) {
+        notify_state = &notify_state_var;
+    }
+
+    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path, to_env), NULL);
 
     if (ut_file_test(src_path) == 1) {
-        ut_error("project '%s' already cloned, try 'bake update'", name);
-
-        free(full_url);
-        free(base_url);
-        free(src_path);
-
-        return -1;
+        bake_message(UT_LOG, "skip", "#[green]package#[reset] %s (already cloned)", name);
+        bake_message(UT_LOG, "note", "to pull the latest state of %s, run 'bake update'", name);
     } else {
         bake_message(UT_LOG, "clone", "'%s' into '%s'", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);
@@ -269,7 +301,7 @@ int16_t bake_clone(
         goto error;
     }
 
-    ut_try( bake_update_dependencies(config, base_url, project), NULL);
+    ut_try( bake_update_dependencies(config, base_url, project, to_env, override_env, notify_state), NULL);
 
     if (bake_crawler_search(config, src_path) == -1) {
         goto error;

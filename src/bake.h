@@ -30,11 +30,20 @@
 #include "crawler.h"
 #include "project.h"
 
+/* Track which messages have been printed already to avoid spamming the console */
+typedef struct bake_notify_state {
+    bool override_env;    
+} bake_notify_state;
+
 void bake_message(
     int kind,
     const char *bracket_txt,
     const char *fmt,
     ...);
+
+int16_t bake_use(
+    bake_config *config, 
+    const char *expr);
 
 /* -- Configuration functions -- */
 
@@ -52,6 +61,13 @@ int16_t bake_config_export(
 int16_t bake_config_unset(
     bake_config *cfg,
     const char *expr);
+
+/** Add bundle to configuration */
+int16_t bake_config_use_bundle(
+    bake_config *cfg,
+    const char *bundle,
+    const char *tag,
+    bool *changed);
 
 /* -- Build functions -- */
 
@@ -101,7 +117,10 @@ int bake_run(
 /* Clone from remote repository */
 int16_t bake_clone(
     bake_config *config,
-    const char *url);
+    const char *url,
+    bool to_env,
+    bool override_env,
+    bake_notify_state *notify_state);
 
 /* Update from remote repository */
 int bake_update_action(

@@ -691,3 +691,75 @@ int16_t bake_config_unset(
 error:
     return -1;
 }
+
+int16_t bake_config_use_bundle(
+    bake_config *cfg,
+    const char *bundle,
+    const char *tag,
+    bool *changed)
+{
+    char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
+
+    if (ut_file_test(bake_json) != 1) {
+        FILE *f = fopen(bake_json, "w");
+        fprintf(f,
+            "{\"bundles\":{\"use\":[]}}"
+        );
+        fclose(f);
+    }
+
+    if (!tag) {
+        tag = "default";
+    }
+
+    JSON_Value *root = json_parse_file_with_comments(bake_json);
+    if (!root) {
+        ut_throw("failed to parse file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *root_obj = json_value_get_object(root);
+    if (!root_obj) {
+        ut_throw("expected JSON object as root of file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *env = bake_json_find_or_create_object(root_obj, "bundles");
+    if (!env) {
+        goto error;
+    }
+
+    JSON_Object *cur = bake_json_find_or_create_object(env, bundle);
+    if (!cur) {
+        goto error;
+    }
+
+    JSON_Value *val = json_object_get_value(cur, "tag");
+    if (val) {
+        if (json_value_get_type(val) != JSONString) {
+            json_object_remove(cur, "tag");
+            if (changed) {
+                *changed = true;
+            }
+        }
+
+        const char *prev = json_string(val);
+        if (prev) {
+            if (strcmp(prev, tag)) {
+                if (changed) {
+                    *changed = true;
+                }
+            }
+        }
+    }
+
+    json_object_set_string(cur, "tag", tag);
+
+    json_set_escape_slashes(0);
+
+    json_serialize_to_file_pretty(root, bake_json);
+
+    return 0;
+error:
+    return -1;
+}

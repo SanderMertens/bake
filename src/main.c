@@ -21,7 +21,7 @@
 
 #include "bake.h"
 
-#define BAKE_VERSION "2.4.0"
+#define BAKE_VERSION "2.5.0"
 
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
@@ -40,6 +40,8 @@ bool local_setup = false;
 bool strict = false;
 bool optimize = false;
 bool is_test = false;
+bool to_env = false;
+bool override_env = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -53,6 +55,7 @@ const char *output_dir = NULL;
 
 /* Command specific parameters */
 const char *export_expr = NULL;
+const char *use_expr = NULL;
 const char *publish_cmd = NULL;
 const char *run_prefix = NULL;
 const char *test_prefix = NULL;
@@ -96,6 +99,8 @@ void bake_usage(void)
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
     printf("  --test                       Create a test project\n");
+    printf("  --to-env                     Clone projects to the bake environment source path (use with clone)\n");
+    printf("  --override-env               Clone dependencies even if found in the bake environment (use with clone)\n");    
     printf("\n");
     printf("  --id <project id>            Specify a project id\n");
     printf("  --type <package|template>    Specify a project type (default = \"application\")\n");
@@ -129,6 +134,7 @@ void bake_usage(void)
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
+    printf("  use <bundle:tag>             Configure the environment to use specified bundle\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
     printf("  update [project id]          Update an installed package or application\n");
     printf("  foreach <cmd>                Run command for each discovered project\n");
@@ -226,6 +232,7 @@ int16_t bake_init_action(
         !strcmp(arg, "publish") ||
         !strcmp(arg, "info") ||
         !strcmp(arg, "list") ||
+        !strcmp(arg, "use") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
@@ -274,6 +281,9 @@ int bake_parse_args(
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "template", type = BAKE_TEMPLATE);
             ARG(0, "test", is_test = true);
+            ARG(0, "to-env", to_env = true);
+            ARG(0, "override-env", override_env = true);
+
             ARG(0, "private", private = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG('o', NULL, output_dir = argv[i + 1]; i ++);
@@ -356,6 +366,14 @@ int bake_parse_args(
             goto error;
         }
         export_expr = path;
+    }
+    
+    else if (!strcmp(action, "use")) {
+        if (!path_set) {
+            ut_throw("missing expression for use command");
+            goto error;
+        }
+        use_expr = path;
     }
 
     else if (!strcmp(action, "publish")) {
@@ -1312,7 +1330,7 @@ int main(int argc, const char *argv[]) {
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            ut_try( bake_clone(&config, path), NULL);
+            ut_try( bake_clone(&config, path, to_env, override_env, NULL), NULL);
         }
 
         uint32_t count = bake_crawler_count();
@@ -1392,6 +1410,8 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
             ut_try (bake_config_unset(&config, export_expr), NULL);
+        } else if (!strcmp(action, "use")) {
+            ut_try (bake_use(&config, use_expr), NULL);
         } else if (!strcmp(action, "upgrade")) {
             ut_log("#[bold]Cannot upgrade bake while bake is running\n");
             printf("  This is likely happening because the bake environment is exported. To\n");

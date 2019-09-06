@@ -578,10 +578,11 @@ int bake_project_load_drivers(
         JSON_Value *value = json_object_get_value_at(project->json, i);
         JSON_Object *obj = json_value_get_object(value);
 
-        if (strcmp(member, "dependee")) {
-            ut_try( bake_project_load_driver(project, member, obj), NULL);
-        } else {
+        if (!strcmp(member, "dependee")) {
             project->dependee_json = json_serialize_to_string(value);
+        } else if (!strcmp(member, "bundle")) {
+        } else {
+            ut_try( bake_project_load_driver(project, member, obj), NULL);
         }
     }
 
