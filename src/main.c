@@ -134,7 +134,7 @@ void bake_usage(void)
     printf("  publish <patch|minor|major>  Publish new project version\n");
     printf("  install [path]               Install project to bake environment\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
-    printf("  use <bundle:tag>             Configure the environment to use specified bundle\n");
+    printf("  use <project:bundle>         Configure the environment to use specified bundle\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
     printf("  update [project id]          Update an installed package or application\n");
     printf("  foreach <cmd>                Run command for each discovered project\n");

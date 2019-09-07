@@ -21,6 +21,27 @@
 
 #include "bake.h"
 
+typedef struct bake_repository_ref {
+    const char *id;
+    const char *repository;
+    const char *branch;
+    const char *commit;
+    const char *tag;
+    const char *bundle_source;
+    const char *bundle;
+} bake_repository_ref;
+
+static ut_rb rrefs;
+
+static
+int repository_ref_cmp(
+    void *ctx,
+    const void* key1,
+    const void* key2)
+{
+    return strcmp(key1, key2);
+}
+
 int16_t bake_use(
     bake_config *config, 
     const char *expr)
@@ -43,5 +64,95 @@ int16_t bake_use(
 
     return 0;
 error:
+    return -1;
+}
+
+static
+int16_t check_conflict(
+    const char *id,
+    const char *attribute,
+    const char *value1,
+    const char *value2)
+{
+    if (value1 && value2) {
+        if (strcmp(value1, value2)) {
+            ut_error("bundle conflict for '%s': %s mismatch ('%s' vs. '%s')",
+                id, attribute, value1, value2);
+            goto error;                
+        }
+    } else if (value1 != value2) {
+        if (value1) {
+            ut_error("bundle conflict for '%s': %s mismatch ('%s' vs. null)",
+                id, attribute, value1);
+            goto error;
+        } else {
+            ut_error("bundle conflict for '%s': %s mismatch ('%s' vs. null)",
+                id, attribute, value2);  
+            goto error;              
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_add_repository(
+    const char *id,
+    const char *repository,
+    const char *branch,
+    const char *commit,
+    const char *tag,
+    const char *bundle_source,
+    const char *bundle)
+{
+    bake_repository_ref *rref = NULL;
+
+    if (!rrefs) {
+        rrefs = ut_rb_new(repository_ref_cmp, NULL);
+    } else {
+        rref = ut_rb_find(rrefs, id);
+    }
+
+    if (!rref) {
+        rref = malloc(sizeof(bake_repository_ref));
+        rref->id = ut_strdup(id);
+        rref->repository = ut_strdup(repository);
+        rref->branch = ut_strdup(branch);
+        rref->commit = ut_strdup(commit);
+        rref->tag = ut_strdup(tag);
+        rref->bundle_source = ut_strdup(bundle_source);
+        rref->bundle = ut_strdup(bundle);
+        ut_rb_set(rrefs, id, rref);
+    } else {
+        ut_try( check_conflict(
+            id, 
+            "repository", 
+            rref->repository, 
+            repository), NULL);
+
+        ut_try( check_conflict(
+            id, 
+            "branch", 
+            rref->branch, 
+            branch), NULL);
+
+        ut_try( check_conflict(
+            id, 
+            "commit", 
+            rref->commit, 
+            commit), NULL);
+
+        ut_try( check_conflict(
+            id, 
+            "tag", 
+            rref->tag, 
+            tag), NULL);
+    }
+
+    return 0;
+error:
+    ut_error("conflicting bundles: %s:%s, %s:%s", 
+        rref->bundle_source, rref->bundle, bundle_source, bundle);
     return -1;
 }

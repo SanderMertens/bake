@@ -41,9 +41,20 @@ void bake_message(
     const char *fmt,
     ...);
 
+/* -- Repository database -- */
+
 int16_t bake_use(
     bake_config *config, 
     const char *expr);
+
+int16_t bake_add_repository(
+    const char *id,
+    const char *repository,
+    const char *branch,
+    const char *commit,
+    const char *tag,
+    const char *bundle_source,
+    const char *bundle);
 
 /* -- Configuration functions -- */
 

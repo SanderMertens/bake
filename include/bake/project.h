@@ -46,6 +46,33 @@ typedef struct bake_project_driver {
     ut_ll attributes;
 } bake_project_driver;
 
+/* Bind bake project to a repository */
+typedef struct bake_repository {
+    char *id;
+    char *url;
+} bake_repository;
+
+/* Identifies a specific revision in the repository */
+typedef struct bake_ref {
+    bake_repository *repository;
+    char *branch;
+    char *commit;
+    char *tag;
+} bake_ref;
+
+/* Default values for revision to use by refs in bundle */
+typedef struct bake_bundle_defaults {
+    char *branch;
+    char *tag;
+} bake_bundle_defaults;
+
+/* Bundle containing repository revisions */
+typedef struct bake_bundle {
+    char *id;
+    bake_bundle_defaults defaults;
+    ut_rb refs;
+} bake_bundle;
+
 struct bake_project {
     /* Project properties (managed by bake core) */
     char *path;             /* Project path */
@@ -67,8 +94,12 @@ struct bake_project {
     ut_ll link;             /* All resolved dependencies package must link with */
     ut_ll sources;          /* Paths to source files */
     ut_ll includes;         /* Paths to include files */
-    bool keep_binary;     /* Keep artefact when cleaning project */
+    bool keep_binary;       /* Keep artefact when cleaning project */
     char *dependee_json;    /* Build instructions for dependees */
+
+    char *default_host;     /* Optional default git repository host */
+    ut_rb repositories;     /* Repositories in bundle */
+    ut_rb bundles;          /* Repository references in bundle */
 
     ut_ll drivers;          /* Drivers used to build this project */
     bake_project_driver *language_driver; /* Driver loaded for the language */

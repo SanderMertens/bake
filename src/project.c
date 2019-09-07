@@ -25,6 +25,260 @@ extern ut_tls BAKE_DRIVER_KEY;
 extern ut_tls BAKE_FILELIST_KEY;
 extern ut_tls BAKE_PROJECT_KEY;
 
+static
+int rb_strcmp(
+    void *ctx,
+    const void* key1,
+    const void* key2)
+{
+    return strcmp(key1, key2);
+}
+
+/* Parse ref in 'refs' section */
+static
+int16_t bake_project_parse_ref(
+    bake_project *p,
+    bake_bundle *bundle,
+    const char *id,
+    JSON_Object *o)
+{
+    if (!bundle->refs) {
+        bundle->refs = ut_rb_new(rb_strcmp, NULL);
+    } else {
+        if (ut_rb_find(bundle->refs, id)) {
+            ut_throw("ref '%s' redefined", id);
+            goto error;
+        }
+    }
+
+    bake_ref *ref = ut_calloc(sizeof(bake_bundle));
+
+    /* Find corresponding repository */
+    bake_repository *repo = ut_rb_find(p->repositories, id);
+    if (!repo) {
+        ut_throw("referenced project '%s' that is not in 'repository' list",
+            id);
+        goto error;
+    }
+
+    ref->repository = repo;
+
+    uint32_t i, count = json_object_get_count(o);
+    for (i = 0; i < count; i ++) {
+        char *member = (char*)json_object_get_name(o, i);
+        JSON_Value *v = json_object_get_value_at(o, i);
+
+        if (!strcmp(member, "tag")) {
+            ut_try( bake_json_set_string(&ref->tag, member, v), NULL);
+
+        } else if (!strcmp(member, "commit")) {
+            ut_try( bake_json_set_string(&ref->commit, member, v), NULL);
+
+        } else if (!strcmp(member, "branch")) {
+            ut_try( bake_json_set_string(&ref->branch, member, v), NULL);
+        
+        } else {
+            ut_warning("ignoring unkown property '%s'", member);
+        }
+    }
+
+    if (!ref->tag && !ref->commit) {
+        if (bundle->defaults.tag) {
+            ref->tag = ut_strdup(bundle->defaults.tag);
+        }
+    }
+
+    if (!ref->branch) {
+        if (bundle->defaults.branch) {
+            ref->branch = ut_strdup(bundle->defaults.branch);
+        }
+    }
+
+    ut_rb_set(bundle->refs, id, ref);
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse bundle in 'refs' section */
+static
+int16_t bake_project_parse_bundle(
+    bake_project *p,
+    const char *id,
+    JSON_Object *o)
+{
+    bake_bundle *bundle = ut_calloc(sizeof(bake_bundle));
+
+    uint32_t i, count = json_object_get_count(o);
+    for (i = 0; i < count; i ++) {
+        char *member = (char*)json_object_get_name(o, i);
+        JSON_Value *v = json_object_get_value_at(o, i);
+
+        if (!strcmp(member, "default-tag")) {
+            ut_try( bake_json_set_string(&bundle->defaults.tag, member, v), NULL);
+
+        } else if (!strcmp(member, "default-branch")) {
+            ut_try( bake_json_set_string(&bundle->defaults.branch, member, v), NULL);
+        
+        } else {
+            JSON_Object *o = json_object(v);
+            if (!o) {
+                ut_throw("invalid value for ref '%s', expected object",
+                    member);
+                goto error;
+            }
+
+            ut_try( bake_project_parse_ref(p, bundle, member, o), NULL);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse 'refs' in 'bundle' section */
+static
+int16_t bake_project_parse_refs(
+    bake_project *p,
+    JSON_Object *o)
+{
+    bake_bundle *bundle = ut_calloc(sizeof(bake_bundle));
+
+    uint32_t i, count = json_object_get_count(o);
+    for (i = 0; i < count; i ++) {
+        char *member = (char*)json_object_get_name(o, i);
+        JSON_Value *v = json_object_get_value_at(o, i);
+        JSON_Object *o = json_object(v);
+        if (!o) {
+            ut_throw("invalid value for '%s', expected object");
+            goto error;
+        }
+
+        ut_try( bake_project_parse_bundle(p, member, o), NULL);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse repository in 'repositories' section */
+static
+int16_t bake_project_parse_repository(
+    bake_project *p,
+    JSON_Object *o)
+{
+    bake_repository *repo = ut_calloc(sizeof(bake_repository));
+
+    uint32_t i, count = json_object_get_count(o);
+    for (i = 0; i < count; i ++) {
+        char *member = (char*)json_object_get_name(o, i);
+        JSON_Value *v = json_object_get_value_at(o, i);
+
+        if (!strcmp(member, "id")) {
+            ut_try( bake_json_set_string(&repo->id, member, v), NULL);
+
+        } else if (!strcmp(member, "url")) {
+            ut_try( bake_json_set_string(&repo->url, member, v), NULL);
+        
+        } else {
+            ut_warning("ignoring unknown property '%s'", member);
+        }
+    }
+
+    if (!repo->id) {
+        ut_throw("missing 'id' for repository");
+        goto error;
+    }
+    
+    if (!repo->url) {
+        ut_throw("missing 'url' for repository");
+        goto error;
+    }
+
+    if (!p->repositories) {
+        p->repositories = ut_rb_new(rb_strcmp, NULL);
+    } else {
+        if (ut_rb_find(p->repositories, repo->id)) {
+            ut_throw("repository '%s' redefined", repo->id);
+            goto error;
+        }
+    }
+
+    ut_rb_set(p->repositories, repo->id, repo);
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse 'repositories' section in bundle */
+static
+int16_t bake_project_parse_repositories(
+    bake_project *p,
+    JSON_Array *a)
+{
+    uint32_t i, count = json_array_get_count(a);
+    for (i = 0; i < count; i ++) {
+        JSON_Value *v = json_array_get_value(a, i);
+        JSON_Object *o = json_object(v);
+        if (!o) {
+            ut_throw("invalid element in 'projects', expected object");
+            goto error;
+        }
+
+        ut_try( bake_project_parse_repository(p, o), NULL);
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Parse 'bundle' section in project file */
+static
+int16_t bake_project_parse_bundles(
+    bake_project *p,
+    JSON_Object *jo)
+{
+    uint32_t i, count = json_object_get_count(jo);
+    for (i = 0; i < count; i ++) {
+        char *member = (char*)json_object_get_name(jo, i);
+        JSON_Value *v = json_object_get_value_at(jo, i);
+
+        if (!strcmp(member, "default-host")) {
+            ut_try( bake_json_set_string(&p->default_host, member, v), NULL);
+
+        } else if (!strcmp(member, "repositories")) {
+            JSON_Array *a = json_array(v);
+            if (!a) {
+                ut_throw("invalid value for 'repositories', expected array");
+                goto error;                
+            }
+
+            ut_try( bake_project_parse_repositories(p, a), NULL);
+        
+        } else if (!strcmp(member, "refs")) {
+            JSON_Object *o = json_object(v);
+            if (!o) {
+                ut_throw("invalid value for 'refs', expected object");
+                goto error;
+            }
+
+            ut_try( bake_project_parse_refs(p, o), NULL);
+        
+        } else {
+            ut_warning("ignoring unknown property '%s'", member);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Validate dependencies in use array */
 static
 int16_t bake_validate_dep_array(
@@ -233,7 +487,7 @@ int bake_project_load_driver(
             goto error;
         }
 
-        project_driver = malloc(sizeof(bake_project_driver));
+        project_driver = ut_calloc(sizeof(bake_project_driver));
         project_driver->id = driver->id;
         project_driver->driver = driver;
         project_driver->json = NULL;
@@ -581,6 +835,7 @@ int bake_project_load_drivers(
         if (!strcmp(member, "dependee")) {
             project->dependee_json = json_serialize_to_string(value);
         } else if (!strcmp(member, "bundle")) {
+            ut_try( bake_project_parse_bundles(project, obj), NULL);
         } else {
             ut_try( bake_project_load_driver(project, member, obj), NULL);
         }
@@ -1944,5 +2199,64 @@ int16_t bake_project_setup_w_template(
     return 0;
 error:
     free(template_path);
+    return -1;
+}
+
+uint16_t bake_project_load_bundle(
+    bake_config *config,
+    bake_project *project,
+    const char *bundle_id)
+{
+    if (!project->repositories) {
+        ut_throw("cannot load '%s:%s', project has no bundles", 
+            project->id, bundle_id);
+        goto error;
+    }
+
+    if (!bundle_id) {
+        bundle_id = "default";
+    }
+
+    bake_bundle *bundle = ut_rb_find(project->bundles, bundle_id);
+    if (!bundle) {
+        /* If no explicit bundle configuration is found, use the repository
+         * list with the bundle_id as tag unless the bundle_id is 'default'
+         * in which case the repository head will be used. */
+        const char *tag = bundle_id;
+        if (!strcmp(tag, "default")) {
+            tag = NULL;
+        }
+
+        ut_iter it = ut_rb_iter(project->repositories);
+        while (ut_iter_hasNext(&it)) {
+            bake_repository *repo = ut_iter_next(&it);
+            bake_add_repository(
+                repo->id,
+                repo->url,
+                NULL,
+                NULL,
+                tag,
+                project->id,
+                bundle_id);
+        }
+
+    /* If explicit references are defined, use those */
+    } else {
+        ut_iter it = ut_rb_iter(bundle->refs);
+        while (ut_iter_hasNext(&it)) {
+            bake_ref *ref = ut_iter_next(&it);
+            bake_add_repository(
+                ref->repository->id,
+                ref->repository->url,
+                ref->branch,
+                ref->commit,
+                ref->tag,
+                project->id,
+                bundle_id);
+        }
+    }
+
+    return 0;
+error:
     return -1;
 }
