@@ -61,7 +61,8 @@ int16_t bake_add_repository(
 /** Find bake config file(s), load specified configuration & environment */
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *env_id);
+    const char *env_id,
+    bool load_bundles);
 
 /** Export variable to bake configuration */
 int16_t bake_config_export(

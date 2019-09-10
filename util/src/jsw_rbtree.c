@@ -228,6 +228,10 @@ void jsw_rbdelete ( jsw_rbtree_t *tree )
 */
 void *jsw_rbfind ( jsw_rbtree_t *tree, const void *key )
 {
+  if (!tree) {
+    return NULL;
+  }
+  
   jsw_rbnode_t *it = tree->root;
 
   while ( it != NULL ) {

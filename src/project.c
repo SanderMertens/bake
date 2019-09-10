@@ -2208,7 +2208,7 @@ uint16_t bake_project_load_bundle(
     const char *bundle_id)
 {
     if (!project->repositories) {
-        ut_throw("cannot load '%s:%s', project has no bundles", 
+        ut_throw("cannot load '%s:%s', project has no repositories", 
             project->id, bundle_id);
         goto error;
     }

@@ -25,6 +25,36 @@ static bool env_found = false;
 static bool cfg_found = false;
 
 static
+int16_t bake_config_load_bundle(
+    bake_config *cfg,
+    const char *project_id,
+    const char *bundle)
+{
+    /* First try to load project and bundle, to make it is available */
+    const char *project_path = ut_locate(project_id, NULL, UT_LOCATE_PROJECT);
+    if (!project_path) {
+        ut_throw("cannot load bundle '%s:%s', project not found",
+            project_id, bundle);
+        goto error;
+    }
+
+    bake_project *project = bake_project_new(project_path, cfg);
+    if (!project) {
+        ut_throw("cannot load bundle '%s:%s', error loading project file",
+            project_id, bundle);
+        goto error;
+    }
+
+    ut_try( bake_project_load_bundle(cfg, project, bundle), 
+        "cannot load bundle '%s:%s', error loading project bundle",
+            project_id, bundle);
+
+    return 0;
+error:
+    return -1;
+}
+
+static
 bool bake_config_var_is_valid(
     const char *var)
 {
@@ -245,7 +275,8 @@ int16_t bake_config_load_file (
     const char *file,
     bake_config *cfg_out,
     const char *cfg_name,
-    const char *env_name)
+    const char *env_name,
+    bool load_bundles)
 {
     ut_ok("load configuration '%s'", file);
 
@@ -301,6 +332,35 @@ int16_t bake_config_load_file (
         }
     }
 
+    /* Parse bundles */
+    if (load_bundles) {
+        JSON_Object *bundles = json_object_get_object(jsonObj, "bundles");
+        if (bundles) {
+            int i;
+            for (i = 0; i < json_object_get_count(bundles); i ++) {
+                const char *project_id = json_object_get_name(bundles, i);
+                JSON_Value *j_project = json_object_get_value_at(bundles, i);
+                JSON_Object *o_project = json_object(j_project);
+                if (!o_project) {
+                    ut_throw("%s: invalid configuration, expected object for '%s'",
+                        project_id);
+                    goto error;    
+                }
+
+                const char *bundle = json_object_get_string(o_project, "bundle");
+                if (!bundle) {
+                    bundle = "default";
+                }
+                
+                if (bake_config_load_bundle(cfg_out, project_id, bundle)) {
+                    ut_warning(
+                        "%s: bundle '%s:%s' not loaded due to errors, ignoring", 
+                        project_id, bundle);
+                }
+            }
+        }
+    }
+
     json_value_free(json);
 
     return 0;
@@ -315,11 +375,12 @@ int16_t bake_config_load_config(
     ut_ll config_files,
     bake_config *cfg_out,
     const char *cfg_id,
-    const char *env_id)
+    const char *env_id,
+    bool load_bundles)
 {
     char *file;
     while ((file = ut_ll_takeFirst(config_files))) {
-        if (bake_config_load_file(file, cfg_out, cfg_id, env_id) == -1) {
+        if (bake_config_load_file(file, cfg_out, cfg_id, env_id, load_bundles) == -1) {
             goto error;
         }
         free(file);
@@ -414,7 +475,8 @@ ut_ll bake_config_find_config(void)
 
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *env_id)
+    const char *env_id,
+    bool load_bundles)
 {
     /* Use default configuration and environment */
     cfg_out->env_variables = ut_ll_new();
@@ -428,7 +490,8 @@ int16_t bake_config_load(
             config_files,
             cfg_out,
             UT_CONFIG,
-            env_id))
+            env_id,
+            load_bundles))
         {
             goto error;
         }
@@ -694,22 +757,25 @@ error:
 
 int16_t bake_config_use_bundle(
     bake_config *cfg,
+    const char *project_id,
     const char *bundle,
-    const char *tag,
     bool *changed)
 {
+    ut_try( bake_config_load_bundle(cfg, project_id, bundle), NULL);
+
+    /* Bake was able to load bundle, continue adding it to the config file */
     char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
 
     if (ut_file_test(bake_json) != 1) {
         FILE *f = fopen(bake_json, "w");
         fprintf(f,
-            "{\"bundles\":{\"use\":[]}}"
+            "{\"bundles\":{}}"
         );
         fclose(f);
     }
 
-    if (!tag) {
-        tag = "default";
+    if (!bundle) {
+        bundle = "default";
     }
 
     JSON_Value *root = json_parse_file_with_comments(bake_json);
@@ -724,36 +790,41 @@ int16_t bake_config_use_bundle(
         goto error;
     }
 
-    JSON_Object *env = bake_json_find_or_create_object(root_obj, "bundles");
-    if (!env) {
+    JSON_Object *bundles = bake_json_find_or_create_object(root_obj, "bundles");
+    if (!bundles) {
         goto error;
     }
 
-    JSON_Object *cur = bake_json_find_or_create_object(env, bundle);
+    JSON_Object *cur = bake_json_find_or_create_object(bundles, project_id);
     if (!cur) {
         goto error;
     }
 
-    JSON_Value *val = json_object_get_value(cur, "tag");
+    JSON_Value *val = json_object_get_value(cur, "bundle");
     if (val) {
         if (json_value_get_type(val) != JSONString) {
-            json_object_remove(cur, "tag");
+            json_object_remove(cur, "bundle");
             if (changed) {
                 *changed = true;
             }
         }
 
+
         const char *prev = json_string(val);
         if (prev) {
-            if (strcmp(prev, tag)) {
+            if (strcmp(prev, bundle)) {
                 if (changed) {
                     *changed = true;
                 }
             }
         }
+    } else {
+        if (changed) {
+            *changed = true;
+        }
     }
 
-    json_object_set_string(cur, "tag", tag);
+    json_object_set_string(cur, "bundle", bundle);
 
     json_set_escape_slashes(0);
 

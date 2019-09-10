@@ -37,6 +37,7 @@ bool discover = true;
 bool build = true;
 bool test = false;
 bool local_setup = false;
+bool load_bundles = false;
 bool strict = false;
 bool optimize = false;
 bool is_test = false;
@@ -250,6 +251,13 @@ int16_t bake_init_action(
         discover = true;
         build = false;
         return 0;
+    }
+
+    /* Bundles are only loaded when bake interacts with git */
+    if (!strcmp(arg, "clone") ||
+        !strcmp(arg, "update"))
+    {
+        load_bundles = true;
     }
 
     return -1;
@@ -1289,7 +1297,7 @@ int main(int argc, const char *argv[]) {
     }
 
     ut_log_push("config");
-    ut_try (bake_config_load(&config, env), NULL);
+    ut_try (bake_config_load(&config, env, load_bundles), NULL);
     ut_log_pop();
 
 #ifndef UT_OS_WINDOWS

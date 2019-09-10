@@ -47,20 +47,30 @@ int16_t bake_use(
     const char *expr)
 {
     char *pkg = ut_strdup(expr);
-    char *tag = strrchr(pkg, ':');
-    if (tag) {
-        *tag = '\0';
-        tag ++;
+    char *bundle = strrchr(pkg, ':');
+    if (bundle) {
+        *bundle = '\0';
+        bundle ++;
     }
 
     const char *path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
     if (!path) {
-        ut_error("cannot find bundle '%s'", pkg);
+        ut_error("cannot find project '%s'", pkg);
         goto error;
     }
 
     bool changed = false;
-    ut_try( bake_config_use_bundle(config, pkg, tag, &changed), NULL);
+    ut_try( bake_config_use_bundle(config, pkg, bundle, &changed), NULL);
+
+    if (changed) {
+        bake_message(UT_LOG, "info", 
+            "bundle '%s:%s' added to configuration",
+            pkg, bundle);
+    } else {
+        bake_message(UT_LOG, "info", 
+            "bundle '%s:%s' already added to configuration",
+            pkg, bundle);        
+    }
 
     return 0;
 error:
