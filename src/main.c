@@ -42,7 +42,7 @@ bool strict = false;
 bool optimize = false;
 bool is_test = false;
 bool to_env = false;
-bool override_env = false;
+bool always_clone = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -66,6 +66,7 @@ int run_argc = 0;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
 const char *list_filter = NULL;
+bool show_repositories = false;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -101,7 +102,7 @@ void bake_usage(void)
     printf("  --template                   Set the project type to template\n");
     printf("  --test                       Create a test project\n");
     printf("  --to-env                     Clone projects to the bake environment source path (use with clone)\n");
-    printf("  --override-env               Clone dependencies even if found in the bake environment (use with clone)\n");    
+    printf("  --always-clone               Clone dependencies even if found in the bake environment (use with clone)\n");    
     printf("\n");
     printf("  --id <project id>            Specify a project id\n");
     printf("  --type <package|template>    Specify a project type (default = \"application\")\n");
@@ -118,6 +119,8 @@ void bake_usage(void)
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
     printf("\n");
+    printf("  --show-repositories          List loaded repositories (use with bake list)\n");
+    printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
     printf("  --debug                      Set verbosity to DEBUG (highest verbosity)\n");
@@ -133,10 +136,10 @@ void bake_usage(void)
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  reset                        Resets bake environment to initial state, save for bake configuration\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
-    printf("  install [path]               Install project to bake environment\n");
+    printf("  install [project id]         Install project to bake environment (repository must be known)\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
-    printf("  use <project:bundle>         Configure the environment to use specified bundle\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
+    printf("  use <project:bundle>         Configure the environment to use specified bundle\n");
     printf("  update [project id]          Update an installed package or application\n");
     printf("  foreach <cmd>                Run command for each discovered project\n");
     printf("\n");
@@ -211,11 +214,21 @@ bake_project_type bake_parse_project_type(
 int16_t bake_init_action(
     const char *arg)
 {
+    /* Bundles are only loaded when bake interacts with git */
+    if (!strcmp(arg, "clone") ||
+        !strcmp(arg, "install") ||
+        !strcmp(arg, "update") ||
+        !strcmp(arg, "list"))
+    {
+        load_bundles = true;
+    }
+
     if (!strcmp(arg, "build") ||
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
-        !strcmp(arg, "install") ||
-        !strcmp(arg, "clone"))
+        !strcmp(arg, "meta-install") ||
+        !strcmp(arg, "clone") ||
+        !strcmp(arg, "install"))
     {
         discover = true;
         build = true;
@@ -253,13 +266,6 @@ int16_t bake_init_action(
         return 0;
     }
 
-    /* Bundles are only loaded when bake interacts with git */
-    if (!strcmp(arg, "clone") ||
-        !strcmp(arg, "update"))
-    {
-        load_bundles = true;
-    }
-
     return -1;
 }
 
@@ -290,7 +296,7 @@ int bake_parse_args(
             ARG(0, "template", type = BAKE_TEMPLATE);
             ARG(0, "test", is_test = true);
             ARG(0, "to-env", to_env = true);
-            ARG(0, "override-env", override_env = true);
+            ARG(0, "always-clone", always_clone = true);
 
             ARG(0, "private", private = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
@@ -306,6 +312,7 @@ int bake_parse_args(
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
+            ARG(0, "show-repositories", show_repositories = true);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
             ARG('v', "version", bake_version(); action = NULL; i ++);
@@ -356,7 +363,7 @@ int bake_parse_args(
 
     bool path_set = strcmp(path, ".");
 
-    if (!strcmp(action, "install")) {
+    if (!strcmp(action, "meta-install")) {
         if (ut_file_test(path) != 1) {
             action = "install_remote";
             discover = false;
@@ -483,7 +490,7 @@ int bake_build(
     if (!strcmp(action, "build")) cb = bake_do_build;
     else if (!strcmp(action, "clean")) cb = bake_do_clean;
     else if (!strcmp(action, "rebuild")) cb = bake_do_rebuild;
-    else if (!strcmp(action, "install")) cb = bake_do_install;
+    else if (!strcmp(action, "meta-install")) cb = bake_do_install;
     else {
         ut_error("unknown action '%s'", action);
         goto error;
@@ -875,6 +882,57 @@ int bake_list(
         ep->id = ut_strdup(id);
         list_configurations(config, ep);
         ut_ll_append(packages, ep);
+    }
+
+    if (!clean_missing && config->bundles) {
+        ut_log("\n#[grey]Loaded bundles:#[normal]\n");
+        it = ut_ll_iter(config->bundles);
+        while (ut_iter_hasNext(&it)) {
+            bake_bundle *bundle = ut_iter_next(&it);
+            ut_log(" * %s:%s\n", bundle->project, bundle->id);            
+        }
+    }
+
+    if (show_repositories) {
+        ut_log("\n#[grey]Known repositories:#[normal]\n");
+        if (config->repositories) {
+            it = ut_rb_iter(config->repositories);
+            while (ut_iter_hasNext(&it)) {
+                bake_repository *repo = ut_iter_next(&it);
+                const char *branch = repo->branch ? repo->branch : "master";
+                const char *tag = repo->tag ? repo->tag : "latest";
+                const char *commit = repo->commit;
+
+                const char *bundle = repo->bundle;
+                if (!bundle) {
+                    bundle = "[value.repository]";
+                }
+
+                /* If project is not cloned, show it as greyed out */
+                const char *located = ut_locate(
+                    repo->id, NULL, UT_LOCATE_PROJECT);
+
+                if (located) {
+                    if (commit) {
+                        ut_log(" * %s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
+                            repo->id, repo->url, branch, commit, repo->project, bundle);            
+                    } else {
+                        ut_log(" * %s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
+                            repo->id, repo->url, branch, tag, repo->project, bundle); 
+                    }
+                } else {
+                    if (commit) {
+                        ut_log(" * #[yellow]%s#[normal]: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
+                            repo->id, repo->url, branch, commit, repo->project, bundle);            
+                    } else {
+                        ut_log(" * #[yellow]%s#[normal]: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
+                            repo->id, repo->url, branch, tag, repo->project, bundle); 
+                    }   
+                }
+            }        
+        } else {
+            ut_log(" - no repositories loaded\n");
+        }
     }
 
     if (!clean_missing) {
@@ -1296,12 +1354,23 @@ int main(int argc, const char *argv[]) {
         config.optimizations = true;
     }
 
+#ifndef UT_OS_WINDOWS
+    bool is_bake_parent = !ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE");
+    if (is_bake_parent) {
+        /* If this is a parent process, don't load bundles. This is not 
+         * necessary since the parent process won't do anything with it, 
+         * and it can also limit the amount of errors thrown if the module
+         * configuration has issues. */
+        load_bundles = false;
+    }
+#endif
+
     ut_log_push("config");
     ut_try (bake_config_load(&config, env, load_bundles), NULL);
     ut_log_pop();
 
 #ifndef UT_OS_WINDOWS
-    if (!ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE")) {
+    if (is_bake_parent) {
         ut_setenv("BAKE_CHILD", "TRUE");
 
         ut_trace("fork bake to export environment");
@@ -1338,7 +1407,9 @@ int main(int argc, const char *argv[]) {
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            ut_try( bake_clone(&config, path, to_env, override_env, NULL), NULL);
+            ut_try( bake_clone(&config, path, to_env, always_clone, NULL), NULL);
+        } else if (!strcmp(action, "install")) {
+            ut_try( bake_install(&config, path), NULL);
         }
 
         uint32_t count = bake_crawler_count();
@@ -1399,7 +1470,7 @@ int main(int argc, const char *argv[]) {
                     NULL);
             }
         } else if (!strcmp(action, "publish")) {
-            ut_try (bake_publish_project(&config), NULL);
+            ut_try (bake_publish_project(&config), NULL);        
         } else if (!strcmp(action, "uninstall")) {
             if (type == BAKE_TEMPLATE) {
                 ut_try (bake_install_uninstall_template(&config, id), NULL);

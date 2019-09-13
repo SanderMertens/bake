@@ -21,20 +21,10 @@
 
 #include "bake.h"
 
-typedef struct bake_repository_ref {
-    const char *id;
-    const char *repository;
-    const char *branch;
-    const char *commit;
-    const char *tag;
-    const char *bundle_source;
-    const char *bundle;
-} bake_repository_ref;
-
 static ut_rb rrefs;
 
 static
-int repository_ref_cmp(
+int repository_cmp(
     void *ctx,
     const void* key1,
     const void* key2)
@@ -62,14 +52,19 @@ int16_t bake_use(
     bool changed = false;
     ut_try( bake_config_use_bundle(config, pkg, bundle, &changed), NULL);
 
+    /* Set to "default" rather than NULL for more pleasant log to the console */
+    if (!bundle) {
+        bundle = "default";
+    }
+
     if (changed) {
         bake_message(UT_LOG, "info", 
-            "bundle '%s:%s' added to configuration",
+            "bundle '%s:%s' set in configuration",
             pkg, bundle);
     } else {
         bake_message(UT_LOG, "info", 
-            "bundle '%s:%s' already added to configuration",
-            pkg, bundle);        
+            "bundle '%s:%s' is already configured",
+            pkg, bundle);
     }
 
     return 0;
@@ -108,37 +103,59 @@ error:
 }
 
 int16_t bake_add_repository(
+    bake_config *cfg,
     const char *id,
     const char *repository,
     const char *branch,
     const char *commit,
     const char *tag,
-    const char *bundle_source,
+    const char *project,
     const char *bundle)
 {
-    bake_repository_ref *rref = NULL;
-
-    if (!rrefs) {
-        rrefs = ut_rb_new(repository_ref_cmp, NULL);
+    bake_repository *rref = NULL;
+    
+    if (!cfg->repositories) {
+        cfg->repositories = ut_rb_new(repository_cmp, NULL);
     } else {
-        rref = ut_rb_find(rrefs, id);
+        rref = ut_rb_find(cfg->repositories, id);
     }
 
     if (!rref) {
-        rref = malloc(sizeof(bake_repository_ref));
+        rref = ut_calloc(sizeof(bake_repository));
         rref->id = ut_strdup(id);
-        rref->repository = ut_strdup(repository);
-        rref->branch = ut_strdup(branch);
-        rref->commit = ut_strdup(commit);
-        rref->tag = ut_strdup(tag);
-        rref->bundle_source = ut_strdup(bundle_source);
-        rref->bundle = ut_strdup(bundle);
-        ut_rb_set(rrefs, id, rref);
-    } else {
+        rref->url = ut_strdup(repository);  
+        ut_rb_set(cfg->repositories, id, rref);      
+    }
+
+    /* If the previous value did not set a bundle, override previous values. A
+     * repository without a bundle comes from the repository field in the value
+     * section of a project file. */
+    if (!rref->bundle && bundle) {
+        /* The repository URL has to match */
         ut_try( check_conflict(
             id, 
             "repository", 
-            rref->repository, 
+            rref->url, 
+            repository), NULL);
+
+        /* These fields are guaranteed to not be set */
+        rref->branch = ut_strdup(branch);
+        rref->commit = ut_strdup(commit);
+        rref->tag = ut_strdup(tag);
+
+        /* If the repository was set through the repository field, the project
+         * id was already set. Override with the project of the bundle. */
+        free(rref->project);
+        rref->project = ut_strdup(project);
+        rref->bundle = ut_strdup(bundle);
+
+    /* If the bundle is set, make sure the new values don't conflict with the
+     * old ones. */
+    } else if (rref->bundle && bundle) {
+        ut_try( check_conflict(
+            id, 
+            "repository", 
+            rref->url, 
             repository), NULL);
 
         ut_try( check_conflict(
@@ -158,11 +175,33 @@ int16_t bake_add_repository(
             "tag", 
             rref->tag, 
             tag), NULL);
+
+    /* It can happen that after loading the bundle, the project.json file is
+     * parsed again. In that case just check if the repository still matches. */
+    } else if (!bundle) {
+        ut_try( check_conflict(
+            id, 
+            "repository", 
+            rref->url, 
+            repository), NULL);
+        
+        /* Nothing else needs to be done, the bundle takes precedence over the
+         * repository field in the value section. */
     }
 
     return 0;
 error:
     ut_error("conflicting bundles: %s:%s, %s:%s", 
-        rref->bundle_source, rref->bundle, bundle_source, bundle);
+        rref->project, 
+        rref->bundle ? rref->bundle : "[value.repository]", 
+        project, 
+        bundle ? bundle : "[value.repository]");
     return -1;
+}
+
+bake_repository* bake_find_repository(
+    bake_config *cfg,
+    const char *id)
+{
+    return ut_rb_find(cfg->repositories, id);
 }

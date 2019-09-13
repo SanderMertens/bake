@@ -38,7 +38,7 @@ int rb_strcmp(
 static
 int16_t bake_project_parse_ref(
     bake_project *p,
-    bake_bundle *bundle,
+    bake_project_bundle *bundle,
     const char *id,
     JSON_Object *o)
 {
@@ -51,10 +51,10 @@ int16_t bake_project_parse_ref(
         }
     }
 
-    bake_ref *ref = ut_calloc(sizeof(bake_bundle));
+    bake_ref *ref = ut_calloc(sizeof(bake_project_bundle));
 
     /* Find corresponding repository */
-    bake_repository *repo = ut_rb_find(p->repositories, id);
+    bake_project_repository *repo = ut_rb_find(p->repositories, id);
     if (!repo) {
         ut_throw("referenced project '%s' that is not in 'repository' list",
             id);
@@ -108,7 +108,7 @@ int16_t bake_project_parse_bundle(
     const char *id,
     JSON_Object *o)
 {
-    bake_bundle *bundle = ut_calloc(sizeof(bake_bundle));
+    bake_project_bundle *bundle = ut_calloc(sizeof(bake_project_bundle));
 
     uint32_t i, count = json_object_get_count(o);
     for (i = 0; i < count; i ++) {
@@ -133,6 +133,12 @@ int16_t bake_project_parse_bundle(
         }
     }
 
+    if (!p->bundles) {
+        p->bundles = ut_rb_new(rb_strcmp, NULL);
+    }
+
+    ut_rb_set(p->bundles, id, bundle);        
+
     return 0;
 error:
     return -1;
@@ -144,8 +150,6 @@ int16_t bake_project_parse_refs(
     bake_project *p,
     JSON_Object *o)
 {
-    bake_bundle *bundle = ut_calloc(sizeof(bake_bundle));
-
     uint32_t i, count = json_object_get_count(o);
     for (i = 0; i < count; i ++) {
         char *member = (char*)json_object_get_name(o, i);
@@ -168,34 +172,34 @@ error:
 static
 int16_t bake_project_parse_repository(
     bake_project *p,
-    JSON_Object *o)
+    const char *project,
+    const char *url)
 {
-    bake_repository *repo = ut_calloc(sizeof(bake_repository));
+    if (!project) {
+        ut_throw("invalid project identifier in bundle repositories");
+        goto error;
+    }
 
-    uint32_t i, count = json_object_get_count(o);
-    for (i = 0; i < count; i ++) {
-        char *member = (char*)json_object_get_name(o, i);
-        JSON_Value *v = json_object_get_value_at(o, i);
+    if (!url) {
+        ut_throw("invalid repository for bundle project '%s'", project);
+        goto error;
+    }
 
-        if (!strcmp(member, "id")) {
-            ut_try( bake_json_set_string(&repo->id, member, v), NULL);
+    bake_project_repository *repo = ut_calloc(sizeof(bake_repository));
+    repo->id = ut_strdup(project);
 
-        } else if (!strcmp(member, "url")) {
-            ut_try( bake_json_set_string(&repo->url, member, v), NULL);
-        
+    /* If URL is not complete, append either the default host, or if
+        * none is specified, prefix with https://github.com */
+    bool has_protocol, has_url;
+    ut_try( bake_url_is_well_formed(url, &has_protocol, &has_url), NULL);
+    if (has_protocol && has_url) {
+        repo->url = ut_strdup(url);
+    } else {
+        if (p->default_host) {
+            repo->url = ut_asprintf("%s/%s", p->default_host, url);
         } else {
-            ut_warning("ignoring unknown property '%s'", member);
+            repo->url = ut_asprintf("https://github.com/%s", url);
         }
-    }
-
-    if (!repo->id) {
-        ut_throw("missing 'id' for repository");
-        goto error;
-    }
-    
-    if (!repo->url) {
-        ut_throw("missing 'url' for repository");
-        goto error;
     }
 
     if (!p->repositories) {
@@ -218,18 +222,21 @@ error:
 static
 int16_t bake_project_parse_repositories(
     bake_project *p,
-    JSON_Array *a)
+    JSON_Object *o)
 {
-    uint32_t i, count = json_array_get_count(a);
+    uint32_t i, count = json_object_get_count(o);
     for (i = 0; i < count; i ++) {
-        JSON_Value *v = json_array_get_value(a, i);
-        JSON_Object *o = json_object(v);
-        if (!o) {
-            ut_throw("invalid element in 'projects', expected object");
+        JSON_Value *v = json_object_get_value_at(o, i);
+        const char *project = (char*)json_object_get_name(o, i);
+        const char *repo = json_string(v);
+        if (!repo) {
+            ut_throw(
+                "invalid value for project '%s': expected repository string",
+                project);
             goto error;
         }
 
-        ut_try( bake_project_parse_repository(p, o), NULL);
+        ut_try( bake_project_parse_repository(p, project, repo), NULL);
     }
 
     return 0;
@@ -243,33 +250,48 @@ int16_t bake_project_parse_bundles(
     bake_project *p,
     JSON_Object *jo)
 {
+    /* Parse default-host first, before parsing repositories */
+    JSON_Value *default_host_value = json_object_get_value(jo, "default-host");
+    if (default_host_value) {
+        ut_try( bake_json_set_string(
+            &p->default_host, "default-host", default_host_value), NULL);
+    }
+
+    /* Parse repositories before parsing repository references, so they can be
+     * added to the configuration file in any order. */
+    JSON_Value *repositories_value = json_object_get_value(jo, "repositories");
+    if (repositories_value) {
+        JSON_Object *o = json_object(repositories_value);
+        if (!o) {
+            ut_throw("invalid value for 'repositories', expected object");
+            goto error;                
+        }
+
+        ut_try( bake_project_parse_repositories(p, o), NULL);
+    }
+
+    JSON_Value *refs_value = json_object_get_value(jo, "refs");
+    if (refs_value) {
+        JSON_Object *o = json_object(refs_value);
+        if (!o) {
+            ut_throw("invalid value for 'refs', expected object");
+            goto error;
+        }
+
+        ut_try( bake_project_parse_refs(p, o), NULL);
+    }
+
+    /* Check for invalid properties */
+
     uint32_t i, count = json_object_get_count(jo);
     for (i = 0; i < count; i ++) {
         char *member = (char*)json_object_get_name(jo, i);
         JSON_Value *v = json_object_get_value_at(jo, i);
 
-        if (!strcmp(member, "default-host")) {
-            ut_try( bake_json_set_string(&p->default_host, member, v), NULL);
-
-        } else if (!strcmp(member, "repositories")) {
-            JSON_Array *a = json_array(v);
-            if (!a) {
-                ut_throw("invalid value for 'repositories', expected array");
-                goto error;                
-            }
-
-            ut_try( bake_project_parse_repositories(p, a), NULL);
-        
-        } else if (!strcmp(member, "refs")) {
-            JSON_Object *o = json_object(v);
-            if (!o) {
-                ut_throw("invalid value for 'refs', expected object");
-                goto error;
-            }
-
-            ut_try( bake_project_parse_refs(p, o), NULL);
-        
-        } else {
+        if (strcmp(member, "default-host") && 
+            strcmp(member, "repositories") && 
+            strcmp(member, "refs")) 
+        {
             ut_warning("ignoring unknown property '%s'", member);
         }
     }
@@ -336,6 +358,17 @@ int16_t bake_project_parse_value(
         } else
         if (!strcmp(member, "repository")) {
             ut_try (bake_json_set_string(&p->repository, member, v), NULL);
+
+            /* Register repository for project */
+            ut_try( bake_add_repository(
+                config, 
+                p->id, 
+                p->repository,
+                NULL,
+                NULL,
+                NULL,
+                p->id,
+                NULL), NULL);
         } else
         if (!strcmp(member, "license")) {
             ut_try (bake_json_set_string(&p->license, member, v), NULL);
@@ -2208,52 +2241,84 @@ uint16_t bake_project_load_bundle(
     const char *bundle_id)
 {
     if (!project->repositories) {
-        ut_throw("cannot load '%s:%s', project has no repositories", 
-            project->id, bundle_id);
-        goto error;
+        ut_warning("project '%s' has no repositories, adding empty bundle '%s:%s'", 
+            project->id, project->id, bundle_id);
+        return 0;
     }
 
     if (!bundle_id) {
         bundle_id = "default";
     }
 
-    bake_bundle *bundle = ut_rb_find(project->bundles, bundle_id);
-    if (!bundle) {
-        /* If no explicit bundle configuration is found, use the repository
-         * list with the bundle_id as tag unless the bundle_id is 'default'
-         * in which case the repository head will be used. */
-        const char *tag = bundle_id;
-        if (!strcmp(tag, "default")) {
-            tag = NULL;
+    /* Lookup bundle in package */
+    bake_project_bundle *bundle = NULL;
+    if (project->bundles) {
+        bundle = ut_rb_find(project->bundles, bundle_id);
+    }
+
+    /* Regardless of whether a bundle is found, all repositories are always
+     * added to the administration. */
+    ut_iter it = ut_rb_iter(project->repositories);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_repository *repo = ut_iter_next(&it);
+
+        const char *branch = NULL;
+        const char *tag = NULL;
+        const char *commit = NULL;
+
+        /* Try to find repository in bundle */
+        if (bundle) {
+            bake_ref *ref = ut_rb_find(bundle->refs, repo->id);
+            const char *ref_branch = ref ? ref->branch : NULL;
+            const char *ref_commit = ref ? ref->commit : NULL;
+            const char *ref_tag = ref ? ref->tag : NULL;
+
+            /* If a ref is found for the repository, get values from ref and use
+             * defaults where no values are provided */
+
+            branch = ref_branch
+                ? ref_branch
+                : bundle->defaults.branch
+                    ? bundle->defaults.branch
+                    : NULL;
+
+            commit = ref_commit;
+
+            /* Can never set the tag and commit sha simultaneously. If commit is
+             * set, don't attempt to assign default values to tag, even if the
+             * tag is not set in the ref. 
+             *
+             * If no commit sha is provided and no values nor default values are
+             * provided for the tag, use the bundle_id. This allows users to
+             * easily switch between tags for all repositories without having to
+             * explicitly configure it. */
+            if (!commit) {
+                tag = ref_tag
+                    ? ref_tag
+                    : bundle->defaults.tag
+                        ? bundle->defaults.tag
+                        : bundle_id;
+            }
+
+        /* If there is no bundle, set the tag to the bundle_id, unless the
+         * bundle is the default bundle. The default bundle is intended to just
+         * fetch the latest state of the master, so don't attempt to load a
+         * 'default' tag. */
+        } else {
+            if (strcmp(bundle_id, "default")) {
+                tag = bundle_id;
+            }
         }
 
-        ut_iter it = ut_rb_iter(project->repositories);
-        while (ut_iter_hasNext(&it)) {
-            bake_repository *repo = ut_iter_next(&it);
-            bake_add_repository(
-                repo->id,
-                repo->url,
-                NULL,
-                NULL,
-                tag,
-                project->id,
-                bundle_id);
-        }
-
-    /* If explicit references are defined, use those */
-    } else {
-        ut_iter it = ut_rb_iter(bundle->refs);
-        while (ut_iter_hasNext(&it)) {
-            bake_ref *ref = ut_iter_next(&it);
-            bake_add_repository(
-                ref->repository->id,
-                ref->repository->url,
-                ref->branch,
-                ref->commit,
-                ref->tag,
-                project->id,
-                bundle_id);
-        }
+        bake_add_repository(
+            config,
+            repo->id,
+            repo->url,
+            branch,
+            commit,
+            tag,
+            project->id,
+            bundle_id);
     }
 
     return 0;

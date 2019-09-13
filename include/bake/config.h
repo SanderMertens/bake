@@ -31,6 +31,21 @@
 extern "C" {
 #endif
 
+typedef struct bake_bundle {
+    char *project;
+    char *id;
+} bake_bundle;
+
+typedef struct bake_repository {
+    char *id;
+    char *url;
+    char *branch;
+    char *commit;
+    char *tag;
+    char *project;
+    char *bundle;
+} bake_repository;
+
 struct bake_config {
     const char *environment;    /* Id of environment in use */
     const char *configuration;  /* Id of configuration in use */
@@ -45,6 +60,10 @@ struct bake_config {
     /* Environment attribubtes */
     ut_ll env_variables;        /* List with environment variable names */
     ut_ll env_values;           /* List with environment variable values */
+
+    /* Bundle information */
+    ut_ll bundles;           /* Bundles loaded by bake */
+    ut_rb repositories;      /* Repositories loaded from bundles */
 
     /* Set by configuration loader */
     char *home;              /* $BAKE_HOME */

@@ -32,7 +32,7 @@
 
 /* Track which messages have been printed already to avoid spamming the console */
 typedef struct bake_notify_state {
-    bool override_env;    
+    bool always_clone;    
 } bake_notify_state;
 
 void bake_message(
@@ -48,13 +48,18 @@ int16_t bake_use(
     const char *expr);
 
 int16_t bake_add_repository(
+    bake_config *config,
     const char *id,
     const char *repository,
     const char *branch,
     const char *commit,
     const char *tag,
-    const char *bundle_source,
+    const char *project,
     const char *bundle);
+
+bake_repository* bake_find_repository(
+    bake_config *cfg,
+    const char *id);
 
 /* -- Configuration functions -- */
 
@@ -126,13 +131,18 @@ int bake_run(
 
 /* -- Git functions -- */
 
-/* Clone from remote repository */
+/* Clone from remote repository to local directory */
 int16_t bake_clone(
     bake_config *config,
     const char *url,
     bool to_env,
-    bool override_env,
+    bool always_clone,
     bake_notify_state *notify_state);
+
+/* Clone project to bake environment from bundle */
+int16_t bake_install(
+    bake_config *config,
+    const char *project_id);
 
 /* Update from remote repository */
 int bake_update_action(
@@ -144,6 +154,12 @@ int16_t bake_publish(
     bake_config *config,
     bake_project *project,
     const char *publish_cmd);
+
+/* Quick & dirty check to see if URL is well formed */
+int16_t bake_url_is_well_formed(
+    const char *url,
+    bool *has_protocol_out,
+    bool *has_url_out);
 
 /* -- Template functions -- */
 

@@ -47,31 +47,31 @@ typedef struct bake_project_driver {
 } bake_project_driver;
 
 /* Bind bake project to a repository */
-typedef struct bake_repository {
+typedef struct bake_project_repository {
     char *id;
     char *url;
-} bake_repository;
+} bake_project_repository;
 
 /* Identifies a specific revision in the repository */
 typedef struct bake_ref {
-    bake_repository *repository;
+    bake_project_repository *repository;
     char *branch;
     char *commit;
     char *tag;
 } bake_ref;
 
 /* Default values for revision to use by refs in bundle */
-typedef struct bake_bundle_defaults {
+typedef struct bake_project_bundle_defaults {
     char *branch;
     char *tag;
-} bake_bundle_defaults;
+} bake_project_bundle_defaults;
 
 /* Bundle containing repository revisions */
-typedef struct bake_bundle {
+typedef struct bake_project_bundle {
     char *id;
-    bake_bundle_defaults defaults;
+    bake_project_bundle_defaults defaults;
     ut_rb refs;
-} bake_bundle;
+} bake_project_bundle;
 
 struct bake_project {
     /* Project properties (managed by bake core) */

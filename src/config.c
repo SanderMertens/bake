@@ -49,6 +49,16 @@ int16_t bake_config_load_bundle(
         "cannot load bundle '%s:%s', error loading project bundle",
             project_id, bundle);
 
+    if (!cfg->bundles) {
+        cfg->bundles = ut_ll_new();
+    }
+
+    bake_bundle *new_bundle = malloc(sizeof(bake_bundle));
+    new_bundle->project = ut_strdup(project_id);
+    new_bundle->id = ut_strdup(bundle);
+
+    ut_ll_append(cfg->bundles, new_bundle);
+
     return 0;
 error:
     return -1;
@@ -335,6 +345,7 @@ int16_t bake_config_load_file (
     /* Parse bundles */
     if (load_bundles) {
         JSON_Object *bundles = json_object_get_object(jsonObj, "bundles");
+
         if (bundles) {
             int i;
             for (i = 0; i < json_object_get_count(bundles); i ++) {
@@ -343,7 +354,7 @@ int16_t bake_config_load_file (
                 JSON_Object *o_project = json_object(j_project);
                 if (!o_project) {
                     ut_throw("%s: invalid configuration, expected object for '%s'",
-                        project_id);
+                        file, project_id);
                     goto error;    
                 }
 
@@ -355,7 +366,7 @@ int16_t bake_config_load_file (
                 if (bake_config_load_bundle(cfg_out, project_id, bundle)) {
                     ut_warning(
                         "%s: bundle '%s:%s' not loaded due to errors, ignoring", 
-                        project_id, bundle);
+                        file, project_id, bundle);
                 }
             }
         }
