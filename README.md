@@ -1450,6 +1450,8 @@ Options:
   --package                    Set the project type to package
   --template                   Set the project type to template
   --test                       Create a test project
+  --to-env                     Clone projects to the bake environment source path (use with clone)
+  --always-clone               Clone dependencies even if found in the bake environment (use with clone)
 
   --id <project id>            Specify a project id
   --type <package|template>    Specify a project type (default = "application")
@@ -1458,11 +1460,15 @@ Options:
   -i,--includes <include path> Specify an include path for project
   --private                    Specify a project to be private (not discoverable)
 
-  --interactive                Rebuild project when files change (use w/run)
+  -a,--args [arguments]        Pass arguments to application (use with run)
+  --interactive                Rebuild project when files change (use with run)
+  --run-prefix                 Specify prefix command for run
+  --test-prefix                Specify prefix command for tests run by test
   -r,--recursive               Recursively build all dependencies of discovered projects
-  -a,--args [arguments]        Pass arguments to application (use w/run)
   -t [id]                      Specify template for new project
   -o [path]                    Specify output directory for new projects
+
+  --show-repositories          List loaded repositories (use with list)
 
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
   --trace                      Set verbosity to TRACE
@@ -1474,11 +1480,15 @@ Commands:
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
+  test [path]                  Run tests of project
+  coverage [path]              Run coverage analysis for project
   cleanup                      Cleanup bake environment by removing dead or invalid projects
+  reset                        Resets bake environment to initial state, save for bake configuration
   publish <patch|minor|major>  Publish new project version
-  install [path]               Install project to bake environment
+  install <project id>         Install project to bake environment (repository must be known)
   uninstall [project id]       Remove project from bake environment
   clone <git url>              Clone and build git repository and dependencies
+  use <project:bundle>         Configure the environment to use specified bundle
   update [project id]          Update an installed package or application
   foreach <cmd>                Run command for each discovered project
 
