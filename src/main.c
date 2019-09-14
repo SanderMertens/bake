@@ -1419,7 +1419,7 @@ int main(int argc, const char *argv[]) {
 
         if (!strcmp(action, "clone")) {
             ut_try( 
-                bake_clone(&config, path, to_env, always_clone, NULL, NULL), 
+                bake_clone(&config, path, to_env, always_clone, true, NULL, NULL), 
                 NULL);
         } else if (!strcmp(action, "install")) {
             ut_try( bake_install(&config, path), NULL);

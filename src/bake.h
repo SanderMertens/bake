@@ -153,6 +153,7 @@ int16_t bake_clone(
     const char *url,
     bool to_env,
     bool always_clone,
+    bool clone_dependencies,
     bake_notify_state *notify_state,
     bake_project **project_out);
 

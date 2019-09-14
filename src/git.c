@@ -301,7 +301,7 @@ int16_t bake_update_dependency_list(
                 goto error;
             }
 
-            if (bake_clone(config, url, to_env, always_clone, notify_state, NULL)) {
+            if (bake_clone(config, url, to_env, always_clone, true, notify_state, NULL)) {
                 ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
@@ -370,6 +370,7 @@ int16_t bake_clone(
     const char *url,
     bool to_env,
     bool always_clone,
+    bool clone_dependencies,
     bake_notify_state *notify_state,
     bake_project **project_out)
 {
@@ -397,7 +398,9 @@ int16_t bake_clone(
         goto error;
     }
 
-    ut_try( bake_update_dependencies(config, base_url, project, to_env, always_clone, notify_state), NULL);
+    if (clone_dependencies) {
+        ut_try( bake_update_dependencies(config, base_url, project, to_env, always_clone, notify_state), NULL);
+    }
 
     if (bake_crawler_search(config, src_path, false) == -1) {
         goto error;
@@ -422,11 +425,11 @@ int16_t bake_install(
 {
     bake_repository *repo = bake_find_repository(config, project_id);
     if (!repo) {
-        ut_throw("cannot install '%s', do not know repository");
+        ut_throw("cannot install '%s', do not know repository", project_id);
         goto error;
     }
 
-    ut_try( bake_clone(config, repo->url, true, true, NULL, NULL), NULL);
+    ut_try( bake_clone(config, repo->url, true, true, true, NULL, NULL), NULL);
 
     return 0;
 error:

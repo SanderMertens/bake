@@ -512,7 +512,7 @@ int bake_run(
             !bake_url_is_well_formed(app_id, NULL, NULL))
         {
             bake_project *project;
-            ut_try( bake_clone(config, app_id, true, true, NULL, &project), 
+            ut_try( bake_clone(config, app_id, true, true, false, NULL, &project), 
                 NULL);
             project_dir = project->path;
         } else {
