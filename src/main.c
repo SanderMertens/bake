@@ -1078,16 +1078,16 @@ int bake_reset(
         char *file_path = ut_asprintf("%s/%s", cfg->home, file);
 
         if (ut_isdir(file_path)) {
-            if (!strcmp(file, "include") || !strcmp(file, "meta")) {
+            if (!strcmp(file, "include") || !strcmp(file, "meta") || !strcmp(file, "src")) {
                 bake_reset_dir(cfg, file_path);
 
             } else if (strcmp(file, "lib")) {
                 ut_rm(file_path);
             }
         } else if (strcmp(file, "bake.json") && 
-                   strcmp(file, BAKE_EXEC UT_OS_BIN_EXT) &&
-                   strcmp(file, "bake" UT_OS_SCRIPT_EXT) &&
-                   strcmp(file, "bake-upgrade" UT_OS_SCRIPT_EXT)) 
+                strcmp(file, BAKE_EXEC UT_OS_BIN_EXT) &&
+                strcmp(file, "bake" UT_OS_SCRIPT_EXT) &&
+                strcmp(file, "bake-upgrade" UT_OS_SCRIPT_EXT)) 
         {
             ut_rm(file_path);
         }
