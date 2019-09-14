@@ -499,13 +499,24 @@ int bake_run(
     char *project_dir = NULL; /* Project directory containing sources */
 
     if (app_id && strcmp(app_id, ".")) {
-        app_name = name_from_id(app_id);
 
-        /* First check if passed argument is a valid directory */
+        /* Check if passed argument is a valid directory */
         if (is_valid_project(app_id)) {
             project_dir = (char*)app_id;
         } else {
             ut_catch();
+        }
+
+        /* Check if passed argument is an URL */
+        if (!project_dir && strchr(app_id, '/') && 
+            !bake_url_is_well_formed(app_id, NULL, NULL))
+        {
+            bake_project *project;
+            ut_try( bake_clone(config, app_id, true, true, NULL, &project), 
+                NULL);
+            project_dir = project->path;
+        } else {
+            app_name = name_from_id(app_id);
         }
 
         /* If project is not found, lookup in package repositories */

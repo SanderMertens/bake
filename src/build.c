@@ -42,6 +42,11 @@ int bake_do_pre_discovery(
         ut_log_push("load-driver-config");
         ut_try (bake_project_parse_driver_config(config, project), NULL);
         ut_log_pop();
+
+        /* Step 5: load bundle configuration */
+        ut_log_push("load-bundle");
+        ut_try (bake_project_load_bundle(config, project, NULL), NULL);
+        ut_log_pop();         
     }
 
     return 0;
@@ -59,10 +64,10 @@ int bake_do_post_discovery(
         return 0;
     }
 
-    /* Step 3: parse dependee configuration */
+    /* Step 3: initialize drivers */
     ut_log_push("init-drivers");
     ut_try (bake_project_init_drivers(config, project), NULL);
-    ut_log_pop();
+    ut_log_pop();   
 
     /* Step 4: parse dependee configuration */
     ut_log_push("load-dependees");
