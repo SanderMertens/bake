@@ -29,8 +29,7 @@ typedef int (*bake_crawler_cb)(
  *
  * @return New crawler object.
  */
- void bake_crawler_init(
-    bool recursive);
+ void bake_crawler_init(void);
 
 /** Free crawler.
  *
@@ -46,7 +45,8 @@ void bake_crawler_free(void);
  */
 uint32_t bake_crawler_search(
     bake_config *config,
-    const char *path);
+    const char *path,
+    bool recursive);
 
 /** Count number of projects found by searches.
  *

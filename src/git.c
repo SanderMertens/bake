@@ -56,7 +56,9 @@ int16_t git_reset(
 
     bake_repository *repo = bake_find_repository(config, id);
     if (repo) {
-        branch = repo->branch;
+        if (repo->branch) {
+            branch = repo->branch;
+        }
         tag = repo->tag;
         commit = repo->commit;
     }
@@ -258,7 +260,7 @@ int16_t bake_update_dependency_list(
 
         if (src_path) {
             bake_project *dep_project = bake_project_new(src_path, config);
-            if (bake_crawler_search(config, src_path) == -1) {
+            if (bake_crawler_search(config, src_path, false) == -1) {
                 goto error;
             }           
             ut_try( bake_update_dependencies(config, base_url, dep_project, to_env, always_clone, notify_state), NULL);
@@ -299,7 +301,7 @@ int16_t bake_update_dependency_list(
                 goto error;
             }
 
-            if (bake_clone(config, url, to_env, always_clone, notify_state)) {
+            if (bake_clone(config, url, to_env, always_clone, notify_state, NULL)) {
                 ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
@@ -368,7 +370,8 @@ int16_t bake_clone(
     const char *url,
     bool to_env,
     bool always_clone,
-    bake_notify_state *notify_state)
+    bake_notify_state *notify_state,
+    bake_project **project_out)
 {
     char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
     bake_project *project = NULL;
@@ -396,8 +399,12 @@ int16_t bake_clone(
 
     ut_try( bake_update_dependencies(config, base_url, project, to_env, always_clone, notify_state), NULL);
 
-    if (bake_crawler_search(config, src_path) == -1) {
+    if (bake_crawler_search(config, src_path, false) == -1) {
         goto error;
+    }
+
+    if (project_out) {
+        *project_out = project;
     }
 
     free(full_url);
@@ -419,7 +426,7 @@ int16_t bake_install(
         goto error;
     }
 
-    ut_try( bake_clone(config, repo->url, true, true, NULL), NULL);
+    ut_try( bake_clone(config, repo->url, true, true, NULL, NULL), NULL);
 
     return 0;
 error:

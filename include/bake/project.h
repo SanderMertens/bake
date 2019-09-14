@@ -98,6 +98,7 @@ struct bake_project {
     char *dependee_json;    /* Build instructions for dependees */
 
     char *default_host;     /* Optional default git repository host */
+    ut_ll use_bundle;       /* Global bundle dependencies */
     ut_rb repositories;     /* Repositories in bundle */
     ut_rb bundles;          /* Repository references in bundle */
 

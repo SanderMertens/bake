@@ -34,7 +34,9 @@ int repository_cmp(
 
 int16_t bake_use(
     bake_config *config, 
-    const char *expr)
+    const char *expr,
+    bool update_config,
+    bool load_bundle)
 {
     char *pkg = ut_strdup(expr);
     char *bundle = strrchr(pkg, ':');
@@ -45,31 +47,98 @@ int16_t bake_use(
 
     const char *path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
     if (!path) {
-        ut_error("cannot find project '%s'", pkg);
+        /* Check if bundle is registered as a repository */
+        bake_repository *repo = bake_find_repository(config, pkg);
+        if (repo) {
+            /* If it is, try to install it */
+            ut_try( bake_install(config, pkg), NULL);
+
+            /* Reset locate cache, as project will have been cloned to env */
+            ut_locate_reset(pkg);
+            path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
+        }
+    }
+
+    if (!path) {
+        ut_error("cannot find project '%s' of bundle '%s'", pkg, expr);
         goto error;
     }
 
-    bool changed = false;
-    ut_try( bake_config_use_bundle(config, pkg, bundle, &changed), NULL);
+    if (update_config) {
+        ut_trace("add bundle '%s:%s' to configuration", pkg, bundle);
 
-    /* Set to "default" rather than NULL for more pleasant log to the console */
-    if (!bundle) {
-        bundle = "default";
+        bool changed = false;
+        ut_try( bake_config_use_bundle(config, pkg, bundle, &changed), NULL);
+
+        /* Set to "default" rather than NULL for more pleasant log to the console */
+        if (!bundle) {
+            bundle = "default";
+        }
+
+        if (changed) {
+            bake_message(UT_LOG, "info", 
+                "bundle '%s:%s' set in configuration",
+                pkg, bundle);
+        } else {
+            bake_message(UT_LOG, "info", 
+                "bundle '%s:%s' is already configured",
+                pkg, bundle);
+        }
     }
 
-    if (changed) {
-        bake_message(UT_LOG, "info", 
-            "bundle '%s:%s' set in configuration",
-            pkg, bundle);
-    } else {
-        bake_message(UT_LOG, "info", 
-            "bundle '%s:%s' is already configured",
-            pkg, bundle);
+    if (load_bundle) {
+        ut_trace("load bundle '%s:%s'", pkg, bundle);
+
+        bake_project *project = bake_project_new(path, config);
+        if (!project) {
+            goto error;
+        }
+
+        ut_try( bake_project_load_bundle(config, project, bundle), NULL);
     }
 
     return 0;
 error:
     return -1;
+}
+
+int16_t bake_unuse(
+    bake_config *config,
+    const char *project)
+{
+    char *pkg = ut_strdup(project);
+    char *bundle = strrchr(pkg, ':');
+    if (bundle) {
+        *bundle = '\0';
+        bundle ++;
+        ut_throw("should not specify bundle with unuse, try 'bake unuse %s'",
+            pkg);
+        free(pkg);
+        goto error;
+    }
+
+    const char *path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
+    if (!path) {
+        ut_error("cannot find project '%s'", pkg);
+        goto error;
+    }
+
+    bool changed = false;
+    ut_try( bake_config_unuse_bundle(config, pkg, &changed), NULL);
+
+    if (changed) {
+        bake_message(UT_LOG, "info", 
+            "project '%s' removed from bundle configuration",
+            pkg);
+    } else {
+        bake_message(UT_LOG, "info", 
+            "project '%s' was not found in bundle configuration",
+            pkg);
+    }
+
+    return 0;
+error:
+    return -1;    
 }
 
 static
@@ -148,6 +217,9 @@ int16_t bake_add_repository(
         free(rref->project);
         rref->project = ut_strdup(project);
         rref->bundle = ut_strdup(bundle);
+
+        ut_trace("found #[cyan]%s#[normal] -> #[green]%s#[normal]", 
+            rref->url, rref->branch ? rref->branch : "master");
 
     /* If the bundle is set, make sure the new values don't conflict with the
      * old ones. */

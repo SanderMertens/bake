@@ -111,15 +111,15 @@ void bake_usage(void)
     printf("  -i,--includes <include path> Specify an include path for project\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
-    printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
-    printf("  --interactive                Rebuild project when files change (use w/run)\n");
-    printf("  --run-prefix                 Specify prefix command for bake run\n");
-    printf("  --test-prefix                Specify prefix command for tests run by bake test\n");
+    printf("  -a,--args [arguments]        Pass arguments to application (use with run)\n");
+    printf("  --interactive                Rebuild project when files change (use with run)\n");
+    printf("  --run-prefix                 Specify prefix command for run\n");
+    printf("  --test-prefix                Specify prefix command for tests run by test\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
     printf("\n");
-    printf("  --show-repositories          List loaded repositories (use with bake list)\n");
+    printf("  --show-repositories          List loaded repositories (use with list)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -136,7 +136,7 @@ void bake_usage(void)
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  reset                        Resets bake environment to initial state, save for bake configuration\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
-    printf("  install [project id]         Install project to bake environment (repository must be known)\n");
+    printf("  install <project id>         Install project to bake environment (repository must be known)\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
     printf("  use <project:bundle>         Configure the environment to use specified bundle\n");
@@ -247,6 +247,7 @@ int16_t bake_init_action(
         !strcmp(arg, "info") ||
         !strcmp(arg, "list") ||
         !strcmp(arg, "use") ||
+        !strcmp(arg, "unuse") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
@@ -383,7 +384,7 @@ int bake_parse_args(
         export_expr = path;
     }
     
-    else if (!strcmp(action, "use")) {
+    else if (!strcmp(action, "use") || !strcmp(action, "unuse")) {
         if (!path_set) {
             ut_throw("missing expression for use command");
             goto error;
@@ -461,7 +462,7 @@ int16_t bake_discovery(
 
     if (!id) {
         /* Discover projects */
-        project_count = bake_crawler_search(config, path);
+        project_count = bake_crawler_search(config, path, recursive);
         if (project_count == -1) {
             goto error;
         }
@@ -1080,7 +1081,7 @@ int bake_reset(
             if (!strcmp(file, "include") || !strcmp(file, "meta")) {
                 bake_reset_dir(cfg, file_path);
 
-            } else if (strcmp(file, "lib") && strcmp(file, "src")) {
+            } else if (strcmp(file, "lib")) {
                 ut_rm(file_path);
             }
         } else if (strcmp(file, "bake.json") && 
@@ -1093,6 +1094,10 @@ int bake_reset(
 
         free(file_path);
     }
+
+    /* Remove bundles from configuration file, as reset will remove the projects
+     * from the bake environment */
+    bake_config_reset_bundles(cfg);
 
     return 0;
 error:
@@ -1354,6 +1359,12 @@ int main(int argc, const char *argv[]) {
         config.optimizations = true;
     }
 
+    if (recursive) {
+        /* If this is a recursive build, load bundles in case there are
+         * repositories in the dependency tree that need to be cloned */
+        load_bundles = true;
+    }
+
 #ifndef UT_OS_WINDOWS
     bool is_bake_parent = !ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE");
     if (is_bake_parent) {
@@ -1399,7 +1410,7 @@ int main(int argc, const char *argv[]) {
 #endif
 
     /* Initialize crawler */
-    bake_crawler_init(recursive);
+    bake_crawler_init();
 
     if (discover) {
         /* If discover is true, first discover projects in provided path */
@@ -1407,7 +1418,9 @@ int main(int argc, const char *argv[]) {
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            ut_try( bake_clone(&config, path, to_env, always_clone, NULL), NULL);
+            ut_try( 
+                bake_clone(&config, path, to_env, always_clone, NULL, NULL), 
+                NULL);
         } else if (!strcmp(action, "install")) {
             ut_try( bake_install(&config, path), NULL);
         }
@@ -1490,7 +1503,9 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "unset")) {
             ut_try (bake_config_unset(&config, export_expr), NULL);
         } else if (!strcmp(action, "use")) {
-            ut_try (bake_use(&config, use_expr), NULL);
+            ut_try (bake_use(&config, use_expr, true, false), NULL);
+        } else if (!strcmp(action, "unuse")) {
+            ut_try (bake_unuse(&config, use_expr), NULL);            
         } else if (!strcmp(action, "upgrade")) {
             ut_log("#[bold]Cannot upgrade bake while bake is running\n");
             printf("  This is likely happening because the bake environment is exported. To\n");

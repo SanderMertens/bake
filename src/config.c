@@ -841,6 +841,104 @@ int16_t bake_config_use_bundle(
 
     json_serialize_to_file_pretty(root, bake_json);
 
+    json_value_free(root);
+
+    free(bake_json);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_config_unuse_bundle(
+    bake_config *cfg,
+    const char *project_id,
+    bool *changed)
+{
+    bool bundle_found = false;
+
+    /* Bake was able to load bundle, continue adding it to the config file */
+    char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
+
+    if (ut_file_test(bake_json) != 1) {
+        goto no_bundle;
+    }
+
+    JSON_Value *root = json_parse_file_with_comments(bake_json);
+    if (!root) {
+        ut_throw("failed to parse file '%s'", bake_json);
+        goto parse_error;
+    }
+
+    JSON_Object *root_obj = json_value_get_object(root);
+    if (!root_obj) {
+        ut_throw("expected JSON object as root of file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *bundles = json_object_get_object(root_obj, "bundles");
+    if (!bundles) {
+        goto no_bundle;
+    }
+
+    JSON_Object *cur = json_object_get_object(bundles, project_id);
+    if (!cur) {
+        goto no_bundle;
+    }
+
+    json_object_remove(bundles, project_id);
+
+    json_set_escape_slashes(0);
+
+    json_serialize_to_file_pretty(root, bake_json);
+
+    bundle_found = true;
+
+no_bundle:
+    if (changed) {
+        *changed = bundle_found;
+    }
+
+    free(bake_json);
+    json_value_free(root);
+
+    return 0;
+parse_error:
+
+error:
+    free(bake_json);
+    return -1;
+}
+
+int16_t bake_config_reset_bundles(
+    bake_config *cfg)
+{
+    char *bake_json = ut_envparse("$BAKE_HOME/bake.json");
+
+    if (ut_file_test(bake_json) != 1) {
+        return 0;
+    }
+
+    JSON_Value *root = json_parse_file_with_comments(bake_json);
+    if (!root) {
+        ut_throw("failed to parse file '%s'", bake_json);
+        goto error;
+    }
+
+    JSON_Object *root_obj = json_value_get_object(root);
+    if (!root_obj) {
+        ut_throw("expected JSON object as root of file '%s'", bake_json);
+        goto error;
+    }
+
+    json_object_dotremove(root_obj, "bundles");
+
+    json_set_escape_slashes(0);
+
+    json_serialize_to_file_pretty(root, bake_json);
+
+    free(bake_json);
+
     return 0;
 error:
     return -1;

@@ -244,6 +244,33 @@ error:
     return -1;
 }
 
+/* Parse 'use' section in bundle */
+static
+int16_t bake_project_parse_use_bundles(
+    bake_project *p,
+    JSON_Array *a)
+{
+    uint32_t i, count = json_array_get_count(a);
+    for (i = 0; i < count; i ++) {
+        const char *bundle = json_array_get_string(a, i);
+        if (!bundle) {
+            ut_throw(
+                "invalid value for element in 'use' array: expected string");
+            goto error;
+        }
+
+        if (!p->use_bundle) {
+            p->use_bundle = ut_ll_new();
+        }
+
+        ut_ll_append(p->use_bundle, ut_strdup(bundle));
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Parse 'bundle' section in project file */
 static
 int16_t bake_project_parse_bundles(
@@ -270,6 +297,9 @@ int16_t bake_project_parse_bundles(
         ut_try( bake_project_parse_repositories(p, o), NULL);
     }
 
+    /* Parse refs. These contain specific commit/tag refs to repositories. If
+     * no refs are provided, the provided bundle id (e.g. "v1.0") will be used
+     * as tag instead */
     JSON_Value *refs_value = json_object_get_value(jo, "refs");
     if (refs_value) {
         JSON_Object *o = json_object(refs_value);
@@ -282,7 +312,6 @@ int16_t bake_project_parse_bundles(
     }
 
     /* Check for invalid properties */
-
     uint32_t i, count = json_object_get_count(jo);
     for (i = 0; i < count; i ++) {
         char *member = (char*)json_object_get_name(jo, i);
@@ -290,7 +319,7 @@ int16_t bake_project_parse_bundles(
 
         if (strcmp(member, "default-host") && 
             strcmp(member, "repositories") && 
-            strcmp(member, "refs")) 
+            strcmp(member, "refs"))
         {
             ut_warning("ignoring unknown property '%s'", member);
         }
@@ -382,6 +411,9 @@ int16_t bake_project_parse_value(
         } else
         if (!strcmp(member, "use_private") || !strcmp(member, "use-private")) {
             ut_try (bake_json_set_array(&p->use_private, member, v), NULL);
+        } else
+        if (!strcmp(member, "use_bundle") || !strcmp(member, "use-bundle")) {
+            ut_try (bake_json_set_array(&p->use_bundle, member, v), NULL);
         } else
         if (!strcmp(member, "link")) {
             ut_try (bake_json_set_array(&p->link, member, v), NULL);
@@ -1409,7 +1441,7 @@ int16_t bake_project_add_dependency(
     const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
     if (!libpath) {
         ut_throw(
-            "failed to locate library path for dependency '%s'", dep);
+            "missing dependency '%s'", dep, p->id);
         goto error;
     }
 
@@ -1440,13 +1472,15 @@ static
 int16_t bake_project_add_dependencies(
     bake_project *p)
 {
+    bool error = false;
+
     /* Add dependencies to link list */
     if (p->use) {
         ut_iter it = ut_ll_iter(p->use);
         while (ut_iter_hasNext(&it)) {
             char *dep = ut_iter_next(&it);
             if (bake_project_add_dependency(p, dep)) {
-                goto error;
+                error = true;
             }
         }
     }
@@ -1457,14 +1491,12 @@ int16_t bake_project_add_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *dep = ut_iter_next(&it);
             if (bake_project_add_dependency(p, dep)) {
-                goto error;
+                error = true;
             }
         }
     }
 
-    return 0;
-error:
-    return -1;
+    return error == false ? 0 : -1;
 }
 
 /* Build artefact step */
@@ -2235,29 +2267,12 @@ error:
     return -1;
 }
 
-uint16_t bake_project_load_bundle(
+uint16_t bake_project_load_bundle_repositories(
     bake_config *config,
     bake_project *project,
+    bake_project_bundle *bundle,
     const char *bundle_id)
 {
-    if (!project->repositories) {
-        ut_warning("project '%s' has no repositories, adding empty bundle '%s:%s'", 
-            project->id, project->id, bundle_id);
-        return 0;
-    }
-
-    if (!bundle_id) {
-        bundle_id = "default";
-    }
-
-    /* Lookup bundle in package */
-    bake_project_bundle *bundle = NULL;
-    if (project->bundles) {
-        bundle = ut_rb_find(project->bundles, bundle_id);
-    }
-
-    /* Regardless of whether a bundle is found, all repositories are always
-     * added to the administration. */
     ut_iter it = ut_rb_iter(project->repositories);
     while (ut_iter_hasNext(&it)) {
         bake_project_repository *repo = ut_iter_next(&it);
@@ -2274,7 +2289,7 @@ uint16_t bake_project_load_bundle(
             const char *ref_tag = ref ? ref->tag : NULL;
 
             /* If a ref is found for the repository, get values from ref and use
-             * defaults where no values are provided */
+            * defaults where no values are provided */
 
             branch = ref_branch
                 ? ref_branch
@@ -2285,13 +2300,13 @@ uint16_t bake_project_load_bundle(
             commit = ref_commit;
 
             /* Can never set the tag and commit sha simultaneously. If commit is
-             * set, don't attempt to assign default values to tag, even if the
-             * tag is not set in the ref. 
-             *
-             * If no commit sha is provided and no values nor default values are
-             * provided for the tag, use the bundle_id. This allows users to
-             * easily switch between tags for all repositories without having to
-             * explicitly configure it. */
+            * set, don't attempt to assign default values to tag, even if the
+            * tag is not set in the ref. 
+            *
+            * If no commit sha is provided and no values nor default values are
+            * provided for the tag, use the bundle_id. This allows users to
+            * easily switch between tags for all repositories without having to
+            * explicitly configure it. */
             if (!commit) {
                 tag = ref_tag
                     ? ref_tag
@@ -2301,16 +2316,16 @@ uint16_t bake_project_load_bundle(
             }
 
         /* If there is no bundle, set the tag to the bundle_id, unless the
-         * bundle is the default bundle. The default bundle is intended to just
-         * fetch the latest state of the master, so don't attempt to load a
-         * 'default' tag. */
-        } else {
+        * bundle is the default bundle. The default bundle is intended to just
+        * fetch the latest state of the master, so don't attempt to load a
+        * 'default' tag. */
+        } else if (bundle_id) {
             if (strcmp(bundle_id, "default")) {
                 tag = bundle_id;
             }
         }
 
-        bake_add_repository(
+        ut_try( bake_add_repository(
             config,
             repo->id,
             repo->url,
@@ -2318,10 +2333,52 @@ uint16_t bake_project_load_bundle(
             commit,
             tag,
             project->id,
-            bundle_id);
-    }
+            bundle_id), NULL);
+    }    
 
     return 0;
+error:
+    return -1;
+}
+
+uint16_t bake_project_load_bundle(
+    bake_config *config,
+    bake_project *project,
+    const char *bundle_id)
+{
+    bool error = false;
+
+    /* Lookup bundle in package */
+    bake_project_bundle *bundle = NULL;
+    if (project->bundles && bundle_id) {
+        bundle = ut_rb_find(project->bundles, bundle_id);
+    }
+
+    /* Regardless of whether a bundle is found, all repositories are always
+     * added to the administration. */
+    if (project->repositories) {
+        ut_try( bake_project_load_bundle_repositories(
+            config, project, bundle, bundle_id), NULL);
+    }
+
+    /* Load any bundles the project depends on. By first loading the 
+     * repositories, the project gets a chance to register dependent modules as
+     * repository, which allows bake to install a bundle if it is not yet
+     * installed. */
+    if (project->use_bundle) {
+        ut_iter it = ut_ll_iter(project->use_bundle);
+        while (ut_iter_hasNext(&it)) {
+            const char *bundle = ut_iter_next(&it);
+            if (bake_use(config, bundle, false, true)) {
+                ut_catch();
+                ut_error("failed to load bundle '%s' for project '%s'", 
+                    bundle, project->id);
+                error = true;
+            }
+        }
+    }    
+
+    return error == false ? 0 : -1;
 error:
     return -1;
 }

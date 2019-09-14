@@ -45,7 +45,13 @@ void bake_message(
 
 int16_t bake_use(
     bake_config *config, 
-    const char *expr);
+    const char *expr,
+    bool update_config,
+    bool load_bundle);
+
+int16_t bake_unuse(
+    bake_config *config,
+    const char *project);
 
 int16_t bake_add_repository(
     bake_config *config,
@@ -85,6 +91,16 @@ int16_t bake_config_use_bundle(
     const char *bundle,
     const char *tag,
     bool *changed);
+
+/* Remove bundle from configruation */
+int16_t bake_config_unuse_bundle(
+    bake_config *cfg,
+    const char *project_id,
+    bool *changed);
+
+/* Reset bundles in configuration */
+int16_t bake_config_reset_bundles(
+    bake_config *cfg);
 
 /* -- Build functions -- */
 
@@ -137,7 +153,8 @@ int16_t bake_clone(
     const char *url,
     bool to_env,
     bool always_clone,
-    bake_notify_state *notify_state);
+    bake_notify_state *notify_state,
+    bake_project **project_out);
 
 /* Clone project to bake environment from bundle */
 int16_t bake_install(
@@ -502,3 +519,4 @@ int16_t bake_setup(
 /* Reset bake environment */
 int bake_reset(
     bake_config *cfg);
+
