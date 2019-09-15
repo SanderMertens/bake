@@ -2350,8 +2350,15 @@ uint16_t bake_project_load_bundle(
 
     /* Lookup bundle in package */
     bake_project_bundle *bundle = NULL;
-    if (project->bundles && bundle_id) {
-        bundle = ut_rb_find(project->bundles, bundle_id);
+    if (project->bundles) {
+        if (bundle_id) {
+            bundle = ut_rb_find(project->bundles, bundle_id);
+        } else {
+            bundle = ut_rb_find(project->bundles, "default");
+            if (bundle) {
+                bundle_id = "default";
+            }
+        }
     }
 
     /* Regardless of whether a bundle is found, all repositories are always

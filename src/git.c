@@ -48,7 +48,8 @@ static
 int16_t git_reset(
     bake_config *config,
     const char *id,
-    const char *src_path)
+    const char *src_path,
+    bool should_fetch)
 {
     const char *branch = "master";
     const char *tag = NULL;
@@ -63,19 +64,23 @@ int16_t git_reset(
         commit = repo->commit;
     }
 
-    char *
-    gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
-    ut_try(cmd(gitcmd), NULL);
+    char *gitcmd;
+
+    if (should_fetch) {
+        gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
+        ut_try(cmd(gitcmd), NULL);
+    }
+
     gitcmd = ut_asprintf("git -C %s reset -q --hard origin/%s", src_path, branch);
-    ut_try(cmd(gitcmd), NULL);
+    ut_try(cmd(gitcmd), NULL);    
 
     if (tag) {
         ut_trace("checkout '%s' branch:%s, tag:%s", repo->url, branch, tag);
-        gitcmd = ut_asprintf("git checkout tags/%s", tag);
+        gitcmd = ut_asprintf("git -C %s checkout tags/%s --quiet", src_path, tag);
         ut_try(cmd(gitcmd), NULL);
     } else if (commit) {
         ut_trace("checkout '%s' branch:%s, commit:%s", repo->url, branch, commit);
-        gitcmd = ut_asprintf("git checkout %s", commit);
+        gitcmd = ut_asprintf("git -C %s checkout %s --quiet", src_path, commit);
         ut_try(cmd(gitcmd), NULL);
     }
 
@@ -238,7 +243,7 @@ int16_t bake_update_dependency_list(
         if (src_path) {
             /* If source is in bake environment, pull latest version */
             bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src_path);
-            git_reset(config, dep, src_path);
+            git_reset(config, dep, src_path, true);
         } else if (!always_clone) {
             /* If source is a project under development, just build it */
             src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
@@ -318,7 +323,7 @@ int16_t bake_update_dependency_list(
                     ut_throw("cannot find repository path for '%s'", dep);
                     goto error;
                 }
-                ut_try( git_reset(config, dep, src_path), NULL);
+                ut_try( git_reset(config, dep, src_path, false), NULL);
             }
 
             free(url);
@@ -355,7 +360,7 @@ int bake_update_action(
     char *git_path = ut_asprintf("%s/.git", project->path);
 
     if (ut_file_test(git_path)) {
-        git_reset(config, project->id, project->path);
+        git_reset(config, project->id, project->path, true);
     }
 
     free(git_path);
@@ -396,6 +401,37 @@ int16_t bake_clone(
     if (!project) {
         ut_throw("repository '%s' is not a valid bake project", full_url);
         goto error;
+    }
+
+    bake_repository *repo = bake_find_repository(config, project->id);
+    if (repo && (repo->branch || repo->tag || repo->commit)) {
+        /* Make sure right revision is checked out if project is known to bake */
+        ut_try( git_reset(config, project->id, project->path, false), NULL);
+
+        /* Reload project, as its configuration may be different */
+        bake_project_free(project);
+        project = bake_project_new(src_path, config);
+        if (!project) {
+            ut_throw(
+                "revision '%s:%s' of repository '%s' is not a valid bake project", 
+                repo->branch ? repo->branch : "master",
+                repo->tag
+                    ? repo->tag
+                    : repo->commit
+                        ? repo->commit
+                        : "latest"
+                ,
+                full_url);
+            goto error;
+        }
+
+        bake_message(UT_LOG, "", "rev -> #[green]%s:%s#[normal]", 
+            repo->branch ? repo->branch : "master",
+            repo->tag
+                ? repo->tag
+                : repo->commit
+                    ? repo->commit
+                    : "latest");
     }
 
     if (clone_dependencies) {

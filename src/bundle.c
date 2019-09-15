@@ -218,8 +218,13 @@ int16_t bake_add_repository(
         rref->project = ut_strdup(project);
         rref->bundle = ut_strdup(bundle);
 
-        ut_trace("found #[cyan]%s#[normal] -> #[green]%s#[normal]", 
-            rref->url, rref->branch ? rref->branch : "master");
+        ut_trace("found #[cyan]%s#[normal] -> #[green]%s:%s#[normal]", 
+            rref->url, rref->branch ? rref->branch : "master",
+            rref->tag
+                ? rref->tag
+                : rref->commit
+                    ? rref->commit
+                    : "latest");
 
     /* If the bundle is set, make sure the new values don't conflict with the
      * old ones. */
