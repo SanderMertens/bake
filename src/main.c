@@ -901,7 +901,7 @@ int bake_list(
             while (ut_iter_hasNext(&it)) {
                 bake_repository *repo = ut_iter_next(&it);
                 const char *branch = repo->branch ? repo->branch : "master";
-                const char *tag = repo->tag ? repo->tag : "latest";
+                const char *tag = repo->tag;
                 const char *commit = repo->commit;
 
                 const char *bundle = repo->bundle;
@@ -909,30 +909,54 @@ int bake_list(
                     bundle = "[value.repository]";
                 }
 
-                /* If project is not cloned, show it as greyed out */
+                /* Show project in different colors depending on its state in
+                 * the bake environment. If it is located, test if the project
+                 * is under development or not. If the project is under 
+                 * development, it means that the revision for the bundle is not
+                 * enforced. */
                 const char *located = ut_locate(
                     repo->id, NULL, UT_LOCATE_PROJECT);
 
+                bool in_development = false;
+
                 if (located) {
-                    if (commit) {
-                        ut_log(" * %s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
-                            repo->id, repo->url, branch, commit, repo->project, bundle);            
-                    } else {
-                        ut_log(" * %s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
-                            repo->id, repo->url, branch, tag, repo->project, bundle); 
+                    const char *src = ut_locate(
+                        repo->id, NULL, UT_LOCATE_SOURCE);
+
+                    const char *dev_src = ut_locate(
+                        repo->id, NULL, UT_LOCATE_DEVSRC);
+
+                    if (!src && dev_src) {
+                        in_development = true;
+                    } else if (src && dev_src) {
+                        in_development = strcmp(src, dev_src);
                     }
-                } else {
-                    if (commit) {
-                        ut_log(" * #[yellow]%s#[normal]: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
-                            repo->id, repo->url, branch, commit, repo->project, bundle);            
-                    } else {
-                        ut_log(" * #[yellow]%s#[normal]: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n", 
-                            repo->id, repo->url, branch, tag, repo->project, bundle); 
-                    }   
                 }
-            }        
+
+                ut_log(" * #[%s]%s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n",
+                    located
+                        ? in_development
+                            ? "yellow"
+                            : "green"
+                        : "grey"
+                    ,
+                    repo->id, 
+                    repo->url, 
+                    branch, 
+                    commit
+                        ? commit
+                        : tag
+                            ? tag
+                            : "latest"
+                    ,
+                    repo->project, 
+                    bundle);   
+            }    
+
+            ut_log(
+                "\n Legend: #[green][installed] #[yellow][under development] #[grey][not installed]\n");
         } else {
-            ut_log(" - no repositories loaded\n");
+            ut_log(" - no known repositories\n");
         }
     }
 
