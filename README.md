@@ -7,6 +7,7 @@ To that end, bake is a build tool, build system, package manager and environment
 
 Bake's main features are:
 - discover all projects in current directory & build them in the correct order
+- clone, build and run a project and its dependencies with a single command using bake bundles 
 - automatically include header files from dependencies
 - use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
 - programmable C API for interacting with package management
