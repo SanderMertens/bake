@@ -662,6 +662,7 @@ version | string | Version of the project (use semantic versioning)
 public | bool | If `true`, project is installed to `$BAKE_TARGET`
 use | list(string) | List of dependencies using logical project ids. Dependencies must be located in either `$BAKE_HOME` or `$BAKE_TARGET`.
 use_private | list(string) | Same as "use", but dependencies are private, which means that header files will not be exposed to dependees of this project.
+use_runtime | list(string) | Specify dependencies that a project needs at runtime, but that are not used/linked with during build time.
 sources | list(string) | List of paths that contain source files. Default is `src`. The `$SOURCES` rule is substituted with this value.
 includes | list(string) | List of paths that contain include files.
 keep_binary | bool | Do not clean binary files when doing bake clean. When a binary for the target platform is present, bake will skip the project. To force a rebuild, a user has to explicitly use the `bake rebuild` command.
