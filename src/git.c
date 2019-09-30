@@ -348,6 +348,7 @@ int16_t bake_update_dependencies(
 {
     ut_try(bake_update_dependency_list(config, base_url, project->use, to_env, always_clone, notify_state), NULL);
     ut_try(bake_update_dependency_list(config, base_url, project->use_private, to_env, always_clone, notify_state), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use_runtime, to_env, always_clone, notify_state), NULL);
     return 0;
 error:
     return -1;

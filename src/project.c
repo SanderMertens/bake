@@ -412,6 +412,9 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "use_private") || !strcmp(member, "use-private")) {
             ut_try (bake_json_set_array(&p->use_private, member, v), NULL);
         } else
+        if (!strcmp(member, "use_runtime") || !strcmp(member, "use-runtime")) {
+            ut_try (bake_json_set_array(&p->use_runtime, member, v), NULL);
+        } else        
         if (!strcmp(member, "use_bundle") || !strcmp(member, "use-bundle")) {
             ut_try (bake_json_set_array(&p->use_bundle, member, v), NULL);
         } else
@@ -831,6 +834,9 @@ int16_t bake_project_init(
     if (!project->use_build) {
         project->use_build = ut_ll_new();
     }
+    if (!project->use_runtime) {
+        project->use_runtime = ut_ll_new();
+    }    
     if (!project->link) {
         project->link = ut_ll_new();
     }
@@ -950,6 +956,7 @@ void bake_project_free(
     bake_attr_free_string_array(project->use);
     bake_attr_free_string_array(project->use_private);
     bake_attr_free_string_array(project->use_build);
+    bake_attr_free_string_array(project->use_runtime);
     bake_attr_free_string_array(project->sources);
     bake_attr_free_string_array(project->includes);
     bake_attr_free_string_array(project->link);
