@@ -87,6 +87,7 @@ void compile_src(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(&cmd, " /DNDEBUG");
+        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
     }
 
     /* Enable full optimizations, including cross-file */

@@ -113,7 +113,7 @@ error:
 }
 
 /* Create bake script for Windows */
-int16_t bake_create_script(bool local)
+int16_t bake_create_script(bool local, const char* architecture)
 {
     char *script_path = ut_envparse(BAKE_SCRIPT);
     if (!script_path) {
@@ -121,7 +121,7 @@ int16_t bake_create_script(bool local)
         goto error;
     }
 
-    char *vc_shell_cmd = ut_get_vc_shell_cmd();
+    char *vc_shell_cmd = ut_get_vc_shell_cmd(architecture);
 
     FILE *f = fopen(script_path, "wb");
     if (!f) {
@@ -216,7 +216,7 @@ error:
 }
 
 /* Install script to global location that invokes local bake executable */
-int16_t bake_create_script(bool local)
+int16_t bake_create_script(bool local, const char* architecture)
 {
     if (local) {
         return 0;
@@ -275,6 +275,7 @@ error:
 
 /* Utility function to bootstrap a bake project while bake is installing */
 int16_t bake_build_make_project(
+    bake_config *config,
     const char *path,
     const char *id,
     const char *artefact)
@@ -312,8 +313,7 @@ int16_t bake_build_make_project(
     bake_message(UT_OK, "done", "build '%s'", id);
 
     /* Create the bake bin path (makefiles copy binary to project root) */
-    char *bin_path = ut_asprintf(
-        "%s"UT_OS_PS"bin"UT_OS_PS"%s-debug", path, UT_PLATFORM_STRING);
+    char *bin_path = ut_asprintf("%s"UT_OS_PS"bin"UT_OS_PS"%s-%s", path, UT_PLATFORM_STRING, config->configuration);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
 
     /* Move binary from project root to bake bin path */
@@ -405,7 +405,7 @@ int16_t bake_setup(
 
     /* Create the global bake script, which allows for invoking bake without
      * first exporting the environment */
-    ut_try( bake_create_script(local), 
+    ut_try( bake_create_script(local, config->architecture), 
         "failed to create global bake script, rerun setup with --local");
 
     /* Copy bake executable to bake environment in user working directory */
@@ -424,13 +424,13 @@ int16_t bake_setup(
     bake_message(UT_OK, "done", "install bake include files");
 
     /* Build bake util */
-    ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
+    ut_try( bake_build_make_project(config, "util", "bake.util", "bake_util"), NULL);
 
     /* Build the C and C++ drivers */
-    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"c", 
+    ut_try( bake_build_make_project(config, "drivers"UT_OS_PS"lang"UT_OS_PS"c", 
         "bake.lang.c", "bake_lang_c"), NULL);
 
-    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", 
+    ut_try( bake_build_make_project(config, "drivers"UT_OS_PS"lang"UT_OS_PS"cpp", 
         "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     /* Build the bake test framework */

@@ -34,6 +34,7 @@ extern "C" {
 struct bake_config {
     const char *environment;    /* Id of environment in use */
     const char *configuration;  /* Id of configuration in use */
+    const char *architecture;   /* Id of architecture in use */
 
     /* Configuration attributes */
     bool symbols;               /* Enable symbols in binaries */
