@@ -52,7 +52,7 @@ struct cdiff_file_s {
     ut_strbuf writeBuffer;
     int indent;
     bool newLine; /* Is next write starting on new line */
-} cdiff_file_s;
+};
 
 cdiff_file cdiff_file_open(const char *file);
 
