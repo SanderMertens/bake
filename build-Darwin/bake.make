@@ -83,6 +83,7 @@ endif
 OBJECTS := \
 	$(OBJDIR)/attribute.o \
 	$(OBJDIR)/build.o \
+	$(OBJDIR)/bundle.o \
 	$(OBJDIR)/config.o \
 	$(OBJDIR)/crawler.o \
 	$(OBJDIR)/driver.o \
@@ -181,6 +182,9 @@ $(OBJDIR)/attribute.o: ../src/attribute.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/build.o: ../src/build.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/bundle.o: ../src/bundle.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/config.o: ../src/config.c

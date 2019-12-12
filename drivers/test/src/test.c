@@ -30,7 +30,7 @@ void test_empty(void)
 static
 void test_no_abort(void)
 {
-    ut_log("#[red]FAIL#[reset] %s.%s (expected abort signal)\n", 
+    ut_log("#[red]FAIL#[reset]: %s.%s (expected abort signal)\n", 
         current_testsuite->id, current_testcase->id);
 
     exit(-1);
@@ -107,9 +107,9 @@ void print_dbg_command(
     const char *exec,
     const char *testcase) 
 {
-    printf("  To run/debug your test, do:\n");
-    ut_log("    export $(bake env)#[reset]\n");
-    ut_log("    %s %s#[reset]\n", exec, testcase);
+    printf("To run/debug your test, do:\n");
+    ut_log("export $(bake env)#[reset]\n");
+    ut_log("%s %s#[reset]\n", exec, testcase);
     printf("\n");
 }
 
@@ -155,6 +155,7 @@ int bake_test_run_all_tests(
 
     uint32_t total_fail = 0, total_empty = 0, total_pass = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
+    const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
 
     printf("\n");
 
@@ -174,26 +175,49 @@ int bake_test_run_all_tests(
             bake_test_case *test = &suite->testcases[t];
 
             char *test_id = ut_asprintf("%s.%s", suite->id, test->id);
-
-            ut_proc proc = ut_proc_run(exec, (const char*[]){
-                exec, 
-                test_id, 
-                NULL
-            });
-
+            ut_proc proc;
             int8_t rc;
-            int sig = ut_proc_wait(proc, &rc);
+            int sig;
+
+            if (prefix) {
+                char *has_space = strchr(prefix, ' ');
+                if (has_space) {
+                    ut_strbuf cmd = UT_STRBUF_INIT;
+                    ut_strbuf_append(&cmd, "%s %s %s", prefix, exec, test_id);
+                    char *cmd_str = ut_strbuf_get(&cmd);
+                    sig = ut_proc_cmd(cmd_str, &rc);
+                    free(cmd_str);
+                } else {
+                    proc = ut_proc_run(prefix, (const char*[]){
+                        prefix,
+                        exec,
+                        test_id, 
+                        NULL
+                    }); 
+
+                    sig = ut_proc_wait(proc, &rc);
+                }               
+            } else {
+                proc = ut_proc_run(exec, (const char*[]){
+                    exec, 
+                    test_id, 
+                    NULL
+                });
+
+                sig = ut_proc_wait(proc, &rc);
+            }
+
             if (sig || rc) {
                 if (sig) {
                     if (sig == 6) {
                         ut_log(
-                            "#[red]FAIL#[reset] %s aborted\n", test_id);
+                            "#[red]FAIL#[reset]: %s aborted\n", test_id);
                     } else if (sig == 11) {
                         ut_log(
-                            "#[red]FAIL#[reset] %s segfaulted\n", test_id);
+                            "#[red]FAIL#[reset]: %s segfaulted\n", test_id);
                     } else {
                         ut_log(
-                            "#[red]FAIL#[reset] %s crashed with signal %d\n", 
+                            "#[red]FAIL#[reset]: %s crashed with signal %d\n", 
                             test_id, sig);
                     }
                     result = -1;
@@ -277,7 +301,7 @@ void test_fail(
 
     ut_raise();
 
-    ut_log("#[red]FAIL#[reset] %s.%s:%d: %s\n", 
+    ut_log("#[red]FAIL#[reset]: %s.%s:%d: %s\n", 
         current_testsuite->id, current_testcase->id, line, err);
 
     exit(-1);
@@ -295,6 +319,50 @@ void _test_assert(
         char *err = ut_asprintf("assert(%s)", cond_str);
         test_fail(file, line, err);
         free(err);
+    }
+}
+
+void _test_bool(
+    bool v1,
+    bool v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    current_testsuite->assert_count ++;
+
+    if (v1 && v1 != true) {
+        char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v1, v1);
+        test_fail(file, line, msg);
+        free(msg);
+    }
+
+    if (v2 && v2 != true) {
+        char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v2, v2);
+        test_fail(file, line, msg);
+        free(msg);
+    }
+
+    if (v1 != v2) {
+        char *sv1, *sv2;
+        if (isdigit(*str_v1) || (*str_v1 == '-')) {
+            sv1 = strdup(str_v1);
+        } else {
+            sv1 = ut_asprintf("%s (%s)", str_v1, v1 ? "true" : "false");
+        }
+
+        if (isdigit(*str_v2) || (*str_v2 == '-')) {
+            sv2 = strdup(str_v2);
+        } else {
+            sv2 = ut_asprintf("%s (%s)", str_v2, v2 ? "true" : "false");
+        }
+
+        char *msg = ut_asprintf("%s != %s", sv1, sv2);
+        test_fail(file, line, msg);
+        free(msg);
+        free(sv1);
+        free(sv2);
     }
 }
 
@@ -447,7 +515,17 @@ void abort_handler(int sig)
     }
 }
 
+void test_abort(void) {
+    abort_handler(SIGABRT);
+}
+
 void test_expect_abort(void) {
     test_expect_abort_signal = true;
-    signal(SIGABRT, abort_handler);
+    signal(SIGABRT, &abort_handler);
+}
+
+void test_quarantine(const char *date) {
+    ut_log("#[yellow]SKIP#[reset]: %s.%s: test was quarantined on %s\n", 
+        current_testsuite->id, current_testcase->id, date);
+    exit(0);
 }

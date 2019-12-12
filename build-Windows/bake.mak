@@ -52,6 +52,7 @@ all: prebuild prelink $(TARGET) $(OBJDIR)
 
 BAKE_SOURCE= ..\src\attribute.c \
 			..\src\build.c \
+			..\src\bundle.c \
 			..\src\config.c \
 			..\src\crawler.c \
 			..\src\driver.c \

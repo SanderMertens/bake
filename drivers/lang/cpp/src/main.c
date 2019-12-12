@@ -21,12 +21,12 @@ void setup_project(
     FILE *f = fopen(source_filename, "w");
 
     fprintf(f,
-        "#include <include/%s.h>\n"
+        "#include <%s.h>\n"
         "\n"
         "int main(int argc, char *argv[]) {\n"
         "    return 0;\n"
         "}\n",
-        short_id
+        project->id_underscore
     );
 
     fclose(f);
@@ -50,9 +50,10 @@ void setup_project(
         "#ifndef %s_H\n"
         "#define %s_H\n\n"
         "/* This generated file contains includes for project dependencies */\n"
-        "#include \"bake_config.h\"\n\n",
+        "#include \"%s/bake_config.h\"\n\n",
         id_upper,
-        id_upper);
+        id_upper,
+        project->id_dash);
 
     fprintf(f, "\n" "#endif\n" "\n");
 

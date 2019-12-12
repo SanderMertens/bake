@@ -185,7 +185,7 @@ void add_optimization(
 {
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        if (!is_clang(cpp) || !is_linux()) {
+        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
             ut_strbuf_appendstr(cmd, " -O3 -flto");
         } else {
             /* On some Linux versions clang has trouble loading the LTO plugin */
@@ -208,7 +208,7 @@ void add_misc(
     ut_strbuf_append(cmd, " -fPIC -fno-stack-protector");
 
     /* Include debugging information */
-    if (config->debug) {
+    if (config->symbols) {
         ut_strbuf_appendstr(cmd, " -g");
     }
 
@@ -453,7 +453,7 @@ void link_dynamic_binary(
 
     /* Set optimizations */
     if (config->optimizations) {
-        if (!is_clang(cpp) || !is_linux()) {
+        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
             ut_strbuf_appendstr(&cmd, " -O3 -flto");
         } else {
             /* On some Linux versions clang has trouble loading the LTO plugin */
@@ -837,18 +837,19 @@ static
 void print_coverage(
     const char *file,
     int file_len_max,
-    int coverage,
-    int total_lines)
+    float coverage,
+    int total_lines,
+    int missed_lines)
 {
     if (coverage < 60) {
-        ut_log("%*s: #[red]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[red]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     } else if (coverage < 80) {
-        ut_log("%*s: #[yellow]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[yellow]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     } else {
-        ut_log("%*s: #[green]%3d%%#[normal] (LOC: %d)\n", file_len_max, file, 
-            coverage, total_lines);
+        ut_log("%*s: #[green]%.1f%%#[normal] (loc: %d, miss: %d)\n", file_len_max, file, 
+            coverage, total_lines, missed_lines);
     }
 }
 
@@ -865,7 +866,7 @@ void parse_coverage(
     int i = 0, file_len_max = 0;
     int total_lines = 0;
     int uncovered_lines = 0;
-    int coverage = 0;
+    float coverage = 0;
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
@@ -885,16 +886,16 @@ void parse_coverage(
     qsort(data, total_files, sizeof(file_coverage_t), coverage_compare);
 
     for (i = 0; i < total_files; i ++) {
-        coverage = 100 * (1.0 - 
+        coverage = 100.0 * (1.0 - 
             (float)data[i].uncovered_lines / (float)data[i].total_lines);
         print_coverage(data[i].file, file_len_max, coverage, 
-            data[i].total_lines);
+            data[i].total_lines, data[i].uncovered_lines);
 
         free(data[i].file);
     }
 
-    coverage = 100 * (1.0 - (float)uncovered_lines / total_lines);
-    print_coverage("total", file_len_max, coverage, total_lines);
+    coverage = 100.0 * (1.0 - (float)uncovered_lines / total_lines);
+    print_coverage("total", file_len_max, coverage, total_lines, uncovered_lines);
     printf("\n");
 
     free(gcov_dir);
@@ -923,6 +924,12 @@ void coverage(
         total_files ++;
     }
 
+    if (!total_files) {
+        ut_error("no source files to analyze for coverage report");
+        project->error = true;
+        return;
+    }
+
     char *srcstr = ut_strbuf_get(&src);
     ut_strbuf_append(&cmd, 
         "gcov --object-directory %s/obj %s", tmp_dir, srcstr);
@@ -938,6 +945,8 @@ void coverage(
     }
 
     char *gcov_dir = ut_asprintf("%s/gcov", project->path);
+    ut_rm(gcov_dir);
+    
     if (ut_mkdir(gcov_dir)) {
         ut_error("failed to create gcov directory '%s'", gcov_dir);
         project->error = 1;
@@ -947,16 +956,42 @@ void coverage(
     free(gcov_dir);
 
     ut_dir_iter(project->path, "*.gcov", &it);
+    int total_gcov_files = 0;
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *dst_file = ut_asprintf("gcov/%s", file);
-        ut_rename(file, dst_file);
+
+        if (ut_rename(file, dst_file)) {
+            ut_error(
+                "failed to move file '%s'", 
+                file);
+        }
+
         free(dst_file);
+        total_gcov_files ++;
     }
 
     free(cmdstr);
     free(srcstr);
+
+    if (!total_gcov_files) {
+        ut_error("no gcov files");
+        project->error = true;
+        return;
+    }
+
+    if (total_gcov_files < total_files) {
+        ut_error("found %d source files, but only %d gcov files",
+            total_files, total_gcov_files);
+        project->error = true;
+        return;
+    } else if (total_gcov_files > total_files) {
+        ut_error("found %d gcov files, but only %d source files",
+            total_files, total_gcov_files);
+        project->error = true;
+        return;
+    }
 
     parse_coverage(project, total_files);
 }

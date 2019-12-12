@@ -46,6 +46,33 @@ typedef struct bake_project_driver {
     ut_ll attributes;
 } bake_project_driver;
 
+/* Bind bake project to a repository */
+typedef struct bake_project_repository {
+    char *id;
+    char *url;
+} bake_project_repository;
+
+/* Identifies a specific revision in the repository */
+typedef struct bake_ref {
+    bake_project_repository *repository;
+    char *branch;
+    char *commit;
+    char *tag;
+} bake_ref;
+
+/* Default values for revision to use by refs in bundle */
+typedef struct bake_project_bundle_defaults {
+    char *branch;
+    char *tag;
+} bake_project_bundle_defaults;
+
+/* Bundle containing repository revisions */
+typedef struct bake_project_bundle {
+    char *id;
+    bake_project_bundle_defaults defaults;
+    ut_rb refs;
+} bake_project_bundle;
+
 struct bake_project {
     /* Project properties (managed by bake core) */
     char *path;             /* Project path */
@@ -64,11 +91,17 @@ struct bake_project {
     ut_ll use;              /* Project dependencies */
     ut_ll use_private;      /* Local dependencies (not visible to dependees) */
     ut_ll use_build;        /* Packages only required by the build */
+    ut_ll use_runtime;      /* Packages required when running the project */
     ut_ll link;             /* All resolved dependencies package must link with */
     ut_ll sources;          /* Paths to source files */
     ut_ll includes;         /* Paths to include files */
-    bool keep_binary;     /* Keep artefact when cleaning project */
+    bool keep_binary;       /* Keep artefact when cleaning project */
     char *dependee_json;    /* Build instructions for dependees */
+
+    char *default_host;     /* Optional default git repository host */
+    ut_ll use_bundle;       /* Global bundle dependencies */
+    ut_rb repositories;     /* Repositories in bundle */
+    ut_rb bundles;          /* Repository references in bundle */
 
     ut_ll drivers;          /* Drivers used to build this project */
     bake_project_driver *language_driver; /* Driver loaded for the language */

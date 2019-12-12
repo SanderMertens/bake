@@ -25,7 +25,6 @@ struct bake_crawler {
     ut_rb nodes; /* tree optimizes looking up dependencies */
     ut_ll leafs; /* projects that cannot act as dependencies */
     uint32_t count;
-    bool recursive;
 };
 
 static bake_crawler *crawler;
@@ -76,7 +75,7 @@ int16_t bake_crawler_lookupDependency(
     bake_config *config,
     bake_project *p,
     const char *use)
-{
+{    
     /* Don't try to rebuild bake dependencies (like bake.util) */
     if (!strncmp(use, "bake.", 5)) {
         return 0;
@@ -99,10 +98,43 @@ int16_t bake_crawler_lookupDependency(
                     ut_warning("ignoring '%s' because of errors", src);
                 }
             }
+        } else {
+            /* If source for dependency is not available, that doesn't mean we
+             * have no binary. If a binary exists in the environment, there is
+             * no need to take further action */
+            if (!ut_locate(use, NULL, UT_LOCATE_BIN)) {
+
+                /* If the binary doesn't exist, check if the project can be
+                 * found in any of the registered repositories */
+                bake_repository *repo = bake_find_repository(config, use);
+                if (repo) {
+                    /* If a repository is found, install it. At this point the
+                     * project repository is guaranteed to be found in bake, so
+                     * the only reason this function can fail is if the clone
+                     * fails, which would be a real error. */
+                    ut_try( bake_install(config, use), NULL);
+
+                    /* Reset locate cache, as project has just been installed */
+                    ut_locate_reset(use);
+                } else {
+                    /* Nothing to be done here. It is possible that a dependency
+                     * is not yet discoverable at this point, as is the case
+                     * with projects that are generated during the build. At
+                     * this point we cannot know for sure if a dependency is
+                     * actually missing, so don't throw an error. */
+                    ut_trace(
+                        "dependency '%s' not found in environment or bundles, possible error", 
+                        use); 
+                }
+            } else {
+                ut_trace("binary found for dependency '%s' (no source)", use);
+            }
         }
     }
 
     return 0;
+error:
+    return -1;
 }
 
 bake_project* bake_crawler_get(
@@ -148,12 +180,13 @@ int16_t bake_crawler_add(
         bake_project *found;
         if ((found = ut_rb_findOrSet(crawler->nodes, p->id, p)) && found != p) {
             if (found->path) {
-                ut_throw(
-                  "duplicate project '%s' found in '%s' (first found here: '%s')",
-                  p->id,
-                  found->path,
-                  p->path);
-                goto error;
+                    ut_throw(
+                        "duplicate project '%s' found in '%s' (first found here: '%s')",
+                        p->id,
+                        found->path,
+                        p->path);
+                    goto error;
+
             } else {
                 /* This is a placeholder. Replace it with the actual project. */
                 p->dependents = found->dependents;
@@ -186,6 +219,7 @@ int16_t bake_crawler_walk_dependencies(
     p->unresolved_dependencies = ut_ll_count(p->use);
     p->unresolved_dependencies += ut_ll_count(p->use_build);
     p->unresolved_dependencies += ut_ll_count(p->use_private);
+    p->unresolved_dependencies += ut_ll_count(p->use_runtime);
 
     /* Add project to dependent lists of dependencies */
     ut_iter it = ut_ll_iter(p->use);
@@ -203,6 +237,13 @@ int16_t bake_crawler_walk_dependencies(
 
     /* Add project to dependent lists of build dependencies */
     it = ut_ll_iter(p->use_build);
+    while (ut_iter_hasNext(&it)) {
+        char *use = ut_iter_next(&it);
+        ut_try( action(config, p, use), NULL);
+    }
+
+    /* Add project to dependent lists of runtime dependencies */
+    it = ut_ll_iter(p->use_runtime);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
         ut_try( action(config, p, use), NULL);
@@ -372,7 +413,6 @@ static
 int16_t bake_crawler_recursive(
     bake_config *config)
 {
-
     /* First collect unresolved dependencies for leafs (applications) */
     ut_iter it = ut_ll_iter(crawler->leafs);
     while (ut_iter_hasNext(&it)) {
@@ -402,10 +442,9 @@ error:
     return -1;
 }
 
-void bake_crawler_init(bool recursive)
+void bake_crawler_init(void)
 {
     crawler = ut_calloc(sizeof(bake_crawler));
-    crawler->recursive = recursive;
 }
 
 void bake_crawler_free(void)
@@ -436,7 +475,8 @@ uint32_t bake_crawler_count(void)
 
 uint32_t bake_crawler_search(
     bake_config *config,
-    const char *path)
+    const char *path,
+    bool recursive)
 {
     int count = bake_crawler_count();
 
@@ -452,7 +492,7 @@ uint32_t bake_crawler_search(
         /* If crawling recursively, discover unresolved depdendencies. Do this
          * after discovering projects in the provided directory, so these take
          * precedence (in case one project is found in two locations). */
-        if (crawler->recursive) {
+        if (recursive) {
             ut_trace("recursively looking for dependencies");
             ut_try( bake_crawler_recursive(config), NULL);
         }
@@ -501,6 +541,7 @@ int16_t bake_crawler_build_project(
     }
 
     if (action(config, p)) {
+        ut_raise();
         bake_message(UT_ERROR, "error", "build interrupted for %s in %s", p->id, p->path);
         goto error;
     }

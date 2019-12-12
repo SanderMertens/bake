@@ -25,7 +25,10 @@ static
 int16_t bake_update_dependencies(
     bake_config *config,
     const char *base_url,
-    bake_project *project);
+    bake_project *project,
+    bool to_env,
+    bool always_clone,
+    bake_notify_state *notify_state);
 
 static
 int16_t cmd(
@@ -42,43 +45,69 @@ int16_t cmd(
 }
 
 static
-int16_t git_pull(
-    const char *src_path)
+int16_t git_reset(
+    bake_config *config,
+    const char *id,
+    const char *src_path,
+    bool should_fetch)
 {
-    char *
-    gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
-    ut_try(cmd(gitcmd), NULL);
-    gitcmd = ut_asprintf("git -C %s reset -q --hard origin/master", src_path);
-    ut_try(cmd(gitcmd), NULL);
+    const char *branch = "master";
+    const char *tag = NULL;
+    const char *commit = NULL;
+
+    bake_repository *repo = bake_find_repository(config, id);
+    if (repo) {
+        if (repo->branch) {
+            branch = repo->branch;
+        }
+        tag = repo->tag;
+        commit = repo->commit;
+    }
+
+    char *gitcmd;
+
+    if (should_fetch) {
+        gitcmd = ut_asprintf("git -C %s fetch -q origin", src_path);
+        ut_try(cmd(gitcmd), NULL);
+    }
+
+    gitcmd = ut_asprintf("git -C %s reset -q --hard origin/%s", src_path, branch);
+    ut_try(cmd(gitcmd), NULL);    
+
+    if (tag) {
+        ut_trace("checkout '%s' branch:%s, tag:%s", repo->url, branch, tag);
+        gitcmd = ut_asprintf("git -C %s checkout tags/%s --quiet", src_path, tag);
+        ut_try(cmd(gitcmd), NULL);
+    } else if (commit) {
+        ut_trace("checkout '%s' branch:%s, commit:%s", repo->url, branch, commit);
+        gitcmd = ut_asprintf("git -C %s checkout %s --quiet", src_path, commit);
+        ut_try(cmd(gitcmd), NULL);
+    }
+
     gitcmd = ut_asprintf("git -C %s clean -q -xdf", src_path);
     ut_try(cmd(gitcmd), NULL);
 
     return 0;
 error:
     ut_raise();
+    bake_message(UT_ERROR, "", "does the specified branch/revision exist?");
     return -1;
 }
 
-static
-int16_t bake_parse_repo_url(
+int16_t bake_url_is_well_formed(
     const char *url,
-    char **full_url_out,
-    char **base_url_out,
-    char **name_out,
-    char **src_out)
+    bool *has_protocol_out,
+    bool *has_url_out)
 {
+    bool result;
     bool has_protocol = false;
     bool has_url = false;
-
-    *full_url_out = NULL;
-    *base_url_out = NULL;
-    *name_out = NULL;
-    *src_out = NULL;
 
     char *proto = strchr(url, '/');
     if (proto) {
         if (proto == url) {
-            ut_throw("invalid repository name '%s': cannot start with '/'");
+            ut_throw("invalid repository '%s': cannot start with '/'",
+                url);
             goto error;
         }
 
@@ -93,16 +122,42 @@ int16_t bake_parse_repo_url(
         has_url = true;
     }
 
-    char *name = strrchr(url, '/');
-    if (!name) {
-        name = strrchr(url, ':');
-        if (!name) {
-            ut_throw("invalid git URL");
-            goto error;
-        }
+    if (has_protocol && !has_url) {
+        ut_throw("malformed url: '%s'", url);
+        goto error;
     }
 
-    name ++; /* Skip separator character */
+    if (has_protocol_out) {
+        *has_protocol_out = has_protocol;
+    }
+
+    if (has_url_out) {
+        *has_url_out = has_url;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+static
+int16_t bake_parse_repo_url(
+    const char *url,
+    char **full_url_out,
+    char **base_url_out,
+    char **name_out,
+    char **src_out,
+    bool to_env)
+{
+    bool has_protocol = false;
+    bool has_url = false;
+
+    ut_try(bake_url_is_well_formed(url, &has_protocol, &has_url), NULL);
+
+    *full_url_out = NULL;
+    *base_url_out = NULL;
+    *name_out = NULL;
+    *src_out = NULL;
 
     char *full_url = NULL;
     if (has_protocol && has_url) {
@@ -114,7 +169,23 @@ int16_t bake_parse_repo_url(
           url);
     }
 
-    char *src_path = ut_envparse("%s"UT_OS_PS"%s", UT_SRC_PATH, name);
+    char *name = strrchr(url, '/');
+    if (!name) {
+        name = strrchr(url, ':');
+        if (!name) {
+            ut_throw("invalid git URL");
+            goto error;
+        }
+    }
+
+    name ++; /* Skip separator character */
+
+    char *src_path;
+    if (to_env) {
+        src_path = ut_envparse("%s"UT_OS_PS"%s", UT_SRC_PATH, name);
+    } else {
+        src_path = ut_envparse("."UT_OS_PS"%s", name);
+    }
 
     char *last_elem = strrchr(full_url, '/');
     char *base_url = NULL;
@@ -138,14 +209,17 @@ static
 int16_t bake_update_dependency_list(
     bake_config *config,
     const char *base_url,
-    ut_ll dependencies)
+    ut_ll dependencies,
+    bool to_env,
+    bool always_clone,
+    bake_notify_state *notify_state)
 {
     ut_iter it = ut_ll_iter(dependencies);
     while (ut_iter_hasNext(&it)) {
         char *dep = ut_iter_next(&it);
 
-        if (!strcmp(dep, "bake.util")) {
-            /* Skip bootstrapped bake.util dependency */
+        if (ut_project_is_buildtool(dep)) {
+            /* Skip build utility dependencies */
             continue;
         }
 
@@ -161,46 +235,98 @@ int16_t bake_update_dependency_list(
             }
         }
 
-        const char *src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        const char *src_path = NULL;
+        if (to_env) {
+            src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+        }
+
         if (src_path) {
             /* If source is in bake environment, pull latest version */
             bake_message(UT_LOG, "pull", "#[green]package#[reset] %s in '%s'", dep, src_path);
-            git_pull(src_path);
-        } else {
+            git_reset(config, dep, src_path, true);
+        } else if (!always_clone) {
             /* If source is a project under development, just build it */
             src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
             if (src_path) {
                 bake_message(UT_LOG, 
-                    "note", 
+                    "skip", 
                     "#[green]package#[reset] %s found in '%s' (in dev tree, not pulling)", 
                     dep, src_path);
+
+                if (!notify_state->always_clone) {
+                    bake_message(UT_LOG, 
+                        "note", 
+                        "to pull anyway, add --always-clone to the bake clone command", 
+                        dep, src_path);
+                    notify_state->always_clone = true;                    
+                }
             }
         }
 
         if (src_path) {
             bake_project *dep_project = bake_project_new(src_path, config);
-            if (bake_crawler_search(config, src_path) == -1) {
+            if (bake_crawler_search(config, src_path, false) == -1) {
                 goto error;
             }           
-            ut_try( bake_update_dependencies(config, base_url, dep_project), NULL);
-        } else if (base_url) {
-            if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
-                bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
+            ut_try( bake_update_dependencies(config, base_url, dep_project, to_env, always_clone, notify_state), NULL);
+        } else {
+            /* No source path is found. We may need to clone from git */
+            if (!always_clone && to_env) {
+                /* Check if the project is known to bake. If it is, just print
+                 * a friendly message to the console telling the user what bake
+                 * is up to. */
+                if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
+                    bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
+                }
             }
 
-            char *url = ut_asprintf("%s/%s", base_url, dep_tmp);
-            if (bake_clone(config, url)) {
+            char *url = NULL;
+            bool should_reset = false;
+
+            /* First check if project is registered as a repository with bake
+             * through a bundle */
+            bake_repository *repo = bake_find_repository(config, dep);
+            if (repo) {
+                url = ut_strdup(repo->url);
+                if (repo->branch || repo->tag || repo->commit) {
+                    should_reset = true;
+                }
+
+                ut_trace("using repository '%s' for '%s' from bundle '%s:%s'", 
+                    url, dep, repo->project, repo->bundle);
+
+            /* If project is not found in a bundle, try cloning it using the 
+             * same base url as the dependee project. */
+            } else if (base_url) {
+                url = ut_asprintf("%s/%s", base_url, dep_tmp);
+
+            } else {
+                ut_throw("cannot clone unresolved dependency '%s'", dep);
+                free(dep_tmp);
+                goto error;
+            }
+
+            if (bake_clone(config, url, to_env, always_clone, true, notify_state, NULL)) {
                 ut_catch();
                 ut_throw(
                     "cannot find repository '%s' in '%s'", dep_tmp, base_url);
                 goto error;
             }
 
+            if (should_reset) {
+                const char *src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+                if (!src_path) {
+                    src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
+                }
+
+                if (!src_path) {
+                    ut_throw("cannot find repository path for '%s'", dep);
+                    goto error;
+                }
+                ut_try( git_reset(config, dep, src_path, false), NULL);
+            }
+
             free(url);
-        } else {
-            ut_throw("cannot clone unresolved dependency '%s'", dep);
-            free(dep_tmp);
-            goto error;
         }
 
         free(dep_tmp);
@@ -215,10 +341,14 @@ static
 int16_t bake_update_dependencies(
     bake_config *config,
     const char *base_url,
-    bake_project *project)
+    bake_project *project,
+    bool to_env,
+    bool always_clone,
+    bake_notify_state *notify_state)
 {
-    ut_try(bake_update_dependency_list(config, base_url, project->use), NULL);
-    ut_try(bake_update_dependency_list(config, base_url, project->use_private), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use, to_env, always_clone, notify_state), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use_private, to_env, always_clone, notify_state), NULL);
+    ut_try(bake_update_dependency_list(config, base_url, project->use_runtime, to_env, always_clone, notify_state), NULL);
     return 0;
 error:
     return -1;
@@ -231,7 +361,7 @@ int bake_update_action(
     char *git_path = ut_asprintf("%s/.git", project->path);
 
     if (ut_file_test(git_path)) {
-        git_pull(project->path);
+        git_reset(config, project->id, project->path, true);
     }
 
     free(git_path);
@@ -243,20 +373,25 @@ error:
 
 int16_t bake_clone(
     bake_config *config,
-    const char *url)
+    const char *url,
+    bool to_env,
+    bool always_clone,
+    bool clone_dependencies,
+    bake_notify_state *notify_state,
+    bake_project **project_out)
 {
     char *full_url = NULL, *base_url = NULL, *name = NULL, *src_path = NULL;
     bake_project *project = NULL;
-    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path), NULL);
+    bake_notify_state notify_state_var = {0};
+    if (!notify_state) {
+        notify_state = &notify_state_var;
+    }
+
+    ut_try( bake_parse_repo_url(url, &full_url, &base_url, &name, &src_path, to_env), NULL);
 
     if (ut_file_test(src_path) == 1) {
-        ut_error("project '%s' already cloned, try 'bake update'", name);
-
-        free(full_url);
-        free(base_url);
-        free(src_path);
-
-        return -1;
+        bake_message(UT_LOG, "skip", "#[green]package#[reset] %s (already cloned)", name);
+        bake_message(UT_LOG, "note", "to pull the latest state of %s, run 'bake update'", name);
     } else {
         bake_message(UT_LOG, "clone", "'%s' into '%s'", full_url, src_path);
         char *gitcmd = ut_envparse("git clone -q %s %s", full_url, src_path);
@@ -269,15 +404,69 @@ int16_t bake_clone(
         goto error;
     }
 
-    ut_try( bake_update_dependencies(config, base_url, project), NULL);
+    bake_repository *repo = bake_find_repository(config, project->id);
+    if (repo && (repo->branch || repo->tag || repo->commit)) {
+        /* Make sure right revision is checked out if project is known to bake */
+        ut_try( git_reset(config, project->id, project->path, false), NULL);
 
-    if (bake_crawler_search(config, src_path) == -1) {
+        /* Reload project, as its configuration may be different */
+        bake_project_free(project);
+        project = bake_project_new(src_path, config);
+        if (!project) {
+            ut_throw(
+                "revision '%s:%s' of repository '%s' is not a valid bake project", 
+                repo->branch ? repo->branch : "master",
+                repo->tag
+                    ? repo->tag
+                    : repo->commit
+                        ? repo->commit
+                        : "latest"
+                ,
+                full_url);
+            goto error;
+        }
+
+        bake_message(UT_LOG, "", "rev -> #[green]%s:%s#[normal]", 
+            repo->branch ? repo->branch : "master",
+            repo->tag
+                ? repo->tag
+                : repo->commit
+                    ? repo->commit
+                    : "latest");
+    }
+
+    if (clone_dependencies) {
+        ut_try( bake_update_dependencies(config, base_url, project, to_env, always_clone, notify_state), NULL);
+    }
+
+    if (bake_crawler_search(config, src_path, false) == -1) {
         goto error;
+    }
+
+    if (project_out) {
+        *project_out = project;
     }
 
     free(full_url);
     free(base_url);
     free(src_path);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_install(
+    bake_config *config,
+    const char *project_id)
+{
+    bake_repository *repo = bake_find_repository(config, project_id);
+    if (!repo) {
+        ut_throw("cannot install '%s', do not know repository", project_id);
+        goto error;
+    }
+
+    ut_try( bake_clone(config, repo->url, true, true, true, NULL, NULL), NULL);
 
     return 0;
 error:

@@ -172,7 +172,7 @@ int16_t bake_create_upgrade_script(void)
         goto error;
     }
 
-    fprintf(f, "#!/bin/bash\n\n");
+    fprintf(f, "#!/usr/bin/env bash\n\n");
 
     fprintf(f, "UNAME=$(uname)\n\n");
 
@@ -234,6 +234,8 @@ int16_t bake_create_script(bool local, const char* architecture)
         goto error;
     }
 
+    fprintf(f, "#!/usr/bin/env bash\n\n");
+
     fprintf(f, "if [ \"$1\" = \"upgrade\" ]; then\n");
     fprintf(f, "   exec $HOME/bake/bake-upgrade.sh\n");
     fprintf(f, "else\n");
@@ -282,7 +284,7 @@ int16_t bake_build_make_project(
 {
     /* Install header files to include folder in bake environment */
     char *install_cmd = ut_asprintf(
-      "."UT_OS_PS"bake install %s --id %s --package --includes include",
+      "."UT_OS_PS"bake meta-install %s --id %s --package --includes include",
       path, id);
 
     ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
@@ -333,7 +335,7 @@ int16_t bake_build_make_project(
 
     /* Install binary to bake environment */
     install_cmd = ut_asprintf(
-        "."UT_OS_PS"bake install %s --id %s --artefact %s --package",
+        "."UT_OS_PS"bake meta-install %s --id %s --artefact %s --package",
         path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
@@ -419,7 +421,7 @@ int16_t bake_setup(
     bake_message(UT_OK, "done", "bake environment reset");
 
     /* Install bake header files to bake environment */
-    ut_try( cmd("."UT_OS_PS"bake install --id bake --includes include"),
+    ut_try( cmd("."UT_OS_PS"bake meta-install --id bake --includes include"),
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 

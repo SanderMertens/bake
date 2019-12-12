@@ -30,18 +30,50 @@
 #include "crawler.h"
 #include "project.h"
 
+/* Track which messages have been printed already to avoid spamming the console */
+typedef struct bake_notify_state {
+    bool always_clone;    
+} bake_notify_state;
+
 void bake_message(
     int kind,
     const char *bracket_txt,
     const char *fmt,
     ...);
 
+/* -- Repository database -- */
+
+int16_t bake_use(
+    bake_config *config, 
+    const char *expr,
+    bool update_config,
+    bool load_bundle);
+
+int16_t bake_unuse(
+    bake_config *config,
+    const char *project);
+
+int16_t bake_add_repository(
+    bake_config *config,
+    const char *id,
+    const char *repository,
+    const char *branch,
+    const char *commit,
+    const char *tag,
+    const char *project,
+    const char *bundle);
+
+bake_repository* bake_find_repository(
+    bake_config *cfg,
+    const char *id);
+
 /* -- Configuration functions -- */
 
 /** Find bake config file(s), load specified configuration & environment */
 int16_t bake_config_load(
     bake_config *cfg_out,
-    const char *env_id);
+    const char *env_id,
+    bool load_bundles);
 
 /** Export variable to bake configuration */
 int16_t bake_config_export(
@@ -52,6 +84,23 @@ int16_t bake_config_export(
 int16_t bake_config_unset(
     bake_config *cfg,
     const char *expr);
+
+/** Add bundle to configuration */
+int16_t bake_config_use_bundle(
+    bake_config *cfg,
+    const char *bundle,
+    const char *tag,
+    bool *changed);
+
+/* Remove bundle from configruation */
+int16_t bake_config_unuse_bundle(
+    bake_config *cfg,
+    const char *project_id,
+    bool *changed);
+
+/* Reset bundles in configuration */
+int16_t bake_config_reset_bundles(
+    bake_config *cfg);
 
 /* -- Build functions -- */
 
@@ -98,10 +147,20 @@ int bake_run(
 
 /* -- Git functions -- */
 
-/* Clone from remote repository */
+/* Clone from remote repository to local directory */
 int16_t bake_clone(
     bake_config *config,
-    const char *url);
+    const char *url,
+    bool to_env,
+    bool always_clone,
+    bool clone_dependencies,
+    bake_notify_state *notify_state,
+    bake_project **project_out);
+
+/* Clone project to bake environment from bundle */
+int16_t bake_install(
+    bake_config *config,
+    const char *project_id);
 
 /* Update from remote repository */
 int bake_update_action(
@@ -113,6 +172,12 @@ int16_t bake_publish(
     bake_config *config,
     bake_project *project,
     const char *publish_cmd);
+
+/* Quick & dirty check to see if URL is well formed */
+int16_t bake_url_is_well_formed(
+    const char *url,
+    bool *has_protocol_out,
+    bool *has_url_out);
 
 /* -- Template functions -- */
 
@@ -455,3 +520,4 @@ int16_t bake_setup(
 /* Reset bake environment */
 int bake_reset(
     bake_config *cfg);
+

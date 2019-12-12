@@ -142,3 +142,9 @@ bake_attr* bake_project_set_attr_array(
 /* Transform project type to string */
 const char* bake_project_type_str(
     bake_project_type type);
+
+/* Load bundles from project */
+uint16_t bake_project_load_bundle(
+    bake_config *config,
+    bake_project *project,
+    const char *bundle);

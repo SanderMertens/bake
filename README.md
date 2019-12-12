@@ -7,6 +7,7 @@ To that end, bake is a build tool, build system, package manager and environment
 
 Bake's main features are:
 - discover all projects in current directory & build them in the correct order
+- clone, build and run a project and its dependencies with a single command using bake bundles 
 - automatically include header files from dependencies
 - use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
 - programmable C API for interacting with package management
@@ -31,6 +32,7 @@ Bake is supported on the following platforms:
   * [Project kinds](#project-kinds)
   * [Project layout](#project-layout)
   * [Project configuration](#project-configuration)
+  * [Project bundles](#project-bundles)
   * [Template functions](#template-functions)
   * [Templates](#templates)
   * [Configuring Bake](#configuring-bake)
@@ -660,6 +662,8 @@ version | string | Version of the project (use semantic versioning)
 public | bool | If `true`, project is installed to `$BAKE_TARGET`
 use | list(string) | List of dependencies using logical project ids. Dependencies must be located in either `$BAKE_HOME` or `$BAKE_TARGET`.
 use_private | list(string) | Same as "use", but dependencies are private, which means that header files will not be exposed to dependees of this project.
+use_runtime | list(string) | Specify dependencies that a project needs at runtime, but that are not used/linked with during build time.
+use-bundle | list(string) | Bundles to be used by project. If the bundles are also specified as a repository, bake will be able to automatically download & find dependencies in the specified bundles.
 sources | list(string) | List of paths that contain source files. Default is `src`. The `$SOURCES` rule is substituted with this value.
 includes | list(string) | List of paths that contain include files.
 keep_binary | bool | Do not clean binary files when doing bake clean. When a binary for the target platform is present, bake will skip the project. To force a rebuild, a user has to explicitly use the `bake rebuild` command.
@@ -815,6 +819,210 @@ base | Last element of an id | bar
 upper | Upper case, replace '.' with '\_'. Used for macro's | FOO_BAR
 dash | Replace '.' with '-'. Used for repository names | foo-bar
 underscore | Replace '.' with '\_'. Used for variable names | foo_bar
+
+### Project bundles
+Bake bundles let projects specify in which repositories their dependencies are located, and which revision of those dependencies they require. All repositories and their revisions in a bundle are expected to be compatible with each other. This makes it easier to work with projects that have many (open source) dependencies, where the dependencies have their own release cycles and rules for versioning.
+
+If bundles are setup correctly, the following commands can all automatically download and build the correct set of dependencies:
+
+Run directly from a repository:
+```
+bake run https://github.com/SanderMertens/example
+```
+
+Clone a bake project and its dependencies:
+```
+bake clone https://github.com/SanderMertens/example
+```
+
+Recursively build a project:
+```
+bake -r example
+```
+
+This is a simple example of a bundle configuration:
+
+```json
+{
+    "id": "example",
+    "type": "application",
+    "value": {
+        "use": ["example_library"]
+    },
+    "bundle": {
+        "repositories": {
+            "example_library": "https://github.com/SanderMertens/example_library"
+        }
+    }
+}
+```
+
+This example only contains information about where the `example_library` project can be found. When a user clones, runs or recursively builds the project, bake will automatically clone the `example_library` project if it is not locally available. Alternatively, this information can be stored in a separate project:
+
+```json
+{
+    "id": "example_bundle",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "bundle": {
+        "default-host": "https://github.com/SanderMertens",
+        "repositories": {
+            "example_library": "SanderMertens/example_library",
+            "foo.bar": "SanderMertens/foo-bar",
+            "hello.world": "SanderMertens/hello-world"
+        }
+    }
+}
+```
+
+This is a configuration for a project that only contains bundle information. Note how it uses the `default-host` attribute to shorten the URLs. A bake project can automatically load this bundle when it is built by specifying the bundle in the `use-bundle` attribute:
+
+```json
+{
+    "id": "example",
+    "type": "application",
+    "value": {
+        "use-bundle": ["example_bundle"]
+    },
+    "bundle": {
+        "repositories": {
+            "example_bundle": "https://github.com/SanderMertens/example_bundle"
+        }
+    }    
+}
+```
+
+Note how the project also adds the bundle project to the `repositories` list in its `bundle` section. This is not required, but is recommended so that bake will be able to clone the bundle if `example` is built in an environment that does not contain `example_bundle`. If the repository configuration is ommitted and `example_bundle` cannot be found by bake the project will fail to build.
+
+If a project wants to use a specific branch, commit and/or tag of a repository, it can do so by adding a `refs` property to the `bundle` section:
+
+```json
+{
+    "id": "example_bundle",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "bundle": {
+        "default-host": "https://github.com/SanderMertens",
+        "repositories": {
+            "example_library": "SanderMertens/example_library",
+            "foo.bar": "SanderMertens/foo-bar",
+            "hello.world": "SanderMertens/hello-world"
+        },
+        "refs": {
+            "v1.0": {
+                "example_library": {
+                    "branch": "master",
+                    "tag": "v1.0"
+                },
+                "foo.bar": {
+                    "branch": "master",
+                    "tag": "v1.0"
+                },
+                "hello.world": {
+                    "branch": "master",
+                    "commit": "52ba2e129a6359f06f3437e7f46b9f466464b495"
+                }
+            }
+        }
+    }
+}
+```
+
+To use this specific set of revisions, a project should specify its id in the `use-bundle` property, like so: 
+
+```json
+{
+    "use-bundle": ["example_bundle:v1.0"]
+}
+```
+
+The above bundle configuration can be shortened with the `default-branch` and `default-tag` properties:
+
+```json
+{
+    "id": "example_bundle",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "bundle": {
+        "default-host": "https://github.com/SanderMertens",
+        "repositories": {
+            "example_library": "SanderMertens/example_library",
+            "foo.bar": "SanderMertens/foo-bar",
+            "hello.world": "SanderMertens/hello-world"
+        },
+        "refs": {
+            "v1.0": {
+                "default-branch": "master",
+                "default-tag": "v1.0",
+                "hello.world": {
+                    "commit": "52ba2e129a6359f06f3437e7f46b9f466464b495"
+                }
+            }
+        }
+    }
+}
+```
+
+In cases where the revision id is the same as the tag, the `tag` and `default-tag` properties can be ommitted, as bake will automatically use this id as the tag when a project has no tag and no commit specified. Additionally, if no branch is specified, master is assumed. Therefore the above configuration is equivalent to this:
+
+```json
+{
+    "id": "example_bundle",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "bundle": {
+        "default-host": "https://github.com",
+        "repositories": {
+            "example_library": "SanderMertens/example_library",
+            "foo.bar": "SanderMertens/foo-bar",
+            "hello.world": "SanderMertens/hello-world"
+        },
+        "refs": {
+            "v1.0": {
+                "hello.world": {
+                    "commit": "52ba2e129a6359f06f3437e7f46b9f466464b495"
+                }
+            }
+        }
+    }
+}
+```
+
+This allows for shorter bundle configurations, where the bundle only needs to capture deviations from what is considered good practice. The exception to this rule is if a set of revisions has the `default` id. `default` specifies the set of revisions that are loaded when no bundle id, or `default`, is specified. 
+
+It is possible to add bundles to the bake configuration. This ensures that repositories in the environment are guaranteed to be of the revisions in the configured bundle. If a bundle is configured with bake, and a project is loaded that has a different configuration (repository, branch, tag, commit) for a project, it will fail to build. To add a bundle to bake's configuration, use the `bake use` command:
+
+```
+bake use example_bundle:v1.0
+```
+
+Attempting to load a project with different settings for any of the projects in the `example_bundle` bundle will result in an error. For example, if a project specifies project `hello.world` with tag `v1.0`, bake will reject it. Additionally, if a project specifies project `foo.bar` with tag `v2.0` bake will also reject the configuration. Even though `foo.bar` is not explicitly added to `v1.0`, bake adds it automatically when it loads the bundle configuration.
+
+If a project specifies its repository URL in the `repository` property, it must match with bundle configurations, or bake will reject the project. For example, trying to load the following project configuration against the previous bundle will fail because the URL does not match:
+
+```json
+{
+    "id": "foo.bar",
+    "type": "library",
+    "value": {
+        "repository": "https://gitlab.com/foo-bar"
+    }
+}
+```
+
+Bake will not automatically download dependencies during a build. Dependencies are only automatically downloaded for recursive builds, which are enbled with the `-r` argument:
+
+```
+bake -r
+```
 
 ### Templates
 Bake lets you create template projects which contain boilerplate code for common types of applications. Template projects look like regular projects, with two exceptions:
@@ -1245,6 +1453,8 @@ Options:
   --package                    Set the project type to package
   --template                   Set the project type to template
   --test                       Create a test project
+  --to-env                     Clone projects to the bake environment source path (use with clone)
+  --always-clone               Clone dependencies even if found in the bake environment (use with clone)
 
   --id <project id>            Specify a project id
   --type <package|template>    Specify a project type (default = "application")
@@ -1253,11 +1463,15 @@ Options:
   -i,--includes <include path> Specify an include path for project
   --private                    Specify a project to be private (not discoverable)
 
-  --interactive                Rebuild project when files change (use w/run)
+  -a,--args [arguments]        Pass arguments to application (use with run)
+  --interactive                Rebuild project when files change (use with run)
+  --run-prefix                 Specify prefix command for run
+  --test-prefix                Specify prefix command for tests run by test
   -r,--recursive               Recursively build all dependencies of discovered projects
-  -a,--args [arguments]        Pass arguments to application (use w/run)
   -t [id]                      Specify template for new project
   -o [path]                    Specify output directory for new projects
+
+  --show-repositories          List loaded repositories (use with list)
 
   -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)
   --trace                      Set verbosity to TRACE
@@ -1269,11 +1483,15 @@ Commands:
   build [path]                 Build a project (default command)
   rebuild [path]               Clean and build a project
   clean [path]                 Clean a project
+  test [path]                  Run tests of project
+  coverage [path]              Run coverage analysis for project
   cleanup                      Cleanup bake environment by removing dead or invalid projects
+  reset                        Resets bake environment to initial state, save for bake configuration
   publish <patch|minor|major>  Publish new project version
-  install [path]               Install project to bake environment
+  install <project id>         Install project to bake environment (repository must be known)
   uninstall [project id]       Remove project from bake environment
   clone <git url>              Clone and build git repository and dependencies
+  use <project:bundle>         Configure the environment to use specified bundle
   update [project id]          Update an installed package or application
   foreach <cmd>                Run command for each discovered project
 

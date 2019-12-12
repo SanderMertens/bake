@@ -21,7 +21,7 @@
 
 #include "bake.h"
 
-#define BAKE_VERSION "2.4.0"
+#define BAKE_VERSION "2.5.0"
 
 ut_tls BAKE_DRIVER_KEY;
 ut_tls BAKE_FILELIST_KEY;
@@ -38,9 +38,12 @@ bool discover = true;
 bool build = true;
 bool test = false;
 bool local_setup = false;
+bool load_bundles = false;
 bool strict = false;
 bool optimize = false;
 bool is_test = false;
+bool to_env = false;
+bool always_clone = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -54,14 +57,17 @@ const char *output_dir = NULL;
 
 /* Command specific parameters */
 const char *export_expr = NULL;
+const char *use_expr = NULL;
 const char *publish_cmd = NULL;
 const char *run_prefix = NULL;
+const char *test_prefix = NULL;
 bool interactive = false;
 bool recursive = false;
 int run_argc = 0;
 const char **run_argv = NULL;
 const char *foreach_cmd = NULL;
 const char *list_filter = NULL;
+bool show_repositories = false;
 
 #define ARG(short, long, action)\
     if (i < argc) {\
@@ -97,6 +103,8 @@ void bake_usage(void)
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
     printf("  --test                       Create a test project\n");
+    printf("  --to-env                     Clone projects to the bake environment source path (use with clone)\n");
+    printf("  --always-clone               Clone dependencies even if found in the bake environment (use with clone)\n");    
     printf("\n");
     printf("  --id <project id>            Specify a project id\n");
     printf("  --type <package|template>    Specify a project type (default = \"application\")\n");
@@ -105,12 +113,15 @@ void bake_usage(void)
     printf("  -i,--includes <include path> Specify an include path for project\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
-    printf("  -a,--args [arguments]        Pass arguments to application (use w/run)\n");
-    printf("  --interactive                Rebuild project when files change (use w/run)\n");
-    printf("  --run-prefix                 Specify prefix command for bake run\n");
+    printf("  -a,--args [arguments]        Pass arguments to application (use with run)\n");
+    printf("  --interactive                Rebuild project when files change (use with run)\n");
+    printf("  --run-prefix                 Specify prefix command for run\n");
+    printf("  --test-prefix                Specify prefix command for tests run by test\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
+    printf("\n");
+    printf("  --show-repositories          List loaded repositories (use with list)\n");
     printf("\n");
     printf("  -v,--verbosity <kind>        Set verbosity level (DEBUG, TRACE, OK, INFO, WARNING, ERROR, CRITICAL)\n");
     printf("  --trace                      Set verbosity to TRACE\n");
@@ -127,9 +138,10 @@ void bake_usage(void)
     printf("  cleanup                      Cleanup bake environment by removing dead or invalid projects\n");
     printf("  reset                        Resets bake environment to initial state, save for bake configuration\n");
     printf("  publish <patch|minor|major>  Publish new project version\n");
-    printf("  install [path]               Install project to bake environment\n");
+    printf("  install <project id>         Install project to bake environment (repository must be known)\n");
     printf("  uninstall [project id]       Remove project from bake environment\n");
     printf("  clone <git url>              Clone and build git repository and dependencies\n");
+    printf("  use <project:bundle>         Configure the environment to use specified bundle\n");
     printf("  update [project id]          Update an installed package or application\n");
     printf("  foreach <cmd>                Run command for each discovered project\n");
     printf("\n");
@@ -204,11 +216,21 @@ bake_project_type bake_parse_project_type(
 int16_t bake_init_action(
     const char *arg)
 {
+    /* Bundles are only loaded when bake interacts with git */
+    if (!strcmp(arg, "clone") ||
+        !strcmp(arg, "install") ||
+        !strcmp(arg, "update") ||
+        !strcmp(arg, "list"))
+    {
+        load_bundles = true;
+    }
+
     if (!strcmp(arg, "build") ||
         !strcmp(arg, "rebuild") ||
         !strcmp(arg, "clean") ||
-        !strcmp(arg, "install") ||
-        !strcmp(arg, "clone"))
+        !strcmp(arg, "meta-install") ||
+        !strcmp(arg, "clone") ||
+        !strcmp(arg, "install"))
     {
         discover = true;
         build = true;
@@ -226,6 +248,8 @@ int16_t bake_init_action(
         !strcmp(arg, "publish") ||
         !strcmp(arg, "info") ||
         !strcmp(arg, "list") ||
+        !strcmp(arg, "use") ||
+        !strcmp(arg, "unuse") ||
         !strcmp(arg, "export") ||
         !strcmp(arg, "unset"))
     {
@@ -275,6 +299,9 @@ int bake_parse_args(
             ARG(0, "package", type = BAKE_PACKAGE);
             ARG(0, "template", type = BAKE_TEMPLATE);
             ARG(0, "test", is_test = true);
+            ARG(0, "to-env", to_env = true);
+            ARG(0, "always-clone", always_clone = true);
+
             ARG(0, "private", private = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
             ARG('o', NULL, output_dir = argv[i + 1]; i ++);
@@ -285,9 +312,11 @@ int bake_parse_args(
             ARG(0, "local", local_setup = true);
             ARG(0, "local-setup", ); /* deprecated */
             ARG(0, "run-prefix", run_prefix = argv[i + 1]; i++);
+            ARG(0, "test-prefix", test_prefix = argv[i + 1]; i++);
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
+            ARG(0, "show-repositories", show_repositories = true);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
             ARG('v', "version", bake_version(); action = NULL; i ++);
@@ -338,7 +367,7 @@ int bake_parse_args(
 
     bool path_set = strcmp(path, ".");
 
-    if (!strcmp(action, "install")) {
+    if (!strcmp(action, "meta-install")) {
         if (ut_file_test(path) != 1) {
             action = "install_remote";
             discover = false;
@@ -356,6 +385,14 @@ int bake_parse_args(
             goto error;
         }
         export_expr = path;
+    }
+    
+    else if (!strcmp(action, "use") || !strcmp(action, "unuse")) {
+        if (!path_set) {
+            ut_throw("missing expression for use command");
+            goto error;
+        }
+        use_expr = path;
     }
 
     else if (!strcmp(action, "publish")) {
@@ -428,7 +465,7 @@ int16_t bake_discovery(
 
     if (!id) {
         /* Discover projects */
-        project_count = bake_crawler_search(config, path);
+        project_count = bake_crawler_search(config, path, recursive);
         if (project_count == -1) {
             goto error;
         }
@@ -457,7 +494,7 @@ int bake_build(
     if (!strcmp(action, "build")) cb = bake_do_build;
     else if (!strcmp(action, "clean")) cb = bake_do_clean;
     else if (!strcmp(action, "rebuild")) cb = bake_do_rebuild;
-    else if (!strcmp(action, "install")) cb = bake_do_install;
+    else if (!strcmp(action, "meta-install")) cb = bake_do_install;
     else {
         ut_error("unknown action '%s'", action);
         goto error;
@@ -851,6 +888,81 @@ int bake_list(
         ut_ll_append(packages, ep);
     }
 
+    if (!clean_missing && config->bundles) {
+        ut_log("\n#[grey]Loaded bundles:#[normal]\n");
+        it = ut_ll_iter(config->bundles);
+        while (ut_iter_hasNext(&it)) {
+            bake_bundle *bundle = ut_iter_next(&it);
+            ut_log(" * %s:%s\n", bundle->project, bundle->id);            
+        }
+    }
+
+    if (show_repositories) {
+        ut_log("\n#[grey]Known repositories:#[normal]\n");
+        if (config->repositories) {
+            it = ut_rb_iter(config->repositories);
+            while (ut_iter_hasNext(&it)) {
+                bake_repository *repo = ut_iter_next(&it);
+                const char *branch = repo->branch ? repo->branch : "master";
+                const char *tag = repo->tag;
+                const char *commit = repo->commit;
+
+                const char *bundle = repo->bundle;
+                if (!bundle) {
+                    bundle = "[value.repository]";
+                }
+
+                /* Show project in different colors depending on its state in
+                 * the bake environment. If it is located, test if the project
+                 * is under development or not. If the project is under 
+                 * development, it means that the revision for the bundle is not
+                 * enforced. */
+                const char *located = ut_locate(
+                    repo->id, NULL, UT_LOCATE_PROJECT);
+
+                bool in_development = false;
+
+                if (located) {
+                    const char *src = ut_locate(
+                        repo->id, NULL, UT_LOCATE_SOURCE);
+
+                    const char *dev_src = ut_locate(
+                        repo->id, NULL, UT_LOCATE_DEVSRC);
+
+                    if (!src && dev_src) {
+                        in_development = true;
+                    } else if (src && dev_src) {
+                        in_development = strcmp(src, dev_src);
+                    }
+                }
+
+                ut_log(" * #[%s]%s: #[cyan]%s#[normal] -> #[green]%s:%s#[normal] (%s:%s)\n",
+                    located
+                        ? in_development
+                            ? "yellow"
+                            : "green"
+                        : "grey"
+                    ,
+                    repo->id, 
+                    repo->url, 
+                    branch, 
+                    commit
+                        ? commit
+                        : tag
+                            ? tag
+                            : "latest"
+                    ,
+                    repo->project, 
+                    bundle);   
+            }    
+
+            ut_log(
+                "\n Legend: #[green][installed] #[yellow][under development] #[grey][not installed]\n");
+        } else {
+            ut_log(" - no known repositories\n");
+        }
+    }
+
     if (!clean_missing) {
         ut_log("\n#[grey]Packages & Applications:#[normal]\n");
     }
@@ -993,22 +1105,26 @@ int bake_reset(
         char *file_path = ut_asprintf("%s/%s", cfg->home, file);
 
         if (ut_isdir(file_path)) {
-            if (!strcmp(file, "include") || !strcmp(file, "meta")) {
+            if (!strcmp(file, "include") || !strcmp(file, "meta") || !strcmp(file, "src")) {
                 bake_reset_dir(cfg, file_path);
 
-            } else if (strcmp(file, "lib") && strcmp(file, "src")) {
+            } else if (strcmp(file, "lib")) {
                 ut_rm(file_path);
             }
         } else if (strcmp(file, "bake.json") && 
-                   strcmp(file, BAKE_EXEC UT_OS_BIN_EXT) &&
-                   strcmp(file, "bake" UT_OS_SCRIPT_EXT) &&
-                   strcmp(file, "bake-upgrade" UT_OS_SCRIPT_EXT)) 
+                strcmp(file, BAKE_EXEC UT_OS_BIN_EXT) &&
+                strcmp(file, "bake" UT_OS_SCRIPT_EXT) &&
+                strcmp(file, "bake-upgrade" UT_OS_SCRIPT_EXT)) 
         {
             ut_rm(file_path);
         }
 
         free(file_path);
     }
+
+    /* Remove bundles from configuration file, as reset will remove the projects
+     * from the bake environment */
+    bake_config_reset_bundles(cfg);
 
     return 0;
 error:
@@ -1271,12 +1387,29 @@ int main(int argc, const char *argv[]) {
         config.optimizations = true;
     }
 
+    if (recursive) {
+        /* If this is a recursive build, load bundles in case there are
+         * repositories in the dependency tree that need to be cloned */
+        load_bundles = true;
+    }
+
+#ifndef UT_OS_WINDOWS
+    bool is_bake_parent = !ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE");
+    if (is_bake_parent) {
+        /* If this is a parent process, don't load bundles. This is not 
+         * necessary since the parent process won't do anything with it, 
+         * and it can also limit the amount of errors thrown if the module
+         * configuration has issues. */
+        load_bundles = false;
+    }
+#endif
+
     ut_log_push("config");
-    ut_try (bake_config_load(&config, env), NULL);
+    ut_try (bake_config_load(&config, env, load_bundles), NULL);
     ut_log_pop();
 
 #ifndef UT_OS_WINDOWS
-    if (!ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE")) {
+    if (is_bake_parent) {
         ut_setenv("BAKE_CHILD", "TRUE");
 
         ut_trace("fork bake to export environment");
@@ -1305,7 +1438,7 @@ int main(int argc, const char *argv[]) {
 #endif
 
     /* Initialize crawler */
-    bake_crawler_init(recursive);
+    bake_crawler_init();
 
     if (discover) {
         /* If discover is true, first discover projects in provided path */
@@ -1313,7 +1446,11 @@ int main(int argc, const char *argv[]) {
         bake_project *project = NULL;
 
         if (!strcmp(action, "clone")) {
-            ut_try( bake_clone(&config, path), NULL);
+            ut_try( 
+                bake_clone(&config, path, to_env, always_clone, true, NULL, NULL), 
+                NULL);
+        } else if (!strcmp(action, "install")) {
+            ut_try( bake_install(&config, path), NULL);
         }
 
         uint32_t count = bake_crawler_count();
@@ -1340,6 +1477,9 @@ int main(int argc, const char *argv[]) {
                     ut_try( bake_crawler_walk(
                         &config, action, bake_update_action), NULL);
                 } else if (!strcmp(action, "test")) {
+                    if (test_prefix) {
+                        ut_setenv("BAKE_TEST_PREFIX", test_prefix);
+                    }
                     ut_try( bake_crawler_walk(
                         &config, action, bake_test_action), NULL);
                 } else if (!strcmp(action, "runall")) {
@@ -1371,7 +1511,7 @@ int main(int argc, const char *argv[]) {
                     NULL);
             }
         } else if (!strcmp(action, "publish")) {
-            ut_try (bake_publish_project(&config), NULL);
+            ut_try (bake_publish_project(&config), NULL);        
         } else if (!strcmp(action, "uninstall")) {
             if (type == BAKE_TEMPLATE) {
                 ut_try (bake_install_uninstall_template(&config, id), NULL);
@@ -1390,6 +1530,10 @@ int main(int argc, const char *argv[]) {
             ut_try (bake_config_export(&config, export_expr), NULL);
         } else if (!strcmp(action, "unset")) {
             ut_try (bake_config_unset(&config, export_expr), NULL);
+        } else if (!strcmp(action, "use")) {
+            ut_try (bake_use(&config, use_expr, true, false), NULL);
+        } else if (!strcmp(action, "unuse")) {
+            ut_try (bake_unuse(&config, use_expr), NULL);            
         } else if (!strcmp(action, "upgrade")) {
             ut_log("#[bold]Cannot upgrade bake while bake is running\n");
             printf("  This is likely happening because the bake environment is exported. To\n");
