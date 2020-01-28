@@ -87,6 +87,7 @@ void compile_src(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(&cmd, " /DNDEBUG");
+        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
     }
 
     /* Enable full optimizations, including cross-file */
@@ -246,7 +247,7 @@ void link_dynamic_binary(
         char *pdb_file = strdup(target);
         char *ext = strrchr(pdb_file, '.');
         strcpy(ext + 1, "pdb");
-        ut_strbuf_append(&cmd, " /PDB:\"%s\"", pdb_file);
+        ut_strbuf_append(&cmd, " /DEBUG /PDB:\"%s\"", pdb_file);
     }
 
     /* Enable full optimizations, including cross-file */
