@@ -37,14 +37,14 @@ char * ut_get_vs_dir()
     return vs_path_env;
 }
 
-char * ut_get_vc_shell_cmd()
+char * ut_get_vc_shell_cmd(const char* architecture)
 {
     char * vs_path_env = ut_get_vs_dir();
     if (vs_path_env[strlen(vs_path_env) - 1] == '\\')
         vs_path_env[strlen(vs_path_env) - 1] = '\0';
     char * vc_shell = ut_asprintf("%s\\VC\\Auxiliary\\Build\\vcvarsall.bat", vs_path_env);
     // Check file path exist
-    char * vc_shell_cmd = ut_asprintf("call \"%s\" x64", vc_shell);
+    char * vc_shell_cmd = ut_asprintf("call \"%s\" %s", vc_shell, architecture);
     return vc_shell_cmd;
 }
 
