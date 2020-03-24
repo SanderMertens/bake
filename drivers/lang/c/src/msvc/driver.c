@@ -149,6 +149,11 @@ void compile_src(
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
 
+    /* Include symbols */
+    if (config->symbols) {
+        ut_strbuf_append(&cmd, " /Zi");
+    }
+
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
     driver->exec(cmdstr);
