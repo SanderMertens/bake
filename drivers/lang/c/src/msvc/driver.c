@@ -22,7 +22,7 @@
 #include <bake.h>
 
 static
-char* obj_ext() 
+char* obj_ext()
 {
     return ".obj";
 }
@@ -226,7 +226,7 @@ void link_dynamic_binary(
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
     ut_strbuf_append(&cmd, "link");
-    
+
     /* Suppress Visual C++ banner */
     ut_strbuf_appendstr(&cmd, " /NOLOGO");
 
@@ -238,6 +238,11 @@ void link_dynamic_binary(
         }
 
         ut_strbuf_appendstr(&cmd, " /DYNAMICBASE:NO /NXCOMPAT:NO /DLL");
+
+        char *implib_file = strdup(target);
+        char *ext = strrchr(implib_file, '.');
+        strcpy(ext + 1, "lib");
+        ut_strbuf_append(&cmd, " /IMPLIB:\"%s\"", implib_file);
 
     }
 
