@@ -30,6 +30,7 @@ ut_tls BAKE_CONFIG_KEY;
 
 /* Bake configuration */
 const char *cfg = NULL;
+const char *arch = NULL;
 const char *env = "default";
 const char *action = "build";
 const char *path = ".";
@@ -94,6 +95,7 @@ void bake_usage(void)
     printf("  -v,--version                 Display version information\n");
     printf("\n");
     printf("  --cfg <configuration>        Specify configuration id\n");
+    printf("  --arch <architecture>        Specify architecture id\n");
     printf("  --env <environment>          Specify environment id\n");
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
@@ -284,6 +286,7 @@ int bake_parse_args(
             bool parsed = false;
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
+            ARG(0, "arch", arch = argv[i + 1]; i ++);
             ARG(0, "strict", strict = true;);
             ARG(0, "optimize", optimize = true; i ++);
 
@@ -1340,7 +1343,7 @@ int main(int argc, const char *argv[]) {
     ut_log_push("init");
 
     /* Initialize package loader for default home, arch, os and config */
-    ut_load_init(NULL, NULL, NULL, cfg);
+    ut_load_init(NULL, arch, NULL, cfg);
 
     /* If artefact is manually specified, translate to platform specific name */
     if (artefact) {
@@ -1363,6 +1366,7 @@ int main(int argc, const char *argv[]) {
     bake_config config = {
         .configuration = UT_CONFIG,
         .environment = env,
+        .architecture = arch,
         .symbols = true,
         .debug = true,
         .optimizations = false,

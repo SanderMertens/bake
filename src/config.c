@@ -592,6 +592,7 @@ int16_t bake_config_load(
 
     /* Precompute bake paths */
     cfg_out->configuration = ut_strdup(UT_CONFIG);
+    cfg_out->architecture = "x86";
     cfg_out->platform = UT_PLATFORM_PATH;
     cfg_out->target = UT_TARGET_PATH;
     cfg_out->home = UT_HOME_PATH;
