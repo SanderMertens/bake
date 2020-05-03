@@ -87,6 +87,7 @@ void compile_src(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(&cmd, " /DNDEBUG");
+        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
     }
 
     /* Enable full optimizations, including cross-file */
@@ -147,6 +148,11 @@ void compile_src(
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " /c %s /Fo%s", source, target);
+
+    /* Include symbols */
+    if (config->symbols) {
+        ut_strbuf_append(&cmd, " /Zi");
+    }
 
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
@@ -246,7 +252,7 @@ void link_dynamic_binary(
         char *pdb_file = strdup(target);
         char *ext = strrchr(pdb_file, '.');
         strcpy(ext + 1, "pdb");
-        ut_strbuf_append(&cmd, " /PDB:\"%s\"", pdb_file);
+        ut_strbuf_append(&cmd, " /DEBUG /PDB:\"%s\"", pdb_file);
     }
 
     /* Enable full optimizations, including cross-file */
