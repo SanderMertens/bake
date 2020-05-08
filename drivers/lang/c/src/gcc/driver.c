@@ -599,6 +599,14 @@ void link_dynamic_binary(
     driver->exec(cmdstr);
     free(cmdstr);
 
+    if (is_dylib(driver, project)) {
+        ut_strbuf_append(&cmd, "install_name_tool -id @rpath/%s %s", 
+            project->artefact, target);
+        cmdstr = ut_strbuf_get(&cmd);
+        driver->exec(cmdstr);
+        free(cmdstr);
+    }
+
     /* If static libraries were unpacked, cleanup temporary directories */
     it = ut_ll_iter(static_object_paths);
     while (ut_iter_hasNext(&it)) {
