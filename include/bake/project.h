@@ -91,6 +91,7 @@ struct bake_project {
     ut_ll use;              /* Project dependencies */
     ut_ll use_private;      /* Local dependencies (not visible to dependees) */
     ut_ll use_build;        /* Packages only required by the build */
+    ut_ll use_runtime;      /* Packages required when running the project */
     ut_ll link;             /* All resolved dependencies package must link with */
     ut_ll sources;          /* Paths to source files */
     ut_ll includes;         /* Paths to include files */

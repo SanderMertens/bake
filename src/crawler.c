@@ -219,6 +219,7 @@ int16_t bake_crawler_walk_dependencies(
     p->unresolved_dependencies = ut_ll_count(p->use);
     p->unresolved_dependencies += ut_ll_count(p->use_build);
     p->unresolved_dependencies += ut_ll_count(p->use_private);
+    p->unresolved_dependencies += ut_ll_count(p->use_runtime);
 
     /* Add project to dependent lists of dependencies */
     ut_iter it = ut_ll_iter(p->use);
@@ -236,6 +237,13 @@ int16_t bake_crawler_walk_dependencies(
 
     /* Add project to dependent lists of build dependencies */
     it = ut_ll_iter(p->use_build);
+    while (ut_iter_hasNext(&it)) {
+        char *use = ut_iter_next(&it);
+        ut_try( action(config, p, use), NULL);
+    }
+
+    /* Add project to dependent lists of runtime dependencies */
+    it = ut_ll_iter(p->use_runtime);
     while (ut_iter_hasNext(&it)) {
         char *use = ut_iter_next(&it);
         ut_try( action(config, p, use), NULL);
