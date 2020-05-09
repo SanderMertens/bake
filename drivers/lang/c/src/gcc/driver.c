@@ -197,6 +197,24 @@ void add_optimization(
 }
 
 static
+void add_sanitizers(
+    bake_config *config,
+    ut_strbuf *cmd)
+{
+    if (config->sanitize_memory) {
+        ut_strbuf_appendstr(cmd, " -fsanitize=address");
+    }
+
+    if (config->sanitize_undefined) {
+        ut_strbuf_appendstr(cmd, " -fsanitize=undefined");
+    }
+
+    if (config->sanitize_thread) {
+        ut_strbuf_appendstr(cmd, " -fsanitize=thread");
+    }    
+}
+
+static
 void add_misc(
     bake_driver_api *driver,
     bake_config *config,
@@ -215,6 +233,19 @@ void add_misc(
     if (config->coverage && project->coverage) {
         ut_strbuf_appendstr(cmd, " -fprofile-arcs -ftest-coverage");
     }
+
+    add_sanitizers(config, cmd);
+}
+
+static
+void add_misc_link(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    add_sanitizers(config, cmd);
 }
 
 /* Compile source file */
@@ -450,6 +481,13 @@ void link_dynamic_binary(
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
     }
+
+    add_misc_link(
+        driver,
+        config,
+        project,
+        cpp,
+        &cmd);
 
     /* Set optimizations */
     if (config->optimizations) {

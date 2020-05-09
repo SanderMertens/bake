@@ -527,6 +527,8 @@ int16_t bake_config_load(
             cfg_out->symbols = true;
             cfg_out->optimizations = false;            
             cfg_out->coverage = true;
+            cfg_out->sanitize_memory = true;
+            cfg_out->sanitize_undefined = false;
         } else if (!strcmp(UT_CONFIG, "perf")) {
             cfg_out->debug = false;
             cfg_out->symbols = true;

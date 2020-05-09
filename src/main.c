@@ -48,6 +48,7 @@ bool always_clone = false;
 const char *id = NULL;
 bake_project_type type = BAKE_APPLICATION;
 bool private = false;
+bool static_lib = false;
 const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
@@ -109,6 +110,7 @@ void bake_usage(void)
     printf("  --language <language>        Specify a language for project (default = \"c\")\n");
     printf("  --artefact <binary>          Specify a binary file for project\n");
     printf("  -i,--includes <include path> Specify an include path for project\n");
+    printf("  --static                     Build statically linked version of binary\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
     printf("  -a,--args [arguments]        Pass arguments to application (use with run)\n");
@@ -298,6 +300,7 @@ int bake_parse_args(
             ARG(0, "test", is_test = true);
             ARG(0, "to-env", to_env = true);
             ARG(0, "always-clone", always_clone = true);
+            ARG(0, "static", static_lib = true);
 
             ARG(0, "private", private = true);
             ARG('t', NULL, template = argv[i + 1]; i ++);
@@ -1367,7 +1370,8 @@ int main(int argc, const char *argv[]) {
         .debug = true,
         .optimizations = false,
         .coverage = false,
-        .strict = false
+        .strict = false,
+        .static_lib = false
     };
 
     ut_tls_set(BAKE_CONFIG_KEY, &config);

@@ -56,6 +56,10 @@ struct bake_config {
     bool optimizations;         /* Enable optimizations in binaries */
     bool coverage;              /* Enable code coverage in binaries */
     bool strict;                /* Enable strict compiler settings */
+    bool static_lib;            /* Enable static linking */
+    bool sanitize_memory;       /* Enable memory sanitizer (if supported) */
+    bool sanitize_thread;       /* Enable thread sanitizer (if supported) */
+    bool sanitize_undefined;    /* Enable UB sanitizier (if supported) */
 
     /* Environment attribubtes */
     ut_ll env_variables;        /* List with environment variable names */
