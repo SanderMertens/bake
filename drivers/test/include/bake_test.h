@@ -40,12 +40,21 @@ void _test_assert(
 
 BAKE_TEST_EXPORT
 void _test_int(
+    int64_t v1,
+    int64_t v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line);
+
+BAKE_TEST_EXPORT
+void _test_uint(
     uint64_t v1,
     uint64_t v2,
     const char *str_v1,
     const char *str_v2,
     const char *file,
-    int line);
+    int line);    
 
 BAKE_TEST_EXPORT
 void _test_bool(
@@ -112,6 +121,7 @@ void test_abort();
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_bool(v1, v2) _test_bool(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_int(v1, v2) _test_int(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define test_uint(v1, v2) _test_uint(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_flt(v1, v2) _test_flt(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_str(v1, v2) _test_str(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_null(v) _test_null(v, #v, __FILE__, __LINE__)

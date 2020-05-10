@@ -367,8 +367,8 @@ void _test_bool(
 }
 
 void _test_int(
-    uint64_t v1,
-    uint64_t v2,
+    int64_t v1,
+    int64_t v2,
     const char *str_v1,
     const char *str_v2,
     const char *file,
@@ -388,6 +388,38 @@ void _test_int(
             sv2 = strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%lld)", str_v2, v2);
+        }
+
+        char *msg = ut_asprintf("%s != %s", sv1, sv2);
+        test_fail(file, line, msg);
+        free(msg);
+        free(sv1);
+        free(sv2);
+    }
+}
+
+void _test_uint(
+    uint64_t v1,
+    uint64_t v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    current_testsuite->assert_count ++;
+
+    if (v1 != v2) {
+        char *sv1, *sv2;
+        if (isdigit(*str_v1) || (*str_v1 == '-')) {
+            sv1 = strdup(str_v1);
+        } else {
+            sv1 = ut_asprintf("%s (%llu)", str_v1, v1);
+        }
+
+        if (isdigit(*str_v2) || (*str_v2 == '-')) {
+            sv2 = strdup(str_v2);
+        } else {
+            sv2 = ut_asprintf("%s (%llu)", str_v2, v2);
         }
 
         char *msg = ut_asprintf("%s != %s", sv1, sv2);
