@@ -402,7 +402,7 @@ A number of people have asked me why I used JSON for project configuration. Ther
 - It is a ubiquitous language that everyone understands, 
 - It has a C parser that can be easily embedded into bake without adding dependencies
 
-A disadvantage of JSON is that while it is fine for trivial configurations, it can get a bit unwieldy once project configurations get more complex. In bake however, you can encapsulate complexity into a configuration-only project, and then include that project as a dependency in your project configuration ([example](https://github.com/SanderMertens/bake/tree/master/examples/pkg_w_dependee)).
+A disadvantage of JSON is that while it is fine for trivial configurations, it can get a bit unwieldy once project configurations get more complex. In bake however, you can encapsulate complexity into a configuration-only project, and then include that project as a dependency in your project configuration ([example](https://github.com/SanderMertens/bake/tree/master/examples/c/pkg_w_dependee)).
 
 Additionally, bake is not like traditional build tools where you specify rules with inputs and outputs in your project configuration. If you want to, for example, add a code generation step to your build, you write a driver for it, and then include the driver in your project configuration.
 
@@ -813,7 +813,7 @@ ${id}
 To obtain the id in other formats, the following arguments can be passed to the `id` functions:
 
 Parameter | Description | Example
-----------|-------------
+----------|-------------|---------
 no parameter | | foo.bar
 base | Last element of an id | bar
 upper | Upper case, replace '.' with '\_'. Used for macro's | FOO_BAR
