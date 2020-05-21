@@ -68,10 +68,15 @@ const char *cc(
 static
 bool is_clang(bool is_cpp)
 {
-    if (!strncmp(cc(is_cpp), "clang", 5)) {
-        return true;
+    bool matches_clang = false;
+    char *compiler = ut_strdup(cc(is_cpp));
+    char *token = strtok(compiler, UT_OS_PS);
+    while (token) {
+        matches_clang = (strncmp(token, "clang", 5) == 0);
+        token = strtok(NULL, UT_OS_PS);
     }
-    return false;
+    free(compiler);
+    return matches_clang;
 }
 
 static
