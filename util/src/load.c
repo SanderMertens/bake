@@ -1060,7 +1060,7 @@ int16_t ut_load_init(
     ut_setenv("BAKE_HOME", UT_HOME_PATH);
     ut_setenv("BAKE_TARGET", UT_TARGET_PATH);
     ut_setenv("BAKE_CONFIG", config);
-    ut_setenv("BAKE_ARCH", UT_ARCH);
+    ut_setenv("BAKE_ARCHITECTURE", UT_ARCH);
     ut_setenv("BAKE_OS", UT_OS);
     ut_setenv("BAKE_PLATFORM", UT_PLATFORM);
 
