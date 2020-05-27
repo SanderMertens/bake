@@ -68,15 +68,19 @@ const char *cc(
 static
 bool is_clang(bool is_cpp)
 {
-    bool matches_clang = false;
-    char *compiler = ut_strdup(cc(is_cpp));
-    char *token = strtok(compiler, UT_OS_PS);
-    while (token) {
-        matches_clang = (strncmp(token, "clang", 5) == 0);
-        token = strtok(NULL, UT_OS_PS);
+    const char *compiler = cc(is_cpp);
+
+    /* First test if user is running clang from a non-standard path. */
+    const char path_separator = UT_OS_PS[0];
+    const char *cc_command = strrchr(compiler, path_separator);
+
+    if (cc_command && !strncmp(cc_command, UT_OS_PS "clang", 5)) {
+        return true;
+    } else if (!cc_command && !strncmp(compiler, "clang", 5)) {
+        return true;
+    } else {
+        return false;
     }
-    free(compiler);
-    return matches_clang;
 }
 
 static
