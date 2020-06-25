@@ -358,6 +358,7 @@ void generate(
     bake_project *project)
 {
     const char *short_id = project->id_base;
+    const char *snake_id = project->id_underscore;
 
     /* Create upper-case id for defines in header file */
     char *id_upper = ut_strdup(project->id_underscore);
@@ -401,27 +402,22 @@ void generate(
     add_dependency_includes(config, f, project->use);
 
     fprintf(f, "\n/* Headers of private dependencies */\n");
-    fprintf(f, "#ifdef %s_IMPL\n", id_upper);
+    fprintf(f, "#ifdef %s_EXPORT\n", snake_id);
     add_dependency_includes(config, f, project->use_private);
     fprintf(f, "#endif\n");
 
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
-      "#ifndef %s_STATIC\n"
-      "  #if %s_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))\n"
-      "    #define %s_EXPORT __declspec(dllexport)\n"
-      "  #elif %s_IMPL\n"
-      "    #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
-      "  #elif defined _MSC_VER\n"
-      "    #define %s_EXPORT __declspec(dllimport)\n"
-      "  #else\n"
-      "    #define %s_EXPORT\n"
-      "  #endif\n"
+      "#if %s_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))\n"
+      "  #define %s_EXPORT __declspec(dllexport)\n"
+      "#elif %s_EXPORTS\n"
+      "  #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
+      "#elif defined _MSC_VER\n"
+      "  #define %s_EXPORTS __declspec(dllimport)\n"
       "#else\n"
       "  #define %s_EXPORT\n"
       "#endif\n",
-        id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, id_upper, 
-        id_upper);
+        snake_id, id_upper, snake_id, id_upper, id_upper, id_upper);
 
     fprintf(f, "%s", "\n#endif\n\n");
     fclose(f);

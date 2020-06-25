@@ -515,20 +515,32 @@ int16_t bake_config_load(
             cfg_out->symbols = true;
             cfg_out->optimizations = false;
             cfg_out->coverage = false;
+            cfg_out->sanitize_memory = false;
+            cfg_out->sanitize_undefined = false;
         } else if (!strcmp(UT_CONFIG, "release")) {
             ut_ok("release configuration not found in bake settings file, using defaults");
             cfg_out->debug = false;
             cfg_out->symbols = false;
             cfg_out->optimizations = true;
             cfg_out->coverage = false;
+            cfg_out->sanitize_memory = false;
+            cfg_out->sanitize_undefined = false;            
         } else if (!strcmp(UT_CONFIG, "test")) {
             ut_ok("test configuration not found in bake settings file, using defaults");
             cfg_out->debug = true;
             cfg_out->symbols = true;
             cfg_out->optimizations = false;            
             cfg_out->coverage = true;
-            cfg_out->sanitize_memory = true;
+            cfg_out->sanitize_memory = false;
             cfg_out->sanitize_undefined = false;
+        } else if (!strcmp(UT_CONFIG, "sanitize")) {
+            ut_ok("test configuration not found in bake settings file, using defaults");
+            cfg_out->debug = true;
+            cfg_out->symbols = true;
+            cfg_out->optimizations = false;            
+            cfg_out->coverage = false;
+            cfg_out->sanitize_memory = true;
+            cfg_out->sanitize_undefined = true;
         } else if (!strcmp(UT_CONFIG, "perf")) {
             cfg_out->debug = false;
             cfg_out->symbols = true;

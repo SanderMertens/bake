@@ -23,21 +23,17 @@
 #endif
 
 /* Headers of private dependencies */
-#ifdef BAKE_TEST_IMPL
+#ifdef bake_test_EXPORT
 /* No dependencies */
 #endif
 
 /* Convenience macro for exporting symbols */
-#ifndef BAKE_TEST_STATIC
-  #if BAKE_TEST_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))
-    #define BAKE_TEST_EXPORT __declspec(dllexport)
-  #elif BAKE_TEST_IMPL
-    #define BAKE_TEST_EXPORT __attribute__((__visibility__("default")))
-  #elif defined _MSC_VER
-    #define BAKE_TEST_EXPORT __declspec(dllimport)
-  #else
-    #define BAKE_TEST_EXPORT
-  #endif
+#if bake_test_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
+  #define BAKE_TEST_EXPORT __declspec(dllexport)
+#elif bake_test_EXPORTS
+  #define BAKE_TEST_EXPORT __attribute__((__visibility__("default")))
+#elif defined _MSC_VER
+  #define BAKE_TEST_EXPORTS __declspec(dllimport)
 #else
   #define BAKE_TEST_EXPORT
 #endif

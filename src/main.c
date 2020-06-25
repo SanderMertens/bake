@@ -43,6 +43,7 @@ bool optimize = false;
 bool is_test = false;
 bool to_env = false;
 bool always_clone = false;
+bool fast_build = false;
 
 /* Command line project configuration */
 const char *id = NULL;
@@ -117,6 +118,7 @@ void bake_usage(void)
     printf("  --interactive                Rebuild project when files change (use with run)\n");
     printf("  --run-prefix                 Specify prefix command for run\n");
     printf("  --test-prefix                Specify prefix command for tests run by test\n");
+    printf("  --fast                       Don't add any instrumentations to test builds\n");
     printf("  -r,--recursive               Recursively build all dependencies of discovered projects\n");
     printf("  -t [id]                      Specify template for new project\n");
     printf("  -o [path]                    Specify output directory for new projects\n");
@@ -311,6 +313,7 @@ int bake_parse_args(
 
             ARG(0, "local", local_setup = true);
             ARG(0, "local-setup", ); /* deprecated */
+            ARG(0, "fast", fast_build = true);
             ARG(0, "run-prefix", run_prefix = argv[i + 1]; i++);
             ARG(0, "test-prefix", test_prefix = argv[i + 1]; i++);
             ARG('i', "interactive", interactive = true);
@@ -1333,6 +1336,7 @@ int main(int argc, const char *argv[]) {
         for (i = 0; i < argc; i ++) {
             ut_strbuf_append(&buf, "%s ", argv[i]);
         }
+        
         char *args = ut_strbuf_get(&buf);
         ut_ok("cmd  #[cyan]%s#[normal]", args);
         free(args);
@@ -1380,13 +1384,6 @@ int main(int argc, const char *argv[]) {
         return 0;
     }
 
-    if (strict) {
-        config.strict = true;
-    }
-    if (optimize) {
-        config.optimizations = true;
-    }
-
     if (recursive) {
         /* If this is a recursive build, load bundles in case there are
          * repositories in the dependency tree that need to be cloned */
@@ -1407,6 +1404,18 @@ int main(int argc, const char *argv[]) {
     ut_log_push("config");
     ut_try (bake_config_load(&config, env, load_bundles), NULL);
     ut_log_pop();
+
+    if (strict) {
+        config.strict = true;
+    }
+    if (optimize) {
+        config.optimizations = true;
+    }
+    if (fast_build) {
+        config.coverage = false;
+        config.sanitize_memory = false;
+        config.sanitize_undefined = false;
+    }
 
 #ifndef UT_OS_WINDOWS
     if (is_bake_parent) {

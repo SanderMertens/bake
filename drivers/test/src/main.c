@@ -60,9 +60,9 @@ int generate_testcase_fwd_decls(
         }    
 
         JSON_Array *testcases = json_object_get_array(suite, "testcases");
-        uint32_t t, count = json_array_get_count(testcases);
+        uint32_t t, t_count = json_array_get_count(testcases);
 
-        for (t = 0; t < count; t ++) {
+        for (t = 0; t < t_count; t ++) {
             const char *testcase = json_array_get_string(testcases, t);
             ut_code_write(src, "void %s_%s(void);\n", id, testcase);
         }
@@ -88,7 +88,7 @@ int generate_suite_data(
         const char *id = json_object_get_string(suite, "id");
 
         JSON_Array *testcases = json_object_get_array(suite, "testcases");
-        uint32_t t, count = json_array_get_count(testcases);
+        uint32_t t, t_count = json_array_get_count(testcases);
 
         if (i) {
             ut_code_write(src, ",\n");
@@ -97,7 +97,7 @@ int generate_suite_data(
         ut_code_write(src, "{\n");
         ut_code_indent(src);
         ut_code_write(src, ".id = \"%s\",\n", id);
-        ut_code_write(src, ".testcase_count = %d,\n", count);
+        ut_code_write(src, ".testcase_count = %d,\n", t_count);
 
         int has_setup = json_object_get_boolean(suite, "setup");
         if (has_setup && has_setup != -1) {
@@ -112,7 +112,7 @@ int generate_suite_data(
         ut_code_write(src, ".testcases = (bake_test_case[]){");
         ut_code_indent(src);
 
-        for (t = 0; t < count; t ++) {
+        for (t = 0; t < t_count; t ++) {
             const char *testcase = json_array_get_string(testcases, t);
             if (t) {
                 ut_code_write(src, ",");
@@ -146,6 +146,9 @@ int generate_testmain(
     bake_project *project,
     JSON_Array *suites)
 {
+    (void)driver;
+    (void)config;
+    
     const char *ext = "c";
     if (is_cpp(project)) {
         ext = "cpp";

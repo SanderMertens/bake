@@ -168,10 +168,22 @@ void add_std(
     }
 
     ut_strbuf_appendstr(cmd, " -Wall");
+    ut_strbuf_appendstr(cmd, " -Wextra");
+    ut_strbuf_appendstr(cmd, " -Wshadow");
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
-        ut_strbuf_appendstr(cmd, " -Werror -Wextra -pedantic");
+        ut_strbuf_appendstr(cmd, " -Werror -pedantic");
+    } else {
+        /* Unused parameters can sometimes indicate an error, but more often 
+         * than not are the result of a function implementing some kind of 
+         * interface and not using all of the arguments. Don't throw warning. */
+        ut_strbuf_appendstr(cmd, " -Wno-unused-parameter");  
+
+        /* GCC will sometimes throw warnings when using composite literals without 
+         * using a member name which seems overly paranoid, and clutters code
+         * unnecessarily */        
+        ut_strbuf_appendstr(cmd, " -Wno-missing-field-initializers");
     }
 }
 

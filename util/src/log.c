@@ -1395,7 +1395,7 @@ void _ut_log_pop(
         data->categories[data->sp - 1] = NULL;
 
         /* If categories are not embedded in log message, they are displayed in
-         * a hierarchical view */
+         * a hierarchical it */
         if (!ut_log_shouldEmbedCategories && !data->exceptionCount) {
 
             /* Only print close if messages were logged for category */

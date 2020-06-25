@@ -144,7 +144,7 @@ bool ut_log_profile(
  * -v Verbosity
  * -a Application name
  * -c Category
- * -C Category (tree view)
+ * -C Category (tree it)
  * -m Formatted message
  * -t numerical representation of time (sec, nanosec)
  * -T user-friendly representation of time (1985-4-11 20:00:00.0000)
