@@ -240,6 +240,7 @@ int bake_test_run_all_tests(
                         fail ++;
                     } else {
                         /* Normal test failure */
+                        result = -1;
                         fail ++;
                     }
                 }

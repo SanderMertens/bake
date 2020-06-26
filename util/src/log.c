@@ -523,9 +523,10 @@ void ut_logprint_kind(
     if (kind != UT_LOG) {
         ut_strbuf_append(
             buf,
-            "%s%s%*s#[reset]",
+            "%s[#[reset]%7s%s]%*s#[reset]",
             color,
             levelstr,
+            color,
             levelspace - strlen(levelstr),
             "");
     }

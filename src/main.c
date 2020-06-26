@@ -1173,7 +1173,7 @@ int bake_test_action(
 
     free (test_path);
     
-    return 0;
+    return result;
 error:
     return -1;
 }
@@ -1183,7 +1183,9 @@ int bake_runall_action(
     bake_config *config,
     bake_project *project)
 {
-    ut_try( bake_run(config, project->path, run_prefix, false, run_argc, run_argv), NULL);
+    ut_try( 
+        bake_run(config, project->path, run_prefix, false, run_argc, run_argv), 
+            NULL);
     return 0;
 error:
     return -1;
