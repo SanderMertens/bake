@@ -413,7 +413,7 @@ void generate(
       "#elif %s_EXPORTS\n"
       "  #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
       "#elif defined _MSC_VER\n"
-      "  #define %s_EXPORTS __declspec(dllimport)\n"
+      "  #define %s_EXPORT __declspec(dllimport)\n"
       "#else\n"
       "  #define %s_EXPORT\n"
       "#endif\n",
