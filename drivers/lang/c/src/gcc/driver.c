@@ -965,7 +965,6 @@ void coverage(
     bake_config *config,
     bake_project *project)
 {
-    ut_strbuf cmd = UT_STRBUF_INIT, src = UT_STRBUF_INIT;
     int total_files = 0;
 
     char *tmp_dir = driver->get_attr_string("tmp-dir");
@@ -977,27 +976,26 @@ void coverage(
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        ut_strbuf_append(&src, " %s", file);
+        ut_strbuf cmd = UT_STRBUF_INIT;
+        ut_strbuf_append(&cmd, "gcov --object-file %s/obj/%s %s/obj/%s", tmp_dir, file, tmp_dir, file);
+        char *cmdstr = ut_strbuf_get(&cmd);
+
+        int8_t rc;
+        int sig = ut_proc_cmd_stderr_only(cmdstr, &rc);
+        if (sig || rc) {
+            ut_error("failed to run gcov command '%s'", cmdstr);
+            project->error = 1;
+            return;
+        }
+
+        free(cmdstr);
+
         total_files ++;
     }
 
     if (!total_files) {
         ut_error("no source files to analyze for coverage report");
         project->error = true;
-        return;
-    }
-
-    char *srcstr = ut_strbuf_get(&src);
-    ut_strbuf_append(&cmd, 
-        "gcov --object-directory %s/obj %s", tmp_dir, srcstr);
-
-    char *cmdstr = ut_strbuf_get(&cmd);
-
-    int8_t rc;
-    int sig = ut_proc_cmd_stderr_only(cmdstr, &rc);
-    if (sig || rc) {
-        ut_error("failed to run gcov command '%s'", cmdstr);
-        project->error = 1;
         return;
     }
 
@@ -1028,9 +1026,6 @@ void coverage(
         free(dst_file);
         total_gcov_files ++;
     }
-
-    free(cmdstr);
-    free(srcstr);
 
     if (!total_gcov_files) {
         ut_error("no gcov files");

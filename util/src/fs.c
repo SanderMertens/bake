@@ -370,7 +370,7 @@ int16_t ut_dir_collect(
         }
         ut_path_clean(path, path);
 
-        if (ut_expr_run(filter, path)) {
+        if (ut_expr_run(filter, file)) {
             ut_ll_append(files, path);
         }
 
