@@ -401,13 +401,18 @@ void generate(
     fprintf(f, "/* Headers of public dependencies */\n");
     add_dependency_includes(config, f, project->use);
 
-    fprintf(f, "\n/* Headers of private dependencies */\n");
-    fprintf(f, "#ifdef %s_EXPORT\n", snake_id);
-    add_dependency_includes(config, f, project->use_private);
-    fprintf(f, "#endif\n");
+    if (project->type == BAKE_PACKAGE) {
+
+    if (project->use_private && ut_ll_count(project->use_private)) {
+        fprintf(f, "\n/* Headers of private dependencies */\n");
+        fprintf(f, "#ifdef %s_EXPORT\n", snake_id);
+        add_dependency_includes(config, f, project->use_private);
+        fprintf(f, "#endif\n");
+    }
 
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
+      "#ifndef %s_STATIC\n"
       "#if %s_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))\n"
       "  #define %s_EXPORT __declspec(dllexport)\n"
       "#elif %s_EXPORTS\n"
@@ -416,8 +421,11 @@ void generate(
       "  #define %s_EXPORT __declspec(dllimport)\n"
       "#else\n"
       "  #define %s_EXPORT\n"
+      "#endif\n"
       "#endif\n",
-        snake_id, id_upper, snake_id, id_upper, id_upper, id_upper);
+        snake_id, snake_id, id_upper, snake_id, id_upper, id_upper, id_upper);
+
+    }
 
     fprintf(f, "%s", "\n#endif\n\n");
     fclose(f);
