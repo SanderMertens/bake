@@ -33,6 +33,8 @@
 #else
   #define BAKE_TEST_EXPORT
 #endif
+#else
+  #define BAKE_TEST_EXPORT
 #endif
 
 #endif

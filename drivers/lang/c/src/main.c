@@ -422,8 +422,10 @@ void generate(
       "#else\n"
       "  #define %s_EXPORT\n"
       "#endif\n"
+      "#else\n"
+      "  #define %s_EXPORT\n"
       "#endif\n",
-        snake_id, snake_id, id_upper, snake_id, id_upper, id_upper, id_upper);
+        snake_id, snake_id, id_upper, snake_id, id_upper, id_upper, id_upper, id_upper);
 
     }
 
