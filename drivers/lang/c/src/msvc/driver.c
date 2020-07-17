@@ -46,6 +46,62 @@ const char *cc(
     }
 }
 
+static
+void add_flags(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    bool cpp,
+    ut_strbuf *cmd)
+{
+    if (!cpp) {
+        /* CFLAGS for c projects */
+        bake_attr *flags_attr = driver->get_attr("cflags");
+        if (flags_attr) {
+            ut_iter it = ut_ll_iter(flags_attr->is.array);
+            while (ut_iter_hasNext(&it)) {
+                bake_attr *attr = ut_iter_next(&it);
+                ut_strbuf_append(&cmd, " %s", attr->is.string);
+            }
+        }
+    } else {
+        /* CXXFLAGS for c4cpp projects */
+        bake_attr *flags_attr = driver->get_attr("cxxflags");
+        if (flags_attr) {
+            ut_iter it = ut_ll_iter(flags_attr->is.array);
+            while (ut_iter_hasNext(&it)) {
+                bake_attr *attr = ut_iter_next(&it);
+                ut_strbuf_append(&cmd, " %s", attr->is.string);
+            }
+        }
+    }
+
+    /* Add defines */
+    bake_attr *def_attr = driver->get_attr("defines");
+    if (def_attr) {
+        ut_iter it = ut_ll_iter(def_attr->is.array);
+        while (ut_iter_hasNext(&it)) {
+            bake_attr *el = ut_iter_next(&it);
+            ut_strbuf_append(cmd, " /D%s", el->is.string);
+        }
+    } 
+
+    /* Give project access to its own id */
+    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\\\"%s\\\"", project->id);
+
+    /* This macro is only set for source files of this project, and can be used
+     * to exclude header statements for dependencies */
+    char *building_macro = ut_asprintf(" /D%s_EXPORTS", project->id_underscore);
+    ut_strbuf_appendstr(&cmd, building_macro);
+    free(building_macro);
+
+    /* Enable debugging code */
+    if (!config->debug) {
+        ut_strbuf_appendstr(&cmd, " /DNDEBUG");
+        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
+    }     
+}
+
 /* Compile source file for Windows platform using MSVC*/
 static
 void compile_src(
@@ -74,21 +130,6 @@ void compile_src(
         ut_strbuf_append(&cmd, " /EHsc");
     }
 
-    /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\\\"%s\\\"", project->id);
-
-    /* This macro is only set for source files of this project, and can be used
-     * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" /D%s_EXPORTS", project->id_underscore);
-    ut_strbuf_appendstr(&cmd, building_macro);
-    free(building_macro);
-
-    /* Enable debugging code */
-    if (!config->debug) {
-        ut_strbuf_appendstr(&cmd, " /DNDEBUG");
-        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
-    }
-
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
         ut_strbuf_appendstr(&cmd, " /Ox /GL");
@@ -101,27 +142,7 @@ void compile_src(
         ut_strbuf_appendstr(&cmd, " /WX");
     }
 
-    if (!cpp) {
-        /* CFLAGS for c projects */
-        bake_attr *flags_attr = driver->get_attr("cflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *attr = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", attr->is.string);
-            }
-        }
-    } else {
-        /* CXXFLAGS for c4cpp projects */
-        bake_attr *flags_attr = driver->get_attr("cxxflags");
-        if (flags_attr) {
-            ut_iter it = ut_ll_iter(flags_attr->is.array);
-            while (ut_iter_hasNext(&it)) {
-                bake_attr *attr = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", attr->is.string);
-            }
-        }
-    }
+    add_flags(driver, config, project, cpp, cmd);
 
     /* Add configured include paths */
     bake_attr *include_attr = driver->get_attr("include");

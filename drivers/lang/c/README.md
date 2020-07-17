@@ -8,6 +8,7 @@ Property | Type | Description
 ---------|------|------------
 cflags   | list[string] | List of arguments to pass to the C compiler
 cxxflags | list[string] | List of arguments to pass to the C++ compiler
+defines  | list[string] | List of preprocessor defines to add to the compiler
 ldflags | list[string] | List of arguments to pass to the linker
 lib | list[string] | List of library names to link with
 static-lib | list[string] | List of static libraries to link with.
