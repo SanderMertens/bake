@@ -181,7 +181,7 @@ void generate(
     bake_project *project_obj)
 {
     ut_rb files_parsed = ut_rb_new(compare_string, NULL);
-    const char *project = project_obj->id;
+    const char *project = project_obj->id_underscore;
     char *project_upper = ut_strdup(project_obj->id_underscore);
     strupper(project_upper);
 
