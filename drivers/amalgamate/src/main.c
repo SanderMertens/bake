@@ -1,4 +1,5 @@
 #include <bake.h>
+#include <bake_amalgamate.h>
 
 // If longer, bad
 #define MAX_LINE_LENGTH (256) 
@@ -256,7 +257,7 @@ error:
     project_obj->error = true;
 }
 
-UT_EXPORT 
+BAKE_AMALGAMATE_EXPORT 
 int bakemain(bake_driver_api *driver) {
     driver->generate(generate);
     return 0;

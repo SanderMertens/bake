@@ -2,7 +2,7 @@
 #define AMALGAMATE_H
 
 /* This generated file contains includes for project dependencies */
-#include "amalgamate/bake_config.h"
+#include "bake-amalgamate/bake_config.h"
 
 #ifdef __cplusplus
 extern "C" {
