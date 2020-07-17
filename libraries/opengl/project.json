@@ -1,0 +1,18 @@
+{
+    "id": "bake.opengl",
+    "type": "package",
+    "value": {
+        "language": "none"
+    },
+    "dependee": {
+        "lang.$${language}": {
+            "${os darwin}": {
+                "defines": ["GL_SILENCE_DEPRECATION"],
+                "ldflags": ["-framework OpenGL"]
+            },
+            "${os linux}": {
+                "lib": ["GL", "glut", "GLEW"]
+            }
+        }
+    }
+}
