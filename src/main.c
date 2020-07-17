@@ -73,8 +73,8 @@ bool show_repositories = false;
 #define ARG(short, long, action)\
     if (i < argc) {\
         if (argv[i][0] == '-') {\
-            if (argv[i][1] == '-') {\
-                if (long && !strcmp(&argv[i][2], long ? long : "")) {\
+            if (long && argv[i][1] == '-') {\
+                if (!strcmp(&argv[i][2], long ? long : "")) {\
                     action;\
                     parsed = true;\
                 }\
@@ -114,7 +114,7 @@ void bake_usage(void)
     printf("  --static                     Build statically linked version of binary\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
     printf("\n");
-    printf("  -a,--args [arguments]        Pass arguments to application (use with run)\n");
+    printf("  -- [arguments]               Pass arguments to application (use with run)\n");
     printf("  --interactive                Rebuild project when files change (use with run)\n");
     printf("  --run-prefix                 Specify prefix command for run\n");
     printf("  --test-prefix                Specify prefix command for tests run by test\n");
@@ -281,8 +281,6 @@ int bake_parse_args(
     int i = 1;
     bool action_set = false;
 
-    /* Parse remainder of arguments */
-
     for (; i < argc; i ++) {
         if (argv[i][0] == '-') {
             bool parsed = false;
@@ -319,6 +317,7 @@ int bake_parse_args(
             ARG('i', "interactive", interactive = true);
             ARG('r', "recursive", recursive = true);
             ARG('a', "args", run_argc = argc - i; run_argv = &argv[i + 1]; break);
+            ARG('-', NULL, run_argc = argc - i; run_argv = &argv[i + 1]; break);
             ARG(0, "show-repositories", show_repositories = true);
 
             ARG('h', "help", bake_usage(); action = NULL; i ++);
