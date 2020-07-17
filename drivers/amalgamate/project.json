@@ -1,0 +1,9 @@
+{
+    "id": "bake.amalgamate",
+    "type": "package",
+    "value": {
+        "author": "Sander Mertens",
+        "description": "Amalgamation driver",
+        "use": ["bake.util"]
+    }
+}

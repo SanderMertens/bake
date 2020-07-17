@@ -439,6 +439,10 @@ int16_t bake_setup(
     ut_try(cmd("."UT_OS_PS"bake rebuild drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
 
+    /* Build the amalgamation driver */
+    ut_try(cmd("."UT_OS_PS"bake rebuild drivers/amalgamate"), NULL);
+    bake_message(UT_OK, "done", "install amalgamate driver");
+
     /* Build the bake libraries (predefined configurations) */
     ut_try(cmd("."UT_OS_PS"bake rebuild libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");

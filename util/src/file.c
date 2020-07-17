@@ -164,13 +164,18 @@ char* ut_file_readln(
     while (!feof(file)) {
 
         c = fgetc(file);
-        if ((c == '\n') || (c == EOF)) {
+        
+        if (c == EOF) {
             break;
         }
 
         if ((unsigned int)(ptr - buf) < (length - 1)) {
             *ptr = c;
             ptr++;
+        }
+
+        if (c == '\n') {
+            break;
         }
     }
 

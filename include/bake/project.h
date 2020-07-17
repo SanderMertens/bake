@@ -88,6 +88,7 @@ struct bake_project {
     char *language;         /* Project programming language */
     bool public;            /* Is package public or private */
     bool coverage;          /* Include in coverage analysis (default = true) */
+    bool amalgamate;        /* Generate amalgamated source (default = false) */
     ut_ll use;              /* Project dependencies */
     ut_ll use_private;      /* Local dependencies (not visible to dependees) */
     ut_ll use_build;        /* Packages only required by the build */

@@ -372,7 +372,10 @@ int16_t bake_project_parse_value(
         } else
         if (!strcmp(member, "coverage")) {
            ut_try (bake_json_set_boolean(&p->coverage, member, v), NULL);
-        } else        
+        } else   
+        if (!strcmp(member, "amalgamate")) {
+           ut_try (bake_json_set_boolean(&p->amalgamate, member, v), NULL);
+        } else                
         if (!strcmp(member, "author")) {
             ut_try (bake_json_set_string(&p->author, member, v), NULL);
         } else
@@ -857,6 +860,11 @@ int16_t bake_project_init(
     /* Project artefact could have been provided manually on command line */
     if (project->artefact) {
         bake_project_init_artefact(config, project);
+    }
+
+    if (project->amalgamate) {
+        ut_try( bake_project_load_driver(
+            project, "amalgamate", NULL), "failed to load amalgamate driver");        
     }
 
     project->bin_path = ut_asprintf(
