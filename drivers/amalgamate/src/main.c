@@ -256,7 +256,7 @@ error:
     project_obj->error = true;
 }
 
-UT_EXPORT 
+BAKE_AMALGAMATE_EXPORT 
 int bakemain(bake_driver_api *driver) {
     driver->generate(generate);
     return 0;
