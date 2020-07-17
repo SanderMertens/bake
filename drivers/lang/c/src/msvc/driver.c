@@ -61,7 +61,7 @@ void add_flags(
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
                 bake_attr *attr = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", attr->is.string);
+                ut_strbuf_append(cmd, " %s", attr->is.string);
             }
         }
     } else {
@@ -71,7 +71,7 @@ void add_flags(
             ut_iter it = ut_ll_iter(flags_attr->is.array);
             while (ut_iter_hasNext(&it)) {
                 bake_attr *attr = ut_iter_next(&it);
-                ut_strbuf_append(&cmd, " %s", attr->is.string);
+                ut_strbuf_append(cmd, " %s", attr->is.string);
             }
         }
     }
@@ -87,18 +87,18 @@ void add_flags(
     } 
 
     /* Give project access to its own id */
-    ut_strbuf_append(&cmd, " /DBAKE_PROJECT_ID=\\\"%s\\\"", project->id);
+    ut_strbuf_append(cmd, " /DBAKE_PROJECT_ID=\\\"%s\\\"", project->id);
 
     /* This macro is only set for source files of this project, and can be used
      * to exclude header statements for dependencies */
     char *building_macro = ut_asprintf(" /D%s_EXPORTS", project->id_underscore);
-    ut_strbuf_appendstr(&cmd, building_macro);
+    ut_strbuf_appendstr(cmd, building_macro);
     free(building_macro);
 
     /* Enable debugging code */
     if (!config->debug) {
-        ut_strbuf_appendstr(&cmd, " /DNDEBUG");
-        ut_strbuf_appendstr(&cmd, " /DEBUG:FULL");
+        ut_strbuf_appendstr(cmd, " /DNDEBUG");
+        ut_strbuf_appendstr(cmd, " /DEBUG:FULL");
     }     
 }
 
