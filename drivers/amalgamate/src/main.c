@@ -1,4 +1,5 @@
 #include <bake.h>
+#include <bake_amalgamate.h>
 
 // If longer, bad
 #define MAX_LINE_LENGTH (256) 
