@@ -142,7 +142,7 @@ void compile_src(
         ut_strbuf_appendstr(&cmd, " /WX");
     }
 
-    add_flags(driver, config, project, cpp, cmd);
+    add_flags(driver, config, project, cpp, &cmd);
 
     /* Add configured include paths */
     bake_attr *include_attr = driver->get_attr("include");
