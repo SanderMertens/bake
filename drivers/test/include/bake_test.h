@@ -19,8 +19,8 @@ typedef struct bake_test_suite {
     void (*setup)(void);
     void (*teardown)(void);
     uint32_t testcase_count;
-    uint32_t assert_count;
     bake_test_case *testcases;
+    uint32_t assert_count;
 } bake_test_suite;
 
 BAKE_TEST_EXPORT

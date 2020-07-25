@@ -96,20 +96,24 @@ int generate_suite_data(
 
         ut_code_write(src, "{\n");
         ut_code_indent(src);
-        ut_code_write(src, ".id = \"%s\",\n", id);
-        ut_code_write(src, ".testcase_count = %d,\n", t_count);
+        ut_code_write(src, "\"%s\",\n", id);        
 
         int has_setup = json_object_get_boolean(suite, "setup");
         if (has_setup && has_setup != -1) {
-            ut_code_write(src, ".setup = %s_setup,\n", id);
+            ut_code_write(src, "%s_setup,\n", id);
+        } else {
+            ut_code_write(src, "NULL,\n");
         }
 
         int has_teardown = json_object_get_boolean(suite, "teardown");
         if (has_teardown && has_teardown != -1) {
-            ut_code_write(src, ".teardown = %s_teardown,\n", id);
-        }    
+            ut_code_write(src, "%s_teardown,\n", id);
+        } else {
+            ut_code_write(src, "NULL,\n");
+        }
 
-        ut_code_write(src, ".testcases = (bake_test_case[]){");
+        ut_code_write(src, "%d,\n", t_count);
+        ut_code_write(src, "(bake_test_case[]){");
         ut_code_indent(src);
 
         for (t = 0; t < t_count; t ++) {
@@ -120,8 +124,8 @@ int generate_suite_data(
             ut_code_write(src, "\n");
             ut_code_write(src, "{\n");
             ut_code_indent(src);
-            ut_code_write(src, ".id = \"%s\",\n", testcase);
-            ut_code_write(src, ".function = %s_%s\n", id, testcase);
+            ut_code_write(src, "\"%s\",\n", testcase);
+            ut_code_write(src, "%s_%s\n", id, testcase);
             ut_code_dedent(src);
             ut_code_write(src, "}");
         }
