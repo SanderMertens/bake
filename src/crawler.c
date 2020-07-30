@@ -96,6 +96,8 @@ int16_t bake_crawler_lookupDependency(
             } else {
                 if (bake_crawler_add(config, dep)) {
                     ut_warning("ignoring '%s' because of errors", src);
+                } else {
+                    dep->recursive = true;
                 }
             }
         } else {

@@ -884,6 +884,8 @@ int16_t bake_project_init(
         project->fullpath = ut_strdup(ut_cwd());
     }
 
+    project->recursive = false;
+
     return 0;
 error:
     return -1;
