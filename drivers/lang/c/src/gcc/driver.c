@@ -183,7 +183,7 @@ void add_std(
     if (config->strict) {
         /* Enable pedantic errors in strict mode. Only enable -Wshadow in strict
          * as this can generate loads of warnings for legacy compilers */
-        ut_strbuf_appendstr(cmd, " -Werror -Wshadow -pedantic");
+        ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -pedantic");
     } else {
         /* Unused parameters can sometimes indicate an error, but more often 
          * than not are the result of a function implementing some kind of 
