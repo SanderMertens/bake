@@ -73,11 +73,12 @@ int amalgamate(
     const char *const_file,
     ut_rb files_parsed) 
 {
-    if (ut_rb_find(files_parsed, const_file)) {
+    char *file = ut_strdup(const_file);
+    ut_path_clean(file, file);
+    if (ut_rb_find(files_parsed, file)) {
+        free(file);
         return 0;
     }
-
-    char *file = ut_strdup(const_file);
 
     ut_rb_set(files_parsed, file, file);
 
