@@ -862,10 +862,13 @@ int16_t bake_project_init(
         bake_project_init_artefact(config, project);
     }
 
+    /* Amalgamate driver isn't working correctly on Windows yet */
+#ifndef UT_OS_WINDOWS
     if (project->amalgamate) {
         ut_try( bake_project_load_driver(
             project, "amalgamate", NULL), "failed to load amalgamate driver");        
     }
+#endif
 
     project->bin_path = ut_asprintf(
         "%s"UT_OS_PS"bin", project->path);
@@ -880,6 +883,8 @@ int16_t bake_project_init(
     } else {
         project->fullpath = ut_strdup(ut_cwd());
     }
+
+    project->recursive = false;
 
     return 0;
 error:

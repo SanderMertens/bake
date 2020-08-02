@@ -73,11 +73,12 @@ int amalgamate(
     const char *const_file,
     ut_rb files_parsed) 
 {
-    if (ut_rb_find(files_parsed, const_file)) {
+    char *file = ut_strdup(const_file);
+    ut_path_clean(file, file);
+    if (ut_rb_find(files_parsed, file)) {
+        free(file);
         return 0;
     }
-
-    char *file = ut_strdup(const_file);
 
     ut_rb_set(files_parsed, file, file);
 
@@ -181,6 +182,10 @@ void generate(
     bake_config *config,
     bake_project *project_obj)
 {
+    if (project_obj->recursive) {
+        return;
+    }
+
     ut_rb files_parsed = ut_rb_new(compare_string, NULL);
     const char *project = project_obj->id_underscore;
     char *project_upper = ut_strdup(project_obj->id_underscore);
@@ -216,7 +221,7 @@ void generate(
     }
 
     /* If file is embedded, the code should behave like a static library */
-    fprintf(header_out, "#define %s_STATIC\n", project_upper);
+    fprintf(header_out, "#define %s_STATIC\n", project_obj->id_underscore);
     ut_try(amalgamate(header_out, include_path, true, include_file, files_parsed), NULL);
     fclose(header_out);
 
