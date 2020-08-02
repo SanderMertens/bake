@@ -59,7 +59,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
 #include <signal.h>
 
 /* OS-specific headers */
