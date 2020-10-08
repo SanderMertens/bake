@@ -140,12 +140,14 @@ extern "C" {
 /* Maximum number of code frames in logmsg */
 #define UT_MAX_LOG_CODEFRAMES (16)
 
-#ifndef __cplusplus
-/* Boolean definitions (compatible with C++ and C99 stdbool) */
+#include <stdbool.h>
+
+/* The API uses the native bool type in C++, or a custom one in C */
+#if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
 #undef bool
 #undef true
 #undef false
-#define bool char
+typedef char bool;
 #define false 0
 #define true !false
 #endif

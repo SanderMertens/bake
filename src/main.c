@@ -40,6 +40,7 @@ bool local_setup = false;
 bool load_bundles = false;
 bool strict = false;
 bool optimize = false;
+bool loop_test = false;
 bool is_test = false;
 bool to_env = false;
 bool always_clone = false;
@@ -99,6 +100,7 @@ void bake_usage(void)
     printf("  --env <environment>          Specify environment id\n");
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
+    printf("  --loop-test                  Manually enable vectorization analysis\n");
     printf("\n");
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
@@ -284,10 +286,12 @@ int bake_parse_args(
     for (; i < argc; i ++) {
         if (argv[i][0] == '-') {
             bool parsed = false;
+
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
             ARG(0, "strict", strict = true;);
             ARG(0, "optimize", optimize = true; i ++);
+            ARG(0, "loop-test", loop_test = true);
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
             ARG(0, "debug", ut_log_verbositySet(UT_DEBUG));
@@ -1411,6 +1415,9 @@ int main(int argc, const char *argv[]) {
     }
     if (optimize) {
         config.optimizations = true;
+    }
+    if (loop_test) {
+        config.loop_test = true;
     }
     if (fast_build) {
         config.coverage = false;

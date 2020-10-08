@@ -191,6 +191,10 @@ error:
 #define CFG_OPTIMIZATIONS "optimizations"
 #define CFG_COVERAGE "coverage"
 #define CFG_STRICT "strict"
+#define CFG_SANITIZE_MEMORY "sanitize-memory"
+#define CFG_SANITIZE_THREAD "sanitize-thread"
+#define CFG_SANITIZE_UNDEFINED "sanitize-undefined"
+#define CFG_LOOP_TEST "loop-test"
 
 static
 int16_t bake_config_loadConfiguration(
@@ -215,6 +219,18 @@ int16_t bake_config_loadConfiguration(
             goto error;
         }
         if (bake_json_set_boolean(&cfg_out->strict, CFG_STRICT, value)) {
+            goto error;
+        }
+        if (bake_json_set_boolean(&cfg_out->sanitize_memory, CFG_SANITIZE_MEMORY, value)) {
+            goto error;
+        }
+        if (bake_json_set_boolean(&cfg_out->sanitize_thread, CFG_SANITIZE_THREAD, value)) {
+            goto error;
+        }
+        if (bake_json_set_boolean(&cfg_out->sanitize_undefined, CFG_SANITIZE_UNDEFINED, value)) {
+            goto error;
+        }
+        if (bake_json_set_boolean(&cfg_out->loop_test, CFG_LOOP_TEST, value)) {
             goto error;
         }
     }
@@ -509,43 +525,54 @@ int16_t bake_config_load(
     }
 
     if (!cfg_found) {
+        cfg_out->symbols = false;
+        cfg_out->debug = false;
+        cfg_out->optimizations = false;
+        cfg_out->coverage = false;
+        cfg_out->strict = false;
+        cfg_out->static_lib = false;
+        cfg_out->sanitize_memory = false;
+        cfg_out->sanitize_undefined = false;
+        cfg_out->sanitize_thread = false;
+
+        /* Debug mode, this is the default */
         if (!strcmp(UT_CONFIG, "debug")) {
             ut_ok("debug configuration not found in bake settings file, using defaults");
             cfg_out->debug = true;
             cfg_out->symbols = true;
             cfg_out->optimizations = false;
-            cfg_out->coverage = false;
-            cfg_out->sanitize_memory = false;
-            cfg_out->sanitize_undefined = false;
+
+        /* Release mode, enables optimizations, no symbols */
         } else if (!strcmp(UT_CONFIG, "release")) {
             ut_ok("release configuration not found in bake settings file, using defaults");
-            cfg_out->debug = false;
-            cfg_out->symbols = false;
             cfg_out->optimizations = true;
-            cfg_out->coverage = false;
-            cfg_out->sanitize_memory = false;
-            cfg_out->sanitize_undefined = false;            
+
+        /* Used for testing, same as debug but with coverage analysis */
         } else if (!strcmp(UT_CONFIG, "test")) {
             ut_ok("test configuration not found in bake settings file, using defaults");
             cfg_out->debug = true;
             cfg_out->symbols = true;
-            cfg_out->optimizations = false;            
             cfg_out->coverage = true;
-            cfg_out->sanitize_memory = false;
-            cfg_out->sanitize_undefined = false;
+
+        /* Enable address & UB sanitizers */
         } else if (!strcmp(UT_CONFIG, "sanitize")) {
-            ut_ok("test configuration not found in bake settings file, using defaults");
+            ut_ok("sanitize configuration not found in bake settings file, using defaults");
             cfg_out->debug = true;
             cfg_out->symbols = true;
-            cfg_out->optimizations = false;            
-            cfg_out->coverage = false;
             cfg_out->sanitize_memory = true;
             cfg_out->sanitize_undefined = true;
-        } else if (!strcmp(UT_CONFIG, "perf")) {
-            cfg_out->debug = false;
+            /* Don't enable sanitize_thread by default, as this runs unbearably 
+             * slow and prohibits running a testsuite with sanitize enabled */
+            
+        /* Run all sanitizers, even if this is dreadfully slow */
+        } else if (!strcmp(UT_CONFIG, "sanitize-all")) {
+            ut_ok("sanitize configuration not found in bake settings file, using defaults");
+            cfg_out->debug = true;
             cfg_out->symbols = true;
-            cfg_out->optimizations = true;
-            cfg_out->coverage = false;
+            cfg_out->sanitize_memory = true;
+            cfg_out->sanitize_undefined = true;
+            cfg_out->sanitize_thread = true;
+
         } else {
             ut_throw("unknown configuration '%s'",
                 UT_CONFIG);
@@ -627,6 +654,10 @@ int16_t bake_config_load(
         ut_trace("set '%s' to '%s'", CFG_OPTIMIZATIONS, cfg_out->optimizations ? "true" : "false");
         ut_trace("set '%s' to '%s'", CFG_COVERAGE, cfg_out->coverage ? "true" : "false");
         ut_trace("set '%s' to '%s'", CFG_STRICT, cfg_out->strict ? "true" : "false");
+        ut_trace("set '%s' to '%s'", CFG_SANITIZE_MEMORY, cfg_out->sanitize_memory ? "true" : "false");
+        ut_trace("set '%s' to '%s'", CFG_SANITIZE_THREAD, cfg_out->sanitize_thread ? "true" : "false");
+        ut_trace("set '%s' to '%s'", CFG_SANITIZE_UNDEFINED, cfg_out->sanitize_undefined ? "true" : "false");
+        ut_trace("set '%s' to '%s'", CFG_LOOP_TEST, cfg_out->loop_test ? "true" : "false");
         ut_log_pop();
     }
 

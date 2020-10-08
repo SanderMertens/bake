@@ -245,7 +245,10 @@ void add_misc(
     ut_strbuf *cmd)
 {
     /* In obscure cases with static libs, stack protector can cause unresolved symbols */
-    ut_strbuf_append(cmd, " -fPIC -fno-stack-protector");
+    ut_strbuf_append(cmd, 
+        " -fPIC"
+        " -fvisibility=hidden"
+        " -fno-stack-protector");
 
     /* Include debugging information */
     if (config->symbols) {
@@ -254,6 +257,16 @@ void add_misc(
 
     if (config->coverage && project->coverage) {
         ut_strbuf_appendstr(cmd, " -fprofile-arcs -ftest-coverage");
+    }
+
+    if (config->loop_test) {
+        if (is_clang(cpp)) {
+            ut_strbuf_append(cmd,
+                " -Rpass-missed=loop-vectorize");
+        } else {
+            ut_strbuf_append(cmd,
+                " -fopt-info-vec-missed");
+        }
     }
 
     add_sanitizers(config, cmd);
@@ -363,10 +376,7 @@ void generate_precompiled_header(
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, 
-        "%s -x %s-header %s -o %s", 
-        cc(cpp), 
-        cpp ? "c++" : "c",
-        source, target);
+        "%s -x %s-header %s -o %s", cc(cpp), cpp ? "c++" : "c", source, target);
 
     free(target);
     free(source);
@@ -486,7 +496,7 @@ void link_dynamic_binary(
 
     bool cpp = is_cpp(project);
 
-    ut_strbuf_append(&cmd, "%s -Wall -fPIC", cc(cpp));
+    ut_strbuf_append(&cmd, "%s -Wall", cc(cpp));
 
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
@@ -513,12 +523,7 @@ void link_dynamic_binary(
 
     /* Set optimizations */
     if (config->optimizations) {
-        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
-            ut_strbuf_appendstr(&cmd, " -O3 -flto");
-        } else {
-            /* On some Linux versions clang has trouble loading the LTO plugin */
-            ut_strbuf_appendstr(&cmd, " -O3");
-        }
+        ut_strbuf_appendstr(&cmd, " -O3 -flto");
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }
