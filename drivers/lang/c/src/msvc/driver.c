@@ -139,7 +139,7 @@ void compile_src(
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
-        ut_strbuf_appendstr(&cmd, " /WX");
+        ut_strbuf_appendstr(&cmd, " /W3 /WX");
     }
 
     add_flags(driver, config, project, cpp, &cmd);
