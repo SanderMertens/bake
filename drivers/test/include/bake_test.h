@@ -23,7 +23,7 @@ typedef struct bake_test_suite {
     uint32_t assert_count;
 } bake_test_suite;
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 int bake_test_run(
     const char *test_id,
     int argc, 
@@ -31,14 +31,14 @@ int bake_test_run(
     bake_test_suite *suites,
     uint32_t suite_count);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_assert(
     bool cond,
     const char *cond_str,
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_int(
     int64_t v1,
     int64_t v2,
@@ -47,7 +47,7 @@ void _test_int(
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_uint(
     uint64_t v1,
     uint64_t v2,
@@ -56,7 +56,7 @@ void _test_uint(
     const char *file,
     int line);    
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_bool(
     bool v1,
     bool v2,
@@ -65,7 +65,7 @@ void _test_bool(
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_flt(
     double v1,
     double v2,
@@ -74,7 +74,7 @@ void _test_flt(
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_str(
     const char *v1,
     const char *v2,
@@ -83,21 +83,21 @@ void _test_str(
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_null(
     void *v,
     const char *str_v,
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_not_null(
     void *v,
     const char *str_v,
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void _test_ptr(
     const void *v1,
     const void *v2,
@@ -106,16 +106,16 @@ void _test_ptr(
     const char *file,
     int line);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void test_quarantine(const char *date);
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void test_expect_abort(void);
 
 /* On platforms that do not support proper signal handling
  * (read: Windows) a test may replace abort with this function
  * if the library under test allows for it. */
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 void test_abort();
 
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)

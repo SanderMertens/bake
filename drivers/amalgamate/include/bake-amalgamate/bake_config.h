@@ -24,17 +24,17 @@
 
 /* Convenience macro for exporting symbols */
 #ifndef bake_amalgamate_STATIC
-#if bake_amalgamate_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
-  #define BAKE_AMALGAMATE_EXPORT __declspec(dllexport)
-#elif bake_amalgamate_EXPORTS
-  #define BAKE_AMALGAMATE_EXPORT __attribute__((__visibility__("default")))
+#if bake_amalgamate_APIS && (defined(_MSC_VER) || defined(__MINGW32__))
+  #define BAKE_AMALGAMATE_API __declspec(dllexport)
+#elif bake_amalgamate_APIS
+  #define BAKE_AMALGAMATE_API __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
-  #define BAKE_AMALGAMATE_EXPORT __declspec(dllimport)
+  #define BAKE_AMALGAMATE_API __declspec(dllimport)
 #else
-  #define BAKE_AMALGAMATE_EXPORT
+  #define BAKE_AMALGAMATE_API
 #endif
 #else
-  #define BAKE_AMALGAMATE_EXPORT
+  #define BAKE_AMALGAMATE_API
 #endif
 
 #endif

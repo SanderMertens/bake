@@ -154,7 +154,7 @@ void add_flags(
 
     /* This macro is only set for source files of this project, and can be used
      * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" -D%s_EXPORTS", project->id_underscore);
+    char *building_macro = ut_asprintf(" -D%s_APIS", project->id_underscore);
     ut_strbuf_appendstr(cmd, building_macro);
     free(building_macro);
 }
@@ -172,8 +172,9 @@ void add_std(
         ut_strbuf_append(cmd, " -std=%s",
             driver->get_attr_string("cpp-standard"));
     } else {
-        ut_strbuf_append(cmd, " -std=%s -D_XOPEN_SOURCE=600",
+        ut_strbuf_append(cmd, " -std=%s ",
             driver->get_attr_string("c-standard"));
+        ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
     }
 
     ut_strbuf_appendstr(cmd, " -Wall");
@@ -269,6 +270,10 @@ void add_misc(
         }
     }
 
+    if (config->assembly) {
+        ut_strbuf_append(cmd, " -S -fverbose-asm");
+    }
+
     add_sanitizers(config, cmd);
 }
 
@@ -322,7 +327,7 @@ void compile_src(
      * language as the project configuration. Header compiled with different
      * compiler settings cannot be included */
     if (!file_has_different_language) {
-        if (driver->get_attr_bool("precompile-header")) {
+        if (driver->get_attr_bool("precompile-header") && !config->assembly) {
             if (is_clang(cpp)) {
                 char *pch_dir = driver->get_attr_string("pch-dir");
                 ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
@@ -339,7 +344,11 @@ void compile_src(
     add_includes(driver, config, project, &cmd);
 
     /* Add source file and object file */
-    ut_strbuf_append(&cmd, " -c %s -o %s", source, target);
+    ut_strbuf_append(&cmd, " -c %s", source);
+
+    if (!config->assembly) {
+        ut_strbuf_append(&cmd, " -o %s", target);
+    }
 
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
@@ -354,6 +363,10 @@ void generate_precompiled_header(
     bake_project *project)
 {   
     bool cpp = is_cpp(project);
+
+    if (config->assembly) {
+        return;
+    }
 
     if (!is_clang(cpp)) {
         return;
@@ -493,6 +506,10 @@ void link_dynamic_binary(
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool hide_symbols = false;
     ut_ll static_object_paths = NULL;
+
+    if (config->assembly) {
+        return;
+    }
 
     bool cpp = is_cpp(project);
 

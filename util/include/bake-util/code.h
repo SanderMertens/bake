@@ -39,28 +39,28 @@ typedef struct ut_code {
 } ut_code;
 
 /* Open a file for writing. */
-UT_EXPORT
+UT_API
 ut_code* ut_code_open(
     const char *name,
     ...);
 
 /* Close a file. */
-UT_EXPORT
+UT_API
 void ut_code_close(
     ut_code *file);
 
 /* Increase indentation. */
-UT_EXPORT
+UT_API
 void ut_code_indent(
     ut_code *file);
 
 /* Decrease indentation. */
-UT_EXPORT
+UT_API
 void ut_code_dedent(
     ut_code *file);
 
 /* Write to a file. */
-UT_EXPORT
+UT_API
 int ut_code_write(
     ut_code *file,
     char* fmt, ...);

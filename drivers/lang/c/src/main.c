@@ -405,7 +405,7 @@ void generate(
 
     if (project->use_private && ut_ll_count(project->use_private)) {
         fprintf(f, "\n/* Headers of private dependencies */\n");
-        fprintf(f, "#ifdef %s_EXPORT\n", snake_id);
+        fprintf(f, "#ifdef %s_API\n", snake_id);
         add_dependency_includes(config, f, project->use_private);
         fprintf(f, "#endif\n");
     }
@@ -413,17 +413,17 @@ void generate(
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
       "#ifndef %s_STATIC\n"
-      "#if %s_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))\n"
-      "  #define %s_EXPORT __declspec(dllexport)\n"
-      "#elif %s_EXPORTS\n"
-      "  #define %s_EXPORT __attribute__((__visibility__(\"default\")))\n"
+      "#if %s_APIS && (defined(_MSC_VER) || defined(__MINGW32__))\n"
+      "  #define %s_API __declspec(dllexport)\n"
+      "#elif %s_APIS\n"
+      "  #define %s_API __attribute__((__visibility__(\"default\")))\n"
       "#elif defined _MSC_VER\n"
-      "  #define %s_EXPORT __declspec(dllimport)\n"
+      "  #define %s_API __declspec(dllimport)\n"
       "#else\n"
-      "  #define %s_EXPORT\n"
+      "  #define %s_API\n"
       "#endif\n"
       "#else\n"
-      "  #define %s_EXPORT\n"
+      "  #define %s_API\n"
       "#endif\n",
         snake_id, snake_id, id_upper, snake_id, id_upper, id_upper, id_upper, id_upper);
 
@@ -434,7 +434,7 @@ void generate(
 }
 
 /* -- Rules */
-UT_EXPORT 
+UT_API 
 int bakemain(bake_driver_api *driver) 
 {
     ut_init("bake.c");

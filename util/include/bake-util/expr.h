@@ -65,7 +65,7 @@ struct ut_expr_program_s {
  * @return true if the identifier matches, false if it does not match
  * @see ut_expr_compile ut_expr_run ut_expr_free
  */
-UT_EXPORT
+UT_API
 bool ut_expr(
     const char *pattern,
     const char *id);
@@ -82,7 +82,7 @@ bool ut_expr(
  * @return A compiled version of the string pattern.
  * @see ut_expr_run ut_expr_free ut_expr
  */
-UT_EXPORT
+UT_API
 ut_expr_program ut_expr_compile(
     const char *pattern,
     bool allowScopes,
@@ -95,7 +95,7 @@ ut_expr_program ut_expr_compile(
  * @return true if the identifier matches, false if it does not match
  * @see ut_expr ut_expr_compile ut_expr_free
  */
-UT_EXPORT
+UT_API
 bool ut_expr_run(
     ut_expr_program program,
     const char *id);
@@ -106,7 +106,7 @@ bool ut_expr_run(
  * @return 0 if single object, 1 if multiple objects and 2 if tree is matched.
  * @see ut_expr ut_expr_compile ut_expr_free
  */
-UT_EXPORT
+UT_API
 int ut_expr_scope(
     ut_expr_program program);
 
@@ -120,7 +120,7 @@ int ut_expr_scope(
  * @return true if the identifier matches, false if it does not match
  * @see ut_expr ut_expr_compile ut_expr_free
  */
-UT_EXPORT
+UT_API
 void ut_expr_free(
     ut_expr_program program);
 
@@ -132,7 +132,7 @@ void ut_expr_free(
  * @pattern expr An object identifier
  * @return the remainder if the parent matches, NULL if it does not match
  */
-UT_EXPORT
+UT_API
 const char* ut_matchParent(
     const char *parent,
     const char *expr);
@@ -144,7 +144,7 @@ const char* ut_matchParent(
  * @param ch The character to test
  * @return true if an operator, false if not.
  */
-UT_EXPORT
+UT_API
 bool ut_expr_isOperator(
     char ch);
 
@@ -156,7 +156,7 @@ bool ut_expr_isOperator(
  * @param expr The expression to test
  * @return true if it contains operators, false if it does not.
  */
-UT_EXPORT
+UT_API
 bool ut_expr_hasOperators(
     const char *expr);
 
@@ -168,11 +168,11 @@ bool ut_expr_hasOperators(
  * @return UT_ON_SELF if matching an object, UT_ON_SCOPE if matching a
  * scope, and UT_ON_TREE if matching a tree.
  */
-UT_EXPORT
+UT_API
 int ut_expr_get_scope(
     ut_expr_program program);
 
-UT_EXPORT
+UT_API
 int16_t ut_exprParseIntern(
     ut_expr_program data,
     const char *expr,

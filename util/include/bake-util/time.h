@@ -36,7 +36,7 @@ extern "C" {
  * @param sec Seconds to sleep
  * @param nanoseconds to sleep
  */
-UT_EXPORT
+UT_API
 void ut_sleep(
     unsigned int sec,
     unsigned int nanosec);
@@ -45,7 +45,7 @@ void ut_sleep(
  *
  * @param time Variable that will contain the time.
  */
-UT_EXPORT
+UT_API
 void timespec_gettime(
     struct timespec* time);
 
@@ -55,7 +55,7 @@ void timespec_gettime(
  * @param t2 Time value.
  * @result Result of adding t1 and t2
  */
-UT_EXPORT
+UT_API
 struct timespec timespec_add(
     struct timespec t1,
     struct timespec t2);
@@ -66,7 +66,7 @@ struct timespec timespec_add(
  * @param t2 Time value to subtract.
  * @result Result of subtracting t1 and t2
  */
-UT_EXPORT
+UT_API
 struct timespec timespec_sub(
     struct timespec t1,
     struct timespec t2);
@@ -77,7 +77,7 @@ struct timespec timespec_sub(
  * @param t2 Time value.
  * @result 0 if equal, -1 if t2 is less than t1, 1 if t1 is larger than t2
  */
-UT_EXPORT
+UT_API
 int timespec_compare(
     struct timespec t1,
     struct timespec t2);
@@ -87,7 +87,7 @@ int timespec_compare(
  * @param t1 Last measurement
  * @result Time elapsed since last measurement
  */
-UT_EXPORT
+UT_API
 double timespec_measure(
     struct timespec *t1);
 
@@ -96,11 +96,11 @@ double timespec_measure(
  * @param t Time value.
  * @result Floating point representation of the time.
  */
-UT_EXPORT
+UT_API
 double timespec_toDouble(
     struct timespec t);
 
-UT_EXPORT
+UT_API
 char* timespec_to_str(
     struct timespec t);
 

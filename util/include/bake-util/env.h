@@ -37,7 +37,7 @@ extern "C" {
  * @param value Value to assign to environment variable.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT 
+UT_API 
 int16_t ut_setenv(
     const char *varname, 
     const char *value, 
@@ -62,7 +62,7 @@ int16_t ut_appendenv(
  * @param varname Name of environment variable
  * @return value if environment variable, NULL if not set.
  */
-UT_EXPORT 
+UT_API 
 char* ut_getenv(
     const char *varname);
 
@@ -73,13 +73,13 @@ char* ut_getenv(
  * @param value Value to assign to environment variable.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT 
+UT_API 
 char* ut_envparse(
     const char* str, 
     ...);
 
 /** Same as envparse but with a va_list parameter */
-UT_EXPORT 
+UT_API 
 char* ut_venvparse(
     const char* str, 
     va_list args);

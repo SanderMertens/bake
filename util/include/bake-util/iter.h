@@ -29,10 +29,10 @@ extern "C" {
 #define UT_ITER_STACK_LIMIT (64)
 #define UT_ITER_EMPTY (ut_iter){0}
 
-UT_EXPORT int ut_iter_hasNext(ut_iter* iter);
-UT_EXPORT void* ut_iter_next(ut_iter* iter);
-UT_EXPORT void* ut_iter_nextPtr(ut_iter* iter);
-UT_EXPORT void ut_iter_release(ut_iter* iter);
+UT_API int ut_iter_hasNext(ut_iter* iter);
+UT_API void* ut_iter_next(ut_iter* iter);
+UT_API void* ut_iter_nextPtr(ut_iter* iter);
+UT_API void ut_iter_release(ut_iter* iter);
 
 #ifdef __cplusplus
 }

@@ -65,7 +65,7 @@ typedef struct ut_strbuf {
 
 /* Append format string to a buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_append(
     ut_strbuf *buffer,
     const char *fmt,
@@ -73,7 +73,7 @@ bool ut_strbuf_append(
 
 /* Append format string with argument list to a buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_vappend(
     ut_strbuf *buffer,
     const char *fmt,
@@ -81,47 +81,47 @@ bool ut_strbuf_vappend(
 
 /* Append string to buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_appendstr(
     ut_strbuf *buffer,
     const char *str);
 
 /* Append source buffer to destination buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_mergebuff(
     ut_strbuf *dst_buffer,
     ut_strbuf *src_buffer);
 
 /* Append string to buffer, transfer ownership to buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_appendstr_zerocpy(
     ut_strbuf *buffer,
     char *str);
 
 /* Append string to buffer, do not free/modify string.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_appendstr_zerocpy_const(
     ut_strbuf *buffer,
     const char *str);
 
 /* Append n characters to buffer.
  * Returns false when max is reached, true when there is still space */
-UT_EXPORT
+UT_API
 bool ut_strbuf_appendstrn(
     ut_strbuf *buffer,
     const char *str,
     uint32_t n);
 
 /* Return result string (also resets buffer) */
-UT_EXPORT
+UT_API
 char *ut_strbuf_get(
     ut_strbuf *buffer);
 
 /* Reset buffer without returning a string */
-UT_EXPORT
+UT_API
 void ut_strbuf_reset(
     ut_strbuf *buffer);
 

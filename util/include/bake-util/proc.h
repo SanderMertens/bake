@@ -58,7 +58,7 @@ typedef enum ut_procsignal {
  * @param argv Null-terminated array of strings.
  * @return Handle to process.
  */
-UT_EXPORT
+UT_API
 ut_proc ut_proc_run(
     const char* exec,
     const char *argv[]);
@@ -74,7 +74,7 @@ ut_proc ut_proc_run(
  * @param err FIle to redirect stderr to.
  * @return Handle to process.
  */
-UT_EXPORT
+UT_API
 ut_proc ut_proc_runRedirect(
     const char* exec,
     const char *argv[],
@@ -88,7 +88,7 @@ ut_proc ut_proc_runRedirect(
  * @param sig Signal to send to process.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_proc_kill(
     ut_proc pid,
     ut_procsignal sig);
@@ -99,7 +99,7 @@ int ut_proc_kill(
  * @param rc Value returned by process.
  * @return 0 if success, -1 if function failed, otherwise the signal raised by the process during exit.
  */
-UT_EXPORT
+UT_API
 int ut_proc_wait(
     ut_proc pid,
     int8_t *rc);
@@ -110,7 +110,7 @@ int ut_proc_wait(
  * @param rc Value returned by process.
  * @return 0 if still running, -1 if exitted normally, otherwise the signal raised by the process during exit.
  */
-UT_EXPORT
+UT_API
 int ut_proc_check(
     ut_proc pid,
     int8_t *rc);
@@ -122,19 +122,19 @@ int ut_proc_check(
  * @param rc Value returned by process.
  * @return 0 if success, -1 if function failed, otherwise the signal raised by the process during exit.
  */
-UT_EXPORT
+UT_API
 int ut_proc_cmd(
     char *cmd,
     int8_t *rc);
 
-UT_EXPORT
+UT_API
 int ut_proc_cmd_stderr_only(char* cmd, int8_t *rc);
 
 /** Function that checks if process is being traced (experimental)
  *
  * @return non-zero if being traced, otherwise 0.
  */
-UT_EXPORT
+UT_API
 int ut_beingTraced(void);
 
 /** Get pid of current process.
@@ -142,7 +142,7 @@ int ut_beingTraced(void);
  *
  * @return Process handle of current process.
  */
-UT_EXPORT
+UT_API
 ut_proc _ut_proc(void);
 
 /* Macro that allows using ut_proc as a function in addition to it being used

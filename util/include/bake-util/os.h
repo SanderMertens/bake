@@ -110,7 +110,7 @@ extern "C" {
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING
 
 /* Get hostname of current machine */
-UT_EXPORT
+UT_API
 char* ut_hostname(void);
 
 /** Test whether string matches with current operating system.
@@ -120,7 +120,7 @@ char* ut_hostname(void);
  * @param operating system identifier.
  * @return true if matches, false if no match.
  */
-UT_EXPORT
+UT_API
 bool ut_os_match(const char *os);
 
 #ifdef __cplusplus

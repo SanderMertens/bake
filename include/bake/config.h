@@ -61,6 +61,7 @@ struct bake_config {
     bool sanitize_thread;       /* Enable thread sanitizer (if supported) */
     bool sanitize_undefined;    /* Enable UB sanitizier (if supported) */
     bool loop_test;             /* Enable analysis for SIMD loops */
+    bool assembly;              /* Enable assembly output */
 
     /* Environment attribubtes */
     ut_ll env_variables;        /* List with environment variable names */

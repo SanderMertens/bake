@@ -52,10 +52,10 @@ extern "C" {
 #define ut_calloc(n) calloc(n, 1)
 
 /* Set intern TLS string */
-UT_EXPORT char* ut_setThreadString(char* string);
+UT_API char* ut_setThreadString(char* string);
 
-UT_EXPORT char* ut_itoa(int num, char* buff);
-UT_EXPORT char* ut_ulltoa(uint64_t value, char *ptr, int base);
+UT_API char* ut_itoa(int num, char* buff);
+UT_API char* ut_ulltoa(uint64_t value, char *ptr, int base);
 
 #ifdef __cplusplus
 }

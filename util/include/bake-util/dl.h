@@ -42,7 +42,7 @@ typedef HMODULE ut_dl;
  * @param name Name of library.
  * @return Handle to dynamic library.
  */
-UT_EXPORT 
+UT_API 
 ut_dl ut_dl_open(
     const char* file);
 
@@ -50,7 +50,7 @@ ut_dl ut_dl_open(
  *
  * @param dl Handle to dynamic library.
  */
-UT_EXPORT 
+UT_API 
 void ut_dl_close(
     ut_dl dl);
 
@@ -60,7 +60,7 @@ void ut_dl_close(
  * @param sym Name of symbol to resolve.
  * @return Handle to dynamic library.
  */
-UT_EXPORT 
+UT_API 
 void* ut_dl_sym(
     ut_dl dl, 
     const char* sym);
@@ -73,7 +73,7 @@ void* ut_dl_sym(
  * @param proc Name of procedure to resolve.
  * @return Handle to dynamic library.
  */
-UT_EXPORT 
+UT_API 
 void*(*ut_dl_proc(
     ut_dl dl, 
     const char* proc))(void);
@@ -83,7 +83,7 @@ void*(*ut_dl_proc(
  *
  * @return Internal buffer containing the last reported error.
  */
-UT_EXPORT 
+UT_API 
 const char* ut_dl_error(void);
 
 #ifdef __cplusplus

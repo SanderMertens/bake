@@ -49,7 +49,7 @@ typedef void* (*ut_thread_cb)(void*);
  * @param arg Argument to pass to thread function.
  * @return Handle to thread, 0 if failed.
  */
-UT_EXPORT
+UT_API
 ut_thread ut_thread_new(
     ut_thread_cb func,
     void* arg);
@@ -61,7 +61,7 @@ ut_thread ut_thread_new(
  * @param arg Pointer that will be set to return value of thread.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_thread_join(
     ut_thread thread,
     void **arg);
@@ -73,7 +73,7 @@ int ut_thread_join(
  * @param thread Handle to thread to detach.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_thread_detach(
     ut_thread thread);
 
@@ -83,7 +83,7 @@ int ut_thread_detach(
  * @param priority Priority to set.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_thread_setPriority(
     ut_thread thread,
     int priority);
@@ -93,7 +93,7 @@ int ut_thread_setPriority(
  * @param thread Handle to thread to detach.
  * @return Priority of thread.
  */
-UT_EXPORT
+UT_API
 int ut_thread_getPriority(
     ut_thread thread);
 
@@ -101,7 +101,7 @@ int ut_thread_getPriority(
  *
  * @return handle to thread.
  */
-UT_EXPORT
+UT_API
 ut_thread ut_thread_self(void);
 
 
@@ -114,7 +114,7 @@ ut_thread ut_thread_self(void);
  * @param destructor Function that will be invoked when tls data is cleaned up.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_tls_new(
     ut_tls* key_out,
     void(*destructor)(void*));
@@ -125,7 +125,7 @@ int ut_tls_new(
  * @param value Value to assign to tls storage.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int _ut_tls_set(
     ut_tls key,
     const char *key_str,
@@ -138,7 +138,7 @@ int _ut_tls_set(
  * @param key Key for which to get the tls data.
  * @return tls storage corresponding to key. NULL if not set.
  */
-UT_EXPORT
+UT_API
 void* _ut_tls_get(
     ut_tls key,
     const char* key_str);
@@ -152,7 +152,7 @@ void* _ut_tls_get(
  *
  * The ut_deinit function calls this function.
  */
-UT_EXPORT
+UT_API
 void ut_tls_free(void);
 
 
@@ -165,7 +165,7 @@ void ut_tls_free(void);
  * @param mutex Pointer to uninitialized ut_mutex_s structure.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_new(
     struct ut_mutex_s *mutex);
 
@@ -174,7 +174,7 @@ int ut_mutex_new(
  * @param mutex Mutex to lock.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_lock(
     ut_mutex mutex);
 
@@ -183,7 +183,7 @@ int ut_mutex_lock(
  * @param mutex Mutex to unlock.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_unlock(
     ut_mutex mutex);
 
@@ -192,7 +192,7 @@ int ut_mutex_unlock(
  * @param mutex Mutex to free.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_free(
     ut_mutex mutex);
 
@@ -202,7 +202,7 @@ int ut_mutex_free(
  * @param mutex Mutex to free.
  * @return 0 if mutex is free, UT_LOCK_BUSY if occupied, other value if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_try(
     ut_mutex mutex);
 
@@ -214,7 +214,7 @@ int ut_mutex_try(
  * @param timeout The maximum amount of time to try to lock the mutex.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_mutex_lockTimed(
     ut_mutex mutex,
     struct timespec timeout);
@@ -229,7 +229,7 @@ int ut_mutex_lockTimed(
  * @param mutex Pointer to uninitialized ut_rwmutex_s structure.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_new(
     struct ut_rwmutex_s *mutex);
 
@@ -240,7 +240,7 @@ int ut_rwmutex_new(
  * @param mutex Mutex to read.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_read(
     ut_rwmutex mutex);
 
@@ -251,7 +251,7 @@ int ut_rwmutex_read(
  * @param mutex Mutex to read.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_write(
     ut_rwmutex mutex);
 
@@ -261,7 +261,7 @@ int ut_rwmutex_write(
  * @param mutex Mutex to read.
  * @return 0 if success, UT_LOCK_BUSY if busy, other value if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_tryRead(
     ut_rwmutex mutex);
 
@@ -272,7 +272,7 @@ int ut_rwmutex_tryRead(
  * @param mutex Mutex to write.
  * @return 0 if success, UT_LOCK_BUSY if busy, other value if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_tryWrite(
     ut_rwmutex mutex);
 
@@ -282,7 +282,7 @@ int ut_rwmutex_tryWrite(
  * @param mutex Mutex to unlock.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_unlock(
     ut_rwmutex mutex);
 
@@ -291,7 +291,7 @@ int ut_rwmutex_unlock(
  * @param mutex Mutex to free.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rwmutex_free(
     ut_rwmutex mutex);
 
@@ -305,7 +305,7 @@ int ut_rwmutex_free(
  * @param cond Pointer to uninitialized ut_cond_s structure.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_cond_new(
     struct ut_cond_s *cond);
 
@@ -314,7 +314,7 @@ int ut_cond_new(
  * @param cond Pointer to initialized condition variable.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_cond_signal(
     ut_cond cond);
 
@@ -323,7 +323,7 @@ int ut_cond_signal(
  * @param cond Pointer to initialized condition variable.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_cond_broadcast(
     ut_cond cond);
 
@@ -332,7 +332,7 @@ int ut_cond_broadcast(
  * @param cond Pointer to initialized condition variable.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_cond_wait(
     ut_cond cond,
     ut_mutex mutex);
@@ -342,7 +342,7 @@ int ut_cond_wait(
  * @param mutex Pointer to initialized ut_cond_s structure.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_cond_free(
     ut_cond cond);
 
@@ -354,7 +354,7 @@ int ut_cond_free(
  * @param initValue Initial value of semaphore.
  * @return Handle to new semaphore. NULL if failed.
  */
-UT_EXPORT
+UT_API
 ut_sem ut_sem_new(
     unsigned int initValue);
 
@@ -363,7 +363,7 @@ ut_sem ut_sem_new(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_sem_post(
     ut_sem sem);
 
@@ -372,7 +372,7 @@ int ut_sem_post(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_sem_wait(
     ut_sem sem);
 
@@ -381,7 +381,7 @@ int ut_sem_wait(
  * @param sem Handle to semaphore.
  * @return 0 if success, UT_LOCK_BUSY if empty, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_sem_tryWait(
     ut_sem sem);
 
@@ -390,7 +390,7 @@ int ut_sem_tryWait(
  * @param sem Handle to semaphore.
  * @return Value of current semaphore.
  */
-UT_EXPORT
+UT_API
 int ut_sem_value(
     ut_sem sem);
 
@@ -399,7 +399,7 @@ int ut_sem_value(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_sem_free(
     ut_sem sem);
 
@@ -415,7 +415,7 @@ int ut_sem_free(
  * @param count Value to increment.
  * @return Value after incrementing.
  */
-UT_EXPORT
+UT_API
 int ut_ainc(
     int* count);
 
@@ -427,7 +427,7 @@ int ut_ainc(
  * @param count Value to decrement.
  * @return Value after decrementing.
  */
-UT_EXPORT
+UT_API
 int ut_adec(
     int* count);
 

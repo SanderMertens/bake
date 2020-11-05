@@ -44,7 +44,7 @@ extern "C" {
  * @param fmt printf-style format string for building the directory name.
  * @return zero when success, non-zero when failed.
  */
-UT_EXPORT
+UT_API
 int ut_mkdir(
     const char *fmt,
     ...);
@@ -56,7 +56,7 @@ int ut_mkdir(
  * @param name The name of the directory to open.
  * @return Linked list that contains the files in the directory.
  */
-UT_EXPORT
+UT_API
 ut_ll ut_opendir(
     const char *name);
 
@@ -64,7 +64,7 @@ ut_ll ut_opendir(
  *
  * @param dir Linked list returned by ut_opendir.
  */
-UT_EXPORT
+UT_API
 void ut_closedir(
     ut_ll dir);
 
@@ -76,7 +76,7 @@ void ut_closedir(
  * @param iter_out Iterator to contents in directory.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int16_t ut_dir_iter(
     const char *name,
     const char *filter,
@@ -87,7 +87,7 @@ int16_t ut_dir_iter(
  * @param name The name of the directory to check.
  * @return true if empty, false if not.
  */
-UT_EXPORT
+UT_API
 bool ut_dir_isEmpty(
     const char *name);
 
@@ -105,7 +105,7 @@ typedef void* ut_dirstack;
  * @param dir Directory to be pushed to stack.
  * @return Stack object if success, NULL if failed.
  */
-UT_EXPORT
+UT_API
 ut_dirstack ut_dirstack_push(
     ut_dirstack stack,
     const char *dir);
@@ -119,7 +119,7 @@ ut_dirstack ut_dirstack_push(
  * @param stack A stack object as returned by ut_dirstack_push.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 void ut_dirstack_pop(
     ut_dirstack stack);
 
@@ -128,7 +128,7 @@ void ut_dirstack_pop(
  * @param stack A stack object as returned by ut_dirstack_push.
  * @return Relative path. This value does not need to be freed.
  */
-UT_EXPORT
+UT_API
 const char* ut_dirstack_wd(
     ut_dirstack stack);
 
@@ -137,7 +137,7 @@ const char* ut_dirstack_wd(
  * @param name Name of the file.
  * @return zero if success, non-zero if failed
  */
-UT_EXPORT
+UT_API
 int ut_touch(
     const char *name);
 
@@ -145,14 +145,14 @@ int ut_touch(
  *
  * @return NULL if failed, an internal buffer set to current working directory otherwise
  */
-UT_EXPORT
+UT_API
 char* ut_cwd(void);
 
 /** Change working directory.
  *
  * @return zero if success, non-zero if failed
  */
-UT_EXPORT
+UT_API
 int ut_chdir(
     const char *name);
 
@@ -163,7 +163,7 @@ int ut_chdir(
  * @param destination Destination file.
  * @return zero if success, non-zero if failed
  */
-UT_EXPORT
+UT_API
 int16_t ut_cp(
     const char *source,
     const char *destination);
@@ -176,7 +176,7 @@ int16_t ut_cp(
  * @param newname Name of the link.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_symlink(
     const char *oldname,
     const char *newname);
@@ -190,7 +190,7 @@ int ut_symlink(
  * @param perm Integer indicating the permissions to set.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int16_t ut_setperm(
     const char *name,
     int perm);
@@ -202,7 +202,7 @@ int16_t ut_setperm(
  * @param perm_out Integer specifying the permissions of the file.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int16_t ut_getperm(
     const char *name,
     int *perm_out);
@@ -212,7 +212,7 @@ int16_t ut_getperm(
  * @param name Name to test.
  * @return true if a directory, false if a regular file.
  */
-UT_EXPORT
+UT_API
 bool ut_isdir(
     const char *name);
 
@@ -222,7 +222,7 @@ bool ut_isdir(
  * @param newName New filename.
  * @return 0 if success, non-zero if failed
  */
-UT_EXPORT
+UT_API
 int ut_rename(
     const char *oldName,
     const char *newName);
@@ -233,7 +233,7 @@ int ut_rename(
  * @param name Name of file to remove.
  * @return 0 if success, non-zero if failed
  */
-UT_EXPORT
+UT_API
 int ut_rm(
     const char *name);
 
@@ -242,7 +242,7 @@ int ut_rm(
  * @param name Name of directory to remove.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_rmtree(
     const char *name);
 
@@ -250,7 +250,7 @@ int ut_rmtree(
  *
  * @param name Name of the file.
  */
-UT_EXPORT
+UT_API
 time_t ut_lastmodified(
     const char *name);
 

@@ -38,26 +38,26 @@ typedef enum ut_version_kind {
     UT_VERSION_PATCH = 3
 } ut_version_kind;
 
-UT_EXPORT
+UT_API
 int16_t ut_version_parse(
     const char *version_string,
     ut_version *version_out);
 
-UT_EXPORT
+UT_API
 char *ut_version_str(
     ut_version *version);
 
-UT_EXPORT
+UT_API
 int ut_version_cmp(
     ut_version *v1,
     ut_version *v2);
 
-UT_EXPORT
+UT_API
 int ut_version_strcmp(
     const char *v1,
     const char *v2);
 
-UT_EXPORT
+UT_API
 char* ut_version_inc(
     const char *old_version,
     ut_version_kind kind);

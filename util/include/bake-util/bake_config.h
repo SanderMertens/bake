@@ -27,13 +27,13 @@
 
 /* Convenience macro for exporting symbols */
 #if BAKE_UTIL_IMPL && defined _MSC_VER
-#define BAKE_UTIL_EXPORT __declspec(dllexport)
+#define BAKE_UTIL_API __declspec(dllexport)
 #elif BAKE_UTIL_IMPL
-#define BAKE_UTIL_EXPORT __attribute__((__visibility__("default")))
+#define BAKE_UTIL_API __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
-#define BAKE_UTIL_EXPORT __declspec(dllimport)
+#define BAKE_UTIL_API __declspec(dllimport)
 #else
-#define BAKE_UTIL_EXPORT
+#define BAKE_UTIL_API
 #endif
 
 #endif

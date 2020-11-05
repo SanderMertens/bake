@@ -31,16 +31,16 @@
 /* Convenience macro for exporting symbols */
 #ifndef EXAMPLES_C_PKG_CLIB_STATIC
   #if EXAMPLES_C_PKG_CLIB_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))
-    #define EXAMPLES_C_PKG_CLIB_EXPORT __declspec(dllexport)
+    #define EXAMPLES_C_PKG_CLIB_API __declspec(dllexport)
   #elif EXAMPLES_C_PKG_CLIB_IMPL
-    #define EXAMPLES_C_PKG_CLIB_EXPORT __attribute__((__visibility__("default")))
+    #define EXAMPLES_C_PKG_CLIB_API __attribute__((__visibility__("default")))
   #elif defined _MSC_VER
-    #define EXAMPLES_C_PKG_CLIB_EXPORT __declspec(dllimport)
+    #define EXAMPLES_C_PKG_CLIB_API __declspec(dllimport)
   #else
-    #define EXAMPLES_C_PKG_CLIB_EXPORT
+    #define EXAMPLES_C_PKG_CLIB_API
   #endif
 #else
-  #define EXAMPLES_C_PKG_CLIB_EXPORT
+  #define EXAMPLES_C_PKG_CLIB_API
 #endif
 
 #endif

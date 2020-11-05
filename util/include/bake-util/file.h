@@ -38,7 +38,7 @@ extern "C" {
  * @param file The file to load.
  * @return A string that contains the file contents. Must be deallocated with free.
  */
-UT_EXPORT
+UT_API
 FILE* ut_file_open(
     const char* file,
     const char* mode);
@@ -48,7 +48,7 @@ FILE* ut_file_open(
  * @param file The file to load.
  * @return A string that contains the file contents. Must be deallocated with free.
  */
-UT_EXPORT
+UT_API
 char* ut_file_load(
     const char* file);
 
@@ -58,7 +58,7 @@ char* ut_file_load(
  * @param iter_out out parameter for the iterator.
  * @return 0 if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int16_t ut_file_iter(
     char *filename,
     ut_iter *iter_out);
@@ -68,7 +68,7 @@ int16_t ut_file_iter(
  * @param filefmt A printf-style format specifier that describes the file to test.
  * @return 1 if file exists, 0 if doesn't exist, -1 if an error occurred.
  */
-UT_EXPORT
+UT_API
 int16_t ut_file_test(
     const char* filefmt,
     ...);
@@ -78,7 +78,7 @@ int16_t ut_file_test(
  * @param file The file for which to calculate the size.
  * @return The size of the file.
  */
-UT_EXPORT
+UT_API
 unsigned int ut_file_size(
     FILE* file);
 
@@ -89,7 +89,7 @@ unsigned int ut_file_size(
  * @param length The size of the buffer.
  * @return The buffer pointer if success.
  */
-UT_EXPORT
+UT_API
 char* ut_file_readln(
     FILE* file,
     char* buf,
@@ -101,7 +101,7 @@ char* ut_file_readln(
  * @param buf The buffer in which to store the extension.
  * @return The buffer pointer if success.
  */
-UT_EXPORT
+UT_API
 char* ut_file_extension(
     const char* file, 
     char* buf);
@@ -112,7 +112,7 @@ char* ut_file_extension(
  * @param buf The buffer in which to store the path.
  * @return The buffer pointer if success.
  */
-UT_EXPORT
+UT_API
 char* ut_file_path(
     char* file,
     char* buf);
@@ -123,7 +123,7 @@ char* ut_file_path(
  * @param buf The buffer in which to store the base filename.
  * @return The buffer pointer if success.
  */
-UT_EXPORT
+UT_API
 char* ut_file_base(
     char* file,
     char* buf);

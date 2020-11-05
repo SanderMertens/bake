@@ -81,8 +81,8 @@ static bool UT_LOG_USE_COLORS = true;
 /* Maximum stacktrace */
 #define BACKTRACE_DEPTH 60
 
-UT_EXPORT char* ut_backtraceString(void);
-UT_EXPORT void ut_printBacktrace(FILE* f, int nEntries, char** symbols);
+UT_API char* ut_backtraceString(void);
+UT_API void ut_printBacktrace(FILE* f, int nEntries, char** symbols);
 
 /* One frame for each function where ut_throw is called */
 typedef struct ut_log_codeframe {

@@ -371,7 +371,7 @@ void init(
     }
 }
 
-BAKE_TEST_EXPORT
+BAKE_TEST_API
 int bakemain(bake_driver_api *driver) 
 {
     ut_init("bake.test");

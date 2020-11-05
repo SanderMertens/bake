@@ -44,7 +44,7 @@ extern "C" {
  * @return The path. If buffer is NULL, the returned string is not owned by the application. Otherwise, buffer is returned.
  * @see ut_idof ut_fullname ut_path ut_pathname
  */
-UT_EXPORT
+UT_API
 char* ut_path_clean(
     char *buf,
     char *path);
@@ -54,13 +54,13 @@ char* ut_path_clean(
  * @param path The input path.
  * @return The directory name from the specified path. Needs to be deallocated.
  */
-UT_EXPORT
+UT_API
 char* ut_path_dirname(
     const char *path);
 
 
 /** Turn package id into path in place */
-UT_EXPORT
+UT_API
 void ut_package_to_path(
     char *package);
 
@@ -78,21 +78,21 @@ void ut_package_to_path(
  * @return The number of elements in the array.
  * @see ut_idof ut_fullname ut_path ut_pathname
  */
-UT_EXPORT
+UT_API
 int32_t ut_pathToArray(
     char *path,
     const char *elements[],
     char *sep);
 
 /* Walk tokens in a path */
-UT_EXPORT
+UT_API
 char *ut_path_tok(
     char **id_ptr_ptr,
     char **parent_id,
     char *full_id);
 
 /* Construct path from parent and id */
-UT_EXPORT
+UT_API
 void ut_path_combine(
     char *full_id,
     const char *parent,
@@ -129,7 +129,7 @@ void ut_path_combine(
  * The function is O(n+m), where n is the length of from and m is the length of
  * to.
  */
-UT_EXPORT
+UT_API
 void ut_path_offset(
     char *out,
     const char *from,
@@ -138,7 +138,7 @@ void ut_path_offset(
     bool travel);
 
 /* Test if provided path is relative */
-UT_EXPORT
+UT_API
 bool ut_path_is_relative(
     const char *path);
 

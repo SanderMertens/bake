@@ -31,16 +31,16 @@
 /* Convenience macro for exporting symbols */
 #ifndef EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_STATIC
   #if EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))
-    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_EXPORT __declspec(dllexport)
+    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_API __declspec(dllexport)
   #elif EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_IMPL
-    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_EXPORT __attribute__((__visibility__("default")))
+    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_API __attribute__((__visibility__("default")))
   #elif defined _MSC_VER
-    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_EXPORT __declspec(dllimport)
+    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_API __declspec(dllimport)
   #else
-    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_EXPORT
+    #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_API
   #endif
 #else
-  #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_EXPORT
+  #define EXAMPLES_C_PKG_DEPENDENCY_PRIVATE_API
 #endif
 
 #endif

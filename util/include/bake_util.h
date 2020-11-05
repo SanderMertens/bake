@@ -28,13 +28,13 @@
 #define UT_BASE_H
 
 #if UT_IMPL && defined _MSC_VER
-#define UT_EXPORT __declspec(dllexport)
+#define UT_API __declspec(dllexport)
 #elif UT_IMPL
-#define UT_EXPORT __attribute__((__visibility__("default")))
+#define UT_API __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
-#define UT_EXPORT __declspec(dllimport)
+#define UT_API __declspec(dllimport)
 #else
-#define UT_EXPORT
+#define UT_API
 #endif
 
 #ifndef __ANDROID__
@@ -245,20 +245,20 @@ struct jsw_rbtrav {
 };
 
 /* Global variables */
-UT_EXPORT 
+UT_API 
 extern int8_t UT_APP_STATUS;
 
-UT_EXPORT 
+UT_API 
 extern int8_t UT_LOG_BACKTRACE;
 
-UT_EXPORT
+UT_API
 void ut_init(
     const char *appName);
 
-UT_EXPORT
+UT_API
 void ut_deinit(void);
 
-UT_EXPORT
+UT_API
 const char* ut_appname();
 
 #ifdef __cplusplus

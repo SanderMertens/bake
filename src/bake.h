@@ -75,6 +75,9 @@ int16_t bake_config_load(
     const char *env_id,
     bool load_bundles);
 
+void bake_config_log(
+    bake_config *cfg);
+
 /** Export variable to bake configuration */
 int16_t bake_config_export(
     bake_config *cfg,

@@ -38,9 +38,13 @@ bool build = true;
 bool test = false;
 bool local_setup = false;
 bool load_bundles = false;
+
+/* Override configuration */
 bool strict = false;
 bool optimize = false;
 bool loop_test = false;
+bool assembly = false;
+
 bool is_test = false;
 bool to_env = false;
 bool always_clone = false;
@@ -78,11 +82,13 @@ bool show_repositories = false;
                 if (!strcmp(&argv[i][2], long ? long : "")) {\
                     action;\
                     parsed = true;\
+                    continue;\
                 }\
             } else {\
-                if (short && argv[i][1] == short) {\
+                if (short && argv[i][1] == short && (argv[i][2] == ' ' || argv[i][2] == '\0')) {\
                     action;\
                     parsed = true;\
+                    continue;\
                 }\
             }\
         }\
@@ -280,18 +286,19 @@ int bake_parse_args(
     int argc,
     const char *argv[])
 {
-    int i = 1;
     bool action_set = false;
 
-    for (; i < argc; i ++) {
+    int i;
+    for (i = 1; i < argc; i ++) {
         if (argv[i][0] == '-') {
             bool parsed = false;
 
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
-            ARG(0, "strict", strict = true;);
-            ARG(0, "optimize", optimize = true; i ++);
-            ARG(0, "loop-test", loop_test = true);
+            ARG(0, "strict", strict = true );
+            ARG(0, "optimize", optimize = true );
+            ARG(0, "loop-test", loop_test = true );
+            ARG(0, "assembly", assembly = true );
 
             ARG(0, "trace", ut_log_verbositySet(UT_TRACE));
             ARG(0, "debug", ut_log_verbositySet(UT_DEBUG));
@@ -1419,11 +1426,16 @@ int main(int argc, const char *argv[]) {
     if (loop_test) {
         config.loop_test = true;
     }
+    if (assembly) {
+        config.assembly = true;
+    }
     if (fast_build) {
         config.coverage = false;
         config.sanitize_memory = false;
         config.sanitize_undefined = false;
     }
+
+    bake_config_log(&config);
 
 #ifndef UT_OS_WINDOWS
     if (is_bake_parent) {

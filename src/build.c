@@ -92,6 +92,11 @@ int bake_do_build_intern(
         return 0;
     }
 
+    /* If generating assembly code, always build the code */
+    if (config->assembly) {
+        rebuild = true;
+    }
+
     /* If any of the steps invoke bake, they may invoke the bake script, which
      * can reset the LD_LIBRARY_PATH environment variable. Setting this variable
      * to false will cause bake to fork itself again after the environment is
@@ -157,12 +162,13 @@ int bake_do_build_intern(
 
     /* Step 12: postbuild step */
     ut_log_push("postbuild");
-    ut_try (bake_project_postbuild(config, project), NULL);
+    if (!config->assembly)
+        ut_try (bake_project_postbuild(config, project), NULL);
     ut_log_pop();
 
     /* Step 13: install binary to environment */
     ut_log_push("install-postbuild");
-    if (project->public && project->artefact)
+    if (project->public && project->artefact && !config->assembly)
         ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
 

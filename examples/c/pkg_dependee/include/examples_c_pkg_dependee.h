@@ -4,7 +4,7 @@
 /* This generated file contains includes for project dependencies */
 #include "examples-c-pkg_dependee/bake_config.h"
 
-EXAMPLES_C_PKG_DEPENDEE_EXPORT
+EXAMPLES_C_PKG_DEPENDEE_API
 void pkg_dependee();
 
 #endif

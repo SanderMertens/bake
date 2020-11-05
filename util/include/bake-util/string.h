@@ -39,7 +39,7 @@ extern "C" {
  * @param str2 Second string to compare
  * @return -1 if first unmatched character is smaller, 1 if larger and 0 if strings are equal.
  */
-UT_EXPORT
+UT_API
 int stricmp(
     const char *str1,
     const char *str2);
@@ -51,7 +51,7 @@ int stricmp(
  * @param str2 Second string to compare
  * @return -1 if first unmatched character is smaller, 1 if larger and 0 if strings are equal.
  */
-UT_EXPORT
+UT_API
 int strnicmp(
     const char *str1,
     int length,
@@ -69,7 +69,7 @@ int strnicmp(
  * @param tok Character used to separate tokens.
  * @return -1 if first unmatched character is smaller, 1 if larger and 0 if strings are equal.
  */
-UT_EXPORT
+UT_API
 int tokicmp(
     char ** const str_out,
     const char *str2,
@@ -87,7 +87,7 @@ int idcmp(
  * @param fmt printf-compatible format specifier.
  * @return Source string. Pointer of source string may have changed as this function uses realloc.
  */
-UT_EXPORT
+UT_API
 char *strappend(
     char *src,
     const char *fmt, ...);
@@ -104,7 +104,7 @@ char *strappend(
  * @param in A string containing a (optionally escaped) character.
  * @return -1 if failed, parsed character if success
  */
-UT_EXPORT
+UT_API
 const char* chrparse(
     const char *in,
     char *out);
@@ -119,7 +119,7 @@ const char* chrparse(
  * @param delimiter Custom escapable character.
  * @return Next writable location in out string.
  */
-UT_EXPORT
+UT_API
 char *chresc(
     char *out,
     char in,
@@ -137,7 +137,7 @@ char *chresc(
  * @param in Input string.
  * @return Number of characters written in output string.
  */
-UT_EXPORT
+UT_API
 size_t stresc(
     char *out,
     size_t n,
@@ -149,7 +149,7 @@ size_t stresc(
  * @param out Output string.
  * @param str Input string.
  */
-UT_EXPORT
+UT_API
 void ut_strset(
     char **out,
     const char *str);
@@ -164,7 +164,7 @@ void ut_strset(
  * @return String formatted according to input. Does not need to be deallocated. The value will be
  * overwritten when function is called more than UT_MAX_TLS_STRINGS times in a thread.
  */
-UT_EXPORT
+UT_API
 char* strarg(
     const char *fmt,
     ...);
@@ -176,7 +176,7 @@ char* strarg(
  * @param str Input string.
  * @return The next element when a '/' was found, otherwise NULL.
  */
-UT_EXPORT
+UT_API
 const char *strelem(
     const char *str);
 
@@ -185,7 +185,7 @@ const char *strelem(
  * @param str String to convert.
  * @return Input string.
  */
-UT_EXPORT
+UT_API
 char* strupper(
     char *str);
 
@@ -194,7 +194,7 @@ char* strupper(
  * @param str String to convert.
  * @return Input string.
  */
-UT_EXPORT
+UT_API
 char* strlower(
     char *str);
 
@@ -203,7 +203,7 @@ char* strlower(
  * @param str Input string.
  * @return Duplicated string.
  */
-UT_EXPORT
+UT_API
 char* ut_strdup(
     const char* str);
 
@@ -212,7 +212,7 @@ char* ut_strdup(
  * @param fmt printf-style format specifier.
  * @return Newly allocated formatted string.
  */
-UT_EXPORT
+UT_API
 char* ut_asprintf (
     const char *fmt, ...);
 
@@ -222,7 +222,7 @@ char* ut_asprintf (
  * @args variable argument list.
  * @return Newly allocated formatted string.
  */
-UT_EXPORT
+UT_API
 char* ut_vasprintf (
     const char *fmt,
     va_list args);
@@ -234,7 +234,7 @@ char* ut_vasprintf (
  * @param with String to replace with.
  * @return Newly allocated string with all instances of 'replace' replaced.
  */
-UT_EXPORT
+UT_API
 char* strreplace(
     char *str,
     char *replace,
@@ -245,7 +245,7 @@ char* strreplace(
  * @param str Input string.
  * @param length Input string length
  */
-UT_EXPORT
+UT_API
 void strreverse(
     char *str,
     int length);

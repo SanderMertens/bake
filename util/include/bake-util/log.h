@@ -94,7 +94,7 @@ typedef enum ut_log_verbosity {
  * The verbosity level is the same for all threads.
  * @param verbosity Verbosity level.
  */
-UT_EXPORT
+UT_API
 ut_log_verbosity ut_log_verbositySet(
     ut_log_verbosity verbosity);
 
@@ -102,7 +102,7 @@ ut_log_verbosity ut_log_verbositySet(
  * The verbosity level is the same for all threads.
  * @return The current verbosity level.
  */
-UT_EXPORT
+UT_API
 ut_log_verbosity ut_log_verbosityGet(void);
 
 /** Set verbosity depth.
@@ -115,14 +115,14 @@ ut_log_verbosity ut_log_verbosityGet(void);
  *
  * @param verbosity Verbosity depth.
  */
-UT_EXPORT
+UT_API
 int ut_log_verbositySetDepth(
     int depth);
 
 
 /** Enable or disable colors.
  */
-UT_EXPORT
+UT_API
 bool ut_log_useColors(
     bool enable);
 
@@ -130,7 +130,7 @@ bool ut_log_useColors(
  *
  * When profiling is enabled, categories will always be printed to the console.
  */
-UT_EXPORT
+UT_API
 bool ut_log_profile(
     bool enable);
 
@@ -158,11 +158,11 @@ bool ut_log_profile(
  *
  * @param fmt Format used for logging.
  */
-UT_EXPORT
+UT_API
 void ut_log_fmt(
     char *fmt);
 
-UT_EXPORT
+UT_API
 const char* ut_log_fmtGet(void);
 
 /* -- Pushing/popping logging categories -- */
@@ -172,7 +172,7 @@ const char* ut_log_fmtGet(void);
  * @param category Identifier of category.
  * @return Zero if success, non-zero if failed (max number of categories pushed).
  */
-UT_EXPORT
+UT_API
 int _ut_log_push(
     char const *file,
     unsigned int line,
@@ -181,7 +181,7 @@ int _ut_log_push(
 
 /** Pop a category from the category stack.
  */
-UT_EXPORT
+UT_API
 void _ut_log_pop(
     char const *file,
     unsigned int line,
@@ -190,7 +190,7 @@ void _ut_log_pop(
 /** Embed categories in logmessage or print them on push/pop
  *
  */
-UT_EXPORT
+UT_API
 void ut_log_embedCategories(
     bool embed);
 
@@ -206,7 +206,7 @@ typedef void (*ut_log_handler_cb)(
  * @param context Generic value that will be passed to handler.
  * @return Handler object that can be used to unregister callback.
  */
-UT_EXPORT
+UT_API
 void ut_log_handlerRegister(
     ut_log_handler_cb callback,
     void *context);
@@ -215,7 +215,7 @@ void ut_log_handlerRegister(
  *
  * @return true if handlers are registered, otherwise false.
  */
-UT_EXPORT
+UT_API
 bool ut_log_handlerRegistered(void);
 
 
@@ -229,7 +229,7 @@ bool ut_log_handlerRegistered(void);
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_debug(
     char const *file,
     unsigned int line,
@@ -244,7 +244,7 @@ void _ut_debug(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_trace(
     char const *file,
     unsigned int line,
@@ -259,7 +259,7 @@ void _ut_trace(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_info(
     char const *file,
     unsigned int line,
@@ -274,7 +274,7 @@ void _ut_info(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_ok(
     char const *file,
     unsigned int line,
@@ -289,7 +289,7 @@ void _ut_ok(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_warning(
     char const *file,
     unsigned int line,
@@ -304,7 +304,7 @@ void _ut_warning(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_error(
     char const *file,
     unsigned int line,
@@ -325,7 +325,7 @@ void _ut_error(
  * @param fmt A printf-style format string.
  * @param condition A condition to evaluate. When false, the process aborts.
  */
-UT_EXPORT
+UT_API
 void _ut_assert(
     char const *file,
     unsigned int line,
@@ -343,7 +343,7 @@ void _ut_assert(
  *
  * @param fmt A printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_critical(
     char const *file,
     unsigned int line,
@@ -352,7 +352,7 @@ void _ut_critical(
     ...);
 
 /** Overwrite log if below configured verbosity. */
-UT_EXPORT
+UT_API
 void _ut_log_overwrite(
     char const *file,
     unsigned int line,
@@ -362,7 +362,7 @@ void _ut_log_overwrite(
     ...);
 
 /** As ut_debug, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_debugv(
     char const *file,
     unsigned int line,
@@ -371,7 +371,7 @@ void ut_debugv(
     va_list args);
 
 /** As ut_trace, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_tracev(
     char const *file,
     unsigned int line,
@@ -380,7 +380,7 @@ void ut_tracev(
     va_list args);
 
 /** As ut_info, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_infov(
     char const *file,
     unsigned int line,
@@ -389,7 +389,7 @@ void ut_infov(
     va_list args);
 
 /** As ut_ok, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_okv(
     char const *file,
     unsigned int line,
@@ -398,7 +398,7 @@ void ut_okv(
     va_list args);
 
 /** As ut_warning, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_warningv(
     char const *file,
     unsigned int line,
@@ -407,7 +407,7 @@ void ut_warningv(
     va_list args);
 
 /** As ut_error, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_errorv(
     char const *file,
     unsigned int line,
@@ -416,7 +416,7 @@ void ut_errorv(
     va_list args);
 
 /** As ut_assert, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void _ut_assertv(
     char const *file,
     unsigned int line,
@@ -425,7 +425,7 @@ void _ut_assertv(
     va_list args);
 
 /** As ut_critical, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_criticalv(
     char const *file,
     unsigned int line,
@@ -446,7 +446,7 @@ void ut_criticalv(
  *
  * @param fmt printf-style format string.
  */
-UT_EXPORT
+UT_API
 void _ut_throw(
     char const *file,
     unsigned int line,
@@ -454,7 +454,7 @@ void _ut_throw(
     const char *fmt,
     ...);
 
-UT_EXPORT
+UT_API
 void _ut_throw_fallback(
     char const *file,
     unsigned int line,
@@ -463,7 +463,7 @@ void _ut_throw_fallback(
     ...);
 
 /* As ut_throw, but with va_list parameter. */
-UT_EXPORT
+UT_API
 void ut_throwv(
     char const *file,
     unsigned int line,
@@ -472,7 +472,7 @@ void ut_throwv(
     va_list args);
 
 /** Add details to an exception */
-UT_EXPORT
+UT_API
 void ut_throw_detail(
     const char *fmt,
     ...);
@@ -482,23 +482,23 @@ void ut_throw_detail(
  *
  * @return true if an exception was catched.
  */
-UT_EXPORT
+UT_API
 bool ut_catch(void);
 
 /** Check if exception was raised.
  * @return true if an exception was raised.
  */
-UT_EXPORT
+UT_API
 bool ut_raised(void);
 
 /** Raise an exception.
  */
-UT_EXPORT
+UT_API
 bool ut_raise(void);
 
 /** Raise an exception, add prefix to error messages.
  */
-UT_EXPORT
+UT_API
 bool ut_raise_ext(
     const char *log_fmt,
     const char *prefix_fmt, ...);
@@ -510,7 +510,7 @@ bool ut_raise_ext(
 
 /** Check for unraised exceptions (internal usage).
  */
-UT_EXPORT
+UT_API
 bool __ut_raise_check(void);
 
 typedef enum ut_log_exceptionAction {
@@ -521,7 +521,7 @@ typedef enum ut_log_exceptionAction {
 
 /** Specify what to do when exception is raised.
  */
-UT_EXPORT
+UT_API
 ut_log_exceptionAction ut_log_setExceptionAction(
     ut_log_exceptionAction action);
 
@@ -531,10 +531,10 @@ ut_log_exceptionAction ut_log_setExceptionAction(
  * is does not necessarily indicate an error. The framework will not report a
  * warning when this information is not viewed.
  */
-UT_EXPORT void ut_setinfo(char *fmt, ...);
+UT_API void ut_setinfo(char *fmt, ...);
 
 /** Retrieve last propagated information. */
-UT_EXPORT
+UT_API
 char* ut_lastinfo(void);
 
 /* -- Print stacktraces -- */
@@ -543,20 +543,20 @@ char* ut_lastinfo(void);
  *
  * @param f The file to which to print the stacktrace.
  */
-UT_EXPORT
+UT_API
 void ut_backtrace(
     FILE* f);
 
 
 /* Stub */
-UT_EXPORT
+UT_API
 char *ut_lasterr();
 
 /* -- Utilities -- */
-UT_EXPORT
+UT_API
 void ut_log(char *str, ...);
 
-UT_EXPORT
+UT_API
 void ut_log_tail(char *str, ...);
 
 int16_t ut_log_init(void);

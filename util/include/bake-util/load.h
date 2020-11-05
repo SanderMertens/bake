@@ -92,7 +92,7 @@ extern char *UT_LIB_PREFIX;
  * @return Zero if success, nonzero if failed.
  * @see ut_locate ut_load_register
  */
-UT_EXPORT
+UT_API
 int ut_use(
     const char *identifier,
     int argc,
@@ -108,7 +108,7 @@ int ut_use(
  * @return Zero if success, nonzero if failed.
  * @see ut_locate ut_load_register
  */
-UT_EXPORT
+UT_API
 int ut_run(
     const char *identifier,
     int argc,
@@ -158,19 +158,19 @@ typedef enum ut_locate_kind {
  * @param kind Specify which information should be obtained from package.
  * @return The requested information.
  */
-UT_EXPORT
+UT_API
 const char* ut_locate(
     const char *package,
     ut_dl *dl_out,
     ut_locate_kind kind);
 
 /** Test if package is part of the build toolchain */
-UT_EXPORT
+UT_API
 bool ut_project_is_buildtool(
     const char *id);
 
 /** Test if package is available for config */
-UT_EXPORT
+UT_API
 bool ut_project_in_config(
     const char *id,
     const char *cfg);
@@ -193,7 +193,7 @@ bool ut_project_in_config(
  *
  * @param package The package identifier.
  */
-UT_EXPORT
+UT_API
 void ut_locate_reset(
     const char *package);
 
@@ -212,13 +212,13 @@ void ut_locate_reset(
  *
  * The symbol must point to a global symbol. Different platforms have different
  * rules for which symbols are made visible. If using a corto package, you can
- * use the <package name>_EXPORT macro to make symbols globally visible.
+ * use the <package name>_API macro to make symbols globally visible.
  *
  * @param package A logical package identifier.
  * @param dl_out Cached pointer to library to avoid doing repeated `ut_lookup`'s
  * @param symbol Name of the symbol to lookup.
  */
-UT_EXPORT
+UT_API
 void* ut_load_sym(
     const char *package,
     ut_dl *dl_out,
@@ -228,7 +228,7 @@ void* ut_load_sym(
  *
  * @see ut_load_sym
  */
-UT_EXPORT
+UT_API
 void (*ut_load_proc(
     const char *package,
     ut_dl *dl_out,
@@ -257,21 +257,21 @@ void (*ut_load_proc(
  * @param userData Data passed to the callback.
  * @return Zero if success, non-zero if failed.
  */
-UT_EXPORT
+UT_API
 int ut_load_register(
     char *ext,
     ut_load_cb action,
     void* userData);
 
 /* Internal function for initializing paths in loader */
-UT_EXPORT
+UT_API
 int16_t ut_load_init(
     const char *home,
     const char *arch,
     const char *os,
     const char *config);
 
-UT_EXPORT
+UT_API
 void ut_load_deinit(void);
 
 #ifdef __cplusplus

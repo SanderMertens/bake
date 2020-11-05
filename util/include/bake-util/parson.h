@@ -110,12 +110,12 @@ JSON_Status json_validate(const JSON_Value *schema, const JSON_Value *value);
 /*
  * JSON Object
  */
-UT_EXPORT JSON_Value  * json_object_get_value  (const JSON_Object *object, const char *name);
-UT_EXPORT const char  * json_object_get_string (const JSON_Object *object, const char *name);
-UT_EXPORT JSON_Object * json_object_get_object (const JSON_Object *object, const char *name);
-UT_EXPORT JSON_Array  * json_object_get_array  (const JSON_Object *object, const char *name);
-UT_EXPORT double        json_object_get_number (const JSON_Object *object, const char *name); /* returns 0 on fail */
-UT_EXPORT int           json_object_get_boolean(const JSON_Object *object, const char *name); /* returns -1 on fail */
+UT_API JSON_Value  * json_object_get_value  (const JSON_Object *object, const char *name);
+UT_API const char  * json_object_get_string (const JSON_Object *object, const char *name);
+UT_API JSON_Object * json_object_get_object (const JSON_Object *object, const char *name);
+UT_API JSON_Array  * json_object_get_array  (const JSON_Object *object, const char *name);
+UT_API double        json_object_get_number (const JSON_Object *object, const char *name); /* returns 0 on fail */
+UT_API int           json_object_get_boolean(const JSON_Object *object, const char *name); /* returns -1 on fail */
 
 /* dotget functions enable addressing values with dot notation in nested objects,
  just like in structs or c++/java/c# objects (e.g. objectA.objectB.value).
@@ -170,14 +170,14 @@ JSON_Status json_object_clear(JSON_Object *object);
 /*
  *JSON Array
  */
-UT_EXPORT JSON_Value  * json_array_get_value  (const JSON_Array *array, size_t index);
-UT_EXPORT const char  * json_array_get_string (const JSON_Array *array, size_t index);
-UT_EXPORT JSON_Object * json_array_get_object (const JSON_Array *array, size_t index);
-UT_EXPORT JSON_Array  * json_array_get_array  (const JSON_Array *array, size_t index);
-UT_EXPORT double        json_array_get_number (const JSON_Array *array, size_t index); /* returns 0 on fail */
-UT_EXPORT int           json_array_get_boolean(const JSON_Array *array, size_t index); /* returns -1 on fail */
-UT_EXPORT size_t        json_array_get_count  (const JSON_Array *array);
-UT_EXPORT JSON_Value  * json_array_get_wrapping_value(const JSON_Array *array);
+UT_API JSON_Value  * json_array_get_value  (const JSON_Array *array, size_t index);
+UT_API const char  * json_array_get_string (const JSON_Array *array, size_t index);
+UT_API JSON_Object * json_array_get_object (const JSON_Array *array, size_t index);
+UT_API JSON_Array  * json_array_get_array  (const JSON_Array *array, size_t index);
+UT_API double        json_array_get_number (const JSON_Array *array, size_t index); /* returns 0 on fail */
+UT_API int           json_array_get_boolean(const JSON_Array *array, size_t index); /* returns -1 on fail */
+UT_API size_t        json_array_get_count  (const JSON_Array *array);
+UT_API JSON_Value  * json_array_get_wrapping_value(const JSON_Array *array);
 
 /* Frees and removes value at given index, does nothing and returns JSONFailure if index doesn't exist.
  * Order of values in array may change during execution.  */
