@@ -121,6 +121,9 @@ void init(
         driver->set_attr_array("cxxflags", value);
         free(value);
     }
+    if (!driver->get_attr("check_symbols")) {
+        driver->set_attr_bool("check_symbols", true);
+    }
 
     if (!driver->get_attr("export-symbols")) {
         driver->set_attr_bool("export-symbols", false);

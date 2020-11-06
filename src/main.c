@@ -55,6 +55,7 @@ const char *id = NULL;
 bake_project_type type = BAKE_APPLICATION;
 bool private = false;
 bool static_lib = false;
+bool check_symbols = true;
 const char *artefact = NULL;
 const char *includes = NULL;
 const char *language = NULL;
@@ -1387,7 +1388,8 @@ int main(int argc, const char *argv[]) {
         .optimizations = false,
         .coverage = false,
         .strict = false,
-        .static_lib = false
+        .static_lib = false,
+        .check_symbols = true
     };
 
     ut_tls_set(BAKE_CONFIG_KEY, &config);

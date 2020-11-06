@@ -16,6 +16,7 @@ libpath | list[string] | Linker library path
 link | list[string] | List of objects and (static) library files to provide to the linker.
 include | list[string] | List of paths to look for include files
 static | bool | Create static library (packages only, default=false)
+check-symbols | bool | Check symbols presence (packages only, default=true)
 c-standard | string | Specify C standard (default=c99)
 cpp-standard | string | Specify C++ standard (default=c++0x)
 export-symbols | bool | Export all library symbols (default=false)

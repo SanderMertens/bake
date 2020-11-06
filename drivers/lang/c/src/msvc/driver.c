@@ -250,6 +250,7 @@ void link_dynamic_binary(
 
     bool cpp = is_cpp(project);
     bool export_symbols = driver->get_attr_bool("export-symbols");
+    bool check_symbols = driver->get_attr_bool("check-symbols");
 
     ut_strbuf_append(&cmd, "link");
     

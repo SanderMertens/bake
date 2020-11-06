@@ -52,7 +52,6 @@ char *UT_STATIC_LIB_EXT;
 char *UT_EXECUTABLE_EXT;
 char *UT_BIN_EXT;
 char *UT_LIB_EXT;
-char *UT_STATIC_LIB_EXT;
 char *UT_LIB_PREFIX;
 
 /* Lock protecting the package administration */
@@ -63,6 +62,7 @@ struct ut_loaded {
 
     char *lib; /* Path to library (if available) */
     char *static_lib; /* Path to static library (if available) */
+    char *check_symbols; /* Set to false to avoid check library symbols */
     char *app; /* Path to executable (if available) */
     char *bin; /* Path to binary (if available) */
     char *etc; /* Path to project etc (if available) */
@@ -632,6 +632,7 @@ void ut_locate_reset(
             loaded->app = NULL;
             loaded->lib = NULL;
             loaded->static_lib = NULL;
+            loaded->check_symbols = NULL;
 
             loaded->tried_binary = false;
             loaded->tried_locating = false;
@@ -1053,7 +1054,6 @@ int16_t ut_load_init(
     UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
     UT_BIN_EXT = UT_OS_BIN_EXT;
     UT_LIB_EXT = UT_OS_LIB_EXT;
-    UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
     UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
 
     /* Set environment variables */

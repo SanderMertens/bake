@@ -518,6 +518,7 @@ void link_dynamic_binary(
     if (project->type == BAKE_PACKAGE) {
         /* Set symbol visibility */
         bool export_symbols = driver->get_attr_bool("export-symbols");
+        bool check_symbols = driver->get_attr_bool("check-symbols");
         if (!export_symbols) {
             ut_strbuf_appendstr(&cmd, " -fvisibility=hidden");
             hide_symbols = true;
@@ -526,7 +527,7 @@ void link_dynamic_binary(
         ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
 
         /* Fail when symbols are not found in library */
-        if (!is_clang(cpp)) {
+        if (!is_clang(cpp) && check_symbols) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
     }
