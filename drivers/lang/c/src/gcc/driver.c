@@ -154,7 +154,7 @@ void add_flags(
 
     /* This macro is only set for source files of this project, and can be used
      * to exclude header statements for dependencies */
-    char *building_macro = ut_asprintf(" -D%s_APIS", project->id_underscore);
+    char *building_macro = ut_asprintf(" -D%s_EXPORTS", project->id_underscore);
     ut_strbuf_appendstr(cmd, building_macro);
     free(building_macro);
 }
