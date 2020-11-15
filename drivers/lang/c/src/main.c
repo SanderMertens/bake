@@ -405,7 +405,7 @@ void generate(
 
     if (project->use_private && ut_ll_count(project->use_private)) {
         fprintf(f, "\n/* Headers of private dependencies */\n");
-        fprintf(f, "#ifdef %s_API\n", snake_id);
+        fprintf(f, "#ifdef %s_EXPORTS\n", snake_id);
         add_dependency_includes(config, f, project->use_private);
         fprintf(f, "#endif\n");
     }
