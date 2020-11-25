@@ -226,7 +226,7 @@ char *cdiff_skipExtern(
 {
     /* Test if last parsed token was 'extern' */
     if ((ptr - *t_start) == strlen("extern") &&
-        !memcmp(*t_start, "extern", ptr - *t_start))
+        !memcmp(*t_start, "extern", (size_t)(ptr - *t_start)))
     {
         /* If extern is found, it should be part of the header */
         char ch;
@@ -289,7 +289,7 @@ char *cdiff_parseFunction(
 
     /* Copy identifier into buffer */
     if (t_start[0] == '_') t_start++; /* Support legacy files */
-    strncpy(id, t_start, ptr - t_start);
+    strncpy(id, t_start, (size_t)(ptr - t_start));
     id[ptr - t_start] = '\0';
 
     /* Expect ( */
@@ -524,7 +524,7 @@ cdiff_elem* cdiff_file_elemFind(
                 }
 
                 /* Strip _v from query */
-                int length = strlen(queryId);
+                size_t length = strlen(queryId);
                 if (queryId[length - 2] == '_' && queryId[length - 1] == 'v') {
                     queryId[length - 2] = '\0';
                 }

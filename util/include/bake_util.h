@@ -259,7 +259,7 @@ UT_API
 void ut_deinit(void);
 
 UT_API
-const char* ut_appname();
+const char* ut_appname(void);
 
 #ifdef __cplusplus
 }

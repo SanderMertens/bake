@@ -177,14 +177,27 @@ void add_std(
         ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
     }
 
-    ut_strbuf_appendstr(cmd, " -Wall");
-    ut_strbuf_appendstr(cmd, " -Wextra");
+    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra");
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
-        /* Enable pedantic errors in strict mode. Only enable -Wshadow in strict
-         * as this can generate loads of warnings for legacy compilers */
-        ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -pedantic");
+        /* Enable lots of warnings in strict mode */
+        ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -Wwrite-strings");
+        ut_strbuf_appendstr(cmd, " -Wredundant-decls -pedantic");
+        ut_strbuf_appendstr(cmd, " -Wunused-parameter -Wsign-compare -Wcast-align"); 
+        ut_strbuf_appendstr(cmd, " -Wparentheses -Wsequence-point -Wpointer-arith");
+        ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdisabled-optimization");
+
+        /* These warnings are not valid for C++ */
+        if (!cpp) {
+            ut_strbuf_appendstr(cmd, " -Wstrict-prototypes -Wnested-externs");
+        }
+        
+        /* If project is a package, it should not contain global functions
+         * without a declaration. */
+        if (project->type == BAKE_PACKAGE) {
+            ut_strbuf_appendstr(cmd, " -Wmissing-declarations");
+        }
     } else {
         /* Unused parameters can sometimes indicate an error, but more often 
          * than not are the result of a function implementing some kind of 
@@ -209,7 +222,12 @@ void add_optimization(
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
         if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
-            ut_strbuf_appendstr(cmd, " -O3 -flto");
+            ut_strbuf_appendstr(cmd, " -O3");
+
+            /* LTO can hide warnings */
+            if (!config->strict) {
+                ut_strbuf_appendstr(cmd, " -flto");
+            }
         } else {
             /* On some Linux versions clang has trouble loading the LTO plugin */
             ut_strbuf_appendstr(cmd, " -O3");
@@ -541,6 +559,9 @@ void link_dynamic_binary(
     /* Set optimizations */
     if (config->optimizations) {
         ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        if (!config->strict) {
+            ut_strbuf_appendstr(&cmd, " -flto");
+        }
     } else {
         ut_strbuf_appendstr(&cmd, " -O0");
     }

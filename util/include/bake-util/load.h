@@ -55,7 +55,6 @@ extern char *UT_STATIC_LIB_EXT;
 extern char *UT_EXECUTABLE_EXT;
 extern char *UT_BIN_EXT;
 extern char *UT_LIB_EXT;
-extern char *UT_STATIC_LIB_EXT;
 extern char *UT_LIB_PREFIX;
 
 /** Load a resource.

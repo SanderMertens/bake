@@ -550,7 +550,7 @@ void ut_backtrace(
 
 /* Stub */
 UT_API
-char *ut_lasterr();
+char *ut_lasterr(void);
 
 /* -- Utilities -- */
 UT_API
@@ -561,7 +561,7 @@ void ut_log_tail(char *str, ...);
 
 int16_t ut_log_init(void);
 
-void ut_log_deinit();
+void ut_log_deinit(void);
 
 /* -- Helper macro's -- */
 

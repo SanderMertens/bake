@@ -275,7 +275,7 @@ bool ut_strbuf_append(
 bool ut_strbuf_appendstrn(
     ut_strbuf *b,
     const char* str,
-    uint32_t len)
+    int64_t len)
 {
     va_list args;
     return ut_strbuf_append_intern(

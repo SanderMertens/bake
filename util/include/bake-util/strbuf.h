@@ -113,7 +113,7 @@ UT_API
 bool ut_strbuf_appendstrn(
     ut_strbuf *buffer,
     const char *str,
-    uint32_t n);
+    int64_t n);
 
 /* Return result string (also resets buffer) */
 UT_API

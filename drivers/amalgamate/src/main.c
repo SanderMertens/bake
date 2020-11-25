@@ -1,6 +1,9 @@
 #include <bake.h>
 #include <bake_amalgamate.h>
 
+BAKE_AMALGAMATE_API 
+int bakemain(bake_driver_api *driver);
+
 // If longer, bad
 #define MAX_LINE_LENGTH (256) 
 
@@ -240,7 +243,9 @@ void generate(
     }
 
     /* If specified, include main header file */
+    fprintf(src_out, "#ifndef %s_IMPL\n", project_upper);
     fprintf(src_out, "#include \"%s.h\"\n", project);
+    fprintf(src_out, "#endif\n");
 
     ut_iter it;
     ut_try(ut_dir_iter(src_path, "//*.c,*.cpp", &it), NULL);
@@ -262,7 +267,6 @@ error:
     project_obj->error = true;
 }
 
-BAKE_AMALGAMATE_API 
 int bakemain(bake_driver_api *driver) {
     driver->generate(generate);
     return 0;

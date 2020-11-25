@@ -116,7 +116,7 @@ void test_expect_abort(void);
  * (read: Windows) a test may replace abort with this function
  * if the library under test allows for it. */
 BAKE_TEST_API
-void test_abort();
+void test_abort(void);
 
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_bool(v1, v2) _test_bool(v1, v2, #v1, #v2, __FILE__, __LINE__)
