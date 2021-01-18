@@ -71,6 +71,9 @@ struct bake_config {
     ut_ll bundles;           /* Bundles loaded by bake */
     ut_rb repositories;      /* Repositories loaded from bundles */
 
+    /* Custom defines */
+    ut_ll defines;
+
     /* Set by configuration loader */
     char *home;              /* $BAKE_HOME */
     char *meta;              /* $BAKE_HOME/meta */

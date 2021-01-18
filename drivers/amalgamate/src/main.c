@@ -213,7 +213,7 @@ void generate(
     }
 
     ut_strbuf include_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&include_out_buf, "%s.h", project);
+    ut_strbuf_append(&include_out_buf, "%s/%s.h", project_path, project);
     char *include_out = ut_strbuf_get(&include_out_buf);
 
     /* Create amalgamated header file */
@@ -232,7 +232,7 @@ void generate(
     char *src_path = combine_path(project_path, "src");
 
     ut_strbuf src_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&src_out_buf, "%s.c", project);
+    ut_strbuf_append(&src_out_buf, "%s/%s.c", project_path, project);
     char *src_file_out = ut_strbuf_get(&src_out_buf);
 
     /* Create amalgamated header file */

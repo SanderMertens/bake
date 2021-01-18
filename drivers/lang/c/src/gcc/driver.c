@@ -144,6 +144,15 @@ void add_flags(
         }
     }
 
+    /* Add defines from config */
+    if (config->defines) {
+        ut_iter it = ut_ll_iter(config->defines);
+        while (ut_iter_hasNext(&it)) {
+            const char *el = ut_iter_next(&it);
+            ut_strbuf_append(cmd, " -D%s", el);
+        }
+    }
+
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(cmd, " -DNDEBUG");

@@ -60,6 +60,7 @@ const char *includes = NULL;
 const char *language = NULL;
 const char *template = NULL;
 const char *output_dir = NULL;
+ut_ll defines = NULL;
 
 /* Command specific parameters */
 const char *export_expr = NULL;
@@ -121,6 +122,7 @@ void bake_usage(void)
     printf("  -i,--includes <include path> Specify an include path for project\n");
     printf("  --static                     Build statically linked version of binary\n");
     printf("  --private                    Specify a project to be private (not discoverable)\n");
+    printf("  -D, --define <var[=value]>   Add define to build\n");
     printf("\n");
     printf("  -- [arguments]               Pass arguments to application (use with run)\n");
     printf("  --interactive                Rebuild project when files change (use with run)\n");
@@ -287,6 +289,7 @@ int bake_parse_args(
     const char *argv[])
 {
     bool action_set = false;
+    defines = ut_ll_new();
 
     int i;
     for (i = 1; i < argc; i ++) {
@@ -319,6 +322,7 @@ int bake_parse_args(
             ARG(0, "language", language = argv[i + 1]; i ++);
             ARG(0, "artefact", artefact = argv[i + 1]; i ++);
             ARG(0, "includes", includes = argv[i + 1]; i ++);
+            ARG('D', "defines", ut_ll_append(defines, (char*)argv[i + 1]); i ++);
 
             ARG(0, "local", local_setup = true);
             ARG(0, "local-setup", ); /* deprecated */
@@ -1434,6 +1438,8 @@ int main(int argc, const char *argv[]) {
         config.sanitize_memory = false;
         config.sanitize_undefined = false;
     }
+
+    config.defines = defines;
 
     bake_config_log(&config);
 
