@@ -147,6 +147,137 @@ void bake_test_report(
 }
 
 static
+bake_test_suite* bake_find_suite(
+    bake_test_suite *suites,
+    uint32_t suite_count,
+    const char *suite_id)
+{
+    uint32_t i;
+    for (i = 0; i < suite_count; i ++) {
+        bake_test_suite *suite = &suites[i];
+        if (!strcmp(suite->id, suite_id)) {
+            return &suites[i];
+        }
+    }
+
+    return NULL;
+}
+
+static
+int bake_test_run_suite(
+    const char *test_id,
+    const char *exec,
+    bake_test_suite *suite,
+    uint32_t *fail_out,
+    uint32_t *empty_out,
+    uint32_t *pass_out)
+{
+    int result = 0;
+
+    uint32_t fail = 0, empty = 0, pass = 0;
+    const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
+
+    uint32_t t;
+    for (t = 0; t < suite->testcase_count; t ++) {
+        bake_test_case *test = &suite->testcases[t];
+
+        char *test_name = ut_asprintf("%s.%s", suite->id, test->id);
+        ut_proc proc;
+        int8_t rc;
+        int sig;
+
+        if (prefix) {
+            char *has_space = strchr(prefix, ' ');
+            if (has_space) {
+                ut_strbuf cmd = UT_STRBUF_INIT;
+                ut_strbuf_append(&cmd, "%s %s %s", prefix, exec, test_name);
+                char *cmd_str = ut_strbuf_get(&cmd);
+                sig = ut_proc_cmd(cmd_str, &rc);
+                free(cmd_str);
+            } else {
+                proc = ut_proc_run(prefix, (const char*[]){
+                    prefix,
+                    exec,
+                    test_name, 
+                    NULL
+                }); 
+
+                sig = ut_proc_wait(proc, &rc);
+            }               
+        } else {
+            proc = ut_proc_run(exec, (const char*[]){
+                exec, 
+                test_name, 
+                NULL
+            });
+
+            sig = ut_proc_wait(proc, &rc);
+        }
+
+        if (sig || rc) {
+            if (sig) {
+                if (sig == 6) {
+                    ut_log(
+                        "#[red]FAIL#[reset]: %s aborted\n", test_name);
+                } else if (sig == 11) {
+                    ut_log(
+                        "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
+                } else {
+                    ut_log(
+                        "#[red]FAIL#[reset]: %s crashed with signal %d\n", 
+                        test_name, sig);
+                }
+                result = -1;
+                fail ++;
+            } else {
+                if (rc == 1) {
+                    /* Testcase is empty. No action required, but print the
+                        * test command on command line */
+                    empty ++;
+                } else if (rc != -1) {
+                    /* If return code is not -1, this was not a simple
+                        * testcase failure (which already has been reported) */
+                    ut_log("Testcase '%s' failed with return code %d\n", 
+                        test_name, rc);
+
+                    result = -1;
+                    fail ++;
+                } else {
+                    /* Normal test failure */
+                    result = -1;
+                    fail ++;
+                }
+            }
+
+            ut_catch();
+            print_dbg_command(exec, test_name);
+        } else {
+            if (ut_log_verbosityGet() <= UT_OK) {
+                ut_log("#[green]PASS#[reset] %s.%s\n", 
+                    suite->id, test->id);
+            }
+            pass ++;
+        }
+
+        free(test_name);
+    }
+
+    bake_test_report(test_id, suite->id, fail, empty, pass);
+
+    if (fail_out) {
+        *fail_out = fail;
+    }
+    if (empty_out) {
+        *empty_out = empty;
+    }
+    if (pass_out) {
+        *pass_out = pass;
+    }
+
+    return result;
+}
+
+static
 int bake_test_run_all_tests(
     const char *test_id,
     const char *exec,
@@ -157,107 +288,22 @@ int bake_test_run_all_tests(
 
     uint32_t total_fail = 0, total_empty = 0, total_pass = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
-    const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
 
     ut_log("\n");
 
-    uint32_t i, t;
+    uint32_t i;
     for (i = 0; i < suite_count; i ++) {
         bake_test_suite *suite = &suites[i];
-
-        if (i && (fail || empty)) {
-            ut_log("\n");
-        }
 
         fail = 0;
         empty = 0;
         pass = 0;
 
-        for (t = 0; t < suite->testcase_count; t ++) {
-            bake_test_case *test = &suite->testcases[t];
+        bake_test_run_suite(test_id, exec, suite, &fail, &empty, &pass);
 
-            char *test_name = ut_asprintf("%s.%s", suite->id, test->id);
-            ut_proc proc;
-            int8_t rc;
-            int sig;
-
-            if (prefix) {
-                char *has_space = strchr(prefix, ' ');
-                if (has_space) {
-                    ut_strbuf cmd = UT_STRBUF_INIT;
-                    ut_strbuf_append(&cmd, "%s %s %s", prefix, exec, test_name);
-                    char *cmd_str = ut_strbuf_get(&cmd);
-                    sig = ut_proc_cmd(cmd_str, &rc);
-                    free(cmd_str);
-                } else {
-                    proc = ut_proc_run(prefix, (const char*[]){
-                        prefix,
-                        exec,
-                        test_name, 
-                        NULL
-                    }); 
-
-                    sig = ut_proc_wait(proc, &rc);
-                }               
-            } else {
-                proc = ut_proc_run(exec, (const char*[]){
-                    exec, 
-                    test_name, 
-                    NULL
-                });
-
-                sig = ut_proc_wait(proc, &rc);
-            }
-
-            if (sig || rc) {
-                if (sig) {
-                    if (sig == 6) {
-                        ut_log(
-                            "#[red]FAIL#[reset]: %s aborted\n", test_name);
-                    } else if (sig == 11) {
-                        ut_log(
-                            "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
-                    } else {
-                        ut_log(
-                            "#[red]FAIL#[reset]: %s crashed with signal %d\n", 
-                            test_name, sig);
-                    }
-                    result = -1;
-                    fail ++;
-                } else {
-                    if (rc == 1) {
-                        /* Testcase is empty. No action required, but print the
-                         * test command on command line */
-                        empty ++;
-                    } else if (rc != -1) {
-                        /* If return code is not -1, this was not a simple
-                         * testcase failure (which already has been reported) */
-                        ut_log("Testcase '%s' failed with return code %d\n", 
-                            test_name, rc);
-
-                        result = -1;
-                        fail ++;
-                    } else {
-                        /* Normal test failure */
-                        result = -1;
-                        fail ++;
-                    }
-                }
-
-                ut_catch();
-                print_dbg_command(exec, test_name);
-            } else {
-                if (ut_log_verbosityGet() <= UT_OK) {
-                    ut_log("#[green]PASS#[reset] %s.%s\n", 
-                        suite->id, test->id);
-                }
-                pass ++;
-            }
-
-            free(test_name);
+        if (empty || fail) {
+            ut_log("\n");
         }
-
-        bake_test_report(test_id, suite->id, fail, empty, pass);
 
         total_fail += fail;
         total_empty += empty;
@@ -271,6 +317,46 @@ int bake_test_run_all_tests(
     return result;
 }
 
+static
+void bake_list_tests(
+    bake_test_suite *suites,
+    uint32_t suite_count)
+{
+    uint32_t i, t;
+    for (i = 0; i < suite_count; i ++) {
+        bake_test_suite *suite = &suites[i];
+        for (t = 0; t < suite->testcase_count; t ++) {
+            printf("%s.%s\n", suite->id, suite->testcases[t].id);
+        }
+    }
+}
+
+static
+void bake_list_suites(
+    bake_test_suite *suites,
+    uint32_t suite_count)
+{
+    uint32_t i;
+    for (i = 0; i < suite_count; i ++) {
+        printf("%s\n", suites[i].id);
+    }
+}
+
+static
+void bake_list_commands(
+    const char *exec,
+    bake_test_suite *suites,
+    uint32_t suite_count)
+{
+    uint32_t i, t;
+    for (i = 0; i < suite_count; i ++) {
+        bake_test_suite *suite = &suites[i];
+        for (t = 0; t < suite->testcase_count; t ++) {
+            printf("%s %s.%s\n", exec, suite->id, suite->testcases[t].id);
+        }
+    }
+}
+
 int bake_test_run(
     const char *test_id,
     int argc, 
@@ -279,7 +365,36 @@ int bake_test_run(
     uint32_t suite_count)
 {
     if (argc > 1) {
-        return bake_test_run_single_test(suites, suite_count, argv[1]);
+        char *arg = argv[1];
+
+        if (arg[0] == '-' && arg[1] == '-') {
+            if (!strcmp(arg, "--list-tests")) {
+                bake_list_tests(suites, suite_count);
+
+            } else if (!strcmp(arg, "--list-suites")) {
+                bake_list_suites(suites, suite_count);
+
+            } else if (!strcmp(arg, "--list-commands")) {
+                bake_list_commands(argv[0], suites, suite_count);
+
+            } else {
+                ut_error("invalid argument for test executable", arg);
+                abort();
+            }
+
+        /* Quick & dirty way to test if arg contains testcase name */
+        } else if (strchr(arg, '.')) {
+            return bake_test_run_single_test(suites, suite_count, argv[1]);
+        } else {
+            bake_test_suite *suite = bake_find_suite(suites, suite_count, arg);
+            if (!suite) {
+                ut_error("test suite '%s' not found", arg);
+                abort();
+            }
+
+            return bake_test_run_suite(
+                test_id, argv[0], suite, NULL, NULL, NULL);
+        }
     } else {
         return bake_test_run_all_tests(test_id, argv[0], suites, suite_count);
     }
