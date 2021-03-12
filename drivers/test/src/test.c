@@ -5,6 +5,7 @@ static bake_test_suite *current_testsuite;
 static bake_test_case *current_testcase;
 
 static bool test_expect_abort_signal = false;
+static bool test_flaky = false;
 
 static
 void test_empty(void)
@@ -420,10 +421,15 @@ void test_fail(
 
     ut_raise();
 
-    ut_log("#[red]FAIL#[reset]: %s.%s:%d: %s\n", 
-        current_testsuite->id, current_testcase->id, line, err);
+    if (!test_flaky) {
+        ut_log("#[red]FAIL#[reset]: %s.%s:%d: %s\n", 
+            current_testsuite->id, current_testcase->id, line, err);
+    } else {
+        ut_log("#[yellow]FLAKY#[reset]: %s.%s:%d: %s\n", 
+            current_testsuite->id, current_testcase->id, line, err);
+    }
 
-    exit(-1);
+    exit(!test_flaky * -1);
 }
 
 void _test_assert(
@@ -673,6 +679,10 @@ void test_abort(void) {
 void test_expect_abort(void) {
     test_expect_abort_signal = true;
     signal(SIGABRT, &abort_handler);
+}
+
+void test_is_flaky(void) {
+    test_flaky = true;
 }
 
 void test_quarantine(const char *date) {

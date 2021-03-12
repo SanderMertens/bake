@@ -106,9 +106,20 @@ void _test_ptr(
     const char *file,
     int line);
 
+/* Mark test as flaky. Test will not fail the suite, but if it fails it will be
+ * logged as a flaky test. */
+BAKE_TEST_API
+void test_is_flaky(void);
+
+/* Quarantine test. When used, the test will not be executed, but it will be
+ * logged as quarantined with the provided date */
 BAKE_TEST_API
 void test_quarantine(const char *date);
 
+/* Expect abort signal in the test. Useful for when testing error conditions 
+ * that assert. Note that this function does not work on all platforms, as the
+ * signal handler is not able in all cases to trap an abort. In that case, use
+ * the test_abort function in place of the abort(), when possible. */
 BAKE_TEST_API
 void test_expect_abort(void);
 
