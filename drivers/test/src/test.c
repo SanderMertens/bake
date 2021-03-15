@@ -300,7 +300,9 @@ int bake_test_run_all_tests(
         empty = 0;
         pass = 0;
 
-        bake_test_run_suite(test_id, exec, suite, &fail, &empty, &pass);
+        if (bake_test_run_suite(test_id, exec, suite, &fail, &empty, &pass)) {
+            result = -1;
+        }
 
         if (empty || fail) {
             ut_log("\n");
