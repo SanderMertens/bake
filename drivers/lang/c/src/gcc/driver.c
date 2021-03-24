@@ -192,14 +192,20 @@ void add_std(
     if (config->strict) {
         /* Enable lots of warnings in strict mode */
         ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -Wwrite-strings");
-        ut_strbuf_appendstr(cmd, " -Wredundant-decls -pedantic");
+        ut_strbuf_appendstr(cmd, " -Wredundant-decls -pedantic -Wdouble-promotion");
         ut_strbuf_appendstr(cmd, " -Wunused-parameter -Wsign-compare -Wcast-align"); 
         ut_strbuf_appendstr(cmd, " -Wparentheses -Wsequence-point -Wpointer-arith");
         ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdisabled-optimization");
+        ut_strbuf_appendstr(cmd, " -Wsign-conversion");
 
         /* These warnings are not valid for C++ */
         if (!cpp) {
             ut_strbuf_appendstr(cmd, " -Wstrict-prototypes -Wnested-externs");
+
+        /* These warnings are only valid for C++ */
+        } else {
+            ut_strbuf_appendstr(cmd, " -Wold-style-cast -Wnon-virtual-dtor");
+            ut_strbuf_appendstr(cmd, " -Woverloaded-virtual");
         }
         
         /* If project is a package, it should not contain global functions
