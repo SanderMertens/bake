@@ -68,10 +68,19 @@ const char *cc(
 static
 bool is_clang(bool is_cpp)
 {
-    if (!strncmp(cc(is_cpp), "clang", 5)) {
+    const char *compiler = cc(is_cpp);
+
+    /* First test if user is running clang from a non-standard path. */
+    const char path_separator = UT_OS_PS[0];
+    const char *cc_command = strrchr(compiler, path_separator);
+
+    if (cc_command && !strncmp(cc_command, UT_OS_PS "clang", 5)) {
         return true;
+    } else if (!cc_command && !strncmp(compiler, "clang", 5)) {
+        return true;
+    } else {
+        return false;
     }
-    return false;
 }
 
 static
