@@ -31,80 +31,74 @@ int bake_test_run(
     bake_test_suite *suites,
     uint32_t suite_count);
 
-BAKE_TEST_API
-void _test_assert(
-    bool cond,
-    const char *cond_str,
-    const char *file,
-    int line);
 
 BAKE_TEST_API
-void _test_int(
-    int64_t v1,
-    int64_t v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);
+void _test_assert(bool cond, const char *cond_str, const char *file, int line);
 
 BAKE_TEST_API
-void _test_uint(
-    uint64_t v1,
-    uint64_t v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);    
+void _test_int(int64_t v1, int64_t v2, const char *str_v1, const char *str_v2,
+    const char *file, int line);
 
 BAKE_TEST_API
-void _test_bool(
-    bool v1,
-    bool v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);
+void _test_uint(uint64_t v1, uint64_t v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);    
 
 BAKE_TEST_API
-void _test_flt(
-    double v1,
-    double v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);
+void _test_bool(bool v1, bool v2, const char *str_v1, const char *str_v2, 
+    const char *file, int line);
 
 BAKE_TEST_API
-void _test_str(
-    const char *v1,
-    const char *v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);
+void _test_flt(double v1, double v2, const char *str_v1, const char *str_v2,
+    const char *file, int line);
 
 BAKE_TEST_API
-void _test_null(
-    void *v,
-    const char *str_v,
-    const char *file,
-    int line);
+void _test_str(const char *v1, const char *v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);
 
 BAKE_TEST_API
-void _test_not_null(
-    void *v,
-    const char *str_v,
-    const char *file,
-    int line);
+void _test_null(void *v, const char *str_v, const char *file, int line);
 
 BAKE_TEST_API
-void _test_ptr(
-    const void *v1,
-    const void *v2,
-    const char *str_v1,
-    const char *str_v2,
-    const char *file,
-    int line);
+void _test_not_null(void *v, const char *str_v, const char *file, int line);
+
+BAKE_TEST_API
+void _test_ptr(const void *v1, const void *v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);
+
+
+BAKE_TEST_API
+bool _if_test_assert(bool cond, const char *cond_str, const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_int(int64_t v1, int64_t v2, const char *str_v1, const char *str_v2,
+    const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_uint(uint64_t v1, uint64_t v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);    
+
+BAKE_TEST_API
+bool _if_test_bool(bool v1, bool v2, const char *str_v1, const char *str_v2, 
+    const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_flt(double v1, double v2, const char *str_v1, const char *str_v2,
+    const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_str(const char *v1, const char *v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_null(void *v, const char *str_v, const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_not_null(void *v, const char *str_v, const char *file, int line);
+
+BAKE_TEST_API
+bool _if_test_ptr(const void *v1, const void *v2, const char *str_v1, 
+    const char *str_v2, const char *file, int line);
+    
 
 /* Mark test as flaky. Test will not fail the suite, but if it fails it will be
  * logged as a flaky test. */
@@ -131,6 +125,8 @@ void test_abort(void);
 
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_bool(v1, v2) _test_bool(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define test_true(v) _test_bool(v, true, #v, "true", __FILE__, __LINE__)
+#define test_false(v) _test_bool(v, false, #v, "false", __FILE__, __LINE__)
 #define test_int(v1, v2) _test_int(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_uint(v1, v2) _test_uint(v1, v2, #v1, #v2, __FILE__, __LINE__)
 #define test_flt(v1, v2) _test_flt(v1, v2, #v1, #v2, __FILE__, __LINE__)
@@ -138,6 +134,16 @@ void test_abort(void);
 #define test_null(v) _test_null(v, #v, __FILE__, __LINE__)
 #define test_not_null(v) _test_not_null(v, #v, __FILE__, __LINE__)
 #define test_ptr(v1, v2) _test_ptr(v1, v2, #v1, #v2, __FILE__, __LINE__)
+
+#define if_test_assert(cond) _if_test_assert(cond, #cond, __FILE__, __LINE__)
+#define if_test_bool(v1, v2) _if_test_bool(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define if_test_int(v1, v2) _if_test_int(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define if_test_uint(v1, v2) _if_test_uint(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define if_test_flt(v1, v2) _if_test_flt(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define if_test_str(v1, v2) _if_test_str(v1, v2, #v1, #v2, __FILE__, __LINE__)
+#define if_test_null(v) _if_test_null(v, #v, __FILE__, __LINE__)
+#define if_test_not_null(v) _if_test_not_null(v, #v, __FILE__, __LINE__)
+#define if_test_ptr(v1, v2) _if_test_ptr(v1, v2, #v1, #v2, __FILE__, __LINE__)
 
 #ifdef __cplusplus
 }

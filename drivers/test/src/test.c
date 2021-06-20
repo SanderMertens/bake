@@ -430,11 +430,14 @@ void test_fail(
         ut_log("#[yellow]FLAKY#[reset]: %s.%s:%d: %s\n", 
             current_testsuite->id, current_testcase->id, line, err);
     }
+}
 
+static 
+void test_exit(void) {
     exit(!test_flaky * -1);
 }
 
-void _test_assert(
+bool _if_test_assert(
     bool cond,
     const char *cond_str,
     const char *file,
@@ -446,10 +449,13 @@ void _test_assert(
         char *err = ut_asprintf("assert(%s)", cond_str);
         test_fail(file, line, err);
         free(err);
+        return false;
     }
+
+    return true;
 }
 
-void _test_bool(
+bool _if_test_bool(
     bool v1,
     bool v2,
     const char *str_v1,
@@ -463,12 +469,14 @@ void _test_bool(
         char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v1, v1);
         test_fail(file, line, msg);
         free(msg);
+        return false;
     }
 
     if (v2 && v2 != true) {
         char *msg = ut_asprintf("%s has invalid value for bool (%lld)", str_v2, v2);
         test_fail(file, line, msg);
         free(msg);
+        return false;
     }
 
     if (v1 != v2) {
@@ -490,10 +498,13 @@ void _test_bool(
         free(msg);
         free(sv1);
         free(sv2);
+        return false;
     }
+
+    return true;
 }
 
-void _test_int(
+bool _if_test_int(
     int64_t v1,
     int64_t v2,
     const char *str_v1,
@@ -522,10 +533,13 @@ void _test_int(
         free(msg);
         free(sv1);
         free(sv2);
+        return false;
     }
+
+    return true;
 }
 
-void _test_uint(
+bool _if_test_uint(
     uint64_t v1,
     uint64_t v2,
     const char *str_v1,
@@ -554,10 +568,13 @@ void _test_uint(
         free(msg);
         free(sv1);
         free(sv2);
+        return false;
     }
+
+    return true;
 }
 
-void _test_flt(
+bool _if_test_flt(
     double v1,
     double v2,
     const char *str_v1,
@@ -586,10 +603,13 @@ void _test_flt(
         free(msg);
         free(sv1);
         free(sv2);
+        return false;
     }
+
+    return true;
 }
 
-void _test_str(
+bool _if_test_str(
     const char *v1,
     const char *v2,
     const char *str_v1,
@@ -613,11 +633,14 @@ void _test_str(
 
             test_fail(file, line, msg);
             free(msg);
+            return false;
         }
     }
+
+    return true;
 }
 
-void _test_null(
+bool _if_test_null(
     void *v,
     const char *str_v,
     const char *file,
@@ -629,10 +652,13 @@ void _test_null(
         char *msg = ut_asprintf("%s (%p) is not null", str_v);
         test_fail(file, line, msg);
         free(msg);
+        return false;
     }
+
+    return true;
 }
 
-void _test_not_null(
+bool _if_test_not_null(
     void *v,
     const char *str_v,
     const char *file,
@@ -644,10 +670,13 @@ void _test_not_null(
         char *msg = ut_asprintf("%s is null", v);
         test_fail(file, line, msg);
         free(msg);
+        return false;
     }
+
+    return true;
 }
 
-void _test_ptr(
+bool _if_test_ptr(
     const void *v1,
     const void *v2,
     const char *str_v1,
@@ -661,7 +690,111 @@ void _test_ptr(
         char *msg = ut_asprintf("%s (%p) != %s (%p)", str_v1, v1, str_v2, v2);
         test_fail(file, line, msg);
         free(msg);
+        return false;
     }
+    return true;
+}
+
+void _test_assert(
+    bool cond,
+    const char *cond_str,
+    const char *file,
+    int line)
+{
+    if (!_if_test_assert(cond, cond_str, file, line))
+        test_exit();
+}
+
+void _test_bool(
+    bool v1,
+    bool v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_bool(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
+}
+
+void _test_int(
+    int64_t v1,
+    int64_t v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_int(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
+}
+
+void _test_uint(
+    uint64_t v1,
+    uint64_t v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_uint(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
+}
+
+void _test_flt(
+    double v1,
+    double v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_flt(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
+}
+
+void _test_str(
+    const char *v1,
+    const char *v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_str(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
+}
+
+void _test_null(
+    void *v,
+    const char *str_v,
+    const char *file,
+    int line)
+{
+    if (!_if_test_null(v, str_v, file, line))
+        test_exit();
+}
+
+void _test_not_null(
+    void *v,
+    const char *str_v,
+    const char *file,
+    int line)
+{
+    if (!_if_test_not_null(v, str_v, file, line))
+        test_exit();
+}
+
+void _test_ptr(
+    const void *v1,
+    const void *v2,
+    const char *str_v1,
+    const char *str_v2,
+    const char *file,
+    int line)
+{
+    if (!_if_test_ptr(v1, v2, str_v1, str_v2, file, line))
+        test_exit();
 }
 
 static
