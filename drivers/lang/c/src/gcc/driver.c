@@ -74,6 +74,15 @@ bool is_clang(bool is_cpp)
     return false;
 }
 
+/* Is current compiler icc */
+static 
+bool is_icc(void) {
+    if (!strncmp(cc(false), "icc", 3)) {
+        return true;
+    }
+    return false;
+}
+
 static
 void add_includes(
     bake_driver_api *driver,
@@ -186,26 +195,38 @@ void add_std(
         ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
     }
 
-    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra");
+    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra"); 
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
         /* Enable lots of warnings in strict mode */
         ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -Wwrite-strings");
-        ut_strbuf_appendstr(cmd, " -Wredundant-decls -pedantic -Wdouble-promotion");
-        ut_strbuf_appendstr(cmd, " -Wunused-parameter -Wsign-compare -Wcast-align"); 
+        ut_strbuf_appendstr(cmd, " -pedantic");
+        ut_strbuf_appendstr(cmd, " -Wunused-parameter -Wsign-compare");
         ut_strbuf_appendstr(cmd, " -Wparentheses -Wsequence-point -Wpointer-arith");
-        ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdisabled-optimization");
+        ut_strbuf_appendstr(cmd, " -Wdisabled-optimization");
         ut_strbuf_appendstr(cmd, " -Wsign-conversion");
+
+        if (!is_icc()) {
+            ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
+            ut_strbuf_appendstr(cmd, " -Wcast-align -Wredundant-decls");
+        }
 
         /* These warnings are not valid for C++ */
         if (!cpp) {
-            ut_strbuf_appendstr(cmd, " -Wstrict-prototypes -Wnested-externs");
+            ut_strbuf_appendstr(cmd, " -Wstrict-prototypes");
+
+            if (!is_icc()) {
+                ut_strbuf_appendstr(cmd, " -Wredundant-decls");
+            }
 
         /* These warnings are only valid for C++ */
         } else {
-            ut_strbuf_appendstr(cmd, " -Wold-style-cast -Wnon-virtual-dtor");
+            ut_strbuf_appendstr(cmd, " -Wnon-virtual-dtor");
             ut_strbuf_appendstr(cmd, " -Woverloaded-virtual");
+            if (!is_icc()) {
+                ut_strbuf_appendstr(cmd, " -Wold-style-cast");
+            }
         }
         
         /* If project is a package, it should not contain global functions
