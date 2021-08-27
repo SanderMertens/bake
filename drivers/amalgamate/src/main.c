@@ -224,6 +224,7 @@ void generate(
     }
 
     /* If file is embedded, the code should behave like a static library */
+    fprintf(header_out, "// Comment out this line when using as DLL\n");
     fprintf(header_out, "#define %s_STATIC\n", project_obj->id_underscore);
     ut_try(amalgamate(header_out, include_path, true, include_file, files_parsed), NULL);
     fclose(header_out);
