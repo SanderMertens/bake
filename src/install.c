@@ -510,6 +510,23 @@ int16_t bake_install_postbuild(
         }
     }
 
+    /* If artefact is a webasm file, also copy it to etc directory */
+    char *js_ext = strrchr(project->artefact, '.');
+    if (js_ext && !strcmp(js_ext, ".js")) {
+        if (ut_mkdir("etc")) {
+            goto error;
+        }
+
+        ut_cp(project->artefact_file, "etc");
+
+        char *wasm_file = strdup(project->artefact_file);
+        char *wasm_ext = strrchr(wasm_file, '.');
+        strcpy(wasm_ext, ".wasm");
+
+        ut_cp(wasm_file, "etc");
+        free(wasm_file);
+    }
+
     free(targetBinary);
 
     return 0;

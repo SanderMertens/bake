@@ -74,6 +74,15 @@ bool is_clang(bool is_cpp)
     return false;
 }
 
+/* Is current compiler emcc */
+static 
+bool is_emcc(void) {
+    if (!strncmp(cc(false), "emcc", 4)) {
+        return true;
+    }
+    return false;
+}
+
 /* Is current compiler icc */
 static 
 bool is_icc(void) {
@@ -339,6 +348,15 @@ void add_misc_link(
     bool cpp,
     ut_strbuf *cmd)
 {
+    if (is_emcc()) {
+        ut_strbuf_append(cmd, " -s ALLOW_MEMORY_GROWTH=1");
+        ut_strbuf_append(cmd, " -s EXPORTED_RUNTIME_METHODS=cwrap");
+
+        if (ut_file_test("etc/assets") == 1) {
+            ut_strbuf_append(cmd, " --embed-file etc/assets");
+        }
+    }
+
     add_sanitizers(config, cmd);
 }
 
@@ -577,10 +595,10 @@ void link_dynamic_binary(
             hide_symbols = true;
         }
 
-        ut_strbuf_appendstr(&cmd, " -fno-stack-protector --shared");
+        ut_strbuf_appendstr(&cmd, " -fno-stack-protector -shared");
 
         /* Fail when symbols are not found in library */
-        if (!is_clang(cpp)) {
+        if (!is_clang(cpp) && !is_emcc()) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
     }
@@ -820,19 +838,27 @@ char* artefact_name(
     char *id = project->id_underscore;
 
     if (project->type == BAKE_PACKAGE) {
-        bool link_static = driver->get_attr_bool("static");
-
-        if (link_static) {
-            result = ut_asprintf("lib%s.a", id);
+        if (is_emcc()) {
+            result = ut_asprintf("lib%s.so", id);
         } else {
-            if (is_dylib(driver, project)) {
-                result = ut_asprintf("lib%s.dylib", id);
+            bool link_static = driver->get_attr_bool("static");
+
+            if (link_static) {
+                result = ut_asprintf("lib%s.a", id);
             } else {
-                result = ut_asprintf("lib%s.so", id);
+                if (is_dylib(driver, project)) {
+                    result = ut_asprintf("lib%s.dylib", id);
+                } else {
+                    result = ut_asprintf("lib%s.so", id);
+                }
             }
         }
     } else {
-        result = ut_strdup(id);
+        if (is_emcc()) {
+            result = ut_asprintf("%s.js", id);
+        } else {
+            result = ut_strdup(id);
+        }
     }
 
     return result;
