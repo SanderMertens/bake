@@ -21,6 +21,12 @@
 
 #include <bake.h>
 
+typedef enum bake_src_lang {
+    BAKE_SRC_LANG_C = 0,
+    BAKE_SRC_LANG_CPP = 1,
+    BAKE_SRC_LANG_OBJ_C = 2
+} bake_src_lang;
+
 static
 char* obj_ext() 
 {
@@ -127,10 +133,10 @@ void add_flags(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    bool cpp,
+    bake_src_lang lang,
     ut_strbuf *cmd)
 {
-    if (!cpp) {
+    if (lang == BAKE_SRC_LANG_C) {
         /* CFLAGS for c projects */
         bake_attr *flags_attr = driver->get_attr("cflags");
         if (flags_attr) {
@@ -140,7 +146,7 @@ void add_flags(
                 ut_strbuf_append(cmd, " %s", el->is.string);
             }
         }
-    } else {
+    } else if (lang == BAKE_SRC_LANG_CPP) {
         /* CXXFLAGS for c++ projects */
         bake_attr *flags_attr = driver->get_attr("cxxflags");
         if (flags_attr) {
@@ -191,14 +197,14 @@ void add_std(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    bool cpp,
+    bake_src_lang lang,
     ut_strbuf *cmd)
 {
     /* Set standard for C or C++ */
-    if (cpp) {
+    if (lang == BAKE_SRC_LANG_CPP) {
         ut_strbuf_append(cmd, " -std=%s",
             driver->get_attr_string("cpp-standard"));
-    } else {
+    } else if (lang == BAKE_SRC_LANG_C) {
         ut_strbuf_append(cmd, " -std=%s ",
             driver->get_attr_string("c-standard"));
         ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
@@ -215,6 +221,18 @@ void add_std(
         ut_strbuf_appendstr(cmd, " -Wparentheses -Wsequence-point -Wpointer-arith");
         ut_strbuf_appendstr(cmd, " -Wdisabled-optimization");
         ut_strbuf_appendstr(cmd, " -Wsign-conversion");
+        ut_strbuf_appendstr(cmd, " -Wunknown-pragmas");
+        ut_strbuf_appendstr(cmd, " -Wfloat-conversion");
+        ut_strbuf_appendstr(cmd, " -Wuninitialized");
+
+        if (is_clang(lang)) {
+            ut_strbuf_appendstr(cmd, " -Wdocumentation");
+            ut_strbuf_appendstr(cmd, " -Wconditional-uninitialized");
+            ut_strbuf_appendstr(cmd, " -Wunreachable-code");
+            ut_strbuf_appendstr(cmd, " -Wfour-char-constants");
+            ut_strbuf_appendstr(cmd, " -Wenum-conversion");
+            ut_strbuf_appendstr(cmd, " -Wshorten-64-to-32");
+        }
 
         if (!is_icc()) {
             ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
@@ -222,7 +240,7 @@ void add_std(
         }
 
         /* These warnings are not valid for C++ */
-        if (!cpp) {
+        if (lang != BAKE_SRC_LANG_CPP) {
             ut_strbuf_appendstr(cmd, " -Wstrict-prototypes");
 
             if (!is_icc()) {
@@ -261,12 +279,12 @@ void add_optimization(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    bool cpp,
+    bake_src_lang lang,
     ut_strbuf *cmd)
 {
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
-        if ((!is_clang(cpp) || !is_linux()) && !config->symbols) {
+        if ((!is_clang(lang) || !is_linux()) && !config->symbols) {
             ut_strbuf_appendstr(cmd, " -O3");
 
             /* LTO can hide warnings */
@@ -305,7 +323,7 @@ void add_misc(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    bool cpp,
+    bake_src_lang lang,
     ut_strbuf *cmd)
 {
     /* In obscure cases with static libs, stack protector can cause unresolved symbols */
@@ -316,7 +334,11 @@ void add_misc(
 
     /* Include debugging information */
     if (config->symbols) {
-        ut_strbuf_appendstr(cmd, " -g");
+        if (!is_emcc()) {
+            ut_strbuf_appendstr(cmd, " -g");
+        } else {
+            ut_strbuf_appendstr(cmd, " -gsource-map");
+        }
     }
 
     if (config->coverage && project->coverage) {
@@ -324,7 +346,7 @@ void add_misc(
     }
 
     if (config->loop_test) {
-        if (is_clang(cpp)) {
+        if (is_clang(lang)) {
             ut_strbuf_append(cmd,
                 " -Rpass-missed=loop-vectorize");
         } else {
@@ -345,7 +367,7 @@ void add_misc_link(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
-    bool cpp,
+    bake_src_lang lang,
     ut_strbuf *cmd)
 {
     if (is_emcc()) {
@@ -354,6 +376,13 @@ void add_misc_link(
 
         if (ut_file_test("etc/assets") == 1) {
             ut_strbuf_append(cmd, " --embed-file etc/assets");
+        }
+
+        if (config->debug) {
+            if (is_emcc()) {
+                ut_strbuf_appendstr(cmd, " -s ASSERTIONS=2");
+                // ut_strbuf_appendstr(cmd, " -s LINKABLE=1");
+            }
         }
     }
 
@@ -373,10 +402,15 @@ void compile_src(
     char *ext = strrchr(source, '.');
     bool cpp = is_cpp(project);
     bool file_has_different_language = false;
+    bake_src_lang lang = BAKE_SRC_LANG_C;
 
     if (ext && strcmp(ext, ".c")) {
-        /* If extension is not c, treat as a C++ file */
-        cpp = true;
+        if (!strcmp(ext, ".m")) {
+            lang = BAKE_SRC_LANG_OBJ_C;
+        } else {
+            lang = BAKE_SRC_LANG_CPP;
+        }
+
         file_has_different_language = true;
     }
 

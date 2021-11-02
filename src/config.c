@@ -552,6 +552,12 @@ int16_t bake_config_load(
             ut_ok("release configuration not found in bake settings file, using defaults");
             cfg_out->optimizations = true;
 
+        /* Performance mode, enables optimizations, has symbols */
+        } else if (!strcmp(UT_CONFIG, "perf")) {
+            ut_ok("perf configuration not found in bake settings file, using defaults");
+            cfg_out->optimizations = true;
+            cfg_out->symbols = true;
+
         /* Used for testing, same as debug but with coverage analysis */
         } else if (!strcmp(UT_CONFIG, "test")) {
             ut_ok("test configuration not found in bake settings file, using defaults");

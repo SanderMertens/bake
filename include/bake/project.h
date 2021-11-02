@@ -89,6 +89,7 @@ struct bake_project {
     bool public;            /* Is package public or private */
     bool coverage;          /* Include in coverage analysis (default = true) */
     bool amalgamate;        /* Generate amalgamated source (default = false) */
+    bool use_amalgamate;    /* Copy amalgamated sources from dependencies (default = false) */
     bool recursive;         /* Is this project recursively built */
     ut_ll use;              /* Project dependencies */
     ut_ll use_private;      /* Local dependencies (not visible to dependees) */
@@ -116,6 +117,12 @@ struct bake_project {
     char *id_underscore;    /* Id with underscores instead of dots */
     char *id_dash;          /* Id with dashes instead of dots */
     char *id_base;          /* Last element of id */
+
+    const char *generate_path; /* Optional alternative path that can be used as
+                             * destination for generated code. Useful when code
+                             * needs to be generated from a project into another
+                             * project. */
+
     bool bake_extension;    /* Is package a bake extension (install to HOME) */
 
     /* Direct access to the parson JSON data */

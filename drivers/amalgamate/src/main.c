@@ -186,7 +186,9 @@ void generate(
     bake_project *project_obj)
 {
     if (project_obj->recursive) {
-        return;
+        if (!project_obj->generate_path) {
+            return;
+        }
     }
 
     ut_rb files_parsed = ut_rb_new(compare_string, NULL);
@@ -198,6 +200,11 @@ void generate(
     if (!project_path) {
         ut_error("cannot find source for project '%s'", project);
         goto error;
+    }
+
+    const char *target_path = project_path;
+    if (project_obj->generate_path) {
+        target_path = project_obj->generate_path;
     }
 
     /* -- Amalgamate include files -- */
@@ -213,7 +220,7 @@ void generate(
     }
 
     ut_strbuf include_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&include_out_buf, "%s/%s.h", project_path, project);
+    ut_strbuf_append(&include_out_buf, "%s/%s.h", target_path, project);
     char *include_out = ut_strbuf_get(&include_out_buf);
 
     /* Create amalgamated header file */
@@ -233,10 +240,10 @@ void generate(
     char *src_path = combine_path(project_path, "src");
 
     ut_strbuf src_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&src_out_buf, "%s/%s.c", project_path, project);
+    ut_strbuf_append(&src_out_buf, "%s/%s.c", target_path, project);
     char *src_file_out = ut_strbuf_get(&src_out_buf);
 
-    /* Create amalgamated header file */
+    /* Create amalgamated source file */
     FILE *src_out = fopen(src_file_out, "w");
     if (!src_out) {
         ut_error("cannot open output file '%s'", include_out);

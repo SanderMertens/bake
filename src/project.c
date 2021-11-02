@@ -375,6 +375,9 @@ int16_t bake_project_parse_value(
         } else   
         if (!strcmp(member, "amalgamate")) {
            ut_try (bake_json_set_boolean(&p->amalgamate, member, v), NULL);
+        } else
+        if (!strcmp(member, "use_amalgamate")) {
+           ut_try (bake_json_set_boolean(&p->use_amalgamate, member, v), NULL);
         } else                
         if (!strcmp(member, "author")) {
             ut_try (bake_json_set_string(&p->author, member, v), NULL);
@@ -1213,6 +1216,7 @@ int16_t bake_check_dependency(
             if (dep->language) {
                 dep_has_lib = true;
             }
+
             bake_project_free(dep);
         } else {
             ut_throw("failed to create project for path '%s'", path);
@@ -1224,27 +1228,65 @@ int16_t bake_check_dependency(
         return 0;
     }
 
-    const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
-    if (!lib) {
-        ut_throw("binary for dependency '%s' not found", dependency);
-        goto error;
-    }
+    if (p->use_amalgamate) {
+        const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
+        if (!src_path) {
+            ut_throw("cannot find sources for dependency '%s'", dependency);
+            goto error;
+        }
 
-    time_t dep_modified = ut_lastmodified(lib);
+        ut_trace("source path for '%s' is '%s'", dependency, src_path);
 
-    if (!artefact_modified || dep_modified <= artefact_modified) {
-        const char *fmt = private
-            ? "#[grey]use %s => %s (modified=%d private)"
-            : "#[grey]use %s => %s (modified=%d)"
-            ;
-        ut_ok(fmt, dependency, lib, dep_modified);
+        bake_project *dep = bake_project_new(src_path, config);
+        if (!dep) {
+            ut_throw("failed to create project for path '%s'", src_path);
+            goto error;
+        }
+
+        bake_driver *amalg_driver = bake_driver_get("amalgamate");
+        if (!amalg_driver) {
+            ut_throw("failed to locate amalgamation driver");
+            goto error;
+        }
+
+        bool free_dst_path = false;
+        const char *dst_path = ut_locate(p->id, NULL, UT_LOCATE_SOURCE);
+        if (!dst_path) {
+            dst_path = ut_asprintf("%s/src", ut_cwd());
+            free_dst_path = true;
+        }
+
+        ut_trace("copy amalgamated sources to '%s'", dst_path);
+        dep->generate_path = dst_path;
+
+        ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
+
+        if (free_dst_path) {
+            free((char*)dst_path);
+        }
     } else {
-        p->artefact_outdated = true;
-        const char *fmt = private
-            ? "#[grey]use %s => %s (modified=%d, changed, private)"
-            : "#[grey]use %s => %s (modified=%d, changed)"
-            ;
-        ut_ok(fmt, dependency, lib, dep_modified);
+        const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
+        if (!lib) {
+            ut_throw("binary for dependency '%s' not found", dependency);
+            goto error;
+        }
+
+        time_t dep_modified = ut_lastmodified(lib);
+
+        if (!artefact_modified || dep_modified <= artefact_modified) {
+            const char *fmt = private
+                ? "#[grey]use %s => %s (modified=%d private)"
+                : "#[grey]use %s => %s (modified=%d)"
+                ;
+            ut_ok(fmt, dependency, lib, dep_modified);
+        } else {
+            p->artefact_outdated = true;
+            const char *fmt = private
+                ? "#[grey]use %s => %s (modified=%d, changed, private)"
+                : "#[grey]use %s => %s (modified=%d, changed)"
+                ;
+            ut_ok(fmt, dependency, lib, dep_modified);
+        }
     }
 
 proceed:

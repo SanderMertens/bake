@@ -623,13 +623,9 @@ bool _if_test_str(
         if ((!v1 && v2) || (v1 && !v2) || strcmp(v1, v2)) {
             char *msg = NULL;
 
-            if ((v1 && strchr(v1, '\n')) || (v2 && strchr(v2, '\n'))) {
-                msg = ut_asprintf("\n%s:\n%s\n%s:\n%s\n", 
-                    str_v1, v1, str_v2, v2);
-            } else {
-                msg = ut_asprintf("%s (\"%s\") != %s (\"%s\")", 
-                    str_v1, v1, str_v2, v2);
-            }
+            msg = ut_asprintf("\n"
+                "arg 1: %s\n"
+                "arg 2: %s\n", v1, v2);
 
             test_fail(file, line, msg);
             free(msg);

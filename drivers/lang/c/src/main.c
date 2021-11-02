@@ -440,8 +440,11 @@ int bakemain(bake_driver_api *driver)
     ut_init("bake.c");
 
     /* Create pattern that matches source files */
+#ifndef __APPLE__
     driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-
+#else
+    driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx|*.m");
+#endif
 
     /* -- Compiling and linking source code -- */
 
