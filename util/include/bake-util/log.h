@@ -113,7 +113,8 @@ ut_log_verbosity ut_log_verbosityGet(void);
  *
  * The verbosity depth is the same for all threads.
  *
- * @param verbosity Verbosity depth.
+ * @param depth Verbosity depth.
+ * @return Previous depth.
  */
 UT_API
 int ut_log_verbositySetDepth(
@@ -121,6 +122,9 @@ int ut_log_verbositySetDepth(
 
 
 /** Enable or disable colors.
+ * 
+ * @param enable Enable colors.
+ * @return Previous color setting.
  */
 UT_API
 bool ut_log_useColors(
@@ -129,6 +133,9 @@ bool ut_log_useColors(
 /** Enable or disable profiling.
  *
  * When profiling is enabled, categories will always be printed to the console.
+ * 
+ * @param enable Enable profiling.
+ * @return Previous profiling setting.
  */
 UT_API
 bool ut_log_profile(
@@ -204,7 +211,6 @@ typedef void (*ut_log_handler_cb)(
 /** Register callback that catches log messages.
  * @param callback Message handler callback.
  * @param context Generic value that will be passed to handler.
- * @return Handler object that can be used to unregister callback.
  */
 UT_API
 void ut_log_handlerRegister(
@@ -217,7 +223,6 @@ void ut_log_handlerRegister(
  */
 UT_API
 bool ut_log_handlerRegistered(void);
-
 
 
 /* -- Logging messages to console -- */
@@ -322,8 +327,10 @@ void _ut_error(
  *
  * Asserts are disabled when built with NDEBUG.
  *
+ * @param file File where assert occurred.
+ * @param line Line where assert occurred.
+ * @param function Function where assert occurred.
  * @param fmt A printf-style format string.
- * @param condition A condition to evaluate. When false, the process aborts.
  */
 UT_API
 void _ut_assert(
@@ -341,6 +348,9 @@ void _ut_assert(
  * This function will abort the process after displaying the formatted message.
  * This function ignores the verbosity level.
  *
+ * @param file File where assert occurred.
+ * @param line Line where assert occurred.
+ * @param function Function where assert occurred.
  * @param fmt A printf-style format string.
  */
 UT_API

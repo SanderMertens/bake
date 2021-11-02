@@ -60,7 +60,7 @@ char* ut_file_load(
  */
 UT_API
 int16_t ut_file_iter(
-    char *filename,
+    char *file,
     ut_iter *iter_out);
 
 /** Test if a file exists.

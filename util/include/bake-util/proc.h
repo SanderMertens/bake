@@ -118,7 +118,7 @@ int ut_proc_check(
 /** Run a process (blocking).
  * This function will block until the process exits.
  *
- * @param sig Signal to send to process.
+ * @param cmd Process to run.
  * @param rc Value returned by process.
  * @return 0 if success, -1 if function failed, otherwise the signal raised by the process during exit.
  */

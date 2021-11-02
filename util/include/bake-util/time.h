@@ -34,7 +34,7 @@ extern "C" {
 /** Sleep for specified amount of time.
  *
  * @param sec Seconds to sleep
- * @param nanoseconds to sleep
+ * @param nanosec to sleep
  */
 UT_API
 void ut_sleep(

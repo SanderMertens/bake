@@ -36,10 +36,8 @@ extern "C" {
 
 /** Create a canonical version of a path.
  * This function reduces a path to its canonical form by resolving . and .. operators.
- * @param str An id buffer in which to store the id. If NULL, a corto-managed
- * string is returned which may change with subsequent calls to ut_fullpath and
- * other functions that use the corto stringcache.
  *
+ * @param buf The output buffer.
  * @param path The input path. Can be the same as buffer.
  * @return The path. If buffer is NULL, the returned string is not owned by the application. Otherwise, buffer is returned.
  * @see ut_idof ut_fullname ut_path ut_pathname

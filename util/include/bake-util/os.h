@@ -117,7 +117,7 @@ char* ut_hostname(void);
  * This function tests for the most common occurances to denotate operating
  * systems and cpu architectures.
  *
- * @param operating system identifier.
+ * @param os operating system identifier.
  * @return true if matches, false if no match.
  */
 UT_API

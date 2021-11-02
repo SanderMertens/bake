@@ -70,7 +70,6 @@ char* ut_getenv(
  * A reference to an environment variable is an identifier prefixed with a $. 
  *
  * @param str String that contains references to environment variables.
- * @param value Value to assign to environment variable.
  * @return 0 if success, non-zero if failed.
  */
 UT_API 

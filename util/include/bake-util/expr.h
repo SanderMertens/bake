@@ -111,13 +111,8 @@ int ut_expr_scope(
     ut_expr_program program);
 
 /** Free a compiled program.
- * The ut_expr_run function evaluates an identifier against a compiled
- * pattern program. The compiled program can be reused multiple times for
- * different identifiers.
  *
  * @param program A compiled program, created by ut_expr_compile
- * @pattern id The object identifier to match
- * @return true if the identifier matches, false if it does not match
  * @see ut_expr ut_expr_compile ut_expr_free
  */
 UT_API
@@ -129,7 +124,7 @@ void ut_expr_free(
  * an object identifier. If ther is a match, the functino returns the remainder.
  *
  * @param parent An object identifier representing a parent
- * @pattern expr An object identifier
+ * @param expr An object identifier
  * @return the remainder if the parent matches, NULL if it does not match
  */
 UT_API

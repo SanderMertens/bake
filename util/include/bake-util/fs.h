@@ -117,7 +117,6 @@ ut_dirstack ut_dirstack_push(
  * The working directory will be changed to previous directory on the stack.
  *
  * @param stack A stack object as returned by ut_dirstack_push.
- * @return 0 if success, non-zero if failed.
  */
 UT_API
 void ut_dirstack_pop(

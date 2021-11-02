@@ -339,7 +339,7 @@ int ut_cond_wait(
 
 /** Create new read-write mutex.
  *
- * @param mutex Pointer to initialized ut_cond_s structure.
+ * @param cond Pointer to initialized ut_cond_s structure.
  * @return 0 if success, non-zero if failed.
  */
 UT_API

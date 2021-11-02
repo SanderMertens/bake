@@ -39,7 +39,7 @@ typedef HMODULE ut_dl;
 
 /** Load dynamic library.
  *
- * @param name Name of library.
+ * @param file Name of library.
  * @return Handle to dynamic library.
  */
 UT_API 
