@@ -236,16 +236,12 @@ void add_std(
 
         if (!is_icc()) {
             ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
-            ut_strbuf_appendstr(cmd, " -Wcast-align -Wredundant-decls");
+            ut_strbuf_appendstr(cmd, " -Wcast-align");
         }
 
         /* These warnings are not valid for C++ */
         if (lang != BAKE_SRC_LANG_CPP) {
             ut_strbuf_appendstr(cmd, " -Wstrict-prototypes");
-
-            if (!is_icc()) {
-                ut_strbuf_appendstr(cmd, " -Wredundant-decls");
-            }
 
         /* These warnings are only valid for C++ */
         } else {
