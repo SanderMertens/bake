@@ -276,7 +276,8 @@ void add_optimization(
     bake_config *config,
     bake_project *project,
     bake_src_lang lang,
-    ut_strbuf *cmd)
+    ut_strbuf *cmd,
+    bool is_pch)
 {
     /* Enable full optimizations, including cross-file */
     if (config->optimizations) {
@@ -284,7 +285,7 @@ void add_optimization(
             ut_strbuf_appendstr(cmd, " -O3");
 
             /* LTO can hide warnings */
-            if (!config->strict) {
+            if (!config->strict && !is_pch) {
                 ut_strbuf_appendstr(cmd, " -flto");
             }
         } else {
@@ -416,7 +417,7 @@ void compile_src(
     add_misc(driver, config, project, cpp, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, cpp, &cmd);
+    add_optimization(driver, config, project, cpp, &cmd, false);
 
     /* Add c/c++ standard arguments */
     add_std(driver, config, project, cpp, &cmd);
@@ -500,7 +501,7 @@ void generate_precompiled_header(
     add_misc(driver, config, project, cpp, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, cpp, &cmd);
+    add_optimization(driver, config, project, cpp, &cmd, true);
 
     /* Add -std option */
     add_std(driver, config, project, cpp, &cmd);
