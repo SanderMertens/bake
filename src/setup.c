@@ -254,8 +254,10 @@ int16_t bake_create_script(bool local)
         "#[normal]copying script to '" UT_GLOBAL_BIN_PATH "', #[yellow]setup may request password");
     bake_message(UT_LOG, "", "for local-only install, run setup with --local");
 
-    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
+    char *mkdir_cmd = ut_asprintf("sudo mkdir -p %s", UT_GLOBAL_BIN_PATH);
+    ut_try( cmd(mkdir_cmd), NULL);
 
+    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
     ut_try( cmd(cp_cmd), NULL);
 
     bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'");
@@ -264,6 +266,7 @@ int16_t bake_create_script(bool local)
     ut_rm(script_path);
 
     free(script_path);
+    free(mkdir_cmd);
     free(cp_cmd);
 
     return 0;
