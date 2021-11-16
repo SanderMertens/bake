@@ -37,6 +37,7 @@ bool discover = true;
 bool build = true;
 bool test = false;
 bool local_setup = false;
+bool nopass_setup = false;
 bool load_bundles = false;
 
 /* Override configuration */
@@ -325,7 +326,7 @@ int bake_parse_args(
             ARG('D', "defines", ut_ll_append(defines, (char*)argv[i + 1]); i ++);
 
             ARG(0, "local", local_setup = true);
-            ARG(0, "local-setup", ); /* deprecated */
+            ARG(0, "nopass", nopass_setup = true);
             ARG(0, "fast", fast_build = true);
             ARG(0, "run-prefix", run_prefix = argv[i + 1]; i++);
             ARG(0, "test-prefix", test_prefix = argv[i + 1]; i++);
@@ -1531,7 +1532,7 @@ int main(int argc, const char *argv[]) {
         if (!strcmp(action, "env")) {
             ut_try( bake_env(&config), NULL);
         } else if (!strcmp(action, "setup")) {
-            ut_try (bake_setup(&config, argv[0], local_setup), NULL);
+            ut_try (bake_setup(&config, argv[0], local_setup, nopass_setup), NULL);
         } else if (!strcmp(action, "new")) {
             ut_try (bake_new_project(&config), NULL);
         } else if (!strcmp(action, "run")) {

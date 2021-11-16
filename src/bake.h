@@ -518,7 +518,8 @@ JSON_Object* bake_json_find_or_create_object(
 int16_t bake_setup(
     bake_config *cfg,
     const char *cmd,
-    bool local);
+    bool local,
+    bool nopass);
 
 /* Reset bake environment */
 int bake_reset(

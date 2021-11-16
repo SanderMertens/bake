@@ -113,7 +113,7 @@ error:
 }
 
 /* Create bake script for Windows */
-int16_t bake_create_script(bool local)
+int16_t bake_create_script(bool local, bool nopass)
 {
     char *script_path = ut_envparse(BAKE_SCRIPT);
     if (!script_path) {
@@ -216,7 +216,7 @@ error:
 }
 
 /* Install script to global location that invokes local bake executable */
-int16_t bake_create_script(bool local)
+int16_t bake_create_script(bool local, bool nopass)
 {
     if (local) {
         return 0;
@@ -254,10 +254,16 @@ int16_t bake_create_script(bool local)
         "#[normal]copying script to '" UT_GLOBAL_BIN_PATH "', #[yellow]setup may request password");
     bake_message(UT_LOG, "", "for local-only install, run setup with --local");
 
-    char *mkdir_cmd = ut_asprintf("sudo mkdir -p %s", UT_GLOBAL_BIN_PATH);
+    char *cp_cmd, *mkdir_cmd;
+    if (nopass) {
+        cp_cmd = ut_asprintf("cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
+        mkdir_cmd = ut_asprintf("mkdir -p %s", UT_GLOBAL_BIN_PATH);
+    } else {
+        cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
+        mkdir_cmd = ut_asprintf("sudo mkdir -p %s", UT_GLOBAL_BIN_PATH);
+    }
+    
     ut_try( cmd(mkdir_cmd), NULL);
-
-    char *cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
     ut_try( cmd(cp_cmd), NULL);
 
     bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'");
@@ -369,7 +375,8 @@ void bake_uninstall_old_files(void) {
 int16_t bake_setup(
     bake_config *config,
     const char *bake_cmd,
-    bool local)
+    bool local,
+    bool nopass)
 {
     bake_message(UT_LOG, "", "Bake setup, installing to ~/bake");
 
@@ -410,7 +417,7 @@ int16_t bake_setup(
 
     /* Create the global bake script, which allows for invoking bake without
      * first exporting the environment */
-    ut_try( bake_create_script(local), 
+    ut_try( bake_create_script(local, nopass), 
         "failed to create global bake script, rerun setup with --local");
 
     /* Copy bake executable to bake environment in user working directory */
