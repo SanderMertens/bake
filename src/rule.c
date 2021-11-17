@@ -146,10 +146,12 @@ bake_filelist* bake_node_eval_pattern(
         ut_dirstack ds = NULL;
         while (ut_iter_hasNext(&it)) {
             char *src = ut_iter_next(&it);
-            if (ut_file_test(src) == 1) {
+            char *p_src = ut_asprintf("%s"UT_OS_PS"%s", p->path, src);
+            if (ut_file_test(p_src) == 1) {
                 ut_try ( bake_filelist_add_pattern(
                         targets, src, ((bake_pattern*)n)->pattern), NULL);
             }
+            free(p_src);
         }
 
         /* Add generated sources to list of files to compile */
