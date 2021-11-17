@@ -376,7 +376,7 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "amalgamate")) {
            ut_try (bake_json_set_boolean(&p->amalgamate, member, v), NULL);
         } else
-        if (!strcmp(member, "use_amalgamate")) {
+        if (!strcmp(member, "use_amalgamate") || !strcmp(member, "use-amalgamate")) {
            ut_try (bake_json_set_boolean(&p->use_amalgamate, member, v), NULL);
         } else                
         if (!strcmp(member, "author")) {
@@ -858,6 +858,11 @@ int16_t bake_project_init(
         ut_ll_append(project->includes, ut_strdup("include"));
     }
 
+    /* If project imports sources from other projects, add deps folder */
+    if (project->use_amalgamate) {
+        ut_ll_append(project->sources, ut_strdup("deps"));
+    }
+
     ut_try (bake_project_init_language(config, project), NULL);
 
     /* Project artefact could have been provided manually on command line */
@@ -1203,6 +1208,7 @@ int16_t bake_check_dependency(
     bool private)
 {
     ut_locate_reset(dependency);
+
     const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
     bool dep_has_lib = false;
 
@@ -1222,6 +1228,9 @@ int16_t bake_check_dependency(
             ut_throw("failed to create project for path '%s'", path);
             goto error;
         }
+    } else {
+        ut_throw("dependency '%s' not found", dependency);
+        goto error;
     }
 
     if (!dep_has_lib) {
@@ -1249,21 +1258,14 @@ int16_t bake_check_dependency(
             goto error;
         }
 
-        bool free_dst_path = false;
-        const char *dst_path = ut_locate(p->id, NULL, UT_LOCATE_SOURCE);
-        if (!dst_path) {
-            dst_path = ut_asprintf("%s/src", ut_cwd());
-            free_dst_path = true;
-        }
-
+        char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
+        ut_mkdir(dst_path);
         ut_trace("copy amalgamated sources to '%s'", dst_path);
         dep->generate_path = dst_path;
 
         ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
 
-        if (free_dst_path) {
-            free((char*)dst_path);
-        }
+        free(dst_path);
     } else {
         const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
         if (!lib) {
@@ -1536,6 +1538,12 @@ int16_t bake_project_add_dependencies(
 {
     bool error = false;
 
+    if (p->use_amalgamate) {
+        /* If project is importing amalgamated sources from dependencies, don't
+         * link with dependency libraries. */
+        return 0;
+    }
+
     /* Add dependencies to link list */
     if (p->use) {
         ut_iter it = ut_ll_iter(p->use);
@@ -1791,6 +1799,12 @@ int16_t bake_project_clean_intern(
             char *file = ut_iter_next(&it);
             ut_try(ut_rm(strarg("%s"UT_OS_PS"%s", project->path, file)), NULL);
         }
+    }
+
+    if (project->use_amalgamate) {
+        char *deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
+        ut_try(ut_rm(deps_path), NULL);
+        free(deps_path);
     }
 
     project->changed = true;

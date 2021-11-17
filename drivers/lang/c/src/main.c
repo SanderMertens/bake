@@ -307,6 +307,7 @@ char *project_header_file(
 /* Generate list of include files used in bake_config.h */
 static
 void add_dependency_includes(
+    bake_project *project,
     bake_config *config,
     FILE *f,
     ut_ll dependencies)
@@ -334,7 +335,11 @@ void add_dependency_includes(
             if (!strcmp(project_id, "bake.util")) {
                 fprintf(f, "#ifdef __BAKE__\n");
             }
-            fprintf(f, "#include <%s>\n", project_header);
+            if (!project->use_amalgamate) {
+                fprintf(f, "#include <%s>\n", project_header);
+            } else {
+                fprintf(f, "#include \"../../deps/%s\"\n", project_header);
+            }
             if (!strcmp(project_id, "bake.util")) {
                 fprintf(f, "#endif\n");
             }
@@ -399,14 +404,14 @@ void generate(
         id_upper);
 
     fprintf(f, "/* Headers of public dependencies */\n");
-    add_dependency_includes(config, f, project->use);
+    add_dependency_includes(project, config, f, project->use);
 
     if (project->type == BAKE_PACKAGE) {
 
     if (project->use_private && ut_ll_count(project->use_private)) {
         fprintf(f, "\n/* Headers of private dependencies */\n");
         fprintf(f, "#ifdef %s_EXPORTS\n", snake_id);
-        add_dependency_includes(config, f, project->use_private);
+        add_dependency_includes(project, config, f, project->use_private);
         fprintf(f, "#endif\n");
     }
 

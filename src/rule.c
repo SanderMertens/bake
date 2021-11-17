@@ -146,8 +146,10 @@ bake_filelist* bake_node_eval_pattern(
         ut_dirstack ds = NULL;
         while (ut_iter_hasNext(&it)) {
             char *src = ut_iter_next(&it);
-            ut_try ( bake_filelist_add_pattern(
-                    targets, src, ((bake_pattern*)n)->pattern), NULL);
+            if (ut_file_test(src) == 1) {
+                ut_try ( bake_filelist_add_pattern(
+                        targets, src, ((bake_pattern*)n)->pattern), NULL);
+            }
         }
 
         /* Add generated sources to list of files to compile */

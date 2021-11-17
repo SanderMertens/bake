@@ -419,10 +419,13 @@ int16_t bake_crawler_recursive(
     ut_iter it = ut_ll_iter(crawler->leafs);
     while (ut_iter_hasNext(&it)) {
         bake_project *project = ut_iter_next(&it);
+        if (project->use_amalgamate) {
+            continue;
+        }
+
         ut_try( 
             bake_crawler_walk_dependencies(
                 config, project, bake_crawler_lookupDependency), NULL);
-
     }
 
     /* Collect packages in tree before search, as it may mutate
@@ -432,6 +435,10 @@ int16_t bake_crawler_recursive(
     it = ut_ll_iter(projects);
     while (ut_iter_hasNext(&it)) {
         bake_project *project = ut_iter_next(&it);
+        if (project->use_amalgamate) {
+            continue;
+        }
+
         ut_try( 
             bake_crawler_walk_dependencies(
                 config, project, bake_crawler_lookupDependency), NULL);

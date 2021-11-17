@@ -497,6 +497,7 @@ int bake_run(
     bool is_package = false;
     const char *package_path = NULL; /* App location in bake environment */
     char *project_dir = NULL; /* Project directory containing sources */
+    char *cwd = ut_strdup(ut_cwd());
 
     if (app_id && strcmp(app_id, ".")) {
 
@@ -577,8 +578,8 @@ int bake_run(
         is_package = project->type == BAKE_PACKAGE;
 
         /* If project is found, point to executable in project bin */
-        app_bin = ut_asprintf("%s"UT_OS_PS"bin"UT_OS_PS"%s-%s"UT_OS_PS"%s",
-            project_dir, UT_PLATFORM_STRING, config->configuration, app_name);
+        app_bin = ut_asprintf("bin"UT_OS_PS"%s-%s"UT_OS_PS"%s",
+            UT_PLATFORM_STRING, config->configuration, app_name);
     } else {
         /* If project directory is not found, locate the binary in the
          * package repository. This only allows for running the
@@ -610,6 +611,11 @@ int bake_run(
     ut_ok("  project kind = '%s'", is_package ? "package" : "application");
     ut_ok("  interactive = '%s'", interactive ? "true" : "false");
 
+    /* Always run project from project directory, if there is one */
+    if (project_dir) {
+        ut_chdir(project_dir);
+    }
+
     if (interactive) {
         /* Run process & monitor source for changes */
         if (run_interactive(project_dir, app_bin, app_id, prefix, is_package, argc, argv)) {
@@ -621,7 +627,7 @@ int bake_run(
         ut_trace("starting process '%s'", app_bin);
 
         if (project_dir) {
-            ut_try( build_project(project_dir), "build failed, cannot run");
+            ut_try( build_project("."), "build failed, cannot run");
         }
 
         if (argc) {
@@ -667,7 +673,11 @@ int bake_run(
             app_id, pid, app_bin);
     }
 
+    ut_chdir(cwd);
+    free(cwd);
     return 0;
 error:
+    ut_chdir(cwd);
+    free(cwd);
     return -1;
 }

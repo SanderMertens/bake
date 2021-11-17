@@ -635,6 +635,7 @@ void ut_locate_reset(
 
             loaded->tried_binary = false;
             loaded->tried_locating = false;
+            loaded->tried_src = false;
             loaded->loaded = 0;
         }
     }

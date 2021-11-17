@@ -1379,11 +1379,6 @@ int main(int argc, const char *argv[]) {
     ut_trace("action: %s", action);
     ut_log_pop();
 
-    /* Dump bake environment to console if in debug */
-    if (ut_log_verbosityGet() <= UT_DEBUG) {
-        bake_dump_env();
-    }
-
     bake_config config = {
         .configuration = UT_CONFIG,
         .environment = env,
@@ -1588,10 +1583,6 @@ int main(int argc, const char *argv[]) {
     ut_deinit();
     return 0;
 error:
-    if (ut_log_verbosityGet() <= UT_DEBUG) {
-        ut_error("#[red]problems occurred, dumping environment");
-        bake_dump_env();
-    }
     ut_deinit();
     return -1;
 }
