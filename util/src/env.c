@@ -34,11 +34,10 @@ int16_t ut_setenv(const char *varname, const char *value, ...) {
         va_list arglist;
         va_start(arglist, value);
         char *buff = ut_venvparse(value, arglist);
+        va_end(arglist);
         if (!buff) {
-            va_end(arglist);
             goto error;
         }
-        va_end(arglist);
         if (_setenv(varname, buff)) {
             ut_throw("failed to set variable '%s'", varname);
             goto error;

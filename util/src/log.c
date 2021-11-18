@@ -1855,7 +1855,7 @@ ut_log_verbosity ut_log_verbositySet(
     ut_log_verbosity level)
 {
     ut_log_verbosity old = UT_LOG_LEVEL;
-    ut_setenv("UT_VERBOSITY", ut_log_levelToStr(level));
+    ut_setenv("BAKE_VERBOSITY", ut_log_levelToStr(level));
     UT_LOG_LEVEL = level;
     return old;
 }

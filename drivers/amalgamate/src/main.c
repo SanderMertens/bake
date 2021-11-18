@@ -74,14 +74,21 @@ int amalgamate(
     const char *include_path,
     bool is_include,
     const char *const_file,
+    const char *src_file,
+    int32_t src_line,
     ut_rb files_parsed) 
 {
     char *file = ut_strdup(const_file);
     ut_path_clean(file, file);
     if (ut_rb_find(files_parsed, file)) {
+        ut_debug("amalgamate: skip   '%s'  (from '%s:%d')", file, 
+            src_file, src_line);
         free(file);
         return 0;
     }
+
+    ut_debug("amalgamate: insert '%s' (from '%s:%d')", file,
+        src_file, src_line);
 
     ut_rb_set(files_parsed, file, file);
 
@@ -93,7 +100,8 @@ int amalgamate(
     }
 
     /* Buffer used for reading lines */
-    char line[256];
+    char line[MAX_LINE_LENGTH];
+    int32_t line_count = 0;
 
     /* Open file for reading */
     FILE* in = fopen(file, "r");
@@ -103,6 +111,8 @@ int amalgamate(
     }
 
     while (ut_file_readln(in, line, MAX_LINE_LENGTH) != NULL) {
+        line_count ++;
+
         if (line[0] == '#') {
             if (!strncmp(line, "#include", 8)) {
                 bool relative = false;
@@ -115,10 +125,11 @@ int amalgamate(
                      * neither. If we are amalgamating include files, we should
                      * only include when the file is in our include folder */
                     char *path = combine_path(include_path, include);
-                    if (ut_file_test(path) == 1) {
+                    if (ut_file_test(path) == 1) {                            
                         /* Only amalgamate if file exists */
                         ut_try(
-                            amalgamate(out, include_path, is_include, path, files_parsed), 
+                            amalgamate(out, include_path, is_include, path, 
+                                file, line_count, files_parsed), 
                             NULL);
                     } else {
                         /* If file cannot be found in project, include */
@@ -161,8 +172,8 @@ int amalgamate(
                     if (path) {
                         /* Amalgamate this file */
                         ut_try(
-                            amalgamate(out, include_path, is_include, path, files_parsed), 
-                                    NULL);
+                            amalgamate(out, include_path, is_include, path, 
+                                file, line_count, files_parsed), NULL);
                         free(path);                        
                     }
                 }
@@ -233,7 +244,8 @@ void generate(
     /* If file is embedded, the code should behave like a static library */
     fprintf(header_out, "// Comment out this line when using as DLL\n");
     fprintf(header_out, "#define %s_STATIC\n", project_obj->id_underscore);
-    ut_try(amalgamate(header_out, include_path, true, include_file, files_parsed), NULL);
+    ut_try(amalgamate(header_out, include_path, true, include_file, 
+        "(main header)", 0, files_parsed), NULL);
     fclose(header_out);
 
     /* -- Amalgamate source files -- */
@@ -262,7 +274,8 @@ void generate(
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *file_path = combine_path(src_path, file);
-        ut_try(amalgamate(src_out, include_path, false, file_path, files_parsed), NULL);
+        ut_try(amalgamate(src_out, include_path, false, file_path, 
+            "(main source)", 0, files_parsed), NULL);
         free(file_path);
     } 
 
@@ -276,6 +289,7 @@ error:
 }
 
 int bakemain(bake_driver_api *driver) {
+    ut_init("bake.amalgamate");
     driver->generate(generate);
     return 0;
 }

@@ -790,6 +790,8 @@ int16_t bake_driver__init(
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
+        ut_trace("%s: init", driver->id);
+
         driver->impl.init(&bake_driver_api_impl, config, project);
 
         ut_tls_set(BAKE_DRIVER_KEY, old_driver);
@@ -813,6 +815,8 @@ int16_t bake_driver__generate(
         ut_tls_set(BAKE_DRIVER_KEY, driver);
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        ut_trace("%s: generate", driver->id);
 
         driver->impl.generate(&bake_driver_api_impl, config, project);
 
@@ -838,6 +842,8 @@ int16_t bake_driver__prebuild(
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
+        ut_trace("%s: prebuild", driver->id);
+
         driver->impl.prebuild(&bake_driver_api_impl, config, project);
 
         ut_tls_set(BAKE_DRIVER_KEY, old_driver);
@@ -861,6 +867,8 @@ int16_t bake_driver__build(
         ut_tls_set(BAKE_DRIVER_KEY, driver);
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        ut_trace("%s: build", driver->id);
 
         driver->impl.build(&bake_driver_api_impl, config, project);
 
@@ -886,6 +894,8 @@ int16_t bake_driver__postbuild(
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
 
+        ut_trace("%s: postbuild", driver->id);
+
         driver->impl.postbuild(&bake_driver_api_impl, config, project);
 
         ut_tls_set(BAKE_DRIVER_KEY, old_driver);
@@ -909,6 +919,8 @@ int16_t bake_driver__test(
         ut_tls_set(BAKE_DRIVER_KEY, driver);
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        ut_trace("%s: test", driver->id);
 
         driver->impl.test(&bake_driver_api_impl, config, project);
 
@@ -934,6 +946,8 @@ int16_t bake_driver__coverage(
         ut_tls_set(BAKE_DRIVER_KEY, driver);
         bake_project *old_project = ut_tls_get(BAKE_PROJECT_KEY);
         ut_tls_set(BAKE_PROJECT_KEY, project);
+
+        ut_trace("%s: coverage", driver->id);
 
         driver->impl.coverage(&bake_driver_api_impl, config, project);
 
