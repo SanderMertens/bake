@@ -1198,6 +1198,109 @@ error:
     return -1;
 }
 
+static
+int16_t bake_merge_dependency_config_value(
+    bake_project *p,
+    bake_project *dep,
+    JSON_Value *dst,
+    JSON_Value *src)
+{
+    JSON_Object *dst_json = json_value_get_object(dst);
+    JSON_Object *src_json = json_value_get_object(src);
+    int i, count = json_object_get_count(src_json);
+
+    for (i = 0; i < count; i ++) {
+        const char *mbr = json_object_get_name(src_json, i);
+        JSON_Value *dst_v = json_object_get_value(dst_json, mbr);
+        JSON_Value *src_v = json_object_get_value_at(src_json, i);
+        if (!dst_v) {
+            dst_v = json_value_deep_copy(src_v);
+            json_object_set_value(dst_json, mbr, dst_v);
+            continue;
+        }
+
+        /* Member types must be the same or we can't merge */
+        if (json_value_get_type(dst_v) != json_value_get_type(src_v)) {
+            ut_throw("conflicting type for member '%s' in dependency '%s'",
+                mbr, dep->id);
+            goto error;
+        }
+
+        /* If type is array, append elements from src to dst */
+        if (json_value_get_type(src_v) == JSONArray) {
+            JSON_Array *dst_a = json_value_get_array(dst_v);
+            JSON_Array *src_a = json_value_get_array(src_v);
+            int32_t src_el, dst_el, src_a_count = json_array_get_count(src_a),
+                dst_a_count = json_array_get_count(dst_a);
+
+            for (src_el = 0; src_el < src_a_count; src_el ++) {
+                /* Make sure we're not adding duplicate elements */
+                for (dst_el = 0; dst_el < dst_a_count; dst_el ++) {
+                    JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
+                    JSON_Value *dst_el_v = json_array_get_value(dst_a, dst_el);
+                    if (!json_value_equals(src_el_v, dst_el_v)) {
+                        json_array_append_value(dst_a, 
+                            json_value_deep_copy(src_el_v));
+                    }
+                }
+            }
+
+        /* If type is object, merge objects */
+        } else if (json_value_get_type(src_v) == JSONObject) {
+            ut_try(
+                bake_merge_dependency_config_value(
+                    p, dep, dst_v, src_v), NULL);
+
+        /* If other type, values must match or we can't merge */
+        } else if (!json_value_equals(dst_v, src_v)) {
+            ut_throw("conflicting value for member '%s' in dependency '%s'",
+                mbr, dep->id);
+            goto error;
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
+/* Inherit configuration from embedded projects */
+static
+int16_t bake_import_dependency_config(
+    bake_config *config, 
+    bake_project *p, 
+    bake_project *dep)
+{
+    JSON_Object *json = dep->json;
+    if (json) {
+        int32_t i, count = json_object_get_count(json);
+        for (i = 0; i < count; i ++) {
+            const char *mbr = json_object_get_name(json, i);
+
+            /* Skip fields with non-inheritable configuration */
+            if (strcmp(mbr, "id") && strcmp(mbr, "type") && 
+                strcmp(mbr, "value")) 
+            {
+                if (!p->embed_json) {
+                    p->embed_json = json_value_init_object();
+                }
+
+                JSON_Value *dst = json_value_init_object();
+                json_object_set_value(json_object(p->embed_json), mbr, dst);
+
+                JSON_Value *src = json_object_get_value_at(json, i);
+                if (bake_merge_dependency_config_value(p, dep, dst, src)) {
+                    goto error;
+                }
+            }
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Check project dependency */
 static
 int16_t bake_check_dependency(
@@ -1219,8 +1322,12 @@ int16_t bake_check_dependency(
                 ut_throw("invalid dependency '%s', not a package", dependency);
                 goto error;
             }
+
             if (dep->language) {
                 dep_has_lib = true;
+                if (p->use_amalgamate) {
+                    bake_import_dependency_config(config, p, dep);
+                }
             }
 
             bake_project_free(dep);
@@ -1229,8 +1336,9 @@ int16_t bake_check_dependency(
             goto error;
         }
     } else {
-        ut_throw("dependency '%s' not found", dependency);
-        goto error;
+        ut_trace("missing dependency '%s'", dependency);
+        p->missing_dependencies ++;
+        return 0;
     }
 
     if (!dep_has_lib) {
@@ -1259,7 +1367,6 @@ int16_t bake_check_dependency(
         }
 
         char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
-        ut_mkdir(dst_path);
         ut_trace("copy amalgamated sources to '%s'", dst_path);
         dep->generate_path = dst_path;
 
@@ -1303,6 +1410,8 @@ int16_t bake_project_check_dependencies(
     bake_project *project)
 {
     time_t artefact_modified = 0;
+    char *deps_path = NULL, *deps_dependee_file = NULL;
+    int32_t total_dependencies = 0;
 
     if (!project->language) {
         return 0;
@@ -1311,6 +1420,13 @@ int16_t bake_project_check_dependencies(
     char *artefact_full = project->artefact_file;
     if  (ut_file_test(artefact_full)) {
         artefact_modified = ut_lastmodified(artefact_full);
+    }
+
+    if (project->use_amalgamate) {
+        deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
+        deps_dependee_file = ut_asprintf(
+            "%s"UT_OS_PS"/dependee.json", deps_path);
+        ut_mkdir(deps_path);
     }
 
     if (project->use) {
@@ -1322,6 +1438,7 @@ int16_t bake_project_check_dependencies(
             {
                 goto error;
             }
+            total_dependencies ++;
         }
     }
 
@@ -1334,6 +1451,7 @@ int16_t bake_project_check_dependencies(
             {
                 goto error;
             }
+            total_dependencies ++;
         }
     }
 
@@ -1341,6 +1459,51 @@ int16_t bake_project_check_dependencies(
         if (ut_rm(project->artefact_file)) {
             goto error;
         }
+    }
+
+    /* If not all dependencies could be found, test if we can build this
+     * project in standalone mode (with embedded sources) */
+    if (project->missing_dependencies) {
+        bool standalone = false;
+
+        if (project->use_amalgamate) {
+            if (ut_file_test(deps_dependee_file) == 1) {
+                standalone = true;
+            }
+        }
+
+        if (!standalone) {
+            /* If project has missing dependencies and it can't be built in
+             * standalone mode, we can't build it */
+            ut_throw(
+                "missing dependencies! (rebuild with --trace for more details)");
+            goto error;
+        }
+    }
+
+    /* If all dependencies were found & we're embedding sources, (over)write the
+     * combined configuration for the dependencies */
+    if (!project->missing_dependencies && project->use_amalgamate) {
+        if (project->embed_json) {
+            json_serialize_to_file(project->embed_json, deps_dependee_file);
+            json_value_free(project->embed_json);
+            project->embed_json = NULL;
+        } else {
+            /* If there's no embedded config, write an empty object so that next
+             * time we can detect that we have everything that's needed for a
+             * standalone build. */
+            json_serialize_to_file(
+                json_value_init_object(), deps_dependee_file);
+        }
+    }
+
+    /* At this point we should have a file with the configuration for the
+     * embedded dependencies if we're using embedded sources, whether the
+     * dependencies are locally available or not. */
+    if (project->use_amalgamate) {
+        /* Load as regular dependee config */
+        bake_project_load_dependee_config(
+            config, project, "deps", deps_dependee_file);
     }
 
     return 0;

@@ -128,6 +128,12 @@ struct bake_project {
     /* Direct access to the parson JSON data */
     void *json;
 
+    /* Combined configuration from embedded projects (use_amalgamate) */
+    void *embed_json;
+
+    /* Missing dependency count (determines whether to do standalone build) */
+    int32_t missing_dependencies;
+
     /* Runtime status (managed by driver) */
     bool error;
     bool freshly_baked;
