@@ -164,22 +164,31 @@ bake_test_suite* bake_find_suite(
     return NULL;
 }
 
+typedef struct {
+    const char *exec;
+    bake_test_suite *suite;
+    uint32_t fail;
+    uint32_t empty;
+    uint32_t pass;
+    uint32_t offset;
+    uint32_t count;
+    int result;
+    ut_thread job;
+} bake_test_exec_ctx;
+
 static
-int bake_test_run_suite(
-    const char *test_id,
-    const char *exec,
-    bake_test_suite *suite,
-    uint32_t *fail_out,
-    uint32_t *empty_out,
-    uint32_t *pass_out)
+void* bake_test_run_suite_range(
+    bake_test_exec_ctx *ctx)
 {
     int result = 0;
-
     uint32_t fail = 0, empty = 0, pass = 0;
+    uint32_t offset = ctx->offset, count = ctx->count;
+    const char *exec = ctx->exec;
+    bake_test_suite *suite = ctx->suite;
     const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
 
     uint32_t t;
-    for (t = 0; t < suite->testcase_count; t ++) {
+    for (t = offset; t < (offset + count); t ++) {
         bake_test_case *test = &suite->testcases[t];
 
         char *test_name = ut_asprintf("%s.%s", suite->id, test->id);
@@ -263,17 +272,82 @@ int bake_test_run_suite(
         free(test_name);
     }
 
-    bake_test_report(test_id, suite->id, fail, empty, pass);
+    ctx->fail = fail;
+    ctx->empty = empty;
+    ctx->pass = pass;
+    
+    ctx->result = result;
 
+    return 0;
+}
+
+static
+int bake_test_run_suite(
+    const char *test_id,
+    const char *exec,
+    bake_test_suite *suite,
+    uint32_t *fail_out,
+    uint32_t *empty_out,
+    uint32_t *pass_out,
+    uint32_t job_count)
+{
+    uint32_t i, cur = 0;
+    float next = 0, tests_per_runner = 
+        (float)suite->testcase_count / (float)job_count;
+
+    bake_test_exec_ctx *ctx = ut_calloc(
+        sizeof(bake_test_exec_ctx) * job_count);
+
+    // Divide the work
+    for (i = 0; i < job_count; i ++) {
+        next += tests_per_runner;
+        ctx[i].exec = exec;
+        ctx[i].suite = suite;
+        ctx[i].offset = cur;
+        ctx[i].count = next - cur;
+        
+        if (i == (job_count - 1)) {
+            ctx[i].count += suite->testcase_count - ((uint32_t)next);
+            assert(cur + ctx[i].count == suite->testcase_count);
+        }
+
+        cur += ctx[i].count;
+    }
+
+    // Run jobs
+    for (i = 0; i < job_count; i ++) {
+        ctx[i].job = ut_thread_new(
+            (ut_thread_cb)bake_test_run_suite_range, &ctx[i]);
+    }
+
+    // Wait for jobs to complete
+    for (i = 0; i < job_count; i ++) {
+        ut_thread_join(ctx[i].job, NULL);
+    }
+
+    // Collect results
+    for (i = 1; i < job_count; i ++) {
+        ctx->pass += ctx[i].pass;
+        ctx->fail += ctx[i].fail;
+        ctx->empty += ctx[i].empty;
+        ctx->result |= ctx[i].result;
+    }
+
+    // Report
+    bake_test_report(test_id, suite->id, ctx->fail, ctx->empty, ctx->pass);
+
+    int result = ctx->result;
     if (fail_out) {
-        *fail_out = fail;
+        *fail_out = ctx->fail;
     }
     if (empty_out) {
-        *empty_out = empty;
+        *empty_out = ctx->empty;
     }
     if (pass_out) {
-        *pass_out = pass;
+        *pass_out = ctx->pass;
     }
+
+    free(ctx);
 
     return result;
 }
@@ -283,7 +357,8 @@ int bake_test_run_all_tests(
     const char *test_id,
     const char *exec,
     bake_test_suite *suites,
-    uint32_t suite_count)
+    uint32_t suite_count,
+    uint32_t job_count)
 {
     int result = 0;
 
@@ -300,7 +375,9 @@ int bake_test_run_all_tests(
         empty = 0;
         pass = 0;
 
-        if (bake_test_run_suite(test_id, exec, suite, &fail, &empty, &pass)) {
+        if (bake_test_run_suite(
+            test_id, exec, suite, &fail, &empty, &pass, job_count)) 
+        {
             result = -1;
         }
 
@@ -367,39 +444,58 @@ int bake_test_run(
     bake_test_suite *suites,
     uint32_t suite_count)
 {
-    if (argc > 1) {
-        char *arg = argv[1];
+    const char *single_test = NULL;
+    bake_test_suite *suite = NULL;
+    int32_t job_count = 1;
 
-        if (arg[0] == '-' && arg[1] == '-') {
-            if (!strcmp(arg, "--list-tests")) {
-                bake_list_tests(suites, suite_count);
+    for (int i = 1; i < argc; i ++) {
+        char *arg = argv[i];
 
-            } else if (!strcmp(arg, "--list-suites")) {
-                bake_list_suites(suites, suite_count);
+        if (arg[0] == '-') {
+            if (arg[1] == '-') {
+                if (!strcmp(arg, "--list-tests")) {
+                    bake_list_tests(suites, suite_count);
 
-            } else if (!strcmp(arg, "--list-commands")) {
-                bake_list_commands(argv[0], suites, suite_count);
+                } else if (!strcmp(arg, "--list-suites")) {
+                    bake_list_suites(suites, suite_count);
 
-            } else {
-                ut_error("invalid argument for test executable", arg);
-                abort();
+                } else if (!strcmp(arg, "--list-commands")) {
+                    bake_list_commands(argv[0], suites, suite_count);
+
+                } else {
+                    ut_error("invalid argument for test executable", arg);
+                    abort();
+                }
+            } else if (arg[1] == 'j') {
+                if (argc < (i + 2)) {
+                    ut_error("expected argument after -j");
+                    abort();
+                }
+
+                job_count = atoi(argv[i + 1]);
+                i ++;
             }
 
         /* Quick & dirty way to test if arg contains testcase name */
         } else if (strchr(arg, '.')) {
-            return bake_test_run_single_test(suites, suite_count, argv[1]);
+            single_test = argv[1];
         } else {
-            bake_test_suite *suite = bake_find_suite(suites, suite_count, arg);
+            suite = bake_find_suite(suites, suite_count, arg);
             if (!suite) {
                 ut_error("test suite '%s' not found", arg);
                 abort();
             }
-
-            return bake_test_run_suite(
-                test_id, argv[0], suite, NULL, NULL, NULL);
         }
+    }
+
+    if (single_test) {
+        return bake_test_run_single_test(suites, suite_count, argv[1]);
+    } else if (suite) {
+        return bake_test_run_suite(
+            test_id, argv[0], suite, NULL, NULL, NULL, job_count);
     } else {
-        return bake_test_run_all_tests(test_id, argv[0], suites, suite_count);
+        return bake_test_run_all_tests(
+            test_id, argv[0], suites, suite_count, job_count);
     }
 
     return 0;
