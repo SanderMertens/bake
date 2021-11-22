@@ -625,7 +625,6 @@ int16_t bake_project_load_dependee_object(
             } else {
                 bake_project_driver *driver = bake_project_get_driver(
                     project, member);
-                printf("dependee: load driver '%s'\n", member);
                 if (!driver) {
                     ut_try(
                       bake_project_load_driver(project, member, obj), NULL);
@@ -1528,7 +1527,6 @@ int16_t bake_project_check_dependencies(
         bake_project_driver *base_driver = bake_project_get_driver(
             project, base);
         if (base_driver) {
-            printf("load attributes %p from driver '%s'", base_driver->attributes, base);
             driver->base_attributes = base_driver->attributes;
         }
     }    
