@@ -44,6 +44,7 @@ typedef struct bake_project_driver {
     bake_driver *driver;
     void *json;
     ut_ll attributes;
+    ut_ll base_attributes;
 } bake_project_driver;
 
 /* Bind bake project to a repository */

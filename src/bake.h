@@ -250,6 +250,7 @@ typedef struct bake_driver_impl {
 struct bake_driver {
     char *id;                     /* Bake driver id (lang.c) */
     char *package_id;             /* Full driver package id (bake.lang.c) */
+    char *base;                   /* Base driver */
     ut_dl dl;                     /* Shared object */
 
     ut_ll nodes;                  /* Dependency graph with rules & patterns */

@@ -625,18 +625,20 @@ int16_t bake_project_load_dependee_object(
             } else {
                 bake_project_driver *driver = bake_project_get_driver(
                     project, member);
+                printf("dependee: load driver '%s'\n", member);
                 if (!driver) {
                     ut_try(
                       bake_project_load_driver(project, member, obj), NULL);
-                } else {
-                    driver->attributes = bake_attrs_parse(
-                        config, project, project_id, obj, driver->attributes);
-                    if (!driver->attributes) {
-                        ut_throw(
-                            "failed to parse dependee config for driver '%s'",
-                            member);
-                        goto error;
-                    }
+                    driver = bake_project_get_driver(project, member);
+                }
+                
+                driver->attributes = bake_attrs_parse(
+                    config, project, project_id, obj, driver->attributes);
+                if (!driver->attributes) {
+                    ut_throw(
+                        "failed to parse dependee config for driver '%s'",
+                        member);
+                    goto error;
                 }
             }
         }
@@ -1000,12 +1002,18 @@ bake_attr* bake_project_get_attr(
     const char *attr)
 {
     bake_project_driver* driver = bake_project_get_driver(project, driver_id);
+    bake_attr *result = NULL;
 
-    if (driver && driver->attributes) {
-        return bake_attr_get(driver->attributes, attr);
-    } else {
-        return NULL;
+    if (driver) {
+        if (driver->attributes) {
+            result = bake_attr_get(driver->attributes, attr);
+        }
+        if (!result && driver->base_attributes) {
+            result = bake_attr_get(driver->base_attributes, attr);
+        }
     }
+
+    return result;
 }
 
 /* Get JSON object of driver configuration */
@@ -1505,6 +1513,25 @@ int16_t bake_project_check_dependencies(
         bake_project_load_dependee_config(
             config, project, "deps", deps_dependee_file);
     }
+
+    /* No more changes will be made to the project configuration at this point.
+     * Iterate project drivers with base drivers to update references to base
+     * configuration attributes. */
+    ut_iter it = ut_ll_iter(project->drivers);
+    while (ut_iter_hasNext(&it)) {
+        bake_project_driver *driver = ut_iter_next(&it);
+        const char *base = driver->driver->base;
+        if (!base) {
+            continue;
+        }
+
+        bake_project_driver *base_driver = bake_project_get_driver(
+            project, base);
+        if (base_driver) {
+            printf("load attributes %p from driver '%s'", base_driver->attributes, base);
+            driver->base_attributes = base_driver->attributes;
+        }
+    }    
 
     return 0;
 error:

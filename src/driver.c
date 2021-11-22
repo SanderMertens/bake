@@ -609,7 +609,10 @@ void bake_driver_import_cb(
     bake_driver *driver = ut_tls_get(BAKE_DRIVER_KEY);
     if (!bake_driver_get_intern(id, driver)) {
         driver->error = true;
+        return;
     }
+
+    driver->base = ut_strdup(id);
 }
 
 static

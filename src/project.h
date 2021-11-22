@@ -38,6 +38,13 @@ int bake_project_parse_driver_config(
     bake_config *config,
     bake_project *project);
 
+/* Parse configuration of imported drivers */
+int bake_project_import_driver_config(
+    bake_config *config,
+    bake_project *project,
+    bake_driver *driver,
+    const char *id);
+
 /* Init driver */
 int bake_project_init_drivers(
     bake_config *config,
