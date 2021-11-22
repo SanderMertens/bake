@@ -280,7 +280,9 @@ void build(
     bake_config *config,
     bake_project *project)
 {
-    if (driver->get_attr_bool("precompile-header")) {
+    if (driver->get_attr("precompile-header") && 
+        driver->get_attr_bool("precompile-header")) 
+    {
         generate_precompiled_header(driver, config, project);
     }
 }

@@ -36,7 +36,7 @@ char* obj_ext()
 /* Get compiler */
 static
 const char *cc(
-    bool is_cpp)
+    bake_src_lang lang)
 {
     const char *cxx = ut_getenv("CXX");
     const char *cc = ut_getenv("CC");
@@ -45,7 +45,7 @@ const char *cc(
     if (cxx && !strlen(cxx)) cxx = NULL;
 
     if (!is_darwin()) {
-        if (is_cpp) {
+        if (lang == BAKE_SRC_LANG_CPP) {
             if (!cxx)
                 cxx = "g++";
             return cxx;
@@ -58,7 +58,7 @@ const char *cc(
         /* On MacOS, invoking gcc and g++ actually invokes clang, unless 
          * explicitly configured otherwise. It is safest to assume clang, as
          * some gcc options can cause the clang linker to fail (like -z). */
-        if (is_cpp) {
+        if (lang == BAKE_SRC_LANG_CPP) {
             if (!cxx || !strcmp(cxx, "g++"))
                 cxx = "clang++";
             return cxx;
@@ -72,9 +72,9 @@ const char *cc(
 
 /* Is current compiler clang */
 static
-bool is_clang(bool is_cpp)
+bool is_clang(bake_src_lang lang)
 {
-    if (!strncmp(cc(is_cpp), "clang", 5)) {
+    if (!strncmp(cc(lang), "clang", 5)) {
         return true;
     }
     return false;
@@ -411,27 +411,27 @@ void compile_src(
         file_has_different_language = true;
     }
 
-    ut_strbuf_append(&cmd, "%s", cc(cpp));
+    ut_strbuf_append(&cmd, "%s", cc(lang));
 
     /* Add misc options */
-    add_misc(driver, config, project, cpp, &cmd);
+    add_misc(driver, config, project, lang, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, cpp, &cmd, false);
+    add_optimization(driver, config, project, lang, &cmd, false);
 
     /* Add c/c++ standard arguments */
-    add_std(driver, config, project, cpp, &cmd);
+    add_std(driver, config, project, lang, &cmd);
 
     /* Add CFLAGS */
-    add_flags(driver, config, project, cpp, &cmd);
+    add_flags(driver, config, project, lang, &cmd);
 
     /* Add precompiled header.
      * Only add the precompiled header if the source file is of the same
      * language as the project configuration. Header compiled with different
      * compiler settings cannot be included */
-    if (!file_has_different_language) {
+    if (!file_has_different_language && driver->get_attr("precompile-header")) {
         if (driver->get_attr_bool("precompile-header") && !config->assembly) {
-            if (is_clang(cpp)) {
+            if (is_clang(lang)) {
                 char *pch_dir = driver->get_attr_string("pch-dir");
                 ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
                     project->path, pch_dir, project->id_base);
@@ -466,12 +466,13 @@ void generate_precompiled_header(
     bake_project *project)
 {   
     bool cpp = is_cpp(project);
+    bake_src_lang lang = cpp ? BAKE_SRC_LANG_CPP : BAKE_SRC_LANG_C;
 
     if (config->assembly) {
         return;
     }
 
-    if (!is_clang(cpp)) {
+    if (!is_clang(lang)) {
         return;
     }
 
@@ -498,16 +499,16 @@ void generate_precompiled_header(
     free(source);
 
     /* Add misc options */
-    add_misc(driver, config, project, cpp, &cmd);
+    add_misc(driver, config, project, lang, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, cpp, &cmd, true);
+    add_optimization(driver, config, project, lang, &cmd, true);
 
     /* Add -std option */
-    add_std(driver, config, project, cpp, &cmd);
+    add_std(driver, config, project, lang, &cmd);
 
     /* Add CFLAGS */
-    add_flags(driver, config, project, cpp, &cmd);
+    add_flags(driver, config, project, lang, &cmd);
 
     /* Add include directories */
     add_includes(driver, config, project, &cmd);
@@ -615,6 +616,7 @@ void link_dynamic_binary(
     }
 
     bool cpp = is_cpp(project);
+    bake_src_lang lang = cpp ? BAKE_SRC_LANG_CPP : BAKE_SRC_LANG_C;
 
     ut_strbuf_append(&cmd, "%s -Wall", cc(cpp));
 
