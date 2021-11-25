@@ -520,7 +520,8 @@ int16_t bake_setup(
     bake_config *cfg,
     const char *cmd,
     bool local,
-    bool nopass);
+    bool nopass,
+    bool upgrade);
 
 /* Reset bake environment */
 int bake_reset(

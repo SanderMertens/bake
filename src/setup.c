@@ -198,9 +198,9 @@ int16_t bake_create_upgrade_script(void)
 
     /* Install new version, local install if bake script is not installed */
     fprintf(f, "if [ ! -d \"" BAKE_GLOBAL_SCRIPT "\" ]; then\n");
-    fprintf(f, "    ./bake setup --local\n");
+    fprintf(f, "    ./bake setup --local --upgrade\n");
     fprintf(f, "else\n");
-    fprintf(f, "    ./bake setup\n");
+    fprintf(f, "    ./bake setup --upgrade\n");
     fprintf(f, "fi\n");
     fclose(f);
 
@@ -377,7 +377,8 @@ int16_t bake_setup(
     bake_config *config,
     const char *bake_cmd,
     bool local,
-    bool nopass)
+    bool nopass,
+    bool upgrade)
 {
     bake_message(UT_LOG, "", "Bake setup, installing to ~/bake");
 
@@ -482,17 +483,21 @@ int16_t bake_setup(
         "#[normal]  \\  /#[cyan]  /   #[normal]/ /  #[cyan]/  #[normal]| |  #[cyan]|   #[normal]\\ \\/  #[cyan]/ \n"
         "#[normal]   \\/#[cyan]__/    #[normal]\\/#[cyan]__/    #[normal]\\|#[cyan]__|    #[normal]\\/#[cyan]__/ \n\n");
 
-    printf("\n       Installation complete!\n\n");
+    if (upgrade) {
+        printf("\n       Upgrade complete!\n\n");    
+    } else {
+        printf("\n       Installation complete!\n\n");
 
-    /* If this was a local install, show instructions on how to run bake */
-    if (local) {
-        printf("This is a local bake install. Before using bake, do:\n");
+        /* If this was a local install, show instructions on how to run bake */
+        if (local) {
+            printf("This is a local bake install. Before using bake, do:\n");
 #ifdef _WIN32
-        printf("set PATH=%%USERPROFILE%%\\bake;%%PATH%%\n");
+            printf("set PATH=%%USERPROFILE%%\\bake;%%PATH%%\n");
 #else
-        printf("export `~/bake/bake env`\n");
+            printf("export `~/bake/bake env`\n");
 #endif
-        printf("\n");
+            printf("\n");
+        }
     }
 
     return 0;
