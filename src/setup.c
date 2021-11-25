@@ -175,6 +175,7 @@ int16_t bake_create_upgrade_script(void)
     fprintf(f, "#!/usr/bin/env bash\n\n");
 
     fprintf(f, "UNAME=$(uname)\n\n");
+    fprintf(f, "unset CC\n\n");
 
     /* Create directory for bake repositories */
     fprintf(f, "mkdir -p $HOME/bake/src\n");

@@ -623,10 +623,11 @@ int16_t bake_crawler_walk(
         built ++;
     }
 
-    /* If there are still unbuilt projects there must be a cycle in the graph */
+    /* If there are still unbuilt projects it could be a dependency cycle or a
+     * dependency for another project that failed to build. */
     if (built != crawler->count) {
         ut_throw(
-            "project dependency graph contains cycles (%d built vs %d total)",
+            "not all projects could be built (%d built vs %d total)",
             built, crawler->count);
         goto error;
     }
