@@ -200,16 +200,16 @@ void setup_project(
     free(source_filename);
 
     /* Create main header file */
-    char *header_filename;
+    char *header_file;
     if (is_template) {
-        header_filename = ut_asprintf("include/__id_underscore.h", short_id);
+        header_file = ut_asprintf("include/__id_underscore.h", short_id);
     } else {
-        header_filename = ut_asprintf("include/%s.h", project->id_underscore);
+        header_file = ut_asprintf("include/%s.h", project->id_underscore);
     }
     
-    f = fopen(header_filename, "w");
+    f = fopen(header_file, "w");
     if (!f) {
-        ut_error("failed to open '%s'", header_filename);
+        ut_error("failed to open '%s'", header_file);
         project->error = true;
         return;
     }
@@ -375,11 +375,26 @@ void generate(
     ut_mkdir("%s/include/%s", project->path, project->id_dash);
 
     /* Create main header file */
-    char *header_filename = ut_asprintf(
+    char *header_file = ut_asprintf(
         "%s/include/%s/bake_config.h", project->path, project->id_dash);
-    FILE *f = fopen(header_filename, "w");
+
+    /* Only generate when it doesn't exist or when project.json is newer */
+    time_t header_modified = 0;
+    if (ut_file_test(header_file) == 1) {
+        header_modified = ut_lastmodified(header_file);
+    }
+
+    char *project_json_file = ut_asprintf(
+        "%s/project.json", project->path, project->id_dash);
+    time_t project_json_modified = ut_lastmodified(project_json_file);
+    free(project_json_file);
+    if (header_modified >= project_json_modified) {
+        return;
+    }
+
+    FILE *f = fopen(header_file, "w");
     if (!f) {
-        ut_error("failed to open file '%s'", header_filename);
+        ut_error("failed to open file '%s'", header_file);
         project->error = true;
         return;
     }

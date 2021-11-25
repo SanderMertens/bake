@@ -76,7 +76,8 @@ int amalgamate(
     const char *const_file,
     const char *src_file,
     int32_t src_line,
-    ut_rb files_parsed) 
+    ut_rb files_parsed,
+    time_t *last_modified) 
 {
     char *file = ut_strdup(const_file);
     ut_path_clean(file, file);
@@ -110,6 +111,11 @@ int amalgamate(
         goto error;
     }
 
+    time_t modified = ut_lastmodified(file);
+    if (modified > last_modified[0]) {
+        last_modified[0] = modified;
+    }
+
     while (ut_file_readln(in, line, MAX_LINE_LENGTH) != NULL) {
         line_count ++;
 
@@ -129,7 +135,7 @@ int amalgamate(
                         /* Only amalgamate if file exists */
                         ut_try(
                             amalgamate(out, include_path, is_include, path, 
-                                file, line_count, files_parsed), 
+                                file, line_count, files_parsed, last_modified), 
                             NULL);
                     } else {
                         /* If file cannot be found in project, include */
@@ -173,10 +179,13 @@ int amalgamate(
                         /* Amalgamate this file */
                         ut_try(
                             amalgamate(out, include_path, is_include, path, 
-                                file, line_count, files_parsed), NULL);
+                                file, line_count, files_parsed, last_modified), 
+                                NULL);
                         free(path);                        
                     }
                 }
+
+                free(include);
                 
                 continue;
             }
@@ -218,47 +227,53 @@ void generate(
         target_path = project_obj->generate_path;
     }
 
+    /* Create output file strings & check when they were last modified */
+    char *include_file_out = ut_asprintf("%s/%s.h", target_path, project);
+    char *include_file_tmp = ut_asprintf("%s/%s.h.tmp", target_path, project);
+    time_t include_modified = 0;
+    if (ut_file_test(include_file_out) == 1) {
+        include_modified = ut_lastmodified(include_file_out);
+    }
+
+    char *src_file_out = ut_asprintf("%s/%s.c", target_path, project);
+    char *src_file_tmp = ut_asprintf("%s/%s.c.tmp", target_path, project);
+    time_t src_modified = 0;
+    if (ut_file_test(src_file_out) == 1) {
+        src_modified = ut_lastmodified(src_file_out);
+    }
+
+    time_t project_modified = 0;
+
     /* -- Amalgamate include files -- */
     char *include_path = combine_path(project_path, "include");
-    
-    ut_strbuf include_file_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&include_file_buf, "%s/%s.h", include_path, project);
-    char *include_file = ut_strbuf_get(&include_file_buf);
+    char *include_file = ut_asprintf("%s/%s.h", include_path, project);
 
     if (ut_file_test(include_file) != 1) {
         ut_error("cannot find include file '%s'", include_file);
         goto error;
     }
 
-    ut_strbuf include_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&include_out_buf, "%s/%s.h", target_path, project);
-    char *include_out = ut_strbuf_get(&include_out_buf);
-
     /* Create amalgamated header file */
-    FILE *header_out = fopen(include_out, "w");
-    if (!header_out) {
-        ut_error("cannot open output file '%s'", include_out);
+    FILE *include_out = fopen(include_file_tmp, "w");
+    if (!include_out) {
+        ut_error("cannot open output file '%s'", include_file_out);
         goto error;
     }
 
     /* If file is embedded, the code should behave like a static library */
-    fprintf(header_out, "// Comment out this line when using as DLL\n");
-    fprintf(header_out, "#define %s_STATIC\n", project_obj->id_underscore);
-    ut_try(amalgamate(header_out, include_path, true, include_file, 
-        "(main header)", 0, files_parsed), NULL);
-    fclose(header_out);
+    fprintf(include_out, "// Comment out this line when using as DLL\n");
+    fprintf(include_out, "#define %s_STATIC\n", project_obj->id_underscore);
+    ut_try(amalgamate(include_out, include_path, true, include_file, 
+        "(main header)", 0, files_parsed, &project_modified), NULL);
+    fclose(include_out);
 
     /* -- Amalgamate source files -- */
     char *src_path = combine_path(project_path, "src");
 
-    ut_strbuf src_out_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&src_out_buf, "%s/%s.c", target_path, project);
-    char *src_file_out = ut_strbuf_get(&src_out_buf);
-
     /* Create amalgamated source file */
-    FILE *src_out = fopen(src_file_out, "w");
+    FILE *src_out = fopen(src_file_tmp, "w");
     if (!src_out) {
-        ut_error("cannot open output file '%s'", include_out);
+        ut_error("cannot open output file '%s'", include_file_out);
         goto error;
     }
 
@@ -275,13 +290,27 @@ void generate(
         char *file = ut_iter_next(&it);
         char *file_path = combine_path(src_path, file);
         ut_try(amalgamate(src_out, include_path, false, file_path, 
-            "(main source)", 0, files_parsed), NULL);
+            "(main source)", 0, files_parsed, &project_modified), NULL);
         free(file_path);
     } 
-
     fclose(src_out);
 
+    if (project_modified > src_modified || project_modified > include_modified){
+        ut_rename(src_file_tmp, src_file_out);
+        ut_rename(include_file_tmp, include_file_out);
+    } else {
+        ut_rm(src_file_tmp);
+        ut_rm(include_file_tmp);
+    }
+
     ut_rb_free(files_parsed);
+
+    free(include_file_out);
+    free(include_file_tmp);
+    free(src_file_out);
+    free(src_file_tmp);
+    free(src_path);
+    free(include_path);
 
     return;
 error:
