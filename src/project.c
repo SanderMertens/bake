@@ -1309,44 +1309,84 @@ error:
 }
 
 static
-int16_t copy_amalgamated_src_from_dep(
+int16_t copy_amalgamated_from_dep(
     bake_config *config,
     bake_project *p,
     bake_driver *amalg_driver,
-    const char *dependency)
+    const char *dependency,
+    ut_ll *amalg_copied)
 {
+    bake_project *dep = NULL;
+
+    if (!amalg_copied[0]) {
+        amalg_copied[0] = ut_ll_new();
+    } else {
+        ut_iter it = ut_ll_iter(amalg_copied[0]);
+        while (ut_iter_hasNext(&it)) {
+            char *dep_id = ut_iter_next(&it);
+            if (!strcmp(dep_id, dependency)) {
+                /* Project is already imported */
+                return 0;
+            }
+        }
+    }
+
+    ut_ll_append(amalg_copied[0], strdup(dependency));
+
     const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
     if (!src_path) {
-        ut_throw("cannot find sources for dependency '%s'", dependency);
-        goto error;
+        /* Possible that project is only config and no sources */
+        ut_trace("cannot find sources for dependency '%s'", dependency);
+    } else {
+        ut_trace("source path for '%s' is '%s'", dependency, src_path);
+
+        dep = bake_project_new(src_path, config);
+        if (!dep) {
+            ut_throw("failed to create project for path '%s'", src_path);
+            goto error;
+        }
+
+        char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
+        ut_trace("copy '%s' sources to '%s'", dependency, dst_path);
+        dep->generate_path = dst_path;
+
+        ut_log_push("copy-amalgamate");
+        ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
+        ut_log_pop();
+
+        free(dst_path);
     }
 
-    ut_trace("source path for '%s' is '%s'", dependency, src_path);
-
-    bake_project *dep = bake_project_new(src_path, config);
     if (!dep) {
-        ut_throw("failed to create project for path '%s'", src_path);
-        goto error;
+        const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+        if (!path) {
+            ut_throw("cannot find dependency '%s' of project '%s'", 
+                dependency, p->id);
+            goto error;
+        }
+
+        dep = bake_project_new(path, config);
+        if (!dep) {
+            ut_throw("failed to create project from path '%s'", path);
+            goto error;
+        }
     }
 
-    char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
-    ut_trace("copy amalgamated sources to '%s'", dst_path);
-    dep->generate_path = dst_path;
+    /* Import build configuration from dependency */
+    bake_import_dependency_config(config, p, dep);
 
-    ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
-
-    free(dst_path);
-
-    /* Recursively copy sources from dependencies */
+    /* Recursively copy dependencies */
     if (dep->use) {
         ut_iter it = ut_ll_iter(dep->use);
         while (ut_iter_hasNext(&it)) {
             char *dep_of_dep = ut_iter_next(&it);
             ut_try(
-                copy_amalgamated_src_from_dep(
-                    config, p, amalg_driver, dep_of_dep), NULL);
+                copy_amalgamated_from_dep(
+                    config, p, amalg_driver, dep_of_dep, amalg_copied), NULL);
         }
     }
+
+    bake_project_free(dep);
 
     return 0;
 error:
@@ -1361,72 +1401,72 @@ int16_t bake_check_dependency(
     const char *dependency,
     uint32_t artefact_modified,
     bool private,
-    bake_driver *amalg_driver)
+    bake_driver *amalg_driver,
+    ut_ll *amalg_copied)
 {
     ut_locate_reset(dependency);
 
+    /* Try to find dependency path & project settings */
     const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+    bake_project *dep = NULL;
     bool dep_has_lib = false;
 
     if (path) {
-        bake_project *dep = bake_project_new(path, config);
-        if (dep) {
-            if (dep->type != BAKE_PACKAGE) {
-                ut_throw("invalid dependency '%s', not a package", dependency);
-                goto error;
-            }
-
-            if (dep->language) {
-                dep_has_lib = true;
-                if (p->use_amalgamate) {
-                    bake_import_dependency_config(config, p, dep);
-                }
-            }
-
-            bake_project_free(dep);
-        } else {
-            ut_throw("failed to create project for path '%s'", path);
+        dep = bake_project_new(path, config);
+        if (!dep) {
+            ut_throw("failed to create project from path '%s'", path);
             goto error;
         }
     } else {
         ut_trace("missing dependency '%s'", dependency);
         p->missing_dependencies ++;
-        return 0;
+        goto proceed;
     }
 
-    if (!dep_has_lib) {
-        return 0;
+    if (dep->type != BAKE_PACKAGE) {
+        ut_throw("invalid dependency '%s', not a package", dependency);
+        goto error;
     }
 
+    /* If use_amalgamate, copy source of dependencies to project */    
     if (p->use_amalgamate) {
-        ut_try(copy_amalgamated_src_from_dep(
-            config, p, amalg_driver, dependency), NULL);
+        ut_try(copy_amalgamated_from_dep(
+            config, p, amalg_driver, dependency, amalg_copied), NULL);
+        goto proceed;
+    }
+
+    /* If project doesn't have a language, there's nothing to link with */
+    if (!dep->language) {
+        goto proceed;
+    }
+
+    const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
+    if (!lib) {
+        ut_throw("binary for dependency '%s' not found", dependency);
+        goto error;
+    }
+
+    time_t dep_modified = ut_lastmodified(lib);
+
+    if (!artefact_modified || dep_modified <= artefact_modified) {
+        const char *fmt = private
+            ? "#[grey]use %s => %s (modified=%d private)"
+            : "#[grey]use %s => %s (modified=%d)"
+            ;
+        ut_ok(fmt, dependency, lib, dep_modified);
     } else {
-        const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
-        if (!lib) {
-            ut_throw("binary for dependency '%s' not found", dependency);
-            goto error;
-        }
-
-        time_t dep_modified = ut_lastmodified(lib);
-
-        if (!artefact_modified || dep_modified <= artefact_modified) {
-            const char *fmt = private
-                ? "#[grey]use %s => %s (modified=%d private)"
-                : "#[grey]use %s => %s (modified=%d)"
-                ;
-            ut_ok(fmt, dependency, lib, dep_modified);
-        } else {
-            p->artefact_outdated = true;
-            const char *fmt = private
-                ? "#[grey]use %s => %s (modified=%d, changed, private)"
-                : "#[grey]use %s => %s (modified=%d, changed)"
-                ;
-            ut_ok(fmt, dependency, lib, dep_modified);
-        }
+        p->artefact_outdated = true;
+        const char *fmt = private
+            ? "#[grey]use %s => %s (modified=%d, changed, private)"
+            : "#[grey]use %s => %s (modified=%d, changed)"
+            ;
+        ut_ok(fmt, dependency, lib, dep_modified);
     }
 
 proceed:
+    if (dep) {
+        bake_project_free(dep);
+    }
     return 0;
 error:
     return -1;
@@ -1440,6 +1480,7 @@ int16_t bake_project_check_dependencies(
     time_t artefact_modified = 0;
     char *deps_path = NULL, *deps_dependee_file = NULL;
     int32_t total_dependencies = 0;
+    ut_ll amalg_copied = NULL;
 
     if (!project->language) {
         return 0;
@@ -1471,7 +1512,8 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                config, project, package, artefact_modified, false, amalg_driver))
+                config, project, package, artefact_modified, false, 
+                amalg_driver, &amalg_copied))
             {
                 goto error;
             }
@@ -1484,7 +1526,8 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                config, project, package, artefact_modified, true, amalg_driver))
+                config, project, package, artefact_modified, true, 
+                amalg_driver, &amalg_copied))
             {
                 goto error;
             }
@@ -1559,7 +1602,13 @@ int16_t bake_project_check_dependencies(
         if (base_driver) {
             driver->base_attributes = base_driver->attributes;
         }
-    }    
+    }
+
+    it = ut_ll_iter(amalg_copied);
+    while (ut_iter_hasNext(&it)) {
+        free(ut_iter_next(&it));
+    }
+    ut_ll_free(amalg_copied);
 
     return 0;
 error:

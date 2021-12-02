@@ -43,7 +43,7 @@ char* parse_include_file(
     const char *line, 
     bool *relative) 
 {
-    const char *file_start = &line[8];
+    const char *file_start = &line[7];
     file_start = skip_ws(file_start);
 
     char end = '>';
@@ -70,6 +70,7 @@ error:
 /* Amalgamate source file */
 static
 int amalgamate(
+    const char *project_id,
     FILE *out, 
     const char *include_path,
     bool is_include,
@@ -77,7 +78,8 @@ int amalgamate(
     const char *src_file,
     int32_t src_line,
     ut_rb files_parsed,
-    time_t *last_modified) 
+    time_t *last_modified,
+    bool *main_included) 
 {
     char *file = ut_strdup(const_file);
     ut_path_clean(file, file);
@@ -120,9 +122,18 @@ int amalgamate(
         line_count ++;
 
         if (line[0] == '#') {
-            if (!strncmp(line, "#include", 8)) {
+            const char *pp_start = skip_ws(line + 1);
+
+            if (!strncmp(pp_start, "include", 7)) {
+                if (!is_include && !main_included[0]) {
+                    /* If this is the first include of the source file, add
+                     * include statement for main header */
+                    fprintf(out, "#include \"%s.h\"\n", project_id);
+                    main_included[0] = true;
+                }
+
                 bool relative = false;
-                char *include = parse_include_file(line, &relative);
+                char *include = parse_include_file(pp_start, &relative);
 
                 if (!relative) {
                     /* If this is an absolute path, this either refers to a
@@ -134,8 +145,8 @@ int amalgamate(
                     if (ut_file_test(path) == 1) {                            
                         /* Only amalgamate if file exists */
                         ut_try(
-                            amalgamate(out, include_path, is_include, path, 
-                                file, line_count, files_parsed, last_modified), 
+                            amalgamate(project_id, out, include_path, is_include, path, 
+                                file, line_count, files_parsed, last_modified, main_included), 
                             NULL);
                     } else {
                         /* If file cannot be found in project, include */
@@ -152,6 +163,7 @@ int amalgamate(
                      * source path, as if it doesn't, it is a system header we
                      * need to include. */
                     char *path = combine_path(cur_path, include);
+
                     if (ut_file_test(path) != 1) {
                         /* If we don't find the file in the relative path, look
                          * for the file in the include path, but only if we are
@@ -178,8 +190,8 @@ int amalgamate(
                     if (path) {
                         /* Amalgamate this file */
                         ut_try(
-                            amalgamate(out, include_path, is_include, path, 
-                                file, line_count, files_parsed, last_modified), 
+                            amalgamate(project_id, out, include_path, is_include, path, 
+                                file, line_count, files_parsed, last_modified, main_included), 
                                 NULL);
                         free(path);                        
                     }
@@ -190,7 +202,7 @@ int amalgamate(
                 continue;
             }
         }
-
+        
         fprintf(out, "%s", line);
     }
 
@@ -201,6 +213,45 @@ int amalgamate(
     return 0;
 error:
     return -1;
+}
+
+/* Find project main source file, if there is any */
+static
+char *find_main_src_file(
+    bake_project *project,
+    const char *src_path)
+{
+    /* Try main.cxx */
+    char *main_src_file = ut_asprintf(
+        "%s/main.%s", src_path, project->language);
+    if (ut_file_test(main_src_file) != 1) {
+        free(main_src_file);
+        main_src_file = NULL;
+    }
+
+    /* Try project_full_name.cxx */
+    if (main_src_file == NULL) {
+        main_src_file = ut_asprintf(
+            "%s/%s.%s", src_path, project->id_underscore, 
+            project->language);
+    }
+    if (ut_file_test(main_src_file) != 1) {
+        free(main_src_file);
+        main_src_file = NULL;
+    }
+
+    /* Try name.cxx */
+    if (main_src_file == NULL) {
+        main_src_file = ut_asprintf(
+            "%s/%s.%s", src_path, project->id_base, 
+            project->language);
+    }
+    if (ut_file_test(main_src_file) != 1) {
+        free(main_src_file);
+        main_src_file = NULL;
+    }
+
+    return main_src_file;
 }
 
 static
@@ -246,6 +297,14 @@ void generate(
         src_modified = ut_lastmodified(src_file_out);
     }
 
+    /* In case project contains Objective C files */
+    char *m_file_out = ut_asprintf("%s/%s_objc.m", target_path, project);
+    char *m_file_tmp = ut_asprintf("%s/%s_objc.m.tmp", target_path, project);
+    time_t m_modified = 0;
+    if (ut_file_test(m_file_out) == 1) {
+        m_modified = ut_lastmodified(m_file_out);
+    }
+
     time_t project_modified = 0;
 
     /* -- Amalgamate include files -- */
@@ -267,8 +326,8 @@ void generate(
     /* If file is embedded, the code should behave like a static library */
     fprintf(include_out, "// Comment out this line when using as DLL\n");
     fprintf(include_out, "#define %s_STATIC\n", project_obj->id_underscore);
-    ut_try(amalgamate(include_out, include_path, true, include_file, 
-        "(main header)", 0, files_parsed, &project_modified), NULL);
+    ut_try(amalgamate(project, include_out, include_path, true, include_file, 
+        "(main header)", 0, files_parsed, &project_modified, 0), NULL);
     fclose(include_out);
 
     /* -- Amalgamate source files -- */
@@ -281,24 +340,70 @@ void generate(
         goto error;
     }
 
-    /* If specified, include main header file */
-    fprintf(src_out, "#ifndef %s_IMPL\n", project_upper);
-    fprintf(src_out, "#include \"%s.h\"\n", project);
-    fprintf(src_out, "#endif\n");
+    /* The main header is included in place of the first #include statement
+     * found. This keeps any macro's defined before including a file intact */
+    bool main_included = false;
 
-    ut_iter it;
-    ut_try(ut_dir_iter(src_path, "//*.c,*.cpp", &it), NULL);
+    /* Try to find a file with the name "main.lang" or the name of the project.
+     * If a project contains a file with that name, process it first. This gives
+     * the project an opportunity to control how headers are included by its own
+     * files, as each header is only appended once. */
+    char *main_src_file = find_main_src_file(project_obj, src_path);
+    if (main_src_file) {
+        ut_try(amalgamate(project, src_out, include_path, false, main_src_file, 
+            "(main source)", 0, files_parsed, &project_modified, 
+            &main_included), NULL);
+    }
 
     /* Recursively iterate sources, append to source file */
+    ut_iter it;
+    ut_try(ut_dir_iter(src_path, "//*.c,*.cpp", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *file_path = combine_path(src_path, file);
-        ut_try(amalgamate(src_out, include_path, false, file_path, 
-            "(main source)", 0, files_parsed, &project_modified), NULL);
+
+        if (!main_src_file || strcmp(file_path, main_src_file)) {
+            ut_try(amalgamate(project, src_out, include_path, false, file_path, 
+                "(main source)", 0, files_parsed, &project_modified, 
+                &main_included), NULL);
+        }
+
         free(file_path);
     } 
     fclose(src_out);
+    free(main_src_file);
 
+    /* Objective C output is only created when necessary */
+    FILE *m_out = NULL;
+
+    /* Start with fresh parsed files list */
+    ut_rb objc_files_parsed = NULL;
+
+    /* Recursively iterate objective-C sources, append to source file */
+    ut_try(ut_dir_iter(src_path, "//*.m", &it), NULL);
+    while (ut_iter_hasNext(&it)) {
+        char *file = ut_iter_next(&it);
+        char *file_path = combine_path(src_path, file);
+
+        if (!m_out) {
+            m_out = fopen(m_file_tmp, "w");
+            if (!m_out) {
+                ut_error("cannot open output file '%s'", m_file_tmp);
+                goto error;
+            }
+
+            objc_files_parsed = ut_rb_new(compare_string, NULL);
+        }
+
+        ut_try(amalgamate(project, m_out, include_path, false, file_path, 
+            "(main obj-C source)", 0, objc_files_parsed, &project_modified, 
+            &main_included), NULL);
+    }
+    fclose(m_out);
+
+    /* Timestamps were checked while amalgamating. Only replace files with new
+     * result if we found that inputs were newer. This ensures we won't end up
+     * rebuilding amalgamated file on every build. */
     if (project_modified > src_modified || project_modified > include_modified){
         ut_rename(src_file_tmp, src_file_out);
         ut_rename(include_file_tmp, include_file_out);
@@ -307,7 +412,11 @@ void generate(
         ut_rm(include_file_tmp);
     }
 
-    ut_rb_free(files_parsed);
+    if (m_out && project_modified > m_modified) {
+        ut_rename(m_file_tmp, m_file_out);
+    } else {
+        ut_rm(m_file_tmp);
+    }
 
     free(include_file_out);
     free(include_file_tmp);
@@ -315,6 +424,9 @@ void generate(
     free(src_file_tmp);
     free(src_path);
     free(include_path);
+
+    ut_rb_free(files_parsed);
+    ut_rb_free(objc_files_parsed);
 
     return;
 error:

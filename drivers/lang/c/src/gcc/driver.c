@@ -198,7 +198,8 @@ void add_std(
     bake_config *config,
     bake_project *project,
     bake_src_lang lang,
-    ut_strbuf *cmd)
+    ut_strbuf *cmd,
+    bool own_src)
 {
     /* Set standard for C or C++ */
     if (lang == BAKE_SRC_LANG_CPP) {
@@ -267,6 +268,12 @@ void add_std(
          * using a member name which seems overly paranoid, and clutters code
          * unnecessarily */        
         ut_strbuf_appendstr(cmd, " -Wno-missing-field-initializers");
+    }
+
+    /* If project contains imported source files from other projects, warnings
+     * for unused functions are probably not going to be helpful. */
+    if (!own_src) {
+        ut_strbuf_appendstr(cmd, " -Wno-unused-function");
     }
 }
 
@@ -413,6 +420,15 @@ void compile_src(
         file_has_different_language = true;
     }
 
+    /* Test if the source file is from the project itself. If the project
+     * imports (amalgamated) source files from other projects, we should not
+     * add the precompiled header options for the current project header. */
+    bool own_source = true;
+    char *relative_src = &source[strlen(project->path)];
+    if (strncmp(relative_src, "deps"UT_OS_PS, 5)) {
+        own_source = false;
+    }
+
     ut_strbuf_append(&cmd, "%s", cc(lang));
 
     /* Add misc options */
@@ -422,7 +438,7 @@ void compile_src(
     add_optimization(driver, config, project, lang, &cmd, false);
 
     /* Add c/c++ standard arguments */
-    add_std(driver, config, project, lang, &cmd);
+    add_std(driver, config, project, lang, &cmd, own_source);
 
     /* Add CFLAGS */
     add_flags(driver, config, project, lang, &cmd);
@@ -431,7 +447,7 @@ void compile_src(
      * Only add the precompiled header if the source file is of the same
      * language as the project configuration. Header compiled with different
      * compiler settings cannot be included */
-    if (!file_has_different_language && driver->get_attr("precompile-header")) {
+    if (!file_has_different_language && own_source && driver->get_attr("precompile-header")) {
         if (driver->get_attr_bool("precompile-header") && !config->assembly) {
             if (is_clang(lang)) {
                 char *pch_dir = driver->get_attr_string("pch-dir");
@@ -507,7 +523,7 @@ void generate_precompiled_header(
     add_optimization(driver, config, project, lang, &cmd, true);
 
     /* Add -std option */
-    add_std(driver, config, project, lang, &cmd);
+    add_std(driver, config, project, lang, &cmd, true);
 
     /* Add CFLAGS */
     add_flags(driver, config, project, lang, &cmd);

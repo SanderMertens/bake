@@ -26,7 +26,9 @@ ut_rb ut_rb_new(ut_equals_cb compare, void *ctx) {
 }
 
 void ut_rb_free(ut_rb tree) {
-    jsw_rbdelete((jsw_rbtree_t*)tree);
+    if (tree) {
+        jsw_rbdelete((jsw_rbtree_t*)tree);
+    }
 }
 
 void* ut_rb_find(ut_rb tree, const void* key) {
