@@ -333,7 +333,7 @@ void add_dependency_includes(
             include_found = true;
         }
 
-        if (include_found) {
+        if (include_found || project->standalone) {
             if (!strcmp(project_id, "bake.util")) {
                 fprintf(f, "#ifdef __BAKE__\n");
             }

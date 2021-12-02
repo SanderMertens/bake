@@ -2080,10 +2080,14 @@ int16_t bake_project_clean_intern(
         }
     }
 
-    if (project->standalone) {
-        char *deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
-        ut_try(ut_rm(deps_path), NULL);
-        free(deps_path);
+    if (project->standalone && all_platforms) {
+        bake_project_check_dependencies(config, project);
+        if (project->missing_dependencies == 0) {
+            /* If we don't have all dependencies, don't throw away deps */
+            char *deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
+            ut_try(ut_rm(deps_path), NULL);
+            free(deps_path);
+        }
     }
 
     project->changed = true;

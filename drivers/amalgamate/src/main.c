@@ -100,7 +100,14 @@ int amalgamate(
     char *last_elem = strrchr(cur_path, '/');
     if (last_elem) {
         *last_elem = '\0';
+        last_elem ++;
+    } else {
+        last_elem = cur_path;
     }
+
+    /* Check if current file is a bake_config.h. If it is, replace the <> 
+     * includes it contains with "" */
+    bool bake_config_h = !strcmp(last_elem, "bake_config.h");
 
     /* Buffer used for reading lines */
     char line[MAX_LINE_LENGTH];
@@ -136,23 +143,30 @@ int amalgamate(
                 char *include = parse_include_file(pp_start, &relative);
 
                 if (!relative) {
-                    /* If this is an absolute path, this either refers to a
-                     * system include file or to a file in the include folder.
-                     * If we are amalgamating source files, we should include
-                     * neither. If we are amalgamating include files, we should
-                     * only include when the file is in our include folder */
-                    char *path = combine_path(include_path, include);
-                    if (ut_file_test(path) == 1) {                            
-                        /* Only amalgamate if file exists */
-                        ut_try(
-                            amalgamate(project_id, out, include_path, is_include, path, 
-                                file, line_count, files_parsed, last_modified, main_included), 
-                            NULL);
+                    /* If this is in the bake_config.h file, replace the 
+                     * statement with one that uses "". Assume that the file
+                     * exists, as bake may still be generating it. */
+                    if (bake_config_h) {
+                        fprintf(out, "#include \"%s\"\n", include);
                     } else {
-                        /* If file cannot be found in project, include */
-                        fprintf(out, "%s", line);
+                        /* If this is an absolute path, this either refers to a
+                        * system include file or to a file in the include folder.
+                        * If we are amalgamating source files, we should include
+                        * neither. If we are amalgamating include files, we should
+                        * only include when the file is in our include folder */
+                        char *path = combine_path(include_path, include);
+                        if (ut_file_test(path) == 1) {                            
+                            /* Only amalgamate if file exists */
+                            ut_try(
+                                amalgamate(project_id, out, include_path, is_include, path, 
+                                    file, line_count, files_parsed, last_modified, main_included), 
+                                NULL);
+                        } else {
+                            /* If file cannot be found in project, include */
+                            fprintf(out, "%s", line);
+                        }
+                        free(path);
                     }
-                    free(path);
                 } else {
                     /* If this is a relative path, we should always include it,
                      * if the file can be found. System headers and headers from
