@@ -134,7 +134,8 @@ void init(
     }
 
     char *tmp_dir  = ut_asprintf(
-        CACHE_DIR UT_OS_PS "%s-%s", UT_PLATFORM_STRING, config->configuration);
+        CACHE_DIR UT_OS_PS "%s-%s", config->build_target, 
+        config->configuration);
     driver->set_attr_string("tmp-dir", tmp_dir);
     
     char *obj_dir = ut_asprintf("%s"UT_OS_PS"obj", tmp_dir);

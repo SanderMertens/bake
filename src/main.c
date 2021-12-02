@@ -41,6 +41,9 @@ bool nopass_setup = false;
 bool upgrade_setup = false;
 bool load_bundles = false;
 
+/* Compile to target other than current */
+const char *target = NULL;
+
 /* Override configuration */
 bool strict = false;
 bool optimize = false;
@@ -107,6 +110,7 @@ void bake_usage(void)
     printf("\n");
     printf("  --cfg <configuration>        Specify configuration id\n");
     printf("  --env <environment>          Specify environment id\n");
+    printf("  --target <target>            Specify compilation target\n");
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("  --loop-test                  Manually enable vectorization analysis\n");
@@ -300,6 +304,7 @@ int bake_parse_args(
 
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
+            ARG(0, "target", target = argv[i + 1]; i ++);
             ARG(0, "strict", strict = true );
             ARG(0, "optimize", optimize = true );
             ARG(0, "loop-test", loop_test = true );
@@ -1377,6 +1382,9 @@ int main(int argc, const char *argv[]) {
 
     ut_trace("configuration: %s", UT_CONFIG);
     ut_trace("environment: %s", env);
+    if (target) {
+        ut_trace("target: %s", target);
+    }
     ut_trace("path: %s", path);
     ut_trace("action: %s", action);
     ut_log_pop();
@@ -1438,6 +1446,22 @@ int main(int argc, const char *argv[]) {
     }
 
     config.defines = defines;
+
+    if (target && stricmp(target, UT_PLATFORM_STRING)) {
+        if (!stricmp(target, "em")) {
+            target = "Em";
+            ut_setenv("CC", "emcc");
+        } else {
+            if (!is_bake_parent) {
+                ut_warning("unknown target '%s'", target);
+            }
+        }
+    }
+
+    config.build_target = target;
+    if (!config.build_target) {
+        config.build_target = UT_PLATFORM_STRING;
+    }
 
     bake_config_log(&config);
 

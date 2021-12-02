@@ -86,18 +86,27 @@ int16_t bake_project_func_locate(
  * the current operating system, or false if it doesn't. */
 static
 int16_t bake_project_func_os(
+    bake_config *config,
     bake_project *project,
     const char *package_id,
     ut_strbuf *buffer,
     const char *argument)
 {
     if (!argument) {
-        ut_strbuf_appendstr(buffer, UT_PLATFORM_STRING);
+        ut_strbuf_appendstr(buffer, config->build_target);
     } else {
-        if (ut_os_match(argument)) {
-            ut_strbuf_appendstr(buffer, "1");
+        if (!strcmp(config->build_target, UT_PLATFORM_STRING)) {
+            if (ut_os_match(argument)) {
+                ut_strbuf_appendstr(buffer, "1");
+            } else {
+                ut_strbuf_appendstr(buffer, "0");
+            }
         } else {
-            ut_strbuf_appendstr(buffer, "0");
+            if (!stricmp(config->build_target, argument)) {
+                ut_strbuf_appendstr(buffer, "1");
+            } else {
+                ut_strbuf_appendstr(buffer, "0");   
+            }
         }
     }
 
@@ -290,7 +299,7 @@ int16_t bake_attr_func(
     if (!strcmp(function, "locate")) {
         return bake_project_func_locate(project, package_id, buffer, argument);
     } else if (!strcmp(function, "os") || !strcmp(function, "target")) {
-        return bake_project_func_os(project, package_id, buffer, argument);
+        return bake_project_func_os(config, project, package_id, buffer, argument);
     } else if (!strcmp(function, "language") || !strcmp(function, "lang")) {
         return bake_project_func_language(project, package_id, buffer, argument);
     } else if (!strcmp(function, "id")) {

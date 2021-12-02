@@ -766,7 +766,7 @@ void bake_project_init_artefact(
 {
     if (project->artefact) {
         project->artefact_path = ut_asprintf(
-            "%s"UT_OS_PS"bin"UT_OS_PS"%s-%s", project->path, UT_PLATFORM_STRING,
+            "%s"UT_OS_PS"bin"UT_OS_PS"%s-%s", project->path, config->build_target,
             config->configuration);
 
         project->artefact_file = ut_asprintf(

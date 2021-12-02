@@ -80,6 +80,7 @@ struct bake_config {
     char *tmpl;              /* $BAKE_HOME/template */
     char *platform;          /* $BAKE_HOME/<platform> */
     char *target;            /* $BAKE_HOME/<platform>/<configuration> */
+    const char *build_target;/* Target architecture (default = current) */
     char *bin;               /* $BAKE_HOME/<platform>-<configuration>/bin */
     char *lib;               /* $BAKE_HOME/<platform>-<configuration>/lib */
 };
