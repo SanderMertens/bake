@@ -376,8 +376,8 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "amalgamate")) {
            ut_try (bake_json_set_boolean(&p->amalgamate, member, v), NULL);
         } else
-        if (!strcmp(member, "use_amalgamate") || !strcmp(member, "use-amalgamate")) {
-           ut_try (bake_json_set_boolean(&p->use_amalgamate, member, v), NULL);
+        if (!strcmp(member, "standalone") || !strcmp(member, "standalone")) {
+           ut_try (bake_json_set_boolean(&p->standalone, member, v), NULL);
         } else                
         if (!strcmp(member, "author")) {
             ut_try (bake_json_set_string(&p->author, member, v), NULL);
@@ -860,7 +860,7 @@ int16_t bake_project_init(
     }
 
     /* If project imports sources from other projects, add deps folder */
-    if (project->use_amalgamate) {
+    if (project->standalone) {
         ut_ll_append(project->sources, ut_strdup("deps"));
     }
 
@@ -1440,8 +1440,8 @@ int16_t bake_check_dependency(
         goto error;
     }
 
-    /* If use_amalgamate, copy source of dependencies to project */    
-    if (p->use_amalgamate) {
+    /* If standalone, copy source of dependencies to project */    
+    if (p->standalone) {
         ut_try(copy_amalgamated_from_dep(
             config, p, amalg_driver, dependency, amalg_copied), NULL);
         goto proceed;
@@ -1499,7 +1499,7 @@ int16_t bake_project_check_dependencies(
     }
 
     bake_driver *amalg_driver = NULL;
-    if (project->use_amalgamate) {
+    if (project->standalone) {
         amalg_driver = bake_driver_get("amalgamate");
         if (!amalg_driver) {
             ut_throw("failed to locate amalgamation driver");
@@ -1512,7 +1512,7 @@ int16_t bake_project_check_dependencies(
         artefact_modified = ut_lastmodified(artefact_full);
     }
 
-    if (project->use_amalgamate) {
+    if (project->standalone) {
         deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
         deps_dependee_file = ut_asprintf(
             "%s"UT_OS_PS"/dependee.json", deps_path);
@@ -1558,7 +1558,7 @@ int16_t bake_project_check_dependencies(
     if (project->missing_dependencies) {
         bool standalone = false;
 
-        if (project->use_amalgamate) {
+        if (project->standalone) {
             if (ut_file_test(deps_dependee_file) == 1) {
                 standalone = true;
             }
@@ -1575,7 +1575,7 @@ int16_t bake_project_check_dependencies(
 
     /* If all dependencies were found & we're embedding sources, (over)write the
      * combined configuration for the dependencies */
-    if (!project->missing_dependencies && project->use_amalgamate) {
+    if (!project->missing_dependencies && project->standalone) {
         if (project->embed_json) {
             json_serialize_to_file_pretty(project->embed_json, deps_dependee_file);
             json_value_free(project->embed_json);
@@ -1592,7 +1592,7 @@ int16_t bake_project_check_dependencies(
     /* At this point we should have a file with the configuration for the
      * embedded dependencies if we're using embedded sources, whether the
      * dependencies are locally available or not. */
-    if (project->use_amalgamate) {
+    if (project->standalone) {
         /* Load as regular dependee config */
         bake_project_load_dependee_config(
             config, project, "deps", deps_dependee_file);
@@ -1817,7 +1817,7 @@ int16_t bake_project_add_dependencies(
 {
     bool error = false;
 
-    if (p->use_amalgamate) {
+    if (p->standalone) {
         /* If project is importing amalgamated sources from dependencies, don't
          * link with dependency libraries. */
         return 0;
@@ -2080,7 +2080,7 @@ int16_t bake_project_clean_intern(
         }
     }
 
-    if (project->use_amalgamate) {
+    if (project->standalone) {
         char *deps_path = ut_asprintf("%s"UT_OS_PS"deps", project->path);
         ut_try(ut_rm(deps_path), NULL);
         free(deps_path);

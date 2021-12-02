@@ -419,7 +419,7 @@ int16_t bake_crawler_recursive(
     ut_iter it = ut_ll_iter(crawler->leafs);
     while (ut_iter_hasNext(&it)) {
         bake_project *project = ut_iter_next(&it);
-        if (project->use_amalgamate) {
+        if (project->standalone) {
             continue;
         }
 
@@ -435,7 +435,7 @@ int16_t bake_crawler_recursive(
     it = ut_ll_iter(projects);
     while (ut_iter_hasNext(&it)) {
         bake_project *project = ut_iter_next(&it);
-        if (project->use_amalgamate) {
+        if (project->standalone) {
             continue;
         }
 

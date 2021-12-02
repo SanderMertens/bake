@@ -337,7 +337,7 @@ void add_dependency_includes(
             if (!strcmp(project_id, "bake.util")) {
                 fprintf(f, "#ifdef __BAKE__\n");
             }
-            if (!project->use_amalgamate) {
+            if (!project->standalone) {
                 fprintf(f, "#include <%s>\n", project_header);
             } else {
                 fprintf(f, "#include \"../../deps/%s\"\n", project_header);

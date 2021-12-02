@@ -90,7 +90,7 @@ struct bake_project {
     bool public;            /* Is package public or private */
     bool coverage;          /* Include in coverage analysis (default = true) */
     bool amalgamate;        /* Generate amalgamated source (default = false) */
-    bool use_amalgamate;    /* Copy amalgamated sources from dependencies (default = false) */
+    bool standalone;    /* Copy amalgamated sources from dependencies (default = false) */
     bool recursive;         /* Is this project recursively built */
     ut_ll use;              /* Project dependencies */
     ut_ll use_private;      /* Local dependencies (not visible to dependees) */
@@ -129,7 +129,7 @@ struct bake_project {
     /* Direct access to the parson JSON data */
     void *json;
 
-    /* Combined configuration from embedded projects (use_amalgamate) */
+    /* Combined configuration from embedded projects (standalone) */
     void *embed_json;
 
     /* Missing dependency count (determines whether to do standalone build) */
