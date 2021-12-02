@@ -1220,6 +1220,7 @@ int16_t bake_merge_dependency_config_value(
         const char *mbr = json_object_get_name(src_json, i);
         JSON_Value *dst_v = json_object_get_value(dst_json, mbr);
         JSON_Value *src_v = json_object_get_value_at(src_json, i);
+
         if (!dst_v) {
             dst_v = json_value_deep_copy(src_v);
             json_object_set_value(dst_json, mbr, dst_v);
@@ -1245,11 +1246,18 @@ int16_t bake_merge_dependency_config_value(
                 for (dst_el = 0; dst_el < dst_a_count; dst_el ++) {
                     JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
                     JSON_Value *dst_el_v = json_array_get_value(dst_a, dst_el);
-                    if (!json_value_equals(src_el_v, dst_el_v)) {
-                        json_array_append_value(dst_a, 
-                            json_value_deep_copy(src_el_v));
+                    if (json_value_equals(src_el_v, dst_el_v)) {
+                        break;
                     }
                 }
+                if (dst_el != dst_a_count) {
+                    break;
+                }
+            }
+            if (src_el == src_a_count) {
+                JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
+                json_array_append_value(dst_a, 
+                    json_value_deep_copy(src_el_v));
             }
 
         /* If type is object, merge objects */
@@ -1292,8 +1300,12 @@ int16_t bake_import_dependency_config(
                     p->embed_json = json_value_init_object();
                 }
 
-                JSON_Value *dst = json_value_init_object();
-                json_object_set_value(json_object(p->embed_json), mbr, dst);
+                JSON_Value *dst = NULL;
+                dst = json_object_get_value(json_object(p->embed_json), mbr);
+                if (!dst) {
+                    dst = json_value_init_object();
+                    json_object_set_value(json_object(p->embed_json), mbr, dst);
+                }
 
                 JSON_Value *src = json_object_get_value_at(json, i);
                 if (bake_merge_dependency_config_value(p, dep, dst, src)) {
@@ -1565,7 +1577,7 @@ int16_t bake_project_check_dependencies(
      * combined configuration for the dependencies */
     if (!project->missing_dependencies && project->use_amalgamate) {
         if (project->embed_json) {
-            json_serialize_to_file(project->embed_json, deps_dependee_file);
+            json_serialize_to_file_pretty(project->embed_json, deps_dependee_file);
             json_value_free(project->embed_json);
             project->embed_json = NULL;
         } else {
