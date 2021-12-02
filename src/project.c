@@ -1308,6 +1308,51 @@ error:
     return -1;
 }
 
+static
+int16_t copy_amalgamated_src_from_dep(
+    bake_config *config,
+    bake_project *p,
+    bake_driver *amalg_driver,
+    const char *dependency)
+{
+    const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
+    if (!src_path) {
+        ut_throw("cannot find sources for dependency '%s'", dependency);
+        goto error;
+    }
+
+    ut_trace("source path for '%s' is '%s'", dependency, src_path);
+
+    bake_project *dep = bake_project_new(src_path, config);
+    if (!dep) {
+        ut_throw("failed to create project for path '%s'", src_path);
+        goto error;
+    }
+
+    char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
+    ut_trace("copy amalgamated sources to '%s'", dst_path);
+    dep->generate_path = dst_path;
+
+    ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
+
+    free(dst_path);
+
+    /* Recursively copy sources from dependencies */
+    if (dep->use) {
+        ut_iter it = ut_ll_iter(dep->use);
+        while (ut_iter_hasNext(&it)) {
+            char *dep_of_dep = ut_iter_next(&it);
+            ut_try(
+                copy_amalgamated_src_from_dep(
+                    config, p, amalg_driver, dep_of_dep), NULL);
+        }
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Check project dependency */
 static
 int16_t bake_check_dependency(
@@ -1315,7 +1360,8 @@ int16_t bake_check_dependency(
     bake_project *p,
     const char *dependency,
     uint32_t artefact_modified,
-    bool private)
+    bool private,
+    bake_driver *amalg_driver)
 {
     ut_locate_reset(dependency);
 
@@ -1353,33 +1399,8 @@ int16_t bake_check_dependency(
     }
 
     if (p->use_amalgamate) {
-        const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
-        if (!src_path) {
-            ut_throw("cannot find sources for dependency '%s'", dependency);
-            goto error;
-        }
-
-        ut_trace("source path for '%s' is '%s'", dependency, src_path);
-
-        bake_project *dep = bake_project_new(src_path, config);
-        if (!dep) {
-            ut_throw("failed to create project for path '%s'", src_path);
-            goto error;
-        }
-
-        bake_driver *amalg_driver = bake_driver_get("amalgamate");
-        if (!amalg_driver) {
-            ut_throw("failed to locate amalgamation driver");
-            goto error;
-        }
-
-        char *dst_path = ut_asprintf("%s"UT_OS_PS"deps", p->path);
-        ut_trace("copy amalgamated sources to '%s'", dst_path);
-        dep->generate_path = dst_path;
-
-        ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
-
-        free(dst_path);
+        ut_try(copy_amalgamated_src_from_dep(
+            config, p, amalg_driver, dependency), NULL);
     } else {
         const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
         if (!lib) {
@@ -1424,6 +1445,15 @@ int16_t bake_project_check_dependencies(
         return 0;
     }
 
+    bake_driver *amalg_driver = NULL;
+    if (project->use_amalgamate) {
+        amalg_driver = bake_driver_get("amalgamate");
+        if (!amalg_driver) {
+            ut_throw("failed to locate amalgamation driver");
+            goto error;
+        }
+    }
+
     char *artefact_full = project->artefact_file;
     if  (ut_file_test(artefact_full)) {
         artefact_modified = ut_lastmodified(artefact_full);
@@ -1441,7 +1471,7 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                config, project, package, artefact_modified, false))
+                config, project, package, artefact_modified, false, amalg_driver))
             {
                 goto error;
             }
@@ -1454,7 +1484,7 @@ int16_t bake_project_check_dependencies(
         while (ut_iter_hasNext(&it)) {
             char *package = ut_iter_next(&it);
             if (bake_check_dependency(
-                config, project, package, artefact_modified, true))
+                config, project, package, artefact_modified, true, amalg_driver))
             {
                 goto error;
             }

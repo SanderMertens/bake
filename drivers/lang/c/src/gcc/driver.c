@@ -370,6 +370,8 @@ void add_misc_link(
     if (is_emcc()) {
         ut_strbuf_append(cmd, " -s ALLOW_MEMORY_GROWTH=1");
         ut_strbuf_append(cmd, " -s EXPORTED_RUNTIME_METHODS=cwrap");
+        ut_strbuf_append(cmd, " -s MODULARIZE=true");
+        ut_strbuf_append(cmd, " -s EXPORT_NAME=\"%s\"", project->id);
 
         if (ut_file_test("etc/assets") == 1) {
             ut_strbuf_append(cmd, " --embed-file etc/assets");

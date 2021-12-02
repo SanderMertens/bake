@@ -174,7 +174,7 @@ int amalgamate(
                              * will already have been flagged as included. */
                         }
                     }
-                    
+
                     if (path) {
                         /* Amalgamate this file */
                         ut_try(
@@ -193,6 +193,10 @@ int amalgamate(
 
         fprintf(out, "%s", line);
     }
+
+    fprintf(out, "\n"); /* Support for empty files */
+
+    fclose(in);
 
     return 0;
 error:
