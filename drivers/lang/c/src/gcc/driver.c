@@ -211,13 +211,12 @@ void add_std(
         ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
     }
 
-    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra"); 
+    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra -pedantic"); 
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
         /* Enable lots of warnings in strict mode */
         ut_strbuf_appendstr(cmd, " -Werror -Wshadow -Wconversion -Wwrite-strings");
-        ut_strbuf_appendstr(cmd, " -pedantic");
         ut_strbuf_appendstr(cmd, " -Wunused-parameter -Wsign-compare");
         ut_strbuf_appendstr(cmd, " -Wparentheses -Wsequence-point -Wpointer-arith");
         ut_strbuf_appendstr(cmd, " -Wdisabled-optimization");
