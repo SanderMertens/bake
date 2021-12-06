@@ -413,7 +413,9 @@ void generate(
             "(main obj-C source)", 0, objc_files_parsed, &project_modified, 
             &main_included), NULL);
     }
-    fclose(m_out);
+    if (m_out) {
+        fclose(m_out);
+    }
 
     /* Timestamps were checked while amalgamating. Only replace files with new
      * result if we found that inputs were newer. This ensures we won't end up
