@@ -1412,8 +1412,9 @@ int main(int argc, const char *argv[]) {
         load_bundles = true;
     }
 
+    bool is_bake_parent = false;
 #ifndef UT_OS_WINDOWS
-    bool is_bake_parent = !ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE");
+    is_bake_parent = !ut_getenv("BAKE_CHILD") || strcmp(ut_getenv("BAKE_CHILD"), "TRUE");
     if (is_bake_parent) {
         /* If this is a parent process, don't load bundles. This is not 
          * necessary since the parent process won't do anything with it, 
