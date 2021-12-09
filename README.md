@@ -1,7 +1,7 @@
 [![.github/workflows/main.yml](https://github.com/SanderMertens/bake/actions/workflows/main.yml/badge.svg)](https://github.com/SanderMertens/bake/actions/workflows/main.yml)
 
 # bake
-The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, but with bake you'll probably spend a little less time worrying about it.
+The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building C/C++ code will never be fun, but with bake you'll probably spend a little less time worrying about it.
 
 Here's how bake tries to alleviate some of the pain:
 - Minimal, platform independent project configuration (as in 2 lines of JSON minimal)
@@ -229,6 +229,18 @@ Bake:
 ```
 
 A difference that jumps out from the examples is that the bake configuration is agnostic to its environment. It knows where to find project `bar`, whereas in CMake this needs to be explicitly specified.
+
+### How does bake compare to premake?
+Premake is a lot like CMake, but with a Lua-based project configuration that's slightly less verbose. Premake also generates build configurations, and requires additional tools to actually build your code.
+
+### How does bake compare to Bazel?
+Out of all build systems, bake and bazel come closest in the way they approach building code. The biggest differences are:
+
+- Bake is a much, much smaller project
+- Bake is less controlling when it comes to your environment. If you want absolute control over which version of Python, make, gcc etc. you're using while building, Bazel can do a better job.
+- Bake only builds C/C++ code.
+- Bazel project identifiers are relative to a workspace. Bake project identifiers are universal.
+- Bazel has a custom language for project congiguration
 
 ### Can I link with non-bake libraries?
 Yes. This example shows how to link with `libm`:
