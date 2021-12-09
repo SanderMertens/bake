@@ -38,6 +38,25 @@ jobs:
         run: |
           ./setup.sh
 
-      - name: build examples (debug)
+      - name: build examples
+        run: |
+          bake examples --strict
+
+  build-windows:
+    timeout-minutes: 10
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: setup
+        run: |
+          setup
+
+      - name: build examples
         run: |
           bake examples --strict
