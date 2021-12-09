@@ -83,6 +83,7 @@ OBJECTS := \
 	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/thread.o \
+	$(OBJDIR)/proc_common.o \
 	$(OBJDIR)/rb.o \
 	$(OBJDIR)/strbuf.o \
 	$(OBJDIR)/string.o \
@@ -199,6 +200,9 @@ $(OBJDIR)/proc.o: ../src/posix/proc.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/thread.o: ../src/posix/thread.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/proc_common.o: ../src/proc_common.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rb.o: ../src/rb.c

@@ -128,7 +128,9 @@ int ut_proc_cmd(
     int8_t *rc);
 
 UT_API
-int ut_proc_cmd_stderr_only(char* cmd, int8_t *rc);
+int ut_proc_cmd_stderr_only(
+    char* cmd, 
+    int8_t *rc);
 
 /** Function that checks if process is being traced (experimental)
  *

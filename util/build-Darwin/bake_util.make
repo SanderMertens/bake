@@ -27,8 +27,8 @@ ifeq ($(config),debug)
   INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -ldl -lpthread
   LDDEPS +=
@@ -62,8 +62,8 @@ ifeq ($(config),release)
   INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -ldl -lpthread
   LDDEPS +=
@@ -99,6 +99,7 @@ OBJECTS := \
 	$(OBJDIR)/fs1.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/thread.o \
+	$(OBJDIR)/proc_common.o \
 	$(OBJDIR)/rb.o \
 	$(OBJDIR)/strbuf.o \
 	$(OBJDIR)/string.o \
@@ -215,6 +216,9 @@ $(OBJDIR)/proc.o: ../src/posix/proc.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/thread.o: ../src/posix/thread.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/proc_common.o: ../src/proc_common.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/rb.o: ../src/rb.c
