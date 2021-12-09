@@ -1404,7 +1404,7 @@ int main(int argc, const char *argv[]) {
     ut_tls_set(BAKE_CONFIG_KEY, &config);
 
     if (!action) {
-        return 0;
+        goto ok;
     }
 
     if (recursive) {
@@ -1478,7 +1478,7 @@ int main(int argc, const char *argv[]) {
         ut_proc pid = ut_proc_run(argv[0], argv);
         if (!pid) {
             ut_error("failed to spawn bake child process");
-            return -1;
+            goto error;
         } else {
             int8_t rc = 0;
             int sig = ut_proc_wait(pid, &rc);
@@ -1489,9 +1489,9 @@ int main(int argc, const char *argv[]) {
                     /* If this was a clean exit with an error code, no need to
                      * repeat the error since the bake child already did */
                 }
-                return -1;
+                goto error;
             }
-            return 0;
+            goto ok;
         }
     }
 #endif
@@ -1608,9 +1608,10 @@ int main(int argc, const char *argv[]) {
     /* Cleanup crawler */
     bake_crawler_free();
 
+ok:
     ut_deinit();
-    return 0;
+    return UT_CMD_OK;
 error:
     ut_deinit();
-    return -1;
+    return UT_CMD_ERR;
 }

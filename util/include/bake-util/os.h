@@ -107,6 +107,9 @@ extern "C" {
 #define UT_LINUX
 #endif
 
+#define UT_CMD_OK 0
+#define UT_CMD_ERR ((int8_t)-1)
+
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING
 
 /* Get hostname of current machine */

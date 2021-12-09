@@ -71,6 +71,11 @@ ut_proc ut_proc_run_intern(
         &si,           // STARTUPINFO pointer 
         &pi);
 
+    if (!bSuccess) {
+        ut_trace("failed to start '%s' (code %d)\n", filename, GetLastError());
+        goto error;
+    }
+
     return pi.hProcess;
 error:
     return NULL;
@@ -107,6 +112,10 @@ int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
         if (!GetExitCodeProcess(hProcess, &exit_code)) {
             ut_throw("failed to get exit code of process: %s", ut_last_win_error());
             return -1;
+        }
+
+        if (exit_code && (exit_code != ((int8_t)exit_code))) {
+            exit_code = UT_CMD_ERR;
         }
 
         *rc = exit_code;
