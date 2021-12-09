@@ -1,25 +1,36 @@
-[![Build Status](https://travis-ci.org/SanderMertens/bake.svg?branch=master)](https://travis-ci.org/SanderMertens/bake) [![Build status](https://ci.appveyor.com/api/projects/status/or9nqredss604c39/branch/master?svg=true)](https://ci.appveyor.com/project/SanderMertens/bake/branch/master)
+[![.github/workflows/main.yml](https://github.com/SanderMertens/bake/actions/workflows/main.yml/badge.svg)](https://github.com/SanderMertens/bake/actions/workflows/main.yml)
 
 # bake
-The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated, this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, so let's try to make it as easy and painless as possible.
+The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't niet maken, wel makkelijker". Roughly translated this means: "We can't make it more fun, but we can make it easier". Bake adopts a similar philosophy. Building code (especially C/C++) will never be fun, but with bake you'll probably spend a little less time worrying about it.
 
-To that end, bake is a build tool, build system, package manager and environment manager in one. Bake automates building code, especially for highly interdependent projects. Currently, Bake's focus is C/C++.
+Here's how bake tries to alleviate some of the pain:
+- Minimal, platform independent project configuration (as in 2 lines of JSON minimal)
+- Create new projects with a single command
+- Zero-dependencies, calls compilers directly
+- Refer to dependencies by logical names, no OS/environment dependent paths
+- Automatically include headers from dependencies
+- Out of the box macro's for exporting symbols
+- Automatically discover, order and build projects in directories without additional config
+- Recursively build projects & their dependencies for the right config with a single command
+- Generate single source/header files from any project
+- A test framework
+- Clone, build and run projects with their dependencies with a single command
+- Make projects warning free on all compilers/compiler versions with strict compilation mode
+- Out of the box support for running projects with address sanitizers
+- Manage projects & their git repositories with bake bundles
 
-Bake's main features are:
-- discover all projects in current directory & build them in the correct order
-- clone, build and run a project and its dependencies with a single command using bake bundles 
-- automatically include header files from dependencies
-- use logical (hierarchical) identifiers to specify dependencies on any project built on the machine
-- programmable C API for interacting with package management
-- manage and automatically export environment variables used for builds
-
-Bake depends on git for its package management features, and does _not_ have a server infrastructure for hosting a package repository. **Bake does not collect any information when you clone, build or publish projects**.
-
-Bake is supported on the following platforms:
+Bake is verified on the following platforms:
 
 - Linux
 - MacOS
-- Windows (validated on Windows 10)
+- Windows
+
+Bake is verified on the following compilers
+- gcc (7, 8, 9, 10)
+- clang (8, 9, 10)
+- msvc
+
+Bake is used as the primary build system for [Flecs](https://github.com/SanderMertens/flecs).
 
 ## Contents
 * [Installation](#installation)
@@ -52,35 +63,30 @@ Install bake using the following commands:
 On Linux/MacOS:
 ```demo
 git clone https://github.com/SanderMertens/bake
-make -C bake/build-$(uname)
-bake/bake setup
+bake/setup.sh
 ```
 
 On Windows:
 ```
 git clone https://github.com/SanderMertens/bake
-cd build-Windows
-nmake
-cd ..
-bake setup
+cd bake
+setup
 ```
-On Windows, make sure to open a **visual studio command prompt**, as you will need access to the visual studio build tools. After bake is installed, you can invoke bake from any command prompt. If you want to install bake for all users, open the command prompt as administrator.
 
-Bake installs a script to a location that is accessible for all users (`C:\Windows\System32` on Windows or `/usr/local/bin` on Linux). This however often requires administrator or root privileges. If you do not want bake to install this script and you get a password prompt, just press Enter untill the setup resumes.
+On MacOS/Linux bake will install a single script in `/usr/local/bin` which calls the bake binary in `~/bake`, which may prompt for your password during installation. This script allows you to call bake from any location without having to make changes to your environment.
+
+If you'd rather not install this script, you can install bake in local mode:
+
+```c
+git clone https://github.com/SanderMertens/bake
+cd bake
+make -C build-$(uname) clean all
+./bake setup --local
+```
+After the setup has finished, the bake executable will be stored in `~/bake`. Make sure to add this directory to your `PATH` variable before using bake.
  
-In case you did not install bake for all users, you need to manually add `$HOME/bake` (`%USERPROFILE%\bake` on Windows) to your `PATH` environment variable. You can do this on a command prompt by doing:
-
-On Linux:
-```
-export PATH=$PATH:$HOME/bake
-```
-
-On Windows:
-```
-set PATH=%PATH%;%USERPROFILE%\bake
-```
- 
-After you've installed bake once, you can upgrade to the latest version with:
+## Upgrade bake
+You can upgrade bake to the latest version by running this command:
 
 ```demo
 bake upgrade
