@@ -21,20 +21,46 @@
 
 #include <bake_util.h>
 
+#define VS_PATH_TEMPLATE \
+  "C:\\Program Files\\Microsoft Visual Studio\\%d\\Community"
+
+#define VS_X86_PATH_TEMPLATE \
+  "C:\\Program Files (x86)\\Microsoft Visual Studio\\%d\\Community"
+
 char * ut_get_vs_dir()
 {
-    // Check application is executed from VS 2017 Command Prompt
+    // Try to find visual studio install path
     char * vs_path_env = ut_getenv("VSINSTALLDIR");
-    if (!vs_path_env){
-        // Check for user defined variable
-        vs_path_env = ut_getenv("VS2017");
-        if (!vs_path_env)
-        {
-            ut_log("#[yellow]Attension#[reset]   $VS2017 not defined. Using default Visaul Studio 2017 path.\n");
-            vs_path_env = strdup("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community");
+    if (vs_path_env) {
+        ut_trace("visual studio installation: %s", vs_path_env);
+        return vs_path_env;
+    }
+
+    // Visual studio install path not found, try versions
+    for (int version = 2050; version >= 2015; version --) {
+        free(vs_path_env);
+        vs_path_env = ut_asprintf(VS_PATH_TEMPLATE, version);
+        if (ut_file_test(vs_path_env) == 1) {
+            ut_trace("visual studio installation: %s", vs_path_env);
+            return vs_path_env;
         }
     }
-    return vs_path_env;
+
+    // Still nothing found, try x86 path
+    for (int version = 2050; version >= 2015; version --) {
+        free(vs_path_env);
+        vs_path_env = ut_asprintf(VS_X86_PATH_TEMPLATE, version);
+        if (ut_file_test(vs_path_env) == 1) {
+            ut_trace("visual studio installation: %s", vs_path_env);
+            return vs_path_env;
+        }
+    }
+
+    free(vs_path_env);
+
+    ut_throw("no visual studio installation found, try running bake from vs command prompt");
+
+    return NULL;
 }
 
 char * ut_get_vc_shell_cmd()

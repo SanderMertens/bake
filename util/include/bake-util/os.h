@@ -70,7 +70,7 @@ extern "C" {
 #define UT_ENV_LIBPATH "PATH"
 #define UT_ENV_BINPATH "PATH"
 #define UT_ENV_PATH_SEPARATOR ";"
-#define UT_GLOBAL_BIN_PATH "C:\\Windows\\system32"
+#define UT_GLOBAL_BIN_PATH "C:\\Program Files\\bake"
 #define UT_GLOBAL_LIB_PATH "C:\\Windows\\system32"
 #define UT_WINDOWS
 #elif defined(UT_OS_LINUX)

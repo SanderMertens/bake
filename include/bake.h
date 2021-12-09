@@ -25,7 +25,7 @@
 #include <bake_util.h>
 
 #ifdef _WIN32
-#define BAKE_EXEC "bake2"
+#define BAKE_EXEC "bakebin"
 #else
 #define BAKE_EXEC "bake"
 #endif

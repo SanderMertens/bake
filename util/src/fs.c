@@ -278,11 +278,15 @@ int16_t ut_cp(
     int16_t result;
 
     char *src_parsed = ut_envparse(src);
-    if (!src_parsed) goto error;
+    if (!src_parsed) {
+        ut_throw("failed to parse source filename '%s'", src);
+        goto error;
+    }
 
     char *dst_parsed = ut_envparse(dst);
     if (!dst_parsed) {
         free(src_parsed);
+        ut_throw("failed to parse destination filename '%s'", dst);
         goto error;
     }
 
@@ -301,9 +305,13 @@ int16_t ut_cp(
     free(src_parsed);
     free(dst_parsed);
 
-    return result;
+    if (result) {
+        goto error;
+    }
+
+    return 0;
 error:
-    ut_throw("failed to copy '%s' to '%s'", src, dst);
+    ut_throw("failed to copy '%s' to '%s'", src_parsed, dst_parsed);
     return -1;
 }
 

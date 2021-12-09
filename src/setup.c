@@ -21,7 +21,8 @@
 
 #include "bake.h"
 
-#define BAKE_SCRIPT "~/bake/bake" UT_OS_SCRIPT_EXT
+#define BAKE_SCRIPT_PATH "~" UT_OS_PS "bake"
+#define BAKE_SCRIPT BAKE_SCRIPT_PATH UT_OS_PS "bake" UT_OS_SCRIPT_EXT
 #define BAKE_TEMP_SCRIPT "~/bake/bake-tmp" UT_OS_SCRIPT_EXT
 #define BAKE_UPGRADE_SCRIPT "~/bake/bake-upgrade" UT_OS_SCRIPT_EXT
 #ifdef _WIN32
@@ -30,6 +31,8 @@
 #define BAKE_GLOBAL_SCRIPT UT_GLOBAL_BIN_PATH "/bake"
 #endif
 #define BAKE_REPOSITORY "https://github.com/SanderMertens/bake"
+
+static bool bake_in_path = false;
 
 /* Utility function for running a setup command */
 int16_t cmd(
@@ -115,40 +118,56 @@ error:
 /* Create bake script for Windows */
 int16_t bake_create_script(bool local, bool nopass)
 {
-    char *script_path = ut_envparse(BAKE_SCRIPT);
-    if (!script_path) {
+    char *script_file_path = ut_envparse(BAKE_SCRIPT);
+    if (!script_file_path) {
         ut_error("failed to open '%s'", BAKE_SCRIPT);
         goto error;
     }
 
     char *vc_shell_cmd = ut_get_vc_shell_cmd();
 
-    FILE *f = fopen(script_path, "wb");
+    FILE *f = fopen(script_file_path, "wb");
     if (!f) {
-        ut_error("cannot open '%s': %s", script_path, strerror(errno));
+        ut_error("cannot open '%s': %s", script_file_path, strerror(errno));
         goto error;
     }
 
-    fprintf(f, "@ECHO OFF\n\n");
+    fprintf(f, "@echo off\n\n");
     fprintf(f, "where nmake > nul\n");
-    fprintf(f, "IF %%ERRORLEVEL%% == 1 (\n");
+    fprintf(f, "if %%ERRORLEVEL%% == 1 (\n");
     fprintf(f, "    %s\n", vc_shell_cmd);
     fprintf(f, ")\n");
     fprintf(f, "cmd /c %%USERPROFILE%%\\bake\\"BAKE_EXEC".exe %%*\n");
     fprintf(f, ")\n\n");
     fclose(f);
 
-    /* Copy file to global location, may ask for password */
+    char *script_path = ut_envparse(BAKE_SCRIPT_PATH);
+    if (!script_path) {
+        ut_error("failed to open '%s'", BAKE_SCRIPT_PATH);
+    }
+
     if (!local) {
-        bake_message(UT_WARNING, "WARNING", 
-            "#[normal]copying script to '" UT_GLOBAL_BIN_PATH "', #[yellow]requires administrator privileges");
+        const char *path = ut_getenv("BAKE_USERPATH");
+        if (!path || !strstr(path, script_path)) {
+            ut_trace("add bake directory to user PATH");
+            char *path_w_bake = ut_asprintf("%s;%s", path, script_path);
+            f = fopen("export_bake.bat", "w");
+            if (!f) {
+                ut_throw("failed to create export script");
+                goto error;
+            }
+            fprintf(f, "@echo on\n");
+            fprintf(f, "setx PATH \"%s\"\n", path_w_bake);
+            fclose(f);
 
-        ut_try( ut_cp(script_path, UT_GLOBAL_BIN_PATH), NULL);
-
-        bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'\n");
+            ut_try(cmd("export_bake.bat"), "failed to run export script");
+        } else {
+            bake_in_path = true;
+        }
     }
 
     free(vc_shell_cmd);
+    free(script_file_path);
     free(script_path);
 
     return 0;
@@ -366,7 +385,7 @@ void bake_uninstall_old_file(const char *file) {
 }
 
 void bake_uninstall_old_files(void) {
-    bake_uninstall_old_file("~/bake/bake2");
+    bake_uninstall_old_file("~/bake/bake2.exe");
     bake_uninstall_old_file(BAKE_SCRIPT);
     bake_uninstall_old_file(BAKE_TEMP_SCRIPT);
     bake_uninstall_old_file(BAKE_UPGRADE_SCRIPT);
@@ -423,7 +442,7 @@ int16_t bake_setup(
         "failed to create global bake script, rerun setup with --local");
 
     /* Copy bake executable to bake environment in user working directory */
-    ut_try( ut_cp("./bake" UT_OS_BIN_EXT, "~/bake/" BAKE_EXEC UT_OS_BIN_EXT),
+    ut_try( ut_cp("." UT_OS_PS "bake" UT_OS_BIN_EXT, "~" UT_OS_PS "bake" UT_OS_PS BAKE_EXEC UT_OS_BIN_EXT),
         "failed to copy bake executable");
 
     bake_message(UT_OK, "done", "copy bake executable");
@@ -497,6 +516,12 @@ int16_t bake_setup(
             printf("export `~/bake/bake env`\n");
 #endif
             printf("\n");
+        } else {
+#ifdef _WIN32
+            if (!bake_in_path && !local) {
+                printf("Open a new terminal to start using bake\n");
+            }
+#endif
         }
     }
 
