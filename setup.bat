@@ -42,7 +42,7 @@ call "%VSDIR%\\VC\\Auxiliary\\Build\\vcvarsall.bat" x64
 
 rem Build & install bake
 cd build-Windows
-nmake /NOLOGO
+nmake clean all /NOLOGO
 cd ..
 bake.exe setup
 

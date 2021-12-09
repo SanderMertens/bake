@@ -115,7 +115,12 @@ error:
     return -1;
 }
 
-/* Create bake script for Windows */
+/* Create bake script for Windows.
+ * The bake script ensures that the visual studio environment is imported
+ * before bake is invoked. 
+ * When not in local mode, the setup adds the path to the bake script
+ * (%USERPROFILE%\bake) to the user-specific PATH variable. No files are
+ * copied to locations that require elevated privilege. */
 int16_t bake_create_script(bool local, bool nopass)
 {
     char *script_file_path = ut_envparse(BAKE_SCRIPT);
@@ -161,6 +166,8 @@ int16_t bake_create_script(bool local, bool nopass)
             fclose(f);
 
             ut_try(cmd("export_bake.bat"), "failed to run export script");
+
+            ut_try(ut_rm("export_bake.bat"), "failed to remove export script");
         } else {
             bake_in_path = true;
         }
