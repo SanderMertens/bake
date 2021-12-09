@@ -6,7 +6,8 @@ The Dutch IRS has a catchy slogan, which goes like this: "Leuker kunnen we 't ni
 Here's how bake tries to alleviate some of the pain:
 - Minimal, platform independent project configuration (as in 2 lines of JSON minimal)
 - Create new projects with a single command
-- Zero-dependencies, calls compilers directly
+- Builtin emscripten (webasm) support
+- Zero-dependencies, calls msvc, gcc, clang and emcc compilers directly
 - Refer to dependencies by logical names, no OS/environment dependent paths
 - Automatically include headers from dependencies
 - Out of the box macro's for exporting symbols
@@ -178,29 +179,31 @@ Yes. As long as your customers use the open source version of bake, and you do n
 No. Bake uses premake to generate its makefiles (we would've used bake to build bake- but chicken & egg etc). The generated makefiles are included in the bake repository, so you won't need premake to use bake.
 
 ### Why yet another build tool?
-Bake originally was a build tool developed for a framework (https://corto.io). It ended up simplifying building code a lot, and we decided to turn it into a separate project. So why did bake simplify building code that much?
+To put it bluntly, existing tools for C/C++ aren't great.
 
-Most build tools focus on the actual compilation process itself, and require project configurations to explicitly specify how source files get compiled to binaries. Since these rules are very similar for each C/C++ project, bake stores them into reusable drivers. As a result, bake project configurations can remain very simple and declarative.
+### Is bake a package manager?
+No. Bake has package-management like features, like resolving projects by logica name, automatic project discovery & associate projects with git repositories, but it does not pretend to be a full-fledged package manager. The only reason bake has these features is because it makes the build process easier.
 
-In addition, bake is modular so that even when your build needs to do more than just compile C/C++ files, you can write a new driver that, for example, generates code. You can then simply reference that driver from your project configuration.
+### Why are bake project configurations so simple?
+All C/C++ project build configurations basically boil down to the same set of rules to translate source files into objects, and objects into shared objects or application binaries. Yet with most build systems you'll find yourself copy-pasting the same rules every time you create a new project.
 
-Having said that, bake is not perfect and there is still lots of work to do. It does not run on as many platforms as cmake does, and is not as flexible as make. Maybe someday it will be, maybe not. Bake's development is driven by its users, so if you are using it and you're missing a feature, let us know!
+Bake doesn't need to be told how to build C/C++ code. It just needs three pieces of information:
+- The project name
+- Whether it's an application or a package
+- A `src` and `include` directory
 
-### Why yet another package manager?
-Bake is different from package managers like conan, brew or apt-get. It is intended as a tool for developers to easily import and use code from other developers. Bake for example does not have an online package repository, does not distribute binaries and by default stores packages in the user $HOME directory. Its only dependency is git, so no data is collected by bake when you download or publish packages.
+### Why doesn't bake generate makefiles or visual studio files?
+Makefiles and Visual Studio files are just elaborate front-ends for how to call compilers. Bake calls the compiler directly. It has builtin drivers for gcc, clang, msvc and emcc, and it automatically detects for which compiler it's building.
 
 ### How does bake compare to make?
-GNU make is a tool for generating compiler commands. It has a custom language for specifying build rules, and allows for a lot of complexity and flexibility in the project-specific makefiles. In a makefile, you would ordinarily find all information that is required to build your project, from the names and locations of source files, to the compiler flags, to where your binary will be stored.
-
-Bake also generates compiler commands, but instead of requiring a user to create build rules from scratch, bake uses "drivers" (configurable plugins) to do much of the heavy lifting. Driver implementations look very similar to makefiles, in that they also specify build rules with in & outputs. This moves the most complex part of a build to a reusable module, while keeping configuration simple.
-
-Bake further differentiates itself when it comes to working with multiple projects at once. With make, users often rely on "super" makefiles, that specify the locations of projects and the order in which they must be built. In contrast, bake automatically discovers the projects to build, and computes the right build order based on the project dependencies. If a dependency is not discovered, bake will locate it in the bake environment (or throw an error).
-
-Finally, bake has many features beyond generating compiler commands that address problems commonly found during building, like managing environment variables, git integration and package versioning.
+GNU make is a low-level tool that requires you to explicitly list all the rules required to translate code to binaries. Bake is a high-level tool that already knows how to build the code, and can do this with minimal configuration.
 
 ### How does bake compare to CMake?
-CMake and bake have similar goals in that both tools simplify the build process, but they do so in very different ways. To highlight the differences, lets take an example CMake project configuration, and then compare it to bake:
+CMake is a tool that generates other build configurations. When you use CMake you still need to use another tool like Make or Visual Studio to actually build your project. Bake builds your code directly.
 
+Another big difference is that CMake requires you to specify project configuration in a custom language, whereas Bake configuration is specified in JSON. Here is a CMake configuration and a Bake configuration for the same project:
+
+CMake:
 ```cmake
 cmake_minimum_required (VERSION 2.6)
 
@@ -214,8 +217,7 @@ add_executable(foo foo.c)
 target_link_libraries (foo ${EXTRA_LIBS})
 ```
 
-This configuration builds an executable called `Foo` that depends on a library called `Bar` (configuration for `Bar` not shown). The `Bar` project is a subdirectory of the `Foo` project, and it is added to the configuration so CMake is able to find the `Bar` project. The equivalent bake project configuration looks like this:
-
+Bake:
 ```json
 {
     "id": "foo",
@@ -225,23 +227,11 @@ This configuration builds an executable called `Foo` that depends on a library c
     }
 }
 ```
-A few things jump out. First of all, the bake configuration does not specify where to find `bar`. Bake will either automatically discover `bar` from where it is invoked, or find bar in the bake environment in `$HOME/bake` if it has been built before. 
 
-Secondly, the bake configuration does not explicitly specify the source files of the project. Bake looks for source files in well-defined locations, which is the same for each project (source files in `src`, include files in `include`).
-
-A more subtle difference is how in CMake, the configuration adds the `bar` subdirectory to the list of include paths. In bake, projects can use logical package identifiers to include their headers, like so:
-
-```c
-#include <bar>
-#include <hello.world>  // Nested package
-```
-
-This is possible because bake copies header files of projects to the bake environment, and bake projects always are expected to have a header with the name of the project. This approach ensures that projects always can use the same include path, regardless of where packages are installed, and also prevents name collisions between header files of different projects.
-
-There are of course many more differences, and this example covers only a small subset of the features of both CMake and bake, but hopefully it provides a bit more insight into how the two tools are different.
+A difference that jumps out from the examples is that the bake configuration is agnostic to its environment. It knows where to find project `bar`, whereas in CMake this needs to be explicitly specified.
 
 ### Can I link with non-bake libraries?
-Yes. You will have to add the library not as a bake dependency, but as a library for the C driver. This example shows how to link with the `m` (math) library:
+Yes. This example shows how to link with `libm`:
 
 ```json
 {
@@ -253,8 +243,7 @@ Yes. You will have to add the library not as a bake dependency, but as a library
 }
 ```
 
-This makes the project configuration platform-specific which is not ideal. To improve the above configuration, we should ensure that `m` is only added on Linux (MacOS doesn't have a `m` library):
-
+This can be improved by ensuring that `libm` is only added on Linux (MacOS/Windows don't have `libm`):
 ```json
 {
     "id": "my_app",
