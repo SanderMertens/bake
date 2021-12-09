@@ -5,6 +5,6 @@
 #include "examples-c-pkg_w_dependee/bake_config.h"
 
 EXAMPLES_C_PKG_W_DEPENDEE_API
-void pkg_w_dependee();
+void pkg_w_dependee(void);
 
 #endif

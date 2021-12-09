@@ -1397,7 +1397,8 @@ int main(int argc, const char *argv[]) {
         .optimizations = false,
         .coverage = false,
         .strict = false,
-        .static_lib = false
+        .static_lib = false,
+        .bake_modified = ut_lastmodified(argv[0])
     };
 
     ut_tls_set(BAKE_CONFIG_KEY, &config);

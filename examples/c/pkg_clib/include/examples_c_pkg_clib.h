@@ -5,6 +5,6 @@
 #include "examples-c-pkg_clib/bake_config.h"
 
 EXAMPLES_C_PKG_CLIB_API
-void pkg_clib();
+void pkg_clib(void);
 
 #endif

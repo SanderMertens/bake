@@ -1,4 +1,4 @@
 
-void print_helloworld() {
+void print_helloworld(void) {
     printf("Hello world!\n");
 }

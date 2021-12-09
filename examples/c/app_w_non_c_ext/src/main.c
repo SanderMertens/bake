@@ -3,6 +3,8 @@
 #include "foo.inl"
 
 int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     print_helloworld();
     return 0;
 }

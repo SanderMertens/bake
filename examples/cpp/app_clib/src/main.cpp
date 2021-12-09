@@ -2,7 +2,7 @@
 #include <iostream>
 #include <math.h>
 
-int main(int argc, char *argv[]) {
+int main(int, char *[]) {
     std::cout << "cos(1.0) = " << cos(1.0) << std::endl;
     return 0;
 }

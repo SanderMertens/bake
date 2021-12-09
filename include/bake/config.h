@@ -83,6 +83,9 @@ struct bake_config {
     const char *build_target;/* Target architecture (default = current) */
     char *bin;               /* $BAKE_HOME/<platform>-<configuration>/bin */
     char *lib;               /* $BAKE_HOME/<platform>-<configuration>/lib */
+
+    time_t bake_modified;    /* Used to determine whether code should be
+                              * regenerated after bake is upgraded. */
 };
 
 #ifdef __cplusplus

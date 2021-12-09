@@ -2,6 +2,8 @@
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     printf("Hello " BAKE_PROJECT_ID "\n");
     return 0;
 }

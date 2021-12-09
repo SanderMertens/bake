@@ -390,7 +390,9 @@ void generate(
     time_t project_json_modified = ut_lastmodified(project_json_file);
     free(project_json_file);
     if (header_modified >= project_json_modified) {
-        return;
+        if (header_modified >= config->bake_modified) {
+            return;
+        }
     }
 
     FILE *f = fopen(header_file, "w");
@@ -450,6 +452,12 @@ void generate(
       "#endif\n",
         snake_id, snake_id, id_upper, snake_id, id_upper, id_upper, id_upper, id_upper);
 
+    } else {
+        /* Private depenencies for application are equivalent to regular 
+         * dependencies as an application can't be a dependency itself */
+        if (project->use_private && ut_ll_count(project->use_private)) {
+            add_dependency_includes(project, config, f, project->use_private);
+        } 
     }
 
     fprintf(f, "%s", "\n#endif\n\n");

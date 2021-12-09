@@ -17,29 +17,21 @@
 #ifndef EXAMPLES_C_PKG_DEPENDEE_BAKE_CONFIG_H
 #define EXAMPLES_C_PKG_DEPENDEE_BAKE_CONFIG_H
 
-/* Generated includes are specific to the bake environment. If a project is not
- * built with bake, it will have to provide alternative methods for including
- * its dependencies. */
 /* Headers of public dependencies */
 #include <examples_c_pkg_w_dependee.h>
 #include <examples_c_pkg_helloworld.h>
 
-/* Headers of private dependencies */
-#ifdef EXAMPLES_C_PKG_DEPENDEE_IMPL
-/* No dependencies */
-#endif
-
 /* Convenience macro for exporting symbols */
-#ifndef EXAMPLES_C_PKG_DEPENDEE_STATIC
-  #if EXAMPLES_C_PKG_DEPENDEE_IMPL && (defined(_MSC_VER) || defined(__MINGW32__))
-    #define EXAMPLES_C_PKG_DEPENDEE_API __declspec(dllexport)
-  #elif EXAMPLES_C_PKG_DEPENDEE_IMPL
-    #define EXAMPLES_C_PKG_DEPENDEE_API __attribute__((__visibility__("default")))
-  #elif defined _MSC_VER
-    #define EXAMPLES_C_PKG_DEPENDEE_API __declspec(dllimport)
-  #else
-    #define EXAMPLES_C_PKG_DEPENDEE_API
-  #endif
+#ifndef examples_c_pkg_dependee_STATIC
+#if examples_c_pkg_dependee_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
+  #define EXAMPLES_C_PKG_DEPENDEE_API __declspec(dllexport)
+#elif examples_c_pkg_dependee_EXPORTS
+  #define EXAMPLES_C_PKG_DEPENDEE_API __attribute__((__visibility__("default")))
+#elif defined _MSC_VER
+  #define EXAMPLES_C_PKG_DEPENDEE_API __declspec(dllimport)
+#else
+  #define EXAMPLES_C_PKG_DEPENDEE_API
+#endif
 #else
   #define EXAMPLES_C_PKG_DEPENDEE_API
 #endif

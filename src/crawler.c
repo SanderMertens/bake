@@ -617,7 +617,7 @@ int16_t bake_crawler_walk(
         if (bake_crawler_build_project(
                 config, action_name, action, p, readyForBuild))
         {
-            ut_error("project '%s' built with errors, skipping", p->id);
+            ut_error("project #[red]%s#[reset] built with errors", p->id);
             result = -1;
         }
         built ++;
