@@ -30,7 +30,7 @@ int ut_proc_cmd_intern(
     int8_t *rc,
     bool stderr_only)
 {
-    int pid;
+    ut_proc pid;
     const char *args[UT_MAX_CMD_ARGS];
     char stack_buffer[BUFFER_SIZE];
     char *buffer = stack_buffer;

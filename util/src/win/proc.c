@@ -32,13 +32,6 @@ ut_proc ut_proc_run_intern(
     FILE *err)
 {
     char *cmdline = NULL;
-    int count = 1;
-
-    ut_strbuf buf = UT_STRBUF_INIT;
-    while (argv[count]) {
-        ut_strbuf_append(&buf, " %s", argv[count ++]);
-    }
-    cmdline = ut_strbuf_get(&buf);
 
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -57,17 +50,25 @@ ut_proc ut_proc_run_intern(
 
     // redirect currently not supported
 
+    ut_strbuf buf = UT_STRBUF_INIT;
+    int count = 1;
+    ut_strbuf_append(&buf, "\"%s\"", filename);
+    while (argv[count]) {
+        ut_strbuf_append(&buf, " %s", argv[count ++]);
+    }
+    cmdline = ut_strbuf_get(&buf);
+
     ut_trace("#[cyan]%s %s", filename, cmdline);
 
     bSuccess = CreateProcess(filename,
-        cmdline,     // command line 
+        cmdline,       // command line 
         NULL,          // process security attributes 
         NULL,          // primary thread security attributes 
         TRUE,          // handles are inherited 
         0,             // creation flags 
         NULL,          // use parent's environment 
         NULL,          // use parent's current directory 
-        &si,  // STARTUPINFO pointer 
+        &si,           // STARTUPINFO pointer 
         &pi);
 
     return pi.hProcess;

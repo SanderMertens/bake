@@ -195,6 +195,7 @@ void* bake_test_run_suite_range(
         ut_proc proc;
         int8_t rc;
         int sig;
+        bool proc_fail = false;
 
         if (prefix) {
             char *has_space = strchr(prefix, ' ');
@@ -210,9 +211,13 @@ void* bake_test_run_suite_range(
                     exec,
                     test_name, 
                     NULL
-                }); 
+                });
 
-                sig = ut_proc_wait(proc, &rc);
+                if (proc) {
+                    sig = ut_proc_wait(proc, &rc);
+                } else {
+                    proc_fail = true;
+                }
             }               
         } else {
             proc = ut_proc_run(exec, (const char*[]){
@@ -221,7 +226,11 @@ void* bake_test_run_suite_range(
                 NULL
             });
 
-            sig = ut_proc_wait(proc, &rc);
+            if (proc) {
+                sig = ut_proc_wait(proc, &rc);
+            } else {
+                proc_fail = true;
+            }
         }
 
         if (sig || rc) {
@@ -234,7 +243,7 @@ void* bake_test_run_suite_range(
                         "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
                 } else {
                     ut_log(
-                        "#[red]FAIL#[reset]: %s crashed with signal %d\n", 
+                        "#[red]FAIL#[reset]: %s exited with signal %d\n", 
                         test_name, sig);
                 }
                 result = -1;
@@ -242,11 +251,11 @@ void* bake_test_run_suite_range(
             } else {
                 if (rc == 1) {
                     /* Testcase is empty. No action required, but print the
-                        * test command on command line */
+                     * test command on command line */
                     empty ++;
                 } else if (rc != -1) {
                     /* If return code is not -1, this was not a simple
-                        * testcase failure (which already has been reported) */
+                     * testcase failure (which already has been reported) */
                     ut_log("Testcase '%s' failed with return code %d\n", 
                         test_name, rc);
 
@@ -261,6 +270,8 @@ void* bake_test_run_suite_range(
 
             ut_catch();
             print_dbg_command(exec, test_name);
+        } else if (proc_fail) {
+            ut_log("Testcase '%s' failed to start\n", test_name);
         } else {
             if (ut_log_verbosityGet() <= UT_OK) {
                 ut_log("#[green]PASS#[reset] %s.%s\n", 
@@ -291,12 +302,17 @@ int bake_test_run_suite(
     uint32_t *pass_out,
     uint32_t job_count)
 {
+    assert(test_id != NULL);
+    assert(exec != NULL);
+    assert(strlen(exec) != 0);
+
     uint32_t i, cur = 0;
     float next = 0, tests_per_runner = 
         (float)suite->testcase_count / (float)job_count;
 
     bake_test_exec_ctx *ctx = ut_calloc(
         sizeof(bake_test_exec_ctx) * job_count);
+    assert(ctx != NULL);
 
     // Divide the work
     for (i = 0; i < job_count; i ++) {

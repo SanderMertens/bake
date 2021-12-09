@@ -86,6 +86,7 @@ UTIL_SOURCE= ..\util\src\win\dl.c \
 			..\util\src\os.c \
 			..\util\src\parson.c \
 			..\util\src\path.c \
+			..\util\src\proc_common.c \
 			..\util\src\rb.c \
 			..\util\src\strbuf.c \
 			..\util\src\string.c \

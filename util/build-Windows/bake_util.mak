@@ -69,6 +69,7 @@ CPP_SOURCE= ..\src\win\dl.c \
 			..\src\os.c \
 			..\src\parson.c \
 			..\src\path.c \
+			..\src\proc_common.c \
 			..\src\rb.c \
 			..\src\strbuf.c \
 			..\src\string.c \

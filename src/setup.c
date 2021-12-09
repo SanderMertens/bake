@@ -319,7 +319,7 @@ int16_t bake_build_make_project(
 {
     /* Install header files to include folder in bake environment */
     char *install_cmd = ut_asprintf(
-      "."UT_OS_PS"bake meta-install %s --id %s --package --includes include",
+      "."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install %s --id %s --package --includes include",
       path, id);
 
     ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
@@ -371,7 +371,7 @@ int16_t bake_build_make_project(
 
     /* Install binary to bake environment */
     install_cmd = ut_asprintf(
-        "."UT_OS_PS"bake meta-install %s --id %s --artefact %s --package",
+        "."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install %s --id %s --artefact %s --package",
         path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
@@ -459,7 +459,7 @@ int16_t bake_setup(
     bake_message(UT_OK, "done", "bake environment reset");
 
     /* Install bake header files to bake environment */
-    ut_try( cmd("."UT_OS_PS"bake meta-install --id bake --includes include"),
+    ut_try( cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install --id bake --includes include"),
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 
@@ -474,19 +474,19 @@ int16_t bake_setup(
         "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     /* Build the bake test framework */
-    ut_try(cmd("."UT_OS_PS"bake rebuild drivers/test"), NULL);
+    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
 
     /* Build the amalgamation driver */
-    ut_try(cmd("."UT_OS_PS"bake rebuild drivers/amalgamate"), NULL);
+    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild drivers/amalgamate"), NULL);
     bake_message(UT_OK, "done", "install amalgamate driver");
 
     /* Build the bake libraries (predefined configurations) */
-    ut_try(cmd("."UT_OS_PS"bake rebuild libraries"), NULL);
+    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
 
     /* Export the bake templates */
-    ut_try(cmd("."UT_OS_PS"bake rebuild templates"), NULL);
+    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
 
     /*
