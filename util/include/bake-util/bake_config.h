@@ -20,20 +20,19 @@
 /* Headers of public dependencies */
 /* No dependencies */
 
-/* Headers of private dependencies */
-#ifdef BAKE_UTIL_IMPL
-/* No dependencies */
-#endif
-
 /* Convenience macro for exporting symbols */
-#if BAKE_UTIL_IMPL && defined _MSC_VER
-#define BAKE_UTIL_API __declspec(dllexport)
-#elif BAKE_UTIL_IMPL
-#define BAKE_UTIL_API __attribute__((__visibility__("default")))
+#ifndef bake_util_STATIC
+#if bake_util_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
+  #define BAKE_UTIL_API __declspec(dllexport)
+#elif bake_util_EXPORTS
+  #define BAKE_UTIL_API __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
-#define BAKE_UTIL_API __declspec(dllimport)
+  #define BAKE_UTIL_API __declspec(dllimport)
 #else
-#define BAKE_UTIL_API
+  #define BAKE_UTIL_API
+#endif
+#else
+  #define BAKE_UTIL_API
 #endif
 
 #endif
