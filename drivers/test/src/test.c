@@ -38,7 +38,7 @@ void test_no_abort(void)
 }
 
 static
-int bake_test_run_single_test(
+int8_t bake_test_run_single_test(
     bake_test_suite *suites,
     uint32_t suite_count,
     const char *testcase_id)
@@ -172,7 +172,7 @@ typedef struct {
     uint32_t pass;
     uint32_t offset;
     uint32_t count;
-    int result;
+    int8_t result;
     ut_thread job;
 } bake_test_exec_ctx;
 
@@ -180,7 +180,7 @@ static
 void* bake_test_run_suite_range(
     bake_test_exec_ctx *ctx)
 {
-    int result = 0;
+    int8_t result = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
     uint32_t offset = ctx->offset, count = ctx->count;
     const char *exec = ctx->exec;
@@ -293,7 +293,7 @@ void* bake_test_run_suite_range(
 }
 
 static
-int bake_test_run_suite(
+int8_t bake_test_run_suite(
     const char *test_id,
     const char *exec,
     bake_test_suite *suite,
@@ -352,7 +352,7 @@ int bake_test_run_suite(
     // Report
     bake_test_report(test_id, suite->id, ctx->fail, ctx->empty, ctx->pass);
 
-    int result = ctx->result;
+    int8_t result = ctx->result;
     if (fail_out) {
         *fail_out = ctx->fail;
     }
@@ -369,14 +369,14 @@ int bake_test_run_suite(
 }
 
 static
-int bake_test_run_all_tests(
+int8_t bake_test_run_all_tests(
     const char *test_id,
     const char *exec,
     bake_test_suite *suites,
     uint32_t suite_count,
     uint32_t job_count)
 {
-    int result = 0;
+    int8_t result = 0;
 
     uint32_t total_fail = 0, total_empty = 0, total_pass = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
