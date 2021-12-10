@@ -193,9 +193,11 @@ void* bake_test_run_suite_range(
 
         char *test_name = ut_asprintf("%s.%s", suite->id, test->id);
         ut_proc proc;
-        int8_t rc;
-        int sig;
+        int8_t rc = 0;
+        int sig = 0;
         bool proc_fail = false;
+
+        memset(&proc, 0, sizeof(ut_proc));
 
         if (prefix) {
             char *has_space = strchr(prefix, ' ');
