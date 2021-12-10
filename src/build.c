@@ -156,8 +156,9 @@ int bake_do_build_intern(
 
     /* Step 11: build project */
     ut_log_push("build");
-    if (project->artefact)
+    if (project->artefact) {
         ut_try (bake_project_build(config, project), NULL);
+    }
     ut_log_pop();
 
     /* Step 12: postbuild step */
@@ -175,7 +176,7 @@ int bake_do_build_intern(
     /* Reset environment variable */
     ut_setenv("BAKE_CHILD", "TRUE");
 
-    return 0;
+    return (project->error == true) * -1;
 error:
     ut_log_pop();
     return -1;

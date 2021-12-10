@@ -512,8 +512,8 @@ void bake_driver_exec_cb(
         p->error = true;
     } else {
         int8_t ret = 0;
-        int sig = 0;
-        if ((sig = ut_proc_cmd(envcmd, &ret)) || ret) {
+        int sig = ut_proc_cmd(envcmd, &ret);
+        if (sig || ret) {
             if (!sig) {
                 ut_throw("command returned %d", ret);
                 ut_throw_detail("%s", envcmd);

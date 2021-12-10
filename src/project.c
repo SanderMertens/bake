@@ -1962,7 +1962,7 @@ int16_t bake_project_build(
     /* Restore old list */
     project->link = old_link;
 
-    return 0;
+    return (project->error == true) * -1;
 error:
     return -1;
 }
