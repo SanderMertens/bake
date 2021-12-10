@@ -70,32 +70,46 @@ const char *cc(
     }
 }
 
+static
+bool is_compiler(
+    const char *name,
+    bake_src_lang lang)
+{
+    const char *compiler = cc(lang);
+    size_t name_len = strlen(name);
+
+    /* First test if user is running clang from a non-standard path. */
+    const char *cc_command = strrchr(compiler, UT_OS_PS[0]);
+    if (!cc_command) {
+        cc_command = name;
+    } else {
+        cc_command ++;
+    }
+
+    if (!strncmp(cc_command, compiler, name_len)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /* Is current compiler clang */
 static
 bool is_clang(bake_src_lang lang)
 {
-    if (!strncmp(cc(lang), "clang", 5)) {
-        return true;
-    }
-    return false;
+    return is_compiler("clang", lang);
 }
 
 /* Is current compiler emcc */
 static 
 bool is_emcc(void) {
-    if (!strncmp(cc(false), "emcc", 4)) {
-        return true;
-    }
-    return false;
+    return is_compiler("emcc", 0);
 }
 
 /* Is current compiler icc */
 static 
 bool is_icc(void) {
-    if (!strncmp(cc(false), "icc", 3)) {
-        return true;
-    }
-    return false;
+    return is_compiler("icc", 0);
 }
 
 static
