@@ -236,6 +236,7 @@ void* bake_test_run_suite_range(
         }
 
         if (sig || rc) {
+            ut_catch();
             if (sig) {
                 if (sig == 6) {
                     ut_log(

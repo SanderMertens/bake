@@ -106,6 +106,8 @@ int ut_proc_kill(ut_proc hProcess, ut_procsignal sig) {
 
 int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
     WaitForSingleObject(hProcess, INFINITE);
+
+    int sig = 0;
     
     if (rc) {
         DWORD exit_code = 0;
@@ -114,8 +116,25 @@ int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
             return -1;
         }
 
-        if (exit_code && (exit_code != ((int8_t)exit_code))) {
-            exit_code = UT_CMD_ERR;
+        /* Map process error codes to signals */
+
+        if (exit_code == 3 || exit_code == STATUS_FATAL_APP_EXIT) {
+            sig = 6;
+            exit_code = 0;
+        } else if (exit_code == STATUS_ACCESS_VIOLATION) {
+            sig = 11;
+            exit_code = 0;
+        } else if (exit_code == STATUS_STACK_OVERFLOW) {
+            ut_throw("stack overflow"); /* useful additional information */
+            sig = 11;
+            exit_code = 0;
+        } else if (exit_code == DBG_TERMINATE_PROCESS) {
+            ut_throw("terminated");
+            sig = 9;
+            exit_code = 0;
+        } else if (exit_code && (exit_code != ((int8_t)exit_code))) {
+            sig = 11;
+            exit_code = 0;
         }
 
         *rc = exit_code;
@@ -123,7 +142,7 @@ int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
 
     CloseHandle(hProcess);
 
-    return 0;
+    return sig;
 }
 
 int ut_proc_check(ut_proc pid, int8_t *rc) {

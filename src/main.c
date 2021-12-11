@@ -1485,11 +1485,12 @@ int main(int argc, const char *argv[]) {
             if (sig || rc) {
                 if (sig) {
                     ut_error("bake child crashed with signal %d", sig);
+                    goto error;
                 } else {
                     /* If this was a clean exit with an error code, no need to
                      * repeat the error since the bake child already did */
+                    return rc;
                 }
-                goto error;
             }
             goto ok;
         }
