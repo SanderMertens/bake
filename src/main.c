@@ -1389,6 +1389,27 @@ int main(int argc, const char *argv[]) {
     ut_trace("action: %s", action);
     ut_log_pop();
 
+    /* Find location of bake executable, so we can get its timestamp. This is
+     * used to determine whether to regenerate project files, as new versions
+     * of bake may change how things are generated. */
+    time_t bake_modified = 0;
+    if (ut_file_test(argv[0]) == 1) {
+        /* Try argv first, as bake executable may be called directly */
+        bake_modified = ut_lastmodified(argv[0]);
+    } else {
+        /* If argv[0] can't be found, it's likely because bake is invoked from
+         * the PATH. In that case, use the bake executable in the bake env */
+        char *bake_bin = ut_envparse("~/bake/" BAKE_EXEC);
+        if (ut_file_test(bake_bin) == 1) {
+            bake_modified = ut_lastmodified(bake_bin);
+        } else {
+            /* Odd, we can't find bake. Build should still work, but files may
+             * not be regenerated as a result of a bake upgrade. */
+            ut_trace("could not stat '%s'", bake_bin);
+        }
+        free(bake_bin);
+    }
+
     bake_config config = {
         .configuration = UT_CONFIG,
         .environment = env,
@@ -1398,7 +1419,7 @@ int main(int argc, const char *argv[]) {
         .coverage = false,
         .strict = false,
         .static_lib = false,
-        .bake_modified = ut_lastmodified(argv[0])
+        .bake_modified = bake_modified
     };
 
     ut_tls_set(BAKE_CONFIG_KEY, &config);
