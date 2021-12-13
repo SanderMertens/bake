@@ -117,8 +117,12 @@ int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
         }
 
         /* Map process error codes to signals */
-
-        if (exit_code == 3 || exit_code == STATUS_FATAL_APP_EXIT) {
+        if (exit_code == STATUS_STACK_BUFFER_OVERRUN) {
+            /* Unlike the name suggests, this exit code shows up when
+             * abort() is used (see __fastfail) */
+            sig = 6;
+            exit_code = 0;
+        } else if (exit_code == 3 || exit_code == STATUS_FATAL_APP_EXIT) {
             sig = 6;
             exit_code = 0;
         } else if (exit_code == STATUS_ACCESS_VIOLATION) {
@@ -133,6 +137,7 @@ int ut_proc_wait(ut_proc hProcess, int8_t *rc) {
             sig = 9;
             exit_code = 0;
         } else if (exit_code && (exit_code != ((int8_t)exit_code))) {
+            ut_throw("process exited with unknown error code %x", exit_code);
             sig = 11;
             exit_code = 0;
         }

@@ -91,7 +91,13 @@ int8_t bake_test_run_single_test(
                 if (suite->teardown) {
                     suite->teardown();
                 }
+
+                break;
             }
+        }
+
+        if (found) {
+            break;
         }
     }
 

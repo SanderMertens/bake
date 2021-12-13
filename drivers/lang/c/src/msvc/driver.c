@@ -47,6 +47,17 @@ const char *cc(
 }
 
 static
+void add_sanitizers(
+    bake_config *config,
+    bake_project *project,
+    ut_strbuf *cmd)
+{
+    if (config->sanitize_memory) {
+        ut_strbuf_appendstr(cmd, " /fsanitize=address");
+    }  
+}
+
+static
 void add_flags(
     bake_driver_api *driver,
     bake_config *config,
@@ -54,6 +65,8 @@ void add_flags(
     bool cpp,
     ut_strbuf *cmd)
 {
+    add_sanitizers(config, project, cmd);
+
     if (!cpp) {
         /* CFLAGS for c projects */
         bake_attr *flags_attr = driver->get_attr("cflags");
@@ -108,7 +121,7 @@ void add_flags(
     if (!config->debug) {
         ut_strbuf_appendstr(cmd, " /DNDEBUG");
         ut_strbuf_appendstr(cmd, " /DEBUG:FULL");
-    }     
+    }
 }
 
 /* Compile source file for Windows platform using MSVC*/
@@ -261,6 +274,14 @@ void link_dynamic_binary(
     bool export_symbols = driver->get_attr_bool("export-symbols");
 
     ut_strbuf_append(&cmd, "link");
+
+    if (config->sanitize_memory) {
+        if (config->debug || config->symbols) {
+            ut_strbuf_appendstr(&cmd, " /MTd");
+        } else {
+            ut_strbuf_appendstr(&cmd, " /MT");
+        }
+    }
     
     /* Suppress Visual C++ banner */
     ut_strbuf_appendstr(&cmd, " /NOLOGO");
