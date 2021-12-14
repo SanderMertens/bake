@@ -194,6 +194,8 @@ void add_flags(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(cmd, " -DNDEBUG");
+    } else {
+        ut_strbuf_appendstr(cmd, " -fstack-protector-all");
     }
 
     /* Give project access to its own id */
@@ -343,11 +345,9 @@ void add_misc(
     bake_src_lang lang,
     ut_strbuf *cmd)
 {
-    /* In obscure cases with static libs, stack protector can cause unresolved symbols */
     ut_strbuf_append(cmd, 
         " -fPIC"
-        " -fvisibility=hidden"
-        " -fno-stack-protector");
+        " -fvisibility=hidden");
 
     /* Include debugging information */
     if (config->symbols) {

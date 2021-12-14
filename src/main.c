@@ -181,7 +181,6 @@ void bake_usage(void)
     printf("  bake run my_app -a hello     Run my_app project, pass 'hello' as argument\n");
     printf("  bake publish major           Increase major project version, create git tag\n");
     printf("  bake info foo.bar            Show information about package foo.bar\n");
-    printf("  bake list foo.*              List all packages that start with foo.\n");
     printf("\n");
 }
 
@@ -718,6 +717,70 @@ error:
     return -1;
 }
 
+typedef struct env_package {
+    char *id;
+    char *cfg;
+    uint32_t count;
+    bool in_current_cfg;
+} env_package;
+
+int env_package_compare(
+    const void *ptr1,
+    const void *ptr2)
+{
+    const env_package *package1 = ptr1;
+    const env_package *package2 = ptr2;
+    return strcmp(package1->id, package2->id);
+}
+
+static
+int16_t list_configurations(
+    bake_config *config,
+    env_package *package)
+{
+    ut_strbuf buf = UT_STRBUF_INIT;
+
+    if (!ut_project_is_buildtool(package->id)) {
+        uint32_t count = 0;
+
+        package->in_current_cfg = false;
+
+        ut_strbuf_appendstr(&buf, "[");
+        if (ut_file_test(config->platform) == 1) {
+            ut_iter it;
+            ut_try (ut_dir_iter(config->platform, NULL, &it), NULL);
+            while (ut_iter_hasNext(&it)) {
+                char *cfg = ut_iter_next(&it);
+
+                if (ut_project_in_config(package->id, cfg)) {
+                    if (count) {
+                        ut_strbuf_appendstr(&buf, ", ");
+                    }
+                    ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
+                    count ++;
+
+                    if (!strcmp(cfg, config->configuration)) {
+                        package->in_current_cfg = true;
+                    }
+                }
+            }
+        }
+
+        ut_strbuf_appendstr(&buf, "]");
+        if (count) {
+            package->cfg = ut_strbuf_get(&buf);
+        }
+        package->count = count;
+    } else {
+        package->cfg = ut_strdup("#[grey]all#[normal]");
+        package->in_current_cfg = true;
+    }
+
+    return 0;
+error:
+    return -1;
+}
+
 int bake_info(
     bake_config *config,
     const char *id,
@@ -727,7 +790,7 @@ int bake_info(
     bake_project_type *type_out,
     bool clean_missing)
 {
-     if (type_out) *type_out = BAKE_PACKAGE;
+    if (type_out) *type_out = BAKE_PACKAGE;
 
     const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
     if (!path) {
@@ -821,70 +884,6 @@ error:
     if (clean_missing) {
         bake_install_uninstall(config, id);
     }
-    return -1;
-}
-
-typedef struct env_package {
-    char *id;
-    char *cfg;
-    uint32_t count;
-    bool in_current_cfg;
-} env_package;
-
-int env_package_compare(
-    const void *ptr1,
-    const void *ptr2)
-{
-    const env_package *package1 = ptr1;
-    const env_package *package2 = ptr2;
-    return strcmp(package1->id, package2->id);
-}
-
-static
-int16_t list_configurations(
-    bake_config *config,
-    env_package *package)
-{
-    ut_strbuf buf = UT_STRBUF_INIT;
-
-    if (!ut_project_is_buildtool(package->id)) {
-        uint32_t count = 0;
-
-        package->in_current_cfg = false;
-
-        ut_strbuf_appendstr(&buf, "[");
-        if (ut_file_test(config->platform) == 1) {
-            ut_iter it;
-            ut_try (ut_dir_iter(config->platform, NULL, &it), NULL);
-            while (ut_iter_hasNext(&it)) {
-                char *cfg = ut_iter_next(&it);
-
-                if (ut_project_in_config(package->id, cfg)) {
-                    if (count) {
-                        ut_strbuf_appendstr(&buf, ", ");
-                    }
-                    ut_strbuf_append(&buf, "#[green]%s#[normal]", cfg);
-                    count ++;
-
-                    if (!strcmp(cfg, config->configuration)) {
-                        package->in_current_cfg = true;
-                    }
-                }
-            }
-        }
-
-        ut_strbuf_appendstr(&buf, "]");
-        if (count) {
-            package->cfg = ut_strbuf_get(&buf);
-        }
-        package->count = count;
-    } else {
-        package->cfg = ut_strdup("#[grey]all#[normal]");
-        package->in_current_cfg = true;
-    }
-
-    return 0;
-error:
     return -1;
 }
 
@@ -1604,7 +1603,17 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "reset")) {
             ut_try (bake_reset(&config), NULL);
         } else if (!strcmp(action, "info")) {
-            bake_info(&config, path, NULL, true, true, NULL, false);
+            env_package pkg = { .id = (char*)path };
+            list_configurations(&config, &pkg);
+            bake_info(&config, path, pkg.cfg, true, true, NULL, false);
+
+            const char *devsrc = ut_locate(path, NULL, UT_LOCATE_DEVSRC);
+            if (devsrc) {
+                ut_log("   #[cyan]%s#[reset] #[yellow](under development)#[reset]\n", devsrc);
+            } else {
+                devsrc = ut_locate(path, NULL, UT_LOCATE_DEVSRC);
+                ut_log("   #[cyan]%s#[reset]\n", devsrc);
+            }
         } else if (!strcmp(action, "list")) {
             bake_list(&config, false);
         } else if (!strcmp(action, "export")) {
