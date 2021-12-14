@@ -1242,22 +1242,21 @@ int16_t bake_merge_dependency_config_value(
                 dst_a_count = json_array_get_count(dst_a);
 
             for (src_el = 0; src_el < src_a_count; src_el ++) {
+                JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
+
                 /* Make sure we're not adding duplicate elements */
                 for (dst_el = 0; dst_el < dst_a_count; dst_el ++) {
-                    JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
                     JSON_Value *dst_el_v = json_array_get_value(dst_a, dst_el);
                     if (json_value_equals(src_el_v, dst_el_v)) {
                         break;
                     }
                 }
-                if (dst_el != dst_a_count) {
-                    break;
+
+                /* Element was not found, add */
+                if (dst_el == dst_a_count) {
+                    json_array_append_value(dst_a, 
+                        json_value_deep_copy(src_el_v));
                 }
-            }
-            if (src_el == src_a_count) {
-                JSON_Value *src_el_v = json_array_get_value(src_a, src_el);
-                json_array_append_value(dst_a, 
-                    json_value_deep_copy(src_el_v));
             }
 
         /* If type is object, merge objects */
@@ -1287,7 +1286,7 @@ int16_t bake_import_dependency_config(
     bake_project *dep)
 {
     JSON_Object *json = dep->json;
-    if (json) {
+    if (json) {        
         int32_t i, count = json_object_get_count(json);
         for (i = 0; i < count; i ++) {
             const char *mbr = json_object_get_name(json, i);
@@ -1308,6 +1307,7 @@ int16_t bake_import_dependency_config(
                 }
 
                 JSON_Value *src = json_object_get_value_at(json, i);
+
                 if (bake_merge_dependency_config_value(p, dep, dst, src)) {
                     goto error;
                 }
