@@ -1119,7 +1119,8 @@ error:
 }
 
 int bake_reset(
-    bake_config *cfg)
+    bake_config *cfg,
+    bool reset_meta)
 {
     ut_iter it;
     ut_try( ut_dir_iter(cfg->home, NULL, &it), NULL);
@@ -1129,8 +1130,13 @@ int bake_reset(
         char *file_path = ut_asprintf("%s/%s", cfg->home, file);
 
         if (ut_isdir(file_path)) {
-            if (!strcmp(file, "include") || !strcmp(file, "meta") || !strcmp(file, "src")) {
+            if (!strcmp(file, "include") || !strcmp(file, "src")) {
                 bake_reset_dir(cfg, file_path);
+
+            } else if (!strcmp(file, "meta")) {
+                if (reset_meta) {
+                    bake_reset_dir(cfg, file_path);
+                }
 
             } else if (strcmp(file, "lib")) {
                 ut_rm(file_path);
@@ -1148,7 +1154,9 @@ int bake_reset(
 
     /* Remove bundles from configuration file, as reset will remove the projects
      * from the bake environment */
-    bake_config_reset_bundles(cfg);
+    if (reset_meta) {
+        bake_config_reset_bundles(cfg);
+    }
 
     return 0;
 error:
@@ -1601,7 +1609,7 @@ int main(int argc, const char *argv[]) {
         } else if (!strcmp(action, "cleanup")) {
             ut_try (bake_list(&config, true), NULL);
         } else if (!strcmp(action, "reset")) {
-            ut_try (bake_reset(&config), NULL);
+            ut_try (bake_reset(&config, true), NULL);
         } else if (!strcmp(action, "info")) {
             env_package pkg = { .id = (char*)path };
             list_configurations(&config, &pkg);

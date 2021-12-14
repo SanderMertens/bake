@@ -455,7 +455,7 @@ int16_t bake_setup(
     bake_message(UT_OK, "done", "copy bake executable");
 
     /* Reset bake environment */
-    ut_try (bake_reset(config), NULL);
+    ut_try (bake_reset(config, false), NULL);
     bake_message(UT_OK, "done", "bake environment reset");
 
     /* Install bake header files to bake environment */

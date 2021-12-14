@@ -525,5 +525,6 @@ int16_t bake_setup(
 
 /* Reset bake environment */
 int bake_reset(
-    bake_config *cfg);
+    bake_config *cfg,
+    bool reset_meta);
 

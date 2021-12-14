@@ -371,7 +371,8 @@ error:
     return -1;
 }
 
-int16_t bake_clone(
+static
+int16_t clone_project(
     bake_config *config,
     const char *url,
     bool to_env,
@@ -466,7 +467,33 @@ int16_t bake_install(
         goto error;
     }
 
-    ut_try( bake_clone(config, repo->url, true, true, true, NULL, NULL), NULL);
+    ut_try( clone_project(config, repo->url, true, true, true, NULL, NULL), NULL);
+
+    return 0;
+error:
+    return -1;
+}
+
+int16_t bake_clone(
+    bake_config *config,
+    const char *url,
+    bool to_env,
+    bool always_clone,
+    bool clone_dependencies,
+    bake_notify_state *notify_state,
+    bake_project **project_out)
+{
+    /* First try to resolve the repository by project id. This makes it possible
+     * to use bake clone with project ids if they're associated in a bundle */
+    bake_repository *repo = bake_find_repository(config, url);
+    if (!repo) {
+        ut_try( clone_project(config, url, to_env, always_clone, 
+            clone_dependencies, notify_state, project_out), NULL);
+    } else {
+        ut_try( clone_project(
+            config, repo->url, to_env, always_clone, clone_dependencies, 
+                notify_state, project_out), NULL);
+    }
 
     return 0;
 error:
