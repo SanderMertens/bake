@@ -194,7 +194,7 @@ void add_flags(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(cmd, " -DNDEBUG");
-    } else {
+    } else if (!is_emcc()) {
         ut_strbuf_appendstr(cmd, " -fstack-protector-all");
     }
 

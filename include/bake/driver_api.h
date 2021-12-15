@@ -247,6 +247,9 @@ struct bake_driver_api {
     bake_project* (*lookup)(
         const char *id);
 
+    /* Get current config */
+    bake_config* (*config)(void);
+
     /* Add ignore path for project */
     void (*ignore_path)(
         const char *path);

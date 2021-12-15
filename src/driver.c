@@ -554,6 +554,11 @@ bool bake_driver_exists_cb(
     return ut_locate(id, NULL, UT_LOCATE_PROJECT) != NULL;
 }
 
+bake_config* bake_driver_config_cb(void)
+{
+    return ut_tls_get(BAKE_CONFIG_KEY);
+}
+
 /* Lookup package */
 bake_project* bake_driver_lookup_cb(
     const char *id)
@@ -672,6 +677,7 @@ bake_driver_api bake_driver_api_impl = {
     .use = bake_driver_use_cb,
     .exists = bake_driver_exists_cb,
     .lookup = bake_driver_lookup_cb,
+    .config = bake_driver_config_cb,
     .ignore_path = bake_driver_ignore_path_cb,
     .get_attr = bake_driver_get_attr_cb,
     .get_attr_bool = bake_driver_get_bool_attr_cb,

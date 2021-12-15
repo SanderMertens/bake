@@ -471,11 +471,13 @@ int bakemain(bake_driver_api *driver)
     ut_init("bake.c");
 
     /* Create pattern that matches source files */
-#ifndef __APPLE__
-    driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
-#else
-    driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx|*.m");
-#endif
+    bake_config *cfg = driver->config();
+
+    if (!strcmp(cfg->build_os, "Darwin")) {
+        driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx|*.m");
+    } else {
+        driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
+    }
 
     /* -- Compiling and linking source code -- */
 

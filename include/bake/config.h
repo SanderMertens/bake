@@ -81,6 +81,7 @@ struct bake_config {
     char *platform;          /* $BAKE_HOME/<platform> */
     char *target;            /* $BAKE_HOME/<platform>/<configuration> */
     const char *build_target;/* Target architecture (default = current) */
+    const char *build_os;    /* Target platform (linux/darwin/em/android/windows) */
     char *bin;               /* $BAKE_HOME/<platform>-<configuration>/bin */
     char *lib;               /* $BAKE_HOME/<platform>-<configuration>/lib */
 

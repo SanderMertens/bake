@@ -1477,9 +1477,12 @@ int main(int argc, const char *argv[]) {
 
     config.defines = defines;
 
+    const char *build_os = NULL;
+
     if (target && stricmp(target, UT_PLATFORM_STRING)) {
         if (!stricmp(target, "em")) {
             target = "Em";
+            build_os = "Em";
             ut_setenv("CC", "emcc");
         } else {
             if (!is_bake_parent) {
@@ -1491,6 +1494,11 @@ int main(int argc, const char *argv[]) {
     config.build_target = target;
     if (!config.build_target) {
         config.build_target = UT_PLATFORM_STRING;
+    }
+
+    config.build_os = build_os;
+    if (!config.build_os) {
+        config.build_os = UT_OS_STRING;
     }
 
     bake_config_log(&config);
