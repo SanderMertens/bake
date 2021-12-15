@@ -286,6 +286,25 @@ error:
     return -1;
 }
 
+static
+int16_t bake_project_func_config(
+    bake_config *config,
+    ut_strbuf *buffer,
+    const char *argument)
+{
+    if (!argument) {
+        ut_strbuf_appendstr(buffer, config->configuration);
+    } else {
+        if (!stricmp(argument, config->configuration)) {
+            ut_strbuf_appendstr(buffer, "1");
+        } else {
+            ut_strbuf_appendstr(buffer, "0");
+        }
+    }
+
+    return 0;
+}
+
 /** Forward a function call from project.json to the right implementation. */
 static
 int16_t bake_attr_func(
@@ -306,6 +325,8 @@ int16_t bake_attr_func(
         return bake_project_func_id(project, package_id, buffer, argument);
     } else if (!strcmp(function, "driver-attr")) {
         return bake_project_func_driver_attr(project, package_id, buffer, argument);
+    } else if (!strcmp(function, "config") || !strcmp(function, "cfg")) {
+        return bake_project_func_config(config, buffer, argument);
     } else {
         ut_throw("unknown function '%s'", function);
         return -1;
