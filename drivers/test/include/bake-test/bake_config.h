@@ -18,8 +18,13 @@
 #define BAKE_TEST_BAKE_CONFIG_H
 
 /* Headers of public dependencies */
+/* No dependencies */
+
+/* Headers of private dependencies */
+#ifdef bake_test_EXPORTS
 #ifdef __BAKE__
 #include <bake_util.h>
+#endif
 #endif
 
 /* Convenience macro for exporting symbols */

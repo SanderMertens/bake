@@ -4,6 +4,6 @@
     "value": {
         "author": "Sander Mertens",
         "description": "A simple and easy to use test framework for bake",
-        "use": ["bake.util"]
+        "use-private": ["bake.util"]
     }
 }

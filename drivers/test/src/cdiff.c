@@ -20,6 +20,7 @@
  */
 
 #include <bake_test.h>
+#include "bake-test/cdiff.h"
 
 typedef char cdiff_identifier[512];
 

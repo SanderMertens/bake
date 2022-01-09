@@ -49,6 +49,7 @@ bool strict = false;
 bool optimize = false;
 bool loop_test = false;
 bool assembly = false;
+bool profile_build = false;
 
 bool is_test = false;
 bool to_env = false;
@@ -114,6 +115,7 @@ void bake_usage(void)
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("  --loop-test                  Manually enable vectorization analysis\n");
+    printf("  --profile-build              Manually enable build profiling\n");
     printf("\n");
     printf("  --package                    Set the project type to package\n");
     printf("  --template                   Set the project type to template\n");
@@ -305,6 +307,7 @@ int bake_parse_args(
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
             ARG(0, "target", target = argv[i + 1]; i ++);
             ARG(0, "strict", strict = true );
+            ARG(0, "profile-build", profile_build = true );
             ARG(0, "optimize", optimize = true );
             ARG(0, "loop-test", loop_test = true );
             ARG(0, "assembly", assembly = true );
@@ -1422,10 +1425,6 @@ int main(int argc, const char *argv[]) {
         .environment = env,
         .symbols = true,
         .debug = true,
-        .optimizations = false,
-        .coverage = false,
-        .strict = false,
-        .static_lib = false,
         .bake_modified = bake_modified
     };
 
@@ -1465,6 +1464,9 @@ int main(int argc, const char *argv[]) {
     }
     if (loop_test) {
         config.loop_test = true;
+    }
+    if (profile_build) {
+        config.profile_build = true;
     }
     if (assembly) {
         config.assembly = true;

@@ -376,6 +376,10 @@ void add_misc(
         ut_strbuf_append(cmd, " -S -fverbose-asm");
     }
 
+    if (config->profile_build) {
+        ut_strbuf_append(cmd, " -ftime-trace");
+    }
+
     add_sanitizers(config, cmd);
 }
 

@@ -473,6 +473,8 @@ int bake_test_run(
     bake_test_suite *suite = NULL;
     int32_t job_count = 1;
 
+    ut_init(test_id);
+
     for (int i = 1; i < argc; i ++) {
         char *arg = argv[i];
 
