@@ -676,7 +676,7 @@ void link_dynamic_binary(
 
     /* Set optimizations */
     if (config->optimizations) {
-        ut_strbuf_appendstr(&cmd, " -O3 -flto");
+        ut_strbuf_appendstr(&cmd, " -O3");
         if (!config->strict) {
             ut_strbuf_appendstr(&cmd, " -flto");
         }

@@ -920,6 +920,7 @@ void abort_handler(int sig)
     if (test_expect_abort_signal) {
         exit(0);
     } else {
+        ut_error("bake.test: unexpected abort");
         exit(-1);
     }
 }
