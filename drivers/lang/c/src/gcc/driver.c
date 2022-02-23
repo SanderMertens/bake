@@ -240,6 +240,7 @@ void add_std(
         ut_strbuf_appendstr(cmd, " -Wunknown-pragmas");
         ut_strbuf_appendstr(cmd, " -Wfloat-conversion");
         ut_strbuf_appendstr(cmd, " -Wuninitialized");
+        ut_strbuf_appendstr(cmd, " -Wmissing-field-initializers");
 
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wdocumentation");
@@ -274,15 +275,8 @@ void add_std(
             ut_strbuf_appendstr(cmd, " -Wmissing-declarations");
         }
     } else {
-        /* Unused parameters can sometimes indicate an error, but more often 
-         * than not are the result of a function implementing some kind of 
-         * interface and not using all of the arguments. Don't throw warning. */
-        ut_strbuf_appendstr(cmd, " -Wno-unused-parameter");  
-
-        /* GCC will sometimes throw warnings when using composite literals without 
-         * using a member name which seems overly paranoid, and clutters code
-         * unnecessarily */        
         ut_strbuf_appendstr(cmd, " -Wno-missing-field-initializers");
+        ut_strbuf_appendstr(cmd, " -Wno-unused-parameter");
     }
 
     /* If project contains imported source files from other projects, warnings
