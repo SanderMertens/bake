@@ -29,11 +29,11 @@
 
 /* Convenience macro for exporting symbols */
 #ifndef bake_test_STATIC
-#if bake_test_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
+#if defined(bake_test_EXPORTS) && (defined(_MSC_VER) || defined(__MINGW32__))
   #define BAKE_TEST_API __declspec(dllexport)
-#elif bake_test_EXPORTS
+#elif defined(bake_test_EXPORTS)
   #define BAKE_TEST_API __attribute__((__visibility__("default")))
-#elif defined _MSC_VER
+#elif defined(_MSC_VER)
   #define BAKE_TEST_API __declspec(dllimport)
 #else
   #define BAKE_TEST_API

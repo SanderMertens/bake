@@ -438,11 +438,11 @@ void generate(
     fprintf(f, "\n/* Convenience macro for exporting symbols */\n");
     fprintf(f,
       "#ifndef %s_STATIC\n"
-      "#if %s_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))\n"
+      "#if defined(%s_EXPORTS) && (defined(_MSC_VER) || defined(__MINGW32__))\n"
       "  #define %s_API __declspec(dllexport)\n"
-      "#elif %s_EXPORTS\n"
+      "#elif defined(%s_EXPORTS)\n"
       "  #define %s_API __attribute__((__visibility__(\"default\")))\n"
-      "#elif defined _MSC_VER\n"
+      "#elif defined(_MSC_VER)\n"
       "  #define %s_API __declspec(dllimport)\n"
       "#else\n"
       "  #define %s_API\n"
