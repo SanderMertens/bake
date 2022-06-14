@@ -27,9 +27,9 @@
 #ifndef UT_BASE_H
 #define UT_BASE_H
 
-#if UT_IMPL && defined _MSC_VER
+#if defined(UT_IMPL) && defined(_MSC_VER)
 #define UT_API __declspec(dllexport)
-#elif UT_IMPL
+#elif defined(UT_IMPL)
 #define UT_API __attribute__((__visibility__("default")))
 #elif defined _MSC_VER
 #define UT_API __declspec(dllimport)
