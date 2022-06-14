@@ -241,6 +241,7 @@ void add_std(
         ut_strbuf_appendstr(cmd, " -Wfloat-conversion");
         ut_strbuf_appendstr(cmd, " -Wuninitialized");
         ut_strbuf_appendstr(cmd, " -Wmissing-field-initializers");
+        ut_strbuf_appendstr(cmd, " -Wundef");
 
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wdocumentation");
@@ -251,10 +252,8 @@ void add_std(
             ut_strbuf_appendstr(cmd, " -Wshorten-64-to-32");
         }
 
-        if (!is_icc()) {
-            ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
-            ut_strbuf_appendstr(cmd, " -Wcast-align");
-        }
+        ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
+        ut_strbuf_appendstr(cmd, " -Wcast-align");
 
         /* These warnings are not valid for C++ */
         if (lang != BAKE_SRC_LANG_CPP) {
