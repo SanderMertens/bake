@@ -1486,6 +1486,7 @@ int main(int argc, const char *argv[]) {
             target = "Em";
             build_os = "Em";
             ut_setenv("CC", "emcc");
+            ut_setenv("CXX", "emcc");
         } else {
             if (!is_bake_parent) {
                 ut_warning("unknown target '%s'", target);
