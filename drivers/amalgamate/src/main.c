@@ -114,7 +114,7 @@ int amalgamate(
     int32_t line_count = 0;
 
     /* Open file for reading */
-    FILE* in = fopen(file, "r");
+    FILE* in = ut_file_open(file, "r");
     if (!in) {
         ut_error("cannot read file '%s'", file);
         goto error;
@@ -222,7 +222,7 @@ int amalgamate(
 
     fprintf(out, "\n"); /* Support for empty files */
 
-    fclose(in);
+    ut_file_close(in);
 
     return 0;
 error:

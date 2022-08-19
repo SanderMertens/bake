@@ -58,6 +58,12 @@ error:
     return NULL;
 }
 
+int ut_file_close(
+    FILE* file)
+{
+    return fclose(file);
+}
+
 char* ut_file_load(
     const char* filename)
 {
