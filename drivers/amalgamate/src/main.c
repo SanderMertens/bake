@@ -81,7 +81,7 @@ int amalgamate(
     time_t *last_modified,
     bool *main_included) 
 {
-    char *file = ut_strdup(const_file);
+    char *file = strreplace(const_file, "/", UT_OS_PS);
     ut_path_clean(file, file);
     if (ut_rb_find(files_parsed, file)) {
         ut_debug("amalgamate: skip   '%s'  (from '%s:%d')", file, 
@@ -97,7 +97,7 @@ int amalgamate(
 
     /* Get current path from filename (for relative includes) */
     char *cur_path = ut_strdup(file);
-    char *last_elem = strrchr(cur_path, '/');
+    char *last_elem = strrchr(cur_path, UT_OS_PS[0]);
     if (last_elem) {
         *last_elem = '\0';
         last_elem ++;
