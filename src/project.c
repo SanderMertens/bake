@@ -440,6 +440,12 @@ int16_t bake_project_parse_value(
         }
     }
 
+    if (p->standalone) {
+        /* Standalone projects can't be public because their include files might
+         * refer to dependencies that are not copied to the bake environment. */
+        p->public = false;
+    }
+
     return 0;
 error:
     return -1;
