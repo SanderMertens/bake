@@ -25,7 +25,7 @@ void test_empty(void)
     ut_log("#[yellow]EMPTY#[reset] %s.%s (add test statements)\n", 
         current_testsuite->id, current_testcase->id);
 
-    exit(1);
+    exit(-2);
 }
 
 static
@@ -258,7 +258,7 @@ void* bake_test_run_suite_range(
                 result = -1;
                 fail ++;
             } else {
-                if (rc == 1) {
+                if (rc == -2) {
                     /* Testcase is empty. No action required, but print the
                      * test command on command line */
                     empty ++;
@@ -471,7 +471,7 @@ int bake_test_run(
 {
     const char *single_test = NULL;
     bake_test_suite *suite = NULL;
-    int32_t job_count = 1;
+    int32_t job_count = 0;
 
     ut_init(test_id);
 
@@ -515,17 +515,25 @@ int bake_test_run(
         }
     }
 
+    if (!job_count) {
+        job_count = 8; /* run on 8 threads by default */
+    }
+
+    int result = 0;
+
     if (single_test) {
-        return bake_test_run_single_test(suites, suite_count, argv[1]);
+        result = bake_test_run_single_test(suites, suite_count, argv[1]);
     } else if (suite) {
-        return bake_test_run_suite(
+        result = bake_test_run_suite(
             test_id, argv[0], suite, NULL, NULL, NULL, job_count);
     } else {
-        return bake_test_run_all_tests(
+        result = bake_test_run_all_tests(
             test_id, argv[0], suites, suite_count, job_count);
     }
 
-    return 0;
+    ut_deinit();
+
+    return result;
 }
 
 static
