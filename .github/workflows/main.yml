@@ -1,9 +1,9 @@
-on: [ push, pull_request ]
+on: [ push ]
 
 jobs:
   build-linux:
     timeout-minutes: 10
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CC: ${{ matrix.compiler.cc }}
       CXX: ${{ matrix.compiler.cxx }}
