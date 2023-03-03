@@ -451,63 +451,67 @@ int16_t bake_install_postbuild(
     char *kind, *subdir, *targetDir = NULL;
     bool copy = false;
 
-    if (project->type == BAKE_PACKAGE) {
-        if (project->bake_extension) {
-            targetDir = UT_HOME_LIB_PATH;
+    if (project->public) {
+        if (project->type == BAKE_PACKAGE) {
+            if (project->bake_extension) {
+                targetDir = UT_HOME_LIB_PATH;
+            } else {
+                targetDir = UT_LIB_PATH;
+            }
         } else {
-            targetDir = UT_LIB_PATH;
+            targetDir = UT_BIN_PATH;
         }
-    } else {
-        targetDir = UT_BIN_PATH;
-    }
 
-    if (!ut_file_test(project->artefact_file)) {
-        ut_throw("cannot find artefact '%s'", project->artefact_file);
-        goto error;
-    }
-
-    if (ut_isdir(project->artefact_file)) {
-        ut_throw(
-            "specified artefact '%s' is a directory, expecting regular file",
-            project->artefact_file);
-        goto error;
-    }
-
-    if (ut_mkdir(targetDir)) {
-        goto error;
-    }
-
-    char *targetBinary = ut_asprintf("%s"UT_OS_PS"%s", targetDir, project->artefact);
-
-    if (!ut_file_test(targetBinary) || project->changed || !project->language) {
-
-        /* Copy all files in project bin path to bake environment */
-        ut_iter it;
-        ut_try( ut_dir_iter(project->artefact_path, NULL, &it), NULL);
-
-        while (ut_iter_hasNext(&it)) {
-            char *file = ut_iter_next(&it);
-            char *src = ut_asprintf("%s"UT_OS_PS"%s", project->artefact_path, file);
-            char *dst = ut_asprintf("%s"UT_OS_PS"%s", targetDir, file);
-            ut_try (ut_cp(src, dst), 
-                "failed to install binary '%s' to bake environment", src);
-
-            time_t t_artefact = ut_lastmodified(dst);
-            time_t t = time(NULL);
-            int i = 0;
-            while (t_artefact > time(NULL) && i < 10) {
-                ut_sleep(0, 100000000); /* sleep 100msec */
-                i ++;
-            }
-
-            if (i == 10) {
-                ut_warning(
-                    "clock drift of >1sec between the OS clock and the filesystem detected");
-            }
-
-            free(src);
-            free(dst);
+        if (!ut_file_test(project->artefact_file)) {
+            ut_throw("cannot find artefact '%s'", project->artefact_file);
+            goto error;
         }
+
+        if (ut_isdir(project->artefact_file)) {
+            ut_throw(
+                "specified artefact '%s' is a directory, expecting regular file",
+                project->artefact_file);
+            goto error;
+        }
+
+        if (ut_mkdir(targetDir)) {
+            goto error;
+        }
+
+        char *targetBinary = ut_asprintf("%s"UT_OS_PS"%s", targetDir, project->artefact);
+
+        if (!ut_file_test(targetBinary) || project->changed || !project->language) {
+
+            /* Copy all files in project bin path to bake environment */
+            ut_iter it;
+            ut_try( ut_dir_iter(project->artefact_path, NULL, &it), NULL);
+
+            while (ut_iter_hasNext(&it)) {
+                char *file = ut_iter_next(&it);
+                char *src = ut_asprintf("%s"UT_OS_PS"%s", project->artefact_path, file);
+                char *dst = ut_asprintf("%s"UT_OS_PS"%s", targetDir, file);
+                ut_try (ut_cp(src, dst), 
+                    "failed to install binary '%s' to bake environment", src);
+
+                time_t t_artefact = ut_lastmodified(dst);
+                time_t t = time(NULL);
+                int i = 0;
+                while (t_artefact > time(NULL) && i < 10) {
+                    ut_sleep(0, 100000000); /* sleep 100msec */
+                    i ++;
+                }
+
+                if (i == 10) {
+                    ut_warning(
+                        "clock drift of >1sec between the OS clock and the filesystem detected");
+                }
+
+                free(src);
+                free(dst);
+            }
+        }
+
+        free(targetBinary);
     }
 
     /* If artefact is a webasm file, also copy it to etc directory */
@@ -526,8 +530,6 @@ int16_t bake_install_postbuild(
         ut_cp(wasm_file, "etc");
         free(wasm_file);
     }
-
-    free(targetBinary);
 
     return 0;
 error:

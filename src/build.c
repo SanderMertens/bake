@@ -169,7 +169,7 @@ int bake_do_build_intern(
 
     /* Step 13: install binary to environment */
     ut_log_push("install-postbuild");
-    if (project->public && project->artefact && !config->assembly)
+    if (project->artefact && !config->assembly)
         ut_try (bake_install_postbuild(config, project), NULL);
     ut_log_pop();
 
