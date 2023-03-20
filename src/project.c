@@ -1453,6 +1453,17 @@ int16_t bake_check_dependency(
         goto proceed;
     }
 
+    /* Copy files from etc folder of dependency */
+    const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
+    if (src_path) {
+        char *etc_path = ut_asprintf("%s"UT_OS_PS"etc", src_path);
+        if (ut_file_test("%s", etc_path)) {
+            char *dst_etc_path = ut_asprintf("%s"UT_OS_PS"etc", p->path);
+            ut_try(ut_cp(etc_path, dst_etc_path), 
+                "failed to copy files from '%s'", etc_path);
+        }
+    }
+
     /* If project doesn't have a language, there's nothing to link with */
     if (!dep->language) {
         goto proceed;

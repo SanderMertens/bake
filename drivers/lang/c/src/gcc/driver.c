@@ -390,14 +390,18 @@ void add_misc_link(
         ut_strbuf_append(cmd, " -s MODULARIZE=1");
         ut_strbuf_append(cmd, " -s EXPORT_NAME=\"%s\"", project->id_underscore);
 
-        if (ut_file_test("etc/assets") == 1) {
-            ut_strbuf_append(cmd, " --embed-file etc/assets");
+        ut_ll embeds = driver->get_attr_array("embed");
+        if (embeds) {
+            ut_iter it = ut_ll_iter(embeds);
+            while (ut_iter_hasNext(&it)) {
+                bake_attr *emb_attr = ut_iter_next(&it);
+                ut_strbuf_append(cmd, " --embed-file %s", emb_attr->is.string);
+            }
         }
 
         if (config->debug) {
             if (is_emcc()) {
                 ut_strbuf_appendstr(cmd, " -s ASSERTIONS=2");
-                // ut_strbuf_appendstr(cmd, " -s LINKABLE=1");
             }
         }
     }

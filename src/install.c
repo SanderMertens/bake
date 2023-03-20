@@ -523,7 +523,9 @@ int16_t bake_install_postbuild(
 
         ut_cp(project->artefact_file, "etc");
 
-        char *wasm_file = strdup(project->artefact_file);
+        char *wasm_file = malloc(strlen(project->artefact_file) + 1 + 2);
+        strcpy(wasm_file, project->artefact_file);
+    
         char *wasm_ext = strrchr(wasm_file, '.');
         strcpy(wasm_ext, ".wasm");
 
