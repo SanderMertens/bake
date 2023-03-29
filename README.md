@@ -67,7 +67,7 @@ git clone https://github.com/SanderMertens/bake
 bake/setup.sh
 ```
 
-On Windows:
+On Windows (requires `C++ CMake tools for Windows` individual component included in the `Desktop development with C++` workload for Visual Studio):
 ```
 git clone https://github.com/SanderMertens/bake
 cd bake
