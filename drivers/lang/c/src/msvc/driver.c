@@ -174,10 +174,10 @@ void compile_src(
             bake_attr *include = ut_iter_next(&it);
             char* file = include->is.string;
 
-            if (file[0] == '/' || file[0] == '$' || file[0] == '\\' || (file[0] != 0 && file[1] == ':')) {
-                ut_strbuf_append(&cmd, " /I%s", file);
+            if (file[0] == '/' || file[0] == '$' || file[0] == '%' || file[0] == '\\' || (file[0] != 0 && file[1] == ':')) {
+                ut_strbuf_append(&cmd, " /I %s", file);
             } else {
-                ut_strbuf_append(&cmd, " /I%s\\%s", project->path, file);
+                ut_strbuf_append(&cmd, " /I %s\\%s", project->path, file);
             }
         }
     }
