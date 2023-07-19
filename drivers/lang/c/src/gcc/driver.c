@@ -215,7 +215,8 @@ void add_std(
     bake_project *project,
     bake_src_lang lang,
     ut_strbuf *cmd,
-    bool own_src)
+    bool own_src,
+    bool is_pch)
 {
     /* Set standard for C or C++ */
     if (lang == BAKE_SRC_LANG_CPP) {
@@ -244,20 +245,42 @@ void add_std(
         ut_strbuf_appendstr(cmd, " -Wundef");
 
         if (is_clang(lang)) {
+            ut_strbuf_appendstr(cmd, " -Wno-unknown-warning-option");
             ut_strbuf_appendstr(cmd, " -Wdocumentation");
             ut_strbuf_appendstr(cmd, " -Wconditional-uninitialized");
             ut_strbuf_appendstr(cmd, " -Wunreachable-code");
             ut_strbuf_appendstr(cmd, " -Wfour-char-constants");
             ut_strbuf_appendstr(cmd, " -Wenum-conversion");
             ut_strbuf_appendstr(cmd, " -Wshorten-64-to-32");
+            ut_strbuf_appendstr(cmd, " -Wnonportable-system-include-path");
+            ut_strbuf_appendstr(cmd, " -Wreserved-identifier");
+            ut_strbuf_appendstr(cmd, " -Wextra-semi-stmt");
+            ut_strbuf_appendstr(cmd, " -Wunreachable-code-return");
+            ut_strbuf_appendstr(cmd, " -Wunreachable-code-break");
+            ut_strbuf_appendstr(cmd, " -Wcomma");
+            if (project->type == BAKE_PACKAGE) {
+                ut_strbuf_appendstr(cmd, " -Wmissing-variable-declarations");
+            }
         }
 
         ut_strbuf_appendstr(cmd, " -Wredundant-decls -Wdouble-promotion");
         ut_strbuf_appendstr(cmd, " -Wcast-align");
+        ut_strbuf_appendstr(cmd, " -Wcast-qual");
+        ut_strbuf_appendstr(cmd, " -Wfloat-equal");
+        ut_strbuf_appendstr(cmd, " -Wswitch-enum");
+        ut_strbuf_appendstr(cmd, " -Wimplicit-fallthrough");
+        // ut_strbuf_appendstr(cmd, " -Wcast-function-type"); gcc7 doesn't know it
+        ut_strbuf_appendstr(cmd, " -Wformat-nonliteral");
+
+        if (!is_pch) {
+            ut_strbuf_appendstr(cmd, " -Wunused-macros");
+        }
 
         /* These warnings are not valid for C++ */
         if (lang != BAKE_SRC_LANG_CPP) {
             ut_strbuf_appendstr(cmd, " -Wstrict-prototypes");
+            ut_strbuf_appendstr(cmd, " -Wdeclaration-after-statement");
+            ut_strbuf_appendstr(cmd, " -Wbad-function-cast");
 
         /* These warnings are only valid for C++ */
         } else {
@@ -452,7 +475,7 @@ void compile_src(
     add_optimization(driver, config, project, lang, &cmd, false);
 
     /* Add c/c++ standard arguments */
-    add_std(driver, config, project, lang, &cmd, own_source);
+    add_std(driver, config, project, lang, &cmd, own_source, false);
 
     /* Add CFLAGS */
     add_flags(driver, config, project, lang, &cmd);
@@ -537,7 +560,7 @@ void generate_precompiled_header(
     add_optimization(driver, config, project, lang, &cmd, true);
 
     /* Add -std option */
-    add_std(driver, config, project, lang, &cmd, true);
+    add_std(driver, config, project, lang, &cmd, true, true);
 
     /* Add CFLAGS */
     add_flags(driver, config, project, lang, &cmd);

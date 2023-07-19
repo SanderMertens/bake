@@ -1446,13 +1446,6 @@ int16_t bake_check_dependency(
         goto error;
     }
 
-    /* If standalone, copy source of dependencies to project */    
-    if (p->standalone) {
-        ut_try(copy_amalgamated_from_dep(
-            config, p, amalg_driver, dependency, amalg_copied), NULL);
-        goto proceed;
-    }
-
     /* Copy files from etc folder of dependency */
     const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
     if (src_path) {
@@ -1462,6 +1455,13 @@ int16_t bake_check_dependency(
             ut_try(ut_cp(etc_path, dst_etc_path), 
                 "failed to copy files from '%s'", etc_path);
         }
+    }
+
+    /* If standalone, copy source of dependencies to project */    
+    if (p->standalone) {
+        ut_try(copy_amalgamated_from_dep(
+            config, p, amalg_driver, dependency, amalg_copied), NULL);
+        goto proceed;
     }
 
     /* If project doesn't have a language, there's nothing to link with */
