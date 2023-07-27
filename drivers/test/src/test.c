@@ -25,7 +25,7 @@ void test_empty(void)
     ut_log("#[yellow]EMPTY#[reset] %s.%s (add test statements)\n", 
         current_testsuite->id, current_testcase->id);
 
-    exit(-2);
+    exit(2);
 }
 
 static
@@ -258,14 +258,15 @@ void* bake_test_run_suite_range(
                 result = -1;
                 fail ++;
             } else {
-                if (rc == -2) {
+                if (rc == 2) {
                     /* Testcase is empty. No action required, but print the
                      * test command on command line */
                     empty ++;
                 } else if (rc != -1) {
                     /* If return code is not -1, this was not a simple
                      * testcase failure (which already has been reported) */
-                    ut_log("Testcase '%s' failed with return code %d\n", 
+                    ut_log(
+                        "#[red]FAIL#[reset]: %s failed with return code %d\n", 
                         test_name, rc);
 
                     result = -1;
