@@ -33,7 +33,7 @@ char *combine_path(
     const char *file)
 {
     ut_strbuf path_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&path_buf, "%s/%s", path, file);
+    ut_strbuf_append(&path_buf, "%s" UT_OS_PS "%s", path, file);
     return ut_strbuf_get(&path_buf);
 }
 
@@ -268,6 +268,34 @@ char *find_main_src_file(
     return main_src_file;
 }
 
+// Sort file paths by directory depth, then alphabetically
+int file_path_compare(
+    const void *ptr1,
+    const void *ptr2)
+{
+    const char *path1 = *((char**)ptr1);
+    const char *path2 = *((char**)ptr2);
+
+    int32_t depth1 = 0, depth2 = 0;
+    const char *ptr = path1;
+    while ((ptr = strchr(ptr, UT_OS_PS[0]))) {
+        depth1 ++;
+        ptr ++;
+    }
+    ptr = path2;
+    while ((ptr = strchr(ptr, UT_OS_PS[0]))) {
+        depth2 ++;
+        ptr ++;
+    }
+
+    if (depth1 != depth2) {
+        // Sort by the shortest path first
+        return depth1 - depth2;
+    }
+
+    return strcmp(path1, path2);
+}
+
 static
 void generate(
     bake_driver_api *driver,
@@ -369,12 +397,31 @@ void generate(
             &main_included), NULL);
     }
 
-    /* Recursively iterate sources, append to source file */
+    /* Recursively iterate sources and store the paths */
+    ut_ll source_files = ut_ll_new();
     ut_iter it;
     ut_try(ut_dir_iter(src_path, "//*.c,*.cpp", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *file_path = combine_path(src_path, file);
+        ut_ll_append(source_files, file_path);
+    }
+
+    /* Copy file paths to array so they can be sorted with qsort */
+    char **buffer = malloc(sizeof(char*) * ut_ll_count(source_files));
+    uint32_t i = 0;
+    it = ut_ll_iter(source_files);
+    while (ut_iter_hasNext(&it)) {
+        buffer[i ++] = ut_iter_next(&it);
+    }
+    ut_ll_free(source_files);
+
+    /* Sort the source file list to ensure consistent output order */
+    qsort(buffer, i, sizeof(char*), file_path_compare);
+
+    /* Iterate paths and append to source file */
+    for (int x = 0; x < i; x++) {
+        char *file_path = buffer[x];
 
         if (!main_src_file || strcmp(file_path, main_src_file)) {
             ut_try(amalgamate(project, src_out, include_path, false, file_path, 
@@ -383,7 +430,9 @@ void generate(
         }
 
         free(file_path);
-    } 
+    }
+    free(buffer);
+
     fclose(src_out);
     free(main_src_file);
 
