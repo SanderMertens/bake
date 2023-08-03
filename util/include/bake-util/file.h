@@ -43,6 +43,15 @@ FILE* ut_file_open(
     const char* file,
     const char* mode);
 
+/** Close a file stream.
+ *
+ * @param file The file stream to close.
+ * @return 0 if success, non-zero if failed.
+ */
+UT_API
+int ut_file_close(
+    FILE* file);
+
 /** Load contents of text file in memory.
  *
  * @param file The file to load.

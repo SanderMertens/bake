@@ -33,7 +33,7 @@ char *combine_path(
     const char *file)
 {
     ut_strbuf path_buf = UT_STRBUF_INIT;
-    ut_strbuf_append(&path_buf, "%s/%s", path, file);
+    ut_strbuf_append(&path_buf, "%s" UT_OS_PS "%s", path, file);
     return ut_strbuf_get(&path_buf);
 }
 
@@ -81,7 +81,7 @@ int amalgamate(
     time_t *last_modified,
     bool *main_included) 
 {
-    char *file = ut_strdup(const_file);
+    char *file = strreplace(const_file, "/", UT_OS_PS);
     ut_path_clean(file, file);
     if (ut_rb_find(files_parsed, file)) {
         ut_debug("amalgamate: skip   '%s'  (from '%s:%d')", file, 
@@ -97,7 +97,7 @@ int amalgamate(
 
     /* Get current path from filename (for relative includes) */
     char *cur_path = ut_strdup(file);
-    char *last_elem = strrchr(cur_path, '/');
+    char *last_elem = strrchr(cur_path, UT_OS_PS[0]);
     if (last_elem) {
         *last_elem = '\0';
         last_elem ++;
@@ -114,7 +114,7 @@ int amalgamate(
     int32_t line_count = 0;
 
     /* Open file for reading */
-    FILE* in = fopen(file, "r");
+    FILE* in = ut_file_open(file, "r");
     if (!in) {
         ut_error("cannot read file '%s'", file);
         goto error;
@@ -222,7 +222,7 @@ int amalgamate(
 
     fprintf(out, "\n"); /* Support for empty files */
 
-    fclose(in);
+    ut_file_close(in);
 
     return 0;
 error:
@@ -266,6 +266,34 @@ char *find_main_src_file(
     }
 
     return main_src_file;
+}
+
+// Sort file paths by directory depth, then alphabetically
+int file_path_compare(
+    const void *ptr1,
+    const void *ptr2)
+{
+    const char *path1 = *((char**)ptr1);
+    const char *path2 = *((char**)ptr2);
+
+    int32_t depth1 = 0, depth2 = 0;
+    const char *ptr = path1;
+    while ((ptr = strchr(ptr, UT_OS_PS[0]))) {
+        depth1 ++;
+        ptr ++;
+    }
+    ptr = path2;
+    while ((ptr = strchr(ptr, UT_OS_PS[0]))) {
+        depth2 ++;
+        ptr ++;
+    }
+
+    if (depth1 != depth2) {
+        // Sort by the shortest path first
+        return depth1 - depth2;
+    }
+
+    return strcmp(path1, path2);
 }
 
 static
@@ -369,12 +397,31 @@ void generate(
             &main_included), NULL);
     }
 
-    /* Recursively iterate sources, append to source file */
+    /* Recursively iterate sources and store the paths */
+    ut_ll source_files = ut_ll_new();
     ut_iter it;
     ut_try(ut_dir_iter(src_path, "//*.c,*.cpp", &it), NULL);
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
         char *file_path = combine_path(src_path, file);
+        ut_ll_append(source_files, file_path);
+    }
+
+    /* Copy file paths to array so they can be sorted with qsort */
+    char **buffer = malloc(sizeof(char*) * ut_ll_count(source_files));
+    uint32_t i = 0;
+    it = ut_ll_iter(source_files);
+    while (ut_iter_hasNext(&it)) {
+        buffer[i ++] = ut_iter_next(&it);
+    }
+    ut_ll_free(source_files);
+
+    /* Sort the source file list to ensure consistent output order */
+    qsort(buffer, i, sizeof(char*), file_path_compare);
+
+    /* Iterate paths and append to source file */
+    for (int x = 0; x < i; x++) {
+        char *file_path = buffer[x];
 
         if (!main_src_file || strcmp(file_path, main_src_file)) {
             ut_try(amalgamate(project, src_out, include_path, false, file_path, 
@@ -383,7 +430,9 @@ void generate(
         }
 
         free(file_path);
-    } 
+    }
+    free(buffer);
+
     fclose(src_out);
     free(main_src_file);
 

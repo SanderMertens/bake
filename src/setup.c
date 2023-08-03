@@ -146,36 +146,8 @@ int16_t bake_create_script(bool local, bool nopass)
     fprintf(f, ")\n\n");
     fclose(f);
 
-    char *script_path = ut_envparse(BAKE_SCRIPT_PATH);
-    if (!script_path) {
-        ut_error("failed to open '%s'", BAKE_SCRIPT_PATH);
-    }
-
-    if (!local) {
-        const char *path = ut_getenv("BAKE_USERPATH");
-        if (!path || !strstr(path, script_path)) {
-            ut_trace("add bake directory to user PATH");
-            char *path_w_bake = ut_asprintf("%s;%s", path, script_path);
-            f = fopen("export_bake.bat", "w");
-            if (!f) {
-                ut_throw("failed to create export script");
-                goto error;
-            }
-            fprintf(f, "@echo on\n");
-            fprintf(f, "setx PATH \"%s\"\n", path_w_bake);
-            fclose(f);
-
-            ut_try(cmd("export_bake.bat"), "failed to run export script");
-
-            ut_try(ut_rm("export_bake.bat"), "failed to remove export script");
-        } else {
-            bake_in_path = true;
-        }
-    }
-
     free(vc_shell_cmd);
     free(script_file_path);
-    free(script_path);
 
     return 0;
 error:
