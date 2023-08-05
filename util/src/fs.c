@@ -24,7 +24,11 @@
 #ifndef _WIN32
 #define __mkdir(name) mkdir(name, 0755)
 #else
+#ifdef _MSC_VER
 #define __mkdir(name) _mkdir(name)
+#else
+#define __mkdir(name) mkdir(name)
+#endif
 #endif
 
 int ut_touch(const char *file) {

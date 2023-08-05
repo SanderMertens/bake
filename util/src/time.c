@@ -45,7 +45,24 @@ void timespec_gettime(struct timespec* time) {
     time->tv_sec = mts.tv_sec;
     time->tv_nsec = mts.tv_nsec;
 #elif _WIN32
-    timespec_get(time, TIME_UTC);
+    LARGE_INTEGER freq;
+    double win_time_freq;
+    LARGE_INTEGER win_time_start;
+
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&win_time_start);
+    win_time_freq = (double)freq.QuadPart / 1000000000.0;
+
+    LARGE_INTEGER qpc_t;
+    QueryPerformanceCounter(&qpc_t);
+    uint64_t now = (uint64_t)((double)qpc_t.QuadPart / win_time_freq);
+    uint64_t sec = now / 1000000000;
+
+    assert(sec < UINT32_MAX);
+    assert((now - sec * 1000000000) < UINT32_MAX);
+
+    time->tv_sec = (uint32_t)sec;
+    time->tv_nsec = (uint32_t)(now - sec * 1000000000);
 #else
     clock_gettime(CLOCK_REALTIME, time);
 #endif
