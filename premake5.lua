@@ -3,7 +3,7 @@ workspace "bake"
   configurations { "debug", "release" }
   location ("build")
 
-  configuration { "linux", "gmake" }
+  filter { "action:gmake" }
     buildoptions { "-std=c99", "-fPIC", "-D_XOPEN_SOURCE=600"}
 
   project "bake"
@@ -11,8 +11,8 @@ workspace "bake"
     language "C"
     targetdir "."
 
-    files { "include/*.h", "src/*.c", "util/src/*.c", "util/src/posix/*.c", "util/include/*.h", 
-      "util/include/bake-util/*.h", "util/include/bake-util/posix/*.h"
+    files { "include/*.h", "src/*.c", "util/src/*.c", "util/include/*.h", 
+      "util/include/bake-util/*.h"
     }
 
     includedirs { "include", "util/include" }
@@ -21,11 +21,17 @@ workspace "bake"
 
     defines { "BAKE_IMPL" }
 
-    configuration "debug"
+    filter { "action:gmake" }
+      files { "util/src/posix/*.c", "util/include/bake-util/posix/*.h" }
+
+    filter { "action:gmake2" }
+      files { "util/src/win/*.c", "util/include/bake-util/win/*.h" }
+
+    filter "debug"
       defines { "DEBUG" }
       symbols "On"
 
-    configuration "release"
+    filter "release"
       defines { "NDEBUG" }
       optimize "On"
 

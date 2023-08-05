@@ -1,6 +1,9 @@
 rm -rf build-Darwin
 rm -rf build-Linux
-premake5 --os=macosx gmake
+rm -rf build-Mingw
+../premake5 --os=macosx gmake
 mv build build-Darwin
-premake5 --os=linux gmake
+../premake5 --os=linux gmake
 mv build build-Linux
+../premake5 --os=linux gmake2
+mv build build-Mingw
