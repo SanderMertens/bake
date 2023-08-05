@@ -19,35 +19,12 @@
  * THE SOFTWARE.
  */
 
+/* Driver code for msvc compiler */
+
 #include <bake.h>
 
 static
-char* obj_ext() 
-{
-    return ".obj";
-}
-
-/* Get compiler */
-static
-const char *cc(
-    bool is_cpp)
-{
-    const char *cxx = ut_getenv("CXX");
-    const char *cc = ut_getenv("CC");
-
-    if (is_cpp) {
-        if (!cxx)
-            cxx = "cl.exe";
-        return cxx;
-    } else {
-        if (!cc)
-            cc = "cl.exe";
-        return cc;
-    }
-}
-
-static
-void add_sanitizers(
+void msvc_add_sanitizers(
     bake_config *config,
     bake_project *project,
     ut_strbuf *cmd)
@@ -58,14 +35,14 @@ void add_sanitizers(
 }
 
 static
-void add_flags(
+void msvc_add_flags(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
     bool cpp,
     ut_strbuf *cmd)
 {
-    add_sanitizers(config, project, cmd);
+    msvc_add_sanitizers(config, project, cmd);
 
     if (!cpp) {
         /* CFLAGS for c projects */
@@ -126,7 +103,7 @@ void add_flags(
 
 /* Compile source file for Windows platform using MSVC*/
 static
-void compile_src(
+void msvc_compile_src(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -164,7 +141,7 @@ void compile_src(
         ut_strbuf_appendstr(&cmd, " /W3 /WX");
     }
 
-    add_flags(driver, config, project, cpp, &cmd);
+    msvc_add_flags(driver, config, project, cpp, &cmd);
 
     /* Add configured include paths */
     bake_attr *include_attr = driver->get_attr("include");
@@ -203,7 +180,7 @@ void compile_src(
 }
 
 static
-void obj_deps(
+void msvc_obj_deps(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -214,7 +191,7 @@ void obj_deps(
 
 /* Find a static library from a logical name */
 static
-char* find_static_lib(
+char* msvc_find_static_lib(
     bake_driver_api *driver,
     bake_project *project,
     bake_config *config,
@@ -259,7 +236,7 @@ char* find_static_lib(
 
 /* Link a binary for Windows platforms*/
 static
-void link_dynamic_binary(
+void msvc_link_dynamic_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -403,7 +380,7 @@ void link_dynamic_binary(
 
 /* Link a static library */
 static
-void link_static_binary(
+void msvc_link_static_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -419,7 +396,7 @@ void link_static_binary(
 
 /* Link a library */
 static
-void link_binary(
+void msvc_link_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -429,15 +406,15 @@ void link_binary(
     bool link_static = driver->get_attr_bool("static");
 
     if (link_static) {
-        link_static_binary(driver, config, project, source, target);
+        msvc_link_static_binary(driver, config, project, source, target);
     } else {
-        link_dynamic_binary(driver, config, project, source, target);
+        msvc_link_dynamic_binary(driver, config, project, source, target);
     }
 }
 
 /* Specify files to clean */
 static
-void clean(
+void msvc_clean(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -448,7 +425,7 @@ void clean(
 
 /* Return name of project artefact */
 static
-char* artefact_name(
+char* msvc_artefact_name(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -473,7 +450,7 @@ char* artefact_name(
 
 /* Get filename for library */
 static
-char *link_to_lib(
+char *msvc_link_to_lib(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -529,7 +506,7 @@ char *link_to_lib(
 }
 
 static
-void generate_precompiled_header(
+void msvc_generate_precompiled_header(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -537,15 +514,8 @@ void generate_precompiled_header(
     /* TODO: implement PCHs for msvc */
 }
 
-/* Is current compiler clang */
 static
-bool is_clang(bool is_cpp)
-{
-    return false;
-}
-
-static
-void coverage(
+void msvc_coverage(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -554,10 +524,27 @@ void coverage(
 }
 
 static
-void clean_coverage(
+void msvc_clean_coverage(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
 {
     /* TODO */
 }
+
+static
+bake_compiler_interface msvc_get() {
+    bake_compiler_interface result = {
+        .compile = msvc_compile_src,
+        .link = msvc_link_binary,
+        .generate_precompiled_header = msvc_generate_precompiled_header,
+        .clean_coverage = msvc_clean_coverage,
+        .coverage = msvc_coverage,
+        .clean = msvc_clean,
+        .artefact_name = msvc_artefact_name,
+        .link_to_lib = msvc_link_to_lib
+    };
+
+    return result;
+}
+

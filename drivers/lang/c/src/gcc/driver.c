@@ -19,101 +19,12 @@
  * THE SOFTWARE.
  */
 
+/* Driver code for gcc compilers and similar (clang, emcc) */
+
 #include <bake.h>
 
-typedef enum bake_src_lang {
-    BAKE_SRC_LANG_C = 0,
-    BAKE_SRC_LANG_CPP = 1,
-    BAKE_SRC_LANG_OBJ_C = 2
-} bake_src_lang;
-
 static
-char* obj_ext() 
-{
-    return ".o";
-}
-
-/* Get compiler */
-static
-const char *cc(
-    bake_src_lang lang)
-{
-    const char *cxx = ut_getenv("CXX");
-    const char *cc = ut_getenv("CC");
-
-    if (cc && !strlen(cc)) cc = NULL;
-    if (cxx && !strlen(cxx)) cxx = NULL;
-
-    if (!is_darwin()) {
-        if (lang == BAKE_SRC_LANG_CPP) {
-            if (!cxx)
-                cxx = "g++";
-            return cxx;
-        } else {
-            if (!cc)
-                cc = "gcc";
-            return cc;
-        }
-    } else {
-        /* On MacOS, invoking gcc and g++ actually invokes clang, unless 
-         * explicitly configured otherwise. It is safest to assume clang, as
-         * some gcc options can cause the clang linker to fail (like -z). */
-        if (lang == BAKE_SRC_LANG_CPP) {
-            if (!cxx || !strcmp(cxx, "g++"))
-                cxx = "clang++";
-            return cxx;
-        } else {
-            if (!cc || !strcmp(cc, "gcc"))
-                cc = "clang";
-            return cc;
-        }
-    }
-}
-
-static
-bool is_compiler(
-    const char *name,
-    bake_src_lang lang)
-{
-    const char *compiler = cc(lang);
-    size_t name_len = strlen(name);
-
-    /* First test if user is running clang from a non-standard path. */
-    const char *cc_command = strrchr(compiler, UT_OS_PS[0]);
-    if (!cc_command) {
-        cc_command = name;
-    } else {
-        cc_command ++;
-    }
-
-    if (!strncmp(cc_command, compiler, name_len)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-/* Is current compiler clang */
-static
-bool is_clang(bake_src_lang lang)
-{
-    return is_compiler("clang", lang);
-}
-
-/* Is current compiler emcc */
-static 
-bool is_emcc(void) {
-    return is_compiler("emcc", 0);
-}
-
-/* Is current compiler icc */
-static 
-bool is_icc(void) {
-    return is_compiler("icc", 0);
-}
-
-static
-void add_includes(
+void gcc_add_includes(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -143,7 +54,7 @@ void add_includes(
 }   
 
 static
-void add_flags(
+void gcc_add_flags(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -209,7 +120,7 @@ void add_flags(
 }
 
 static
-void add_std(
+void gcc_add_std(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -309,7 +220,7 @@ void add_std(
 }
 
 static
-void add_optimization(
+void gcc_add_optimization(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -336,7 +247,7 @@ void add_optimization(
 }
 
 static
-void add_sanitizers(
+void gcc_add_sanitizers(
     bake_config *config,
     ut_strbuf *cmd)
 {
@@ -354,7 +265,7 @@ void add_sanitizers(
 }
 
 static
-void add_misc(
+void gcc_add_misc(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -396,11 +307,11 @@ void add_misc(
         ut_strbuf_append(cmd, " -ftime-trace");
     }
 
-    add_sanitizers(config, cmd);
+    gcc_add_sanitizers(config, cmd);
 }
 
 static
-void add_misc_link(
+void gcc_add_misc_link(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -429,12 +340,12 @@ void add_misc_link(
         }
     }
 
-    add_sanitizers(config, cmd);
+    gcc_add_sanitizers(config, cmd);
 }
 
 /* Compile source file */
 static
-void compile_src(
+void gcc_compile_src(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -469,16 +380,16 @@ void compile_src(
     ut_strbuf_append(&cmd, "%s", cc(lang));
 
     /* Add misc options */
-    add_misc(driver, config, project, lang, &cmd);
+    gcc_add_misc(driver, config, project, lang, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, lang, &cmd, false);
+    gcc_add_optimization(driver, config, project, lang, &cmd, false);
 
     /* Add c/c++ standard arguments */
-    add_std(driver, config, project, lang, &cmd, own_source, false);
+    gcc_add_std(driver, config, project, lang, &cmd, own_source, false);
 
     /* Add CFLAGS */
-    add_flags(driver, config, project, lang, &cmd);
+    gcc_add_flags(driver, config, project, lang, &cmd);
 
     /* Add precompiled header.
      * Only add the precompiled header if the source file is of the same
@@ -499,7 +410,7 @@ void compile_src(
     }
 
     /* Add include directories */
-    add_includes(driver, config, project, &cmd);
+    gcc_add_includes(driver, config, project, &cmd);
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " -c %s", source);
@@ -515,7 +426,7 @@ void compile_src(
 }
 
 static
-void generate_precompiled_header(
+void gcc_generate_precompiled_header(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -554,19 +465,19 @@ void generate_precompiled_header(
     free(source);
 
     /* Add misc options */
-    add_misc(driver, config, project, lang, &cmd);
+    gcc_add_misc(driver, config, project, lang, &cmd);
 
     /* Add optimization flags */
-    add_optimization(driver, config, project, lang, &cmd, true);
+    gcc_add_optimization(driver, config, project, lang, &cmd, true);
 
     /* Add -std option */
-    add_std(driver, config, project, lang, &cmd, true, true);
+    gcc_add_std(driver, config, project, lang, &cmd, true, true);
 
     /* Add CFLAGS */
-    add_flags(driver, config, project, lang, &cmd);
+    gcc_add_flags(driver, config, project, lang, &cmd);
 
     /* Add include directories */
-    add_includes(driver, config, project, &cmd);
+    gcc_add_includes(driver, config, project, &cmd);
 
     /* Make sure PCH directory exists */
     ut_mkdir(pch_dir);
@@ -582,7 +493,7 @@ void generate_precompiled_header(
 /* A better mechanism is needed to abstract away from the difference between
  * Linux-ish systems. */
 static
-const char* lib_map(
+const char* gcc_lib_map(
     const char *lib)
 {
     /* On darwin, librt does not exist */
@@ -597,7 +508,7 @@ const char* lib_map(
 
 /* Find a static library from a logical name */
 static
-char* find_static_lib(
+char* gcc_find_static_lib(
     bake_driver_api *driver,
     bake_project *project,
     bake_config *config,
@@ -640,22 +551,9 @@ char* find_static_lib(
     return NULL;
 }
 
-/* Is binary a dylib */
-static
-bool is_dylib(
-    bake_driver_api *driver,
-    bake_project *project)
-{
-    if (is_darwin() && project->type == BAKE_PACKAGE) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 /* Link a binary */
 static
-void link_dynamic_binary(
+void gcc_link_dynamic_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -691,7 +589,7 @@ void link_dynamic_binary(
         }
     }
 
-    add_misc_link(
+    gcc_add_misc_link(
         driver,
         config,
         project,
@@ -756,7 +654,7 @@ void link_dynamic_binary(
                  * library objects to temp directory. If the library would be
                  * linked as-is, symbols would be exported, even though
                  * fvisibility is set to hidden */
-                char *static_lib = find_static_lib(
+                char *static_lib = gcc_find_static_lib(
                     driver, project, config, lib->is.string);
                 if (!static_lib) {
                     continue;
@@ -829,7 +727,7 @@ void link_dynamic_binary(
         ut_iter it = ut_ll_iter(lib_attr->is.array);
         while (ut_iter_hasNext(&it)) {
             bake_attr *lib = ut_iter_next(&it);
-            const char *mapped = lib_map(lib->is.string);
+            const char *mapped = gcc_lib_map(lib->is.string);
             if (mapped) {
                 ut_strbuf_append(&cmd, " -l%s", mapped);
             }
@@ -865,7 +763,7 @@ void link_dynamic_binary(
 
 /* Link a static library */
 static
-void link_static_binary(
+void gcc_link_static_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -881,7 +779,7 @@ void link_static_binary(
 
 /* Link a library */
 static
-void link_binary(
+void gcc_link_binary(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -891,15 +789,15 @@ void link_binary(
     bool link_static = driver->get_attr_bool("static");
 
     if (link_static) {
-        link_static_binary(driver, config, project, source, target);
+        gcc_link_static_binary(driver, config, project, source, target);
     } else {
-        link_dynamic_binary(driver, config, project, source, target);
+        gcc_link_dynamic_binary(driver, config, project, source, target);
     }
 }
 
 /* Specify files to clean */
 static
-void clean(
+void gcc_clean(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -917,7 +815,7 @@ void clean(
 
 /* Return name of project artefact */
 static
-char* artefact_name(
+char* gcc_artefact_name(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -954,7 +852,7 @@ char* artefact_name(
 
 /* Get filename for library */
 static
-char *link_to_lib(
+char *gcc_link_to_lib(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
@@ -1047,7 +945,7 @@ static const char *no_code =     "        -:";
 static const char *not_covered = "    #####:";
 
 static
-file_coverage_t parse_gcov(
+file_coverage_t gcc_parse_gcov(
     bake_project *project, 
     const char *file)
 {
@@ -1084,7 +982,7 @@ file_coverage_t parse_gcov(
 }
 
 static
-int coverage_compare(
+int gcc_coverage_compare(
     const void *f1_ptr,
     const void *f2_ptr)
 {
@@ -1095,7 +993,7 @@ int coverage_compare(
 }
 
 static
-void print_coverage(
+void gcc_print_coverage(
     const char *file,
     int file_len_max,
     float coverage,
@@ -1115,7 +1013,7 @@ void print_coverage(
 }
 
 static
-void parse_coverage(
+void gcc_parse_coverage(
     bake_project *project,
     int total_files)
 {
@@ -1131,7 +1029,7 @@ void parse_coverage(
 
     while (ut_iter_hasNext(&it)) {
         char *file = ut_iter_next(&it);
-        data[i] = parse_gcov(project, file);
+        data[i] = gcc_parse_gcov(project, file);
         
         int file_len = strlen(data[i].file);
         if (file_len > file_len_max) {
@@ -1144,19 +1042,19 @@ void parse_coverage(
         i ++;
     }
 
-    qsort(data, total_files, sizeof(file_coverage_t), coverage_compare);
+    qsort(data, total_files, sizeof(file_coverage_t), gcc_coverage_compare);
 
     for (i = 0; i < total_files; i ++) {
         coverage = 100.0 * (1.0 - 
             (float)data[i].uncovered_lines / (float)data[i].total_lines);
-        print_coverage(data[i].file, file_len_max, coverage, 
+        gcc_print_coverage(data[i].file, file_len_max, coverage, 
             data[i].total_lines, data[i].uncovered_lines);
 
         free(data[i].file);
     }
 
     coverage = 100.0 * (1.0 - (float)uncovered_lines / total_lines);
-    print_coverage("total", file_len_max, coverage, total_lines, uncovered_lines);
+    gcc_print_coverage("total", file_len_max, coverage, total_lines, uncovered_lines);
     printf("\n");
 
     free(gcov_dir);
@@ -1164,7 +1062,7 @@ void parse_coverage(
 }
 
 static
-void coverage(
+void gcc_coverage(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -1249,11 +1147,11 @@ void coverage(
         return;
     }
 
-    parse_coverage(project, total_files);
+    gcc_parse_coverage(project, total_files);
 }
 
 static
-void clean_coverage(
+void gcc_clean_coverage(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project)
@@ -1278,4 +1176,20 @@ void clean_coverage(
     }
 
     free(obj_dir);
+}
+
+static
+bake_compiler_interface gcc_get() {
+    bake_compiler_interface result = {
+        .compile = gcc_compile_src,
+        .link = gcc_link_binary,
+        .generate_precompiled_header = gcc_generate_precompiled_header,
+        .clean_coverage = gcc_clean_coverage,
+        .coverage = gcc_coverage,
+        .clean = gcc_clean,
+        .artefact_name = gcc_artefact_name,
+        .link_to_lib = gcc_link_to_lib
+    };
+
+    return result;
 }

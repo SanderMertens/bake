@@ -23,6 +23,25 @@
 
 #define CACHE_DIR ".bake_cache"
 
+typedef enum bake_src_lang {
+    BAKE_SRC_LANG_C = 0,
+    BAKE_SRC_LANG_CPP = 1,
+    BAKE_SRC_LANG_OBJ_C = 2
+} bake_src_lang;
+
+typedef struct bake_compiler_interface {
+    bake_rule_action_cb compile;
+    bake_rule_action_cb link;
+    bake_driver_cb generate_precompiled_header;
+    bake_driver_cb clean_coverage;
+    bake_driver_cb coverage;
+    bake_driver_cb clean;
+    bake_artefact_cb artefact_name;
+    bake_link_to_lib_cb link_to_lib;
+} bake_compiler_interface;
+
+static bake_compiler_interface cif;
+
 /* Is language C++ */
 static
 bool is_cpp(
@@ -54,13 +73,144 @@ bool is_linux(void)
     return true;
 }
 
-/* Include compiler-specific implementation. Eventually this should be made
- * pluggable instead of being determined by the host platform. */
-#ifdef _WIN32
+static
+bool is_windows(void)
+{
+    if (stricmp(UT_OS_STRING, "Windows")) {
+        return false;
+    }
+    return true;
+}
+
+/* Get compiler */
+static
+const char *cc(
+    bake_src_lang lang)
+{
+    const char *default_cxx = NULL, *cxx = ut_getenv("CXX");
+    const char *default_cc = NULL, *cc = ut_getenv("CC");
+
+    if (cc && !strlen(cc)) cc = NULL;
+    if (cxx && !strlen(cxx)) cxx = NULL;
+
+    /* Defaults for cc */
+    if (!cc) {
+        if (is_windows()) {
+            cc = "cl.exe";
+        } else if (is_darwin()) {
+            cc = "clang";
+        } else {
+            cc = "gcc";
+        }
+    }
+
+    /* Defaults for cxx */
+    if (!cxx) {
+        if (is_windows()) {
+            cxx = "cl.exe";
+        } else if (is_darwin()) {
+            cxx = "clang++";
+        } else {
+            cxx = "g++";
+        }
+    }
+
+    if (is_darwin()) {
+        /* On MacOS, invoking gcc and g++ actually invokes clang, unless 
+         * explicitly configured otherwise. It is safest to assume clang, as
+         * some gcc options can cause the clang linker to fail (like -z). */
+        if (lang == BAKE_SRC_LANG_CPP) {
+            if (!strcmp(cxx, "g++")) {
+                cxx = "clang++";
+            }
+        } else {
+            if (!strcmp(cc, "gcc")) {
+                cc = "clang";
+            }
+        }
+    }
+
+    if (lang == BAKE_SRC_LANG_CPP) {
+        return cxx;
+    } else {
+        return cc;
+    }
+}
+
+/* Utility function to test for compiler */
+static
+bool is_compiler(
+    const char *name,
+    bake_src_lang lang)
+{
+    const char *compiler = cc(lang);
+    size_t name_len = strlen(name);
+
+    /* First test if user is running clang from a non-standard path. */
+    const char *cc_command = strrchr(compiler, UT_OS_PS[0]);
+    if (!cc_command) {
+        cc_command = name;
+    } else {
+        cc_command ++;
+    }
+
+    if (!strncmp(cc_command, compiler, name_len)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/* Is current compiler clang */
+static
+bool is_clang(bake_src_lang lang)
+{
+    return is_compiler("clang", lang);
+}
+
+/* Is current compiler emcc */
+static 
+bool is_emcc(void) {
+    return is_compiler("emcc", 0);
+}
+
+/* Is current compiler icc */
+static 
+bool is_icc(void) {
+    return is_compiler("icc", 0);
+}
+
+/* Is current compiler msvc */
+static
+bool is_msvc(void) {
+    return is_compiler("cl.exe", 0);
+}
+
+/* Is binary a dylib */
+static
+bool is_dylib(
+    bake_driver_api *driver,
+    bake_project *project)
+{
+    if (is_darwin() && project->type == BAKE_PACKAGE) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static
+char* obj_ext() {
+    if (is_msvc()) {
+        return ".obj";
+    } else {
+        return ".o";
+    }
+}
+
+
 #include "msvc/driver.c"
-#else
 #include "gcc/driver.c"
-#endif
 
 /* Obtain object name from source file */
 static
@@ -271,7 +421,7 @@ void test(
     bake_project *project)
 {
     if (config->coverage && project->coverage) {
-        clean_coverage(driver, config, project);
+        cif.clean_coverage(driver, config, project);
     }
 }
 
@@ -284,7 +434,7 @@ void build(
     if (driver->get_attr("precompile-header") && 
         driver->get_attr_bool("precompile-header")) 
     {
-        generate_precompiled_header(driver, config, project);
+        cif.generate_precompiled_header(driver, config, project);
     }
 }
 
@@ -479,13 +629,20 @@ int bakemain(bake_driver_api *driver)
         driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
     }
 
+    /* Detect compiler & load compiler interface */
+    if (is_msvc()) {
+        cif = msvc_get();
+    } else {
+        cif = gcc_get();
+    }
+
     /* -- Compiling and linking source code -- */
 
     /* Create rule for dynamically generating object files from source files */
-    driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), compile_src);
+    driver->rule("objects", "$SOURCES", driver->target_map(src_to_obj), cif.compile);
 
     /* Create rule for creating binary from objects */
-    driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), link_binary);
+    driver->rule("ARTEFACT", "$objects", driver->target_pattern(NULL), cif.link);
 
     /* Generate header file that automatically includes project dependencies */
     driver->generate(generate);
@@ -500,16 +657,16 @@ int bakemain(bake_driver_api *driver)
     driver->test(test);
 
     /* Coverage analysis */
-    driver->coverage(coverage);    
+    driver->coverage(cif.coverage);    
 
     /* Callback that specifies files to clean */
-    driver->clean(clean);
+    driver->clean(cif.clean);
 
     /* Callback for generating artefact name(s) */
-    driver->artefact(artefact_name);
+    driver->artefact(cif.artefact_name);
 
     /* Callback for looking up library from link */
-    driver->link_to_lib(link_to_lib);
+    driver->link_to_lib(cif.link_to_lib);
 
     /* Callback for setting up a project */
     driver->setup(setup_project);
