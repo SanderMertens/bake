@@ -30,6 +30,14 @@ char* ut_hostname(void) {
 bool ut_os_match(
     const char *os)
 {
+#if defined(__MINGW32__)
+    if (!stricmp(os, "windows")) {
+        return true;
+    } else if (!stricmp(os, "msys")) {
+        return true;
+    }
+#endif
+
     if (!stricmp(os, UT_OS_STRING) ||
 
 #if defined(__i386__) || defined(_M_IX86)

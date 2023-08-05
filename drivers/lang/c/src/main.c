@@ -58,7 +58,7 @@ bool is_cpp(
 static
 bool is_darwin(void)
 {
-    if (stricmp(UT_OS_STRING, "Darwin")) {
+    if (stricmp(UT_OS_STRING, "darwin")) {
         return false;
     }
     return true;
@@ -67,7 +67,7 @@ bool is_darwin(void)
 static
 bool is_linux(void)
 {
-    if (stricmp(UT_OS_STRING, "Linux")) {
+    if (stricmp(UT_OS_STRING, "linux")) {
         return false;
     }
     return true;
@@ -76,7 +76,15 @@ bool is_linux(void)
 static
 bool is_windows(void)
 {
-    if (stricmp(UT_OS_STRING, "Windows")) {
+    if (stricmp(UT_OS_STRING, "windows")) {
+        return false;
+    }
+    return true;
+}
+
+static
+bool is_msys(void) {
+    if (stricmp(UT_OS_STRING, "mingw")) {
         return false;
     }
     return true;
@@ -184,6 +192,11 @@ bool is_icc(void) {
 static
 bool is_msvc(void) {
     return is_compiler("cl.exe", 0);
+}
+
+static
+bool is_mingw(void) {
+    return is_compiler("gcc", 0) && is_msys();
 }
 
 /* Is binary a dylib */

@@ -58,7 +58,22 @@ extern "C" {
 #error "Unsupported CPU architecture"
 #endif
 
-#ifdef UT_OS_WINDOWS
+#ifdef __MINGW32__
+#define UT_OS_STRING "Mingw"
+#define UT_OS_LIB_EXT ".dll"
+#define UT_OS_STATIC_LIB_EXT ".lib"
+#define UT_OS_BIN_EXT ".exe"
+#define UT_OS_SCRIPT_EXT ".bat"
+#define UT_OS_LIB_PREFIX ""
+#define UT_OS_PS "\\"
+#define UT_ENV_HOME "HOME"
+#define UT_ENV_LIBPATH "PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ";"
+#define UT_GLOBAL_BIN_PATH "/usr/local/bin"
+#define UT_GLOBAL_LIB_PATH "/usr/local/lib"
+#define UT_LINUX
+#elif defined(UT_OS_WINDOWS)
 #define UT_OS_STRING "Windows"
 #define UT_OS_LIB_EXT ".dll"
 #define UT_OS_STATIC_LIB_EXT ".lib"

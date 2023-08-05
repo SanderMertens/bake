@@ -32,6 +32,15 @@
 #endif
 #define BAKE_REPOSITORY "https://github.com/SanderMertens/bake"
 
+#ifndef _WIN32
+#define BAKE_CMD_PREFIX "."UT_OS_PS
+#else
+#define BAKE_CMD_PREFIX ""
+#endif
+
+#define BAKE_LIB_EXT UT_OS_LIB_EXT
+#define BAKE_LIB_PREFIX UT_OS_LIB_PREFIX
+
 static bool bake_in_path = false;
 
 /* Utility function for running a setup command */
@@ -70,7 +79,7 @@ int16_t cmd(
     return 0;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 
 int16_t bake_create_upgrade_script(void)
 {
@@ -261,9 +270,14 @@ int16_t bake_create_script(bool local, bool nopass)
         cp_cmd = ut_asprintf("sudo cp %s %s/bake", script_path, UT_GLOBAL_BIN_PATH);
         mkdir_cmd = ut_asprintf("sudo mkdir -p %s", UT_GLOBAL_BIN_PATH);
     }
-    
+
+#ifdef __MINGW32__
+    ut_mkdir("C:\\msys64\\usr\\local\\bin");
+    ut_cp(script_path, "C:\\msys64\\usr\\local\\bin\\bake");
+#else
     ut_try( cmd(mkdir_cmd), NULL);
     ut_try( cmd(cp_cmd), NULL);
+#endif
 
     bake_message(UT_OK, "done", "install bake script to '" UT_GLOBAL_BIN_PATH "'");
 
@@ -291,7 +305,7 @@ int16_t bake_build_make_project(
 {
     /* Install header files to include folder in bake environment */
     char *install_cmd = ut_asprintf(
-      "."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install %s --id %s --package --includes include",
+      BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --package --includes include",
       path, id);
 
     ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
@@ -302,7 +316,7 @@ int16_t bake_build_make_project(
     char *make_cmd;
 
     /* Invoke project-specific and platform-specific makefile */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     char *cwd = ut_strdup(ut_cwd());
     char *driver_path = ut_asprintf(
         "%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
@@ -315,7 +329,7 @@ int16_t bake_build_make_project(
     free(make_cmd);
 
     /* On Windows, restore the working directory to the bake repo root */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     ut_try( ut_chdir(cwd), NULL);
     free(cwd);
 #endif
@@ -328,22 +342,22 @@ int16_t bake_build_make_project(
 
     /* Move binary from project root to bake bin path */
     ut_try (ut_rename(
-      strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, path, artefact),
+      strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s" BAKE_LIB_EXT, path, artefact),
       strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
         "failed to move '%s' to project bin path", id);
 
     /* On Windows, also copy the .lib file */
-#ifdef _WIN32
+#if defined(_WIN32)
     ut_try(ut_rename(
-        strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", path, artefact),
-        strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s.lib", bin_path, artefact)),
+        strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s.lib", path, artefact),
+        strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s.lib", bin_path, artefact)),
             "failed to move '%s' to project bin path", id);
 #endif
     free(bin_path);
 
     /* Install binary to bake environment */
     install_cmd = ut_asprintf(
-        "."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install %s --id %s --artefact %s --package",
+        BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --artefact %s --package",
         path, id, artefact);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
@@ -379,6 +393,10 @@ int16_t bake_setup(
     bool upgrade)
 {
     bake_message(UT_LOG, "", "Bake setup, installing to ~/bake");
+
+#ifdef __MINGW32__
+    nopass = true; // msys builds don't have sudo
+#endif
 
     /* Move working directory to the location of the invoked bake executable */
     char *dir = ut_strdup(bake_cmd);
@@ -421,7 +439,7 @@ int16_t bake_setup(
         "failed to create global bake script, rerun setup with --local");
 
     /* Copy bake executable to bake environment in user working directory */
-    ut_try( ut_cp("." UT_OS_PS "bake" UT_OS_BIN_EXT, "~" UT_OS_PS "bake" UT_OS_PS BAKE_EXEC UT_OS_BIN_EXT),
+    ut_try( ut_cp(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT, "~" UT_OS_PS "bake" UT_OS_PS BAKE_EXEC UT_OS_BIN_EXT),
         "failed to copy bake executable");
 
     bake_message(UT_OK, "done", "copy bake executable");
@@ -431,7 +449,7 @@ int16_t bake_setup(
     bake_message(UT_OK, "done", "bake environment reset");
 
     /* Install bake header files to bake environment */
-    ut_try( cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " meta-install --id bake --includes include"),
+    ut_try( cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install --id bake --includes include"),
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 
@@ -446,19 +464,19 @@ int16_t bake_setup(
         "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     /* Build the bake test framework */
-    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild drivers/test"), NULL);
+    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
 
     /* Build the amalgamation driver */
-    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild drivers/amalgamate"), NULL);
+    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/amalgamate"), NULL);
     bake_message(UT_OK, "done", "install amalgamate driver");
 
     /* Build the bake libraries (predefined configurations) */
-    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild libraries"), NULL);
+    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
 
     /* Export the bake templates */
-    ut_try(cmd("."UT_OS_PS"bake" UT_OS_BIN_EXT " rebuild templates"), NULL);
+    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
 
     /*

@@ -105,7 +105,7 @@ void gcc_add_flags(
     /* Enable debugging code */
     if (!config->debug) {
         ut_strbuf_appendstr(cmd, " -DNDEBUG");
-    } else if (!is_emcc()) {
+    } else if (!is_emcc() && !is_mingw()) {
         ut_strbuf_appendstr(cmd, " -fstack-protector-all");
     }
 
@@ -584,7 +584,7 @@ void gcc_link_dynamic_binary(
         ut_strbuf_appendstr(&cmd, " -fno-stack-protector -shared");
 
         /* Fail when symbols are not found in library */
-        if (!is_clang(cpp) && !is_emcc()) {
+        if (!is_clang(cpp) && !is_emcc() && !is_mingw()) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
     }
@@ -830,13 +830,9 @@ char* gcc_artefact_name(
             bool link_static = driver->get_attr_bool("static");
 
             if (link_static) {
-                result = ut_asprintf("lib%s.a", id);
+                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_STATIC_LIB_EXT, id);
             } else {
-                if (is_dylib(driver, project)) {
-                    result = ut_asprintf("lib%s.dylib", id);
-                } else {
-                    result = ut_asprintf("lib%s.so", id);
-                }
+                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, id);
             }
         }
     } else {
@@ -883,16 +879,31 @@ char *gcc_link_to_lib(
         full_path = NULL;
     }
 
-    /* Try .so */
+    /* Try platform default */
     if (full_path) {
-        char *so = ut_asprintf("%s/lib%s.so", full_path, lib_name);
+        char *so = ut_asprintf("%s/"UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, full_path, lib_name);
         if (ut_file_test(so)) {
             result = so;
         }
     } else {
-        char *so = ut_asprintf("lib%s.so", lib_name);
+        char *so = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, lib_name);
         if (ut_file_test(so)) {
             result = so;
+        }
+    }
+
+    /* Try .so */
+    if (!result) {
+        if (full_path) {
+            char *so = ut_asprintf("%s/lib%s.so", full_path, lib_name);
+            if (ut_file_test(so)) {
+                result = so;
+            }
+        } else {
+            char *so = ut_asprintf("lib%s.so", lib_name);
+            if (ut_file_test(so)) {
+                result = so;
+            }
         }
     }
 
