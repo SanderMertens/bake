@@ -41,3 +41,6 @@ workspace "bake"
 
     filter { "system:linux", "action:gmake"}
       links { "rt", "dl", "pthread", "m" }
+
+    filter { "action:gmake2" }
+      links { "shlwapi", "imagehlp", "dbghelp", "ws2_32" }
