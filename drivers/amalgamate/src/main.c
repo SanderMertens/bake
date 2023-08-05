@@ -409,7 +409,7 @@ void generate(
 
     /* Copy file paths to array so they can be sorted with qsort */
     char **buffer = malloc(sizeof(char*) * ut_ll_count(source_files));
-    uint32_t i = 0;
+    uint32_t i = 0, x;
     it = ut_ll_iter(source_files);
     while (ut_iter_hasNext(&it)) {
         buffer[i ++] = ut_iter_next(&it);
@@ -420,7 +420,7 @@ void generate(
     qsort(buffer, i, sizeof(char*), file_path_compare);
 
     /* Iterate paths and append to source file */
-    for (int x = 0; x < i; x++) {
+    for (x = 0; x < i; x++) {
         char *file_path = buffer[x];
 
         if (!main_src_file || strcmp(file_path, main_src_file)) {

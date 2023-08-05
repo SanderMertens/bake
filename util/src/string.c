@@ -402,9 +402,9 @@ char* strlower(char *str) {
 }
 
 // You must free the result if result is non-NULL.
-char* strreplace(char *orig, char *rep, char *with) {
+char* strreplace(const char *orig, char *rep, char *with) {
     char *result; // the return string
-    char *ins;    // the next insert point
+    const char *ins;    // the next insert point
     char *tmp;    // varies
     int len_rep;  // length of rep
     int len_with; // length of with

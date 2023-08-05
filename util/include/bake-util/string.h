@@ -236,7 +236,7 @@ char* ut_vasprintf (
  */
 UT_API
 char* strreplace(
-    char *str,
+    const char *str,
     char *replace,
     char *with);
 
