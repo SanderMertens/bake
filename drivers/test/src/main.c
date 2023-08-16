@@ -242,7 +242,7 @@ void generate_testcase(
     cdiff_file_elemBegin(suite_file, "%s_%s", suite, testcase);
 
     cdiff_file_headerBegin(suite_file);
-    cdiff_file_write(suite_file, "void %s_%s() {", suite, testcase);
+    cdiff_file_write(suite_file, "void %s_%s(void) {", suite, testcase);
     cdiff_file_headerEnd(suite_file);
 
     if (!cdiff_file_bodyBegin(suite_file)) {
