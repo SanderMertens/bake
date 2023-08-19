@@ -182,7 +182,7 @@ No. Bake uses premake to generate its makefiles (we would've used bake to build 
 To put it bluntly, existing tools for C/C++ aren't great.
 
 ### Is bake a package manager?
-No. Bake has package-management like features, like resolving projects by logica name, automatic project discovery & associate projects with git repositories, but it does not pretend to be a full-fledged package manager. The only reason bake has these features is because it makes the build process easier.
+No. Bake has package-management like features, like resolving projects by logical name, automatic project discovery & associate projects with git repositories, but it does not pretend to be a full-fledged package manager. The only reason bake has these features is because it makes the build process easier.
 
 ### Why are bake project configurations so simple?
 All C/C++ project build configurations basically boil down to the same set of rules to translate source files into objects, and objects into shared objects or application binaries. Yet with most build systems you'll find yourself copy-pasting the same rules every time you create a new project.
@@ -240,7 +240,7 @@ Out of all build systems, bake and bazel come closest in the way they approach b
 - Bake is less controlling when it comes to your environment. If you want absolute control over which version of Python, make, gcc etc. you're using while building, Bazel can do a better job.
 - Bake only builds C/C++ code.
 - Bazel project identifiers are relative to a workspace. Bake project identifiers are universal.
-- Bazel has a custom language for project congiguration
+- Bazel has a custom language for project configuration
 
 ### Can I link with non-bake libraries?
 Yes. This example shows how to link with `libm`:
@@ -269,7 +269,7 @@ This can be improved by ensuring that `libm` is only added on Linux (MacOS/Windo
 ```
 
 ### I want to wrap a C library so I can use it as a bake dependency. How do I do this?
-It would be nice if we could wrap `libm.so` from the previous example in a bake `math` package, aso we don't have to repeat this configuration for every project. Bake lets us do this with the `"dependee"` attribute:
+It would be nice if we could wrap `libm.so` from the previous example in a bake `math` package, so we don't have to repeat this configuration for every project. Bake lets us do this with the `"dependee"` attribute:
 
 ```json
 {
@@ -380,7 +380,7 @@ Yes! You can load as many drivers as you want. If you want to add a driver, simp
 ```
 
 ### Are there any example drivers I can use as a template?
-Driver documentation is a bit lacking at the moment, but we will eventually address that. In the meantime, you can take a look at the C driver to see what a fully fletched driver looks like:
+Driver documentation is a bit lacking at the moment, but we will eventually address that. In the meantime, you can take a look at the C driver to see what a fully fledged driver looks like:
 
 https://github.com/SanderMertens/bake/tree/master/drivers/lang/c
 
@@ -488,7 +488,7 @@ bake list
 
 Your new project should show up in the list of projects.
 
-Bake lets you create projects with nested identifiers, like `foo.bar`. This lets you create hierarchies of projects. The `.` notation is used to denote different elements in the project identifier. To use nested identfiers, simply specify their name with bake new:
+Bake lets you create projects with nested identifiers, like `foo.bar`. This lets you create hierarchies of projects. The `.` notation is used to denote different elements in the project identifier. To use nested identifiers, simply specify their name with bake new:
 
 ```
 bake new foo.bar
@@ -799,7 +799,7 @@ When an argument is provided, it is matched against the current language:
 ```
 The function accepts both `cpp` and `c++` for C++ projects.
 
-When the argument is ommitted, the current language is returned. This is particularly effective in combination with the `dependee` attribute, when dependees can be implemented in different languages:
+When the argument is omitted, the current language is returned. This is particularly effective in combination with the `dependee` attribute, when dependees can be implemented in different languages:
 
 ```json
 {
@@ -902,7 +902,7 @@ This is a configuration for a project that only contains bundle information. Not
 }
 ```
 
-Note how the project also adds the bundle project to the `repositories` list in its `bundle` section. This is not required, but is recommended so that bake will be able to clone the bundle if `example` is built in an environment that does not contain `example_bundle`. If the repository configuration is ommitted and `example_bundle` cannot be found by bake the project will fail to build.
+Note how the project also adds the bundle project to the `repositories` list in its `bundle` section. This is not required, but is recommended so that bake will be able to clone the bundle if `example` is built in an environment that does not contain `example_bundle`. If the repository configuration is omitted and `example_bundle` cannot be found by bake the project will fail to build.
 
 If a project wants to use a specific branch, commit and/or tag of a repository, it can do so by adding a `refs` property to the `bundle` section:
 
@@ -977,7 +977,7 @@ The above bundle configuration can be shortened with the `default-branch` and `d
 }
 ```
 
-In cases where the revision id is the same as the tag, the `tag` and `default-tag` properties can be ommitted, as bake will automatically use this id as the tag when a project has no tag and no commit specified. Additionally, if no branch is specified, master is assumed. Therefore the above configuration is equivalent to this:
+In cases where the revision id is the same as the tag, the `tag` and `default-tag` properties can be omitted, as bake will automatically use this id as the tag when a project has no tag and no commit specified. Additionally, if no branch is specified, master is assumed. Therefore the above configuration is equivalent to this:
 
 ```json
 {
@@ -1026,7 +1026,7 @@ If a project specifies its repository URL in the `repository` property, it must 
 }
 ```
 
-Bake will not automatically download dependencies during a build. Dependencies are only automatically downloaded for recursive builds, which are enbled with the `-r` argument:
+Bake will not automatically download dependencies during a build. Dependencies are only automatically downloaded for recursive builds, which are enabled with the `-r` argument:
 
 ```
 bake -r
@@ -1316,7 +1316,7 @@ The project configuration now needs to be configured so that dependee projects l
 ```
 
 #### Link external files from bake environment
-In some cases it may be desirable to link with a library without copying it to a public location, like `/usr/local/lib`. In that case, the library can also be copied to the bake environment, in the same way we did for the the include file. First, the library needs to be installed to a project specific location. This can be accomplished by storing it in the `lib` directory in the project:
+In some cases it may be desirable to link with a library without copying it to a public location, like `/usr/local/lib`. In that case, the library can also be copied to the bake environment, in the same way we did for the include file. First, the library needs to be installed to a project specific location. This can be accomplished by storing it in the `lib` directory in the project:
 
 ```
 helloworld
@@ -1543,7 +1543,7 @@ Patterns create a label for a pattern (using the `ut_expr` syntax). Rules are pa
 driver->rule(<id>, <dependencies>, <function to map target to output>, <action>);
 ```
 
-Each plugin must have a `bakemain` entrypoint. This function is called when the
+Each plugin must have a `bakemain` entry point. This function is called when the
 plugin is loaded, and must specify the rules and patterns.
 
 ## Authors
