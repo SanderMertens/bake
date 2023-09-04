@@ -296,40 +296,34 @@ ut_proc run_exec(
     const char *exec,
     const char *app_id,
     const char *prefix,
-    bool is_package,
     int argc,
     const char *argv[])
 {
-    if (!is_package) {
-        const char *local_argv[1024] = {(char*)exec};
-        int i = 1;
+    const char *local_argv[1024] = {(char*)exec};
+    int i = 1;
 
-        if (prefix) {
-            local_argv[0] = prefix;
-            local_argv[1] = exec;
-            i ++;
-            exec = prefix;
-        }
+    if (prefix) {
+        local_argv[0] = prefix;
+        local_argv[1] = exec;
+        i ++;
+        exec = prefix;
+    }
 
-        if (argc) {
-            if (argv) {
-                for (;i < argc; i ++) {
-                    local_argv[i] = argv[i - 1];
-                }
+    if (argc) {
+        if (argv) {
+            for (;i < argc; i ++) {
+                local_argv[i] = argv[i - 1];
             }
         }
-
-        local_argv[i] = NULL;
-
-        ut_proc pid = ut_proc_run(exec, local_argv);
-
-        bake_message(UT_LOG, "run", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, exec);
-
-        return pid;
-    } else {
-        /* TODO */
-        return 0;
     }
+
+    local_argv[i] = NULL;
+
+    ut_proc pid = ut_proc_run(exec, local_argv);
+
+    bake_message(UT_LOG, "run", "#[green]application#[reset] %s [%u] '%s'", app_id, pid, exec);
+
+    return pid;
 }
 
 static
@@ -338,7 +332,6 @@ int16_t run_interactive(
     const char *app_bin,
     const char *app_id,
     const char *prefix,
-    bool is_package,
     int argc,
     const char *argv[])
 {
@@ -377,7 +370,7 @@ int16_t run_interactive(
             if (!pid) {
                 /* Run process, ensure process binary is first argument */
                 {
-                    pid = run_exec(app_bin, app_id, prefix, is_package, argc, argv);
+                    pid = run_exec(app_bin, app_id, prefix, argc, argv);
                     last_pid = pid;
                 }
             }
@@ -597,80 +590,83 @@ int bake_run(
         }
     }
 
-    if (interactive) {
-        if (!project_dir) {
-            ut_warning(
-              "don't know location of sourcefiles, interactive mode disabled");
-            interactive = false;
+    if (!is_package) {
+        if (interactive) {
+            if (!project_dir) {
+                ut_warning(
+                "don't know location of sourcefiles, interactive mode disabled");
+                interactive = false;
+            }
         }
-    }
 
-    ut_ok("starting app '%s'", app_id);
-    ut_ok("  executable = '%s'", app_bin);
-    ut_ok("  project path = '%s'", project_dir);
-    ut_ok("  project kind = '%s'", is_package ? "package" : "application");
-    ut_ok("  interactive = '%s'", interactive ? "true" : "false");
+        ut_ok("starting app '%s'", app_id);
+        ut_ok("  executable = '%s'", app_bin);
+        ut_ok("  project path = '%s'", project_dir);
+        ut_ok("  project kind = '%s'", is_package ? "package" : "application");
+        ut_ok("  interactive = '%s'", interactive ? "true" : "false");
 
-    /* Always run project from project directory, if there is one */
-    if (project_dir) {
-        ut_chdir(project_dir);
-    }
-
-    if (interactive) {
-        /* Run process & monitor source for changes */
-        if (run_interactive(project_dir, app_bin, app_id, prefix, is_package, argc, argv)) {
-            goto error;
-        }
-    } else {
-        /* Just run process */
-        ut_proc pid;
-        ut_trace("starting process '%s'", app_bin);
-
+        /* Always run project from project directory, if there is one */
         if (project_dir) {
-            ut_try( build_project("."), "build failed, cannot run");
+            ut_chdir(project_dir);
         }
 
-        if (argc) {
-            pid = run_exec(app_bin, app_id, prefix, is_package, argc, argv);
+        if (interactive) {
+            /* Run process & monitor source for changes */
+            if (run_interactive(project_dir, app_bin, app_id, prefix, argc, argv)) {
+                goto error;
+            }
         } else {
-            pid = run_exec(
-              app_bin, app_id, prefix, is_package, 1, (const char*[]){
-                  (char*)app_bin, NULL});
-        }
-        if (!pid) {
-            ut_throw("failed to start process '%s'", app_bin);
-            goto error;
-        }
+            /* Just run process */
+            ut_proc pid;
+            ut_trace("starting process '%s'", app_bin);
 
-        ut_trace("waiting for process '%s'", app_bin);
-        int8_t result = 0, sig = 0;
-        if ((sig = ut_proc_wait(pid, &result)) || result) {
-            if (sig > 0) {
-                ut_throw("process crashed (%d)", sig);
-                ut_raise();
-
-                ut_strbuf cmd_args = UT_STRBUF_INIT;
-                int i;
-                for (i = 1; i < argc; i ++) {
-                    ut_strbuf_appendstr(&cmd_args, argv[i]);
-                }
-
-                char *args = ut_strbuf_get(&cmd_args);
-
-                printf("\n");
-                printf("to debug your application, do:\n");
-                ut_log("  export $(bake env)\n");
-                ut_log("  %s %s\n", app_bin, args ? args : "");
-                printf("\n");
-
-                free(args);
+            if (project_dir) {
+                ut_try( build_project("."), "build failed, cannot run");
             }
 
-            goto error;
+            if (argc) {
+                pid = run_exec(app_bin, app_id, prefix, argc, argv);
+            } else {
+                pid = run_exec(
+                app_bin, app_id, prefix, 1, (const char*[]){
+                    (char*)app_bin, NULL});
+            }
+            if (!pid) {
+                ut_throw("failed to start process '%s'", app_bin);
+                goto error;
+            }
+
+            ut_trace("waiting for process '%s'", app_bin);
+            int8_t result = 0, sig = 0;
+            if ((sig = ut_proc_wait(pid, &result)) || result) {
+                if (sig > 0) {
+                    ut_throw("process crashed (%d)", sig);
+                    ut_raise();
+
+                    ut_strbuf cmd_args = UT_STRBUF_INIT;
+                    int i;
+                    for (i = 1; i < argc; i ++) {
+                        ut_strbuf_appendstr(&cmd_args, argv[i]);
+                    }
+
+                    char *args = ut_strbuf_get(&cmd_args);
+
+                    printf("\n");
+                    printf("to debug your application, do:\n");
+                    ut_log("  export $(bake env)\n");
+                    ut_log("  %s %s\n", app_bin, args ? args : "");
+                    printf("\n");
+
+                    free(args);
+                }
+
+                goto error;
+            }
+
+            bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] '%s'", 
+                app_id, pid, app_bin);
         }
 
-        bake_message(UT_LOG, "done", "#[green]application#[reset] %s [%u] '%s'", 
-            app_id, pid, app_bin);
     }
 
     ut_chdir(cwd);
