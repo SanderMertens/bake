@@ -21,6 +21,8 @@
 
 #include <bake_util.h>
 
+#define UT_VA_INIT (va_list){0}
+
 /* Add an extra element to the buffer */
 static
 void ut_strbuf_grow(
@@ -277,7 +279,7 @@ bool ut_strbuf_appendstrn(
     const char* str,
     int64_t len)
 {
-    va_list args;
+    va_list args = UT_VA_INIT;
     return ut_strbuf_append_intern(
         b, str, len, false, args
     );
@@ -307,7 +309,7 @@ bool ut_strbuf_appendstr(
     ut_strbuf *b,
     const char* str)
 {
-    va_list args;
+    va_list args = UT_VA_INIT;
     return ut_strbuf_append_intern(
         b, str, -1, false, args
     );
