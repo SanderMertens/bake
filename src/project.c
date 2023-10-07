@@ -628,7 +628,7 @@ int16_t bake_project_load_dependee_object(
                 ut_try (
                   bake_project_parse_value(config, project, project_id, obj),
                   NULL);
-            } else {
+            } else if (strcmp(member, "dependee")) {
                 bake_project_driver *driver = bake_project_get_driver(
                     project, member);
                 if (!driver) {
