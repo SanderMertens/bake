@@ -253,9 +253,16 @@ retry:
                     ut_log(
                         "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
                 } else {
+                    /* Signal 4 seems to get thrown every now and then when 
+                     * trying to create lots of processes. Retry a few times
+                     * before actually failing the test. */
                     if (sig == 4) {
                         retry_count ++;
                         if (retry_count < 5) {
+                            /* Don't retry too fast in case OS resources are
+                             * limited. */
+                            ut_sleep(0, 100 * 1000 * 1000);
+                            ut_log("#[grey]retrying after sig 4...\n");
                             goto retry;
                         } else {
                             ut_log("#[red]retried 5 times after sig 4\n");
