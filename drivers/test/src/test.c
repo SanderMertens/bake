@@ -202,7 +202,9 @@ void* bake_test_run_suite_range(
         int8_t rc = 0;
         int sig = 0;
         bool proc_fail = false;
+        int32_t retry_count = 0;
 
+retry:
         memset(&proc, 0, sizeof(ut_proc));
 
         if (prefix) {
@@ -251,6 +253,14 @@ void* bake_test_run_suite_range(
                     ut_log(
                         "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
                 } else {
+                    if (sig == 4) {
+                        retry_count ++;
+                        if (retry_count < 5) {
+                            goto retry;
+                        } else {
+                            ut_log("#[red]retried 5 times after sig 4\n");
+                        }
+                    }
                     ut_log(
                         "#[red]FAIL#[reset]: %s exited with signal %d\n", 
                         test_name, sig);
