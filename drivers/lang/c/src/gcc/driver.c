@@ -281,7 +281,7 @@ void gcc_add_misc(
         if (!is_emcc()) {
             ut_strbuf_appendstr(cmd, " -g");
         } else {
-            ut_strbuf_appendstr(cmd, " -gsource-map");
+            ut_strbuf_appendstr(cmd, " -g -gsource-map");
         }
     }
 
@@ -337,6 +337,10 @@ void gcc_add_misc_link(
             if (is_emcc()) {
                 ut_strbuf_appendstr(cmd, " -s ASSERTIONS=2");
             }
+        }
+
+        if (config->symbols) {
+            ut_strbuf_appendstr(cmd, " -g -gsource-map");
         }
     }
 
