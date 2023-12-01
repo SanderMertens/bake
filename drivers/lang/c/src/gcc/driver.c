@@ -210,6 +210,9 @@ void gcc_add_std(
     } else {
         ut_strbuf_appendstr(cmd, " -Wno-missing-field-initializers");
         ut_strbuf_appendstr(cmd, " -Wno-unused-parameter");
+        if (is_clang(lang)) {
+            ut_strbuf_appendstr(cmd, " -Wno-c++11-narrowing");
+        }
     }
 
     /* If project contains imported source files from other projects, warnings

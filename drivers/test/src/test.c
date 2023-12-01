@@ -247,11 +247,9 @@ retry:
             ut_catch();
             if (sig) {
                 if (sig == 6) {
-                    ut_log(
-                        "#[red]FAIL#[reset]: %s aborted\n", test_name);
+                    ut_log("#[red]FAIL#[reset]: %s aborted\n", test_name);
                 } else if (sig == 11) {
-                    ut_log(
-                        "#[red]FAIL#[reset]: %s segfaulted\n", test_name);
+                    ut_log("#[red]FAIL#[reset]: %s segfaulted\n", test_name);
                 } else {
                     /* Signal 4 seems to get thrown every now and then when 
                      * trying to create lots of processes. Retry a few times
@@ -268,8 +266,7 @@ retry:
                             ut_log("#[red]retried 5 times after sig 4\n");
                         }
                     }
-                    ut_log(
-                        "#[red]FAIL#[reset]: %s exited with signal %d\n", 
+                    ut_log("#[red]FAIL#[reset]: %s exited with signal %d\n", 
                         test_name, sig);
                 }
                 result = -1;
