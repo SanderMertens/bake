@@ -176,6 +176,12 @@ bool is_clang(bake_src_lang lang)
     return is_compiler("clang", lang);
 }
 
+/* Is current compiler msvc */
+static
+bool is_gcc(void) {
+    return is_compiler("gcc", 0);
+}
+
 /* Is current compiler emcc */
 static 
 bool is_emcc(void) {
@@ -194,9 +200,10 @@ bool is_msvc(void) {
     return is_compiler("cl.exe", 0);
 }
 
+/* Is current compiler mingw */
 static
 bool is_mingw(void) {
-    return is_compiler("gcc", 0) && is_msys();
+    return is_gcc() && is_msys();
 }
 
 /* Is binary a dylib */
@@ -256,7 +263,11 @@ void init(
         driver->set_attr_string("cpp-standard", "c++0x");
     }
     if (!driver->get_attr("c-standard")) {
-        driver->set_attr_string("c-standard", "c99");
+        if (is_gcc() || is_clang(BAKE_SRC_LANG_C)) {
+            driver->set_attr_string("c-standard", "gnu99");
+        } else {
+            driver->set_attr_string("c-standard", "c99");
+        }
     }
     if (!driver->get_attr("precompile-header")) {
 #ifndef _WIN32

@@ -136,7 +136,6 @@ void gcc_add_std(
     } else if (lang == BAKE_SRC_LANG_C) {
         ut_strbuf_append(cmd, " -std=%s ",
             driver->get_attr_string("c-standard"));
-        ut_strbuf_append(cmd, " -D_XOPEN_SOURCE=600");
     }
 
     ut_strbuf_appendstr(cmd, " -Wall -W -Wextra -pedantic"); 
