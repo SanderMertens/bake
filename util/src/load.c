@@ -426,10 +426,16 @@ int16_t ut_locate_src(
 
         if (ut_file_test(path) == 1) {
             loaded->dev = path;
+            ut_trace("dev path '%s' located", path);
         } else {
+            ut_trace("dev path '%s' not found", path);
             free(path);
         }
+    } else {
+        ut_trace("file '%s' with dev path not found", src);
     }
+
+    free(src);
 
     loaded->tried_src = true;
 

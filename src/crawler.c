@@ -430,21 +430,27 @@ int16_t bake_crawler_recursive(
 
     /* Collect packages in tree before search, as it may mutate
      * the tree, and cannot mutate tree while walking over it. */
+    int32_t count = 0;
     ut_ll projects = bake_crawler_collect_projects();
+    do {
+        count = ut_ll_count(projects);
 
-    it = ut_ll_iter(projects);
-    while (ut_iter_hasNext(&it)) {
-        bake_project *project = ut_iter_next(&it);
-        if (project->standalone) {
-            continue;
+        it = ut_ll_iter(projects);
+        while (ut_iter_hasNext(&it)) {
+            bake_project *project = ut_iter_next(&it);
+
+            if (project->standalone) {
+                continue;
+            }
+
+            ut_try( 
+                bake_crawler_walk_dependencies(
+                    config, project, bake_crawler_lookupDependency), NULL);
         }
 
-        ut_try( 
-            bake_crawler_walk_dependencies(
-                config, project, bake_crawler_lookupDependency), NULL);
-    }
-
-    ut_ll_free(projects);
+        ut_ll_free(projects);
+        projects = bake_crawler_collect_projects();
+    } while (count != ut_ll_count(projects));
 
     return 0;
 error:
@@ -529,6 +535,8 @@ void bake_crawler_decrease_dependents(
 
             if (!dependent->unresolved_dependencies) {
                 if (readyForBuild) {
+                    ut_trace("dependencies resolved for project '%s'", 
+                        dependent->id);
                     ut_ll_append(readyForBuild, dependent);
                 }
             }
