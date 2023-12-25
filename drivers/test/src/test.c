@@ -7,6 +7,9 @@ static bake_test_case *current_testcase;
 static bool test_expect_abort_signal = false;
 static bool test_flaky = false;
 
+static const char *params[1024];
+static uint32_t param_count = 0;
+
 static
 void test_empty(void)
 {
@@ -35,6 +38,24 @@ void test_no_abort(void)
         current_testsuite->id, current_testcase->id);
 
     exit(-1);
+}
+
+static
+void bake_add_param(const char *param) {
+    params[param_count ++] = param;
+}
+
+const char* test_param(const char *name) {
+    uint32_t p;
+    for (p = 0; p < param_count; p ++) {
+        size_t len = strlen(name);
+        if (!strncmp(params[p], name, len)) {
+            if (params[p][len] == '=') {
+                return &params[p][len + 1];
+            }
+        }
+    }
+    return NULL;
 }
 
 static
@@ -113,12 +134,12 @@ int8_t bake_test_run_single_test(
 
 static
 void print_dbg_command(
-    const char *exec,
-    const char *testcase) 
+    const char *test_project,
+    const char *cmd) 
 {
     ut_log("To run/debug your test, do:\n");
     ut_log("export $(bake env)#[reset]\n");
-    ut_log("%s %s#[reset]\n", exec, testcase);
+    ut_log("test/%s/%s#[reset]\n", test_project, cmd);
     ut_log("\n");
 }
 
@@ -126,6 +147,7 @@ static
 void bake_test_report(
     const char *test_id,
     const char *suite_id,
+    const char *param_str,
     uint32_t fail,
     uint32_t empty,
     uint32_t pass)
@@ -135,19 +157,19 @@ void bake_test_report(
     } else {
         if (fail) {
             if (empty) {
-                ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s)\n",
-                    pass, fail, empty, test_id, suite_id);
+                ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s%s#[reset])\n",
+                    pass, fail, empty, test_id, suite_id, param_str);
                 } else {
-                    ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, EMPTY:%3d (%s.%s)\n",
-                        pass, fail, empty, test_id, suite_id);
+                    ut_log("#[]PASS:%3d, #[red]FAIL#[normal]:%3d, EMPTY:%3d (%s.%s%s#[reset])\n",
+                        pass, fail, empty, test_id, suite_id, param_str);
                 }
         } else {
             if (empty) {
-                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s)\n",
-                    pass, fail, empty, test_id, suite_id);
+                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, #[yellow]EMPTY#[normal]:%3d (%s.%s%s#[reset])\n",
+                    pass, fail, empty, test_id, suite_id, param_str);
             } else {
-                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, EMPTY:%3d (%s.%s)\n",
-                    pass, fail, empty, test_id, suite_id);
+                ut_log("#[]#[green]PASS#[normal]:%3d, FAIL:%3d, EMPTY:%3d (%s.%s%s#[reset])\n",
+                    pass, fail, empty, test_id, suite_id, param_str);
             }
         }
     }
@@ -171,6 +193,7 @@ bake_test_suite* bake_find_suite(
 }
 
 typedef struct {
+    const char *test_project;
     const char *exec;
     bake_test_suite *suite;
     uint32_t fail;
@@ -181,6 +204,25 @@ typedef struct {
     int8_t result;
     ut_thread job;
 } bake_test_exec_ctx;
+
+static
+void bake_test_cmd_append_params(
+    ut_strbuf *buf,
+    bake_test_suite *suite)
+{
+    uint32_t p;
+    for (p = 0; p < suite->param_count; p ++) {
+        bake_test_param *param = &suite->params[p];
+        const char *cmd_line_value = test_param(param->name);
+        if (cmd_line_value) {
+            /* Params from command line take precedence */
+            ut_strbuf_append(buf, " --param %s=%s", param->name, cmd_line_value);
+        } else {
+            ut_strbuf_append(buf, " --param %s=%s", param->name, 
+                param->values[param->value_cur]);
+        }
+    } 
+}
 
 static
 void* bake_test_run_suite_range(
@@ -207,41 +249,19 @@ void* bake_test_run_suite_range(
 retry:
         memset(&proc, 0, sizeof(ut_proc));
 
+        ut_strbuf cmd = UT_STRBUF_INIT;
         if (prefix) {
-            char *has_space = strchr(prefix, ' ');
-            if (has_space) {
-                ut_strbuf cmd = UT_STRBUF_INIT;
-                ut_strbuf_append(&cmd, "%s %s %s", prefix, exec, test_name);
-                char *cmd_str = ut_strbuf_get(&cmd);
-                sig = ut_proc_cmd(cmd_str, &rc);
-                free(cmd_str);
-            } else {
-                proc = ut_proc_run(prefix, (const char*[]){
-                    prefix,
-                    exec,
-                    test_name, 
-                    NULL
-                });
-
-                if (proc) {
-                    sig = ut_proc_wait(proc, &rc);
-                } else {
-                    proc_fail = true;
-                }
-            }               
-        } else {
-            proc = ut_proc_run(exec, (const char*[]){
-                exec, 
-                test_name, 
-                NULL
-            });
-
-            if (proc) {
-                sig = ut_proc_wait(proc, &rc);
-            } else {
-                proc_fail = true;
-            }
+            ut_strbuf_append(&cmd, "%s ");
         }
+
+        ut_strbuf_append(&cmd, "%s %s", exec, test_name);
+
+        if (suite->param_count) {
+            bake_test_cmd_append_params(&cmd, suite);
+        }
+
+        char *cmd_str = ut_strbuf_get(&cmd);
+        sig = ut_proc_cmd(cmd_str, &rc);
 
         if (sig || rc) {
             ut_catch();
@@ -293,7 +313,7 @@ retry:
             }
 
             ut_catch();
-            print_dbg_command(exec, test_name);
+            print_dbg_command(ctx->test_project, cmd_str);
         } else if (proc_fail) {
             ut_log("Testcase '%s' failed to start\n", test_name);
         } else {
@@ -304,6 +324,7 @@ retry:
             pass ++;
         }
 
+        free(cmd_str);
         free(test_name);
     }
 
@@ -341,6 +362,7 @@ int8_t bake_test_run_suite(
     // Divide the work
     for (i = 0; i < job_count; i ++) {
         next += tests_per_runner;
+        ctx[i].test_project = test_id;
         ctx[i].exec = exec;
         ctx[i].suite = suite;
         ctx[i].offset = cur;
@@ -374,7 +396,29 @@ int8_t bake_test_run_suite(
     }
 
     // Report
-    bake_test_report(test_id, suite->id, ctx->fail, ctx->empty, ctx->pass);
+    if (!suite->param_count) {
+        bake_test_report(
+            test_id, suite->id, "", ctx->fail, ctx->empty, ctx->pass);
+    } else {
+        ut_strbuf buf = UT_STRBUF_INIT;
+        ut_strbuf_append(&buf, " [ ");
+
+        uint32_t p;
+        for (p = 0; p < suite->param_count; p ++) {
+            if (p) {
+                ut_strbuf_append(&buf, "#[reset], ");
+            }
+            bake_test_param *param = &suite->params[p];
+            char *value = param->values[param->value_cur];
+            ut_strbuf_append(&buf, "#[grey]%s#[reset]: #[green]%s", param->name, value);
+        }
+        ut_strbuf_append(&buf, " #[reset]]");
+
+        char *param_str = ut_strbuf_get(&buf);
+        bake_test_report(
+            test_id, suite->id, param_str, ctx->fail, ctx->empty, ctx->pass);
+        free(param_str);
+    }
 
     int8_t result = ctx->result;
     if (fail_out) {
@@ -388,6 +432,61 @@ int8_t bake_test_run_suite(
     }
 
     free(ctx);
+
+    return result;
+}
+
+static
+int8_t bake_test_run_suite_for_param(
+    const char *test_id,
+    const char *exec,
+    bake_test_suite *suite,
+    uint32_t *fail,
+    uint32_t *empty, 
+    uint32_t *pass,
+    uint32_t job_count,
+    uint32_t param)
+{
+    bake_test_param *p = &suite->params[param];
+    int32_t v;
+    int8_t result = 0;
+
+    for (v = 0; v < p->value_count; v ++) {
+        p->value_cur = v;
+        if (param < (suite->param_count - 1)) {
+            if (bake_test_run_suite_for_param(
+                test_id, exec, suite, fail, empty, pass, job_count, param + 1)) 
+            {
+                result = -1;
+            }
+        } else {
+            if (!suite->param_count) {
+                uint32_t test_fail = 0;
+                uint32_t test_empty = 0; 
+                uint32_t test_pass = 0;
+                if (bake_test_run_suite(test_id, exec, suite, 
+                    &test_fail, &test_empty, &test_pass, job_count)) 
+                {
+                    result = -1;
+                }
+                *fail += test_fail;
+                *empty += test_empty;
+                *pass += test_pass;
+            } else {
+                uint32_t test_fail = 0;
+                uint32_t test_empty = 0; 
+                uint32_t test_pass = 0;
+                if (bake_test_run_suite(test_id, exec, suite, 
+                    &test_fail, &test_empty, &test_pass, job_count)) 
+                {
+                    result = -1;
+                }
+                *fail += test_fail;
+                *empty += test_empty;
+                *pass += test_pass;
+            }
+        }
+    }
 
     return result;
 }
@@ -415,10 +514,15 @@ int8_t bake_test_run_all_tests(
         empty = 0;
         pass = 0;
 
-        if (bake_test_run_suite(
-            test_id, exec, suite, &fail, &empty, &pass, job_count)) 
-        {
-            result = -1;
+        if (!suite->param_count) {
+            if (bake_test_run_suite(
+                test_id, exec, suite, &fail, &empty, &pass, job_count)) 
+            {
+                result = -1;
+            }
+        } else {
+            bake_test_run_suite_for_param(
+                test_id, exec, suite, &fail, &empty, &pass, job_count, 0);
         }
 
         if (empty || fail) {
@@ -431,7 +535,7 @@ int8_t bake_test_run_all_tests(
     }
 
     ut_log("-----------------------------\n");
-    bake_test_report(test_id, "all", total_fail, total_empty, total_pass);
+    bake_test_report(test_id, "all", "", total_fail, total_empty, total_pass);
     ut_log("\n");
 
     return result;
@@ -504,6 +608,17 @@ int bake_test_run(
                 } else if (!strcmp(arg, "--list-commands")) {
                     bake_list_commands(argv[0], suites, suite_count);
 
+                } else if (!strcmp(arg, "--param")) {
+                    if (!argv[i + 1]) {
+                        ut_error("missing argument for --param");
+                        abort();
+                    }
+                    if (!strchr(argv[i + 1], '=')) {
+                        ut_error("invalid format for --param (expected name=value, got '%s')", argv[i + 1]);
+                        abort();
+                    }
+                    bake_add_param(argv[i + 1]);
+                    i ++;
                 } else {
                     ut_error("invalid argument for test executable", arg);
                     abort();
