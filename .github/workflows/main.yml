@@ -28,7 +28,7 @@ jobs:
             cxx: clang++-10
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: install compiler
         run: |
           sudo apt-get update
@@ -51,7 +51,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: install bake
