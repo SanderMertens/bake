@@ -153,6 +153,7 @@ void gcc_add_std(
         ut_strbuf_appendstr(cmd, " -Wuninitialized");
         ut_strbuf_appendstr(cmd, " -Wmissing-field-initializers");
         ut_strbuf_appendstr(cmd, " -Wundef");
+        ut_strbuf_appendstr(cmd, " -Wunused-function");
 
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wno-unknown-warning-option");
@@ -212,12 +213,6 @@ void gcc_add_std(
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wno-c++11-narrowing");
         }
-    }
-
-    /* If project contains imported source files from other projects, warnings
-     * for unused functions are probably not going to be helpful. */
-    if (!own_src) {
-        ut_strbuf_appendstr(cmd, " -Wno-unused-function");
     }
 }
 
