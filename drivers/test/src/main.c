@@ -138,16 +138,10 @@ int generate_suite_params(
             continue;
         }
 
-        ut_code_write(src, "bake_test_param %s_params[] = {\n", id);
-        ut_code_indent(src);
-
+        /* First generate arrays with parameter values */
         for (size_t p = 0; p < json_object_get_count(params); p ++) {
-            if (p) {
-                ut_code_write(src, ",\n");
-            }
-
             const char *name = json_object_get_name(params, p);
-            ut_code_write(src, "{\"%s\", (char*[]){", name);
+            ut_code_write(src, "const char* %s_%s_param[] = {", id, name);
 
             JSON_Array *param_values = json_object_get_array(params, name);
             for (size_t v = 0; v < json_array_get_count(param_values); v ++) {
@@ -158,7 +152,21 @@ int generate_suite_params(
                 ut_code_write(src, "\"%s\"", value);
             }
 
-            ut_code_write(src, "}, %d}", json_array_get_count(param_values));
+            ut_code_write(src, "};\n");
+        }
+
+        ut_code_write(src, "bake_test_param %s_params[] = {\n", id);
+        ut_code_indent(src);
+
+        for (size_t p = 0; p < json_object_get_count(params); p ++) {
+            if (p) {
+                ut_code_write(src, ",\n");
+            }
+
+            const char *name = json_object_get_name(params, p);
+            JSON_Array *param_values = json_object_get_array(params, name);
+            ut_code_write(src, "{\"%s\", (char**)%s_%s_param", name, id, name);
+            ut_code_write(src, ", %d}", json_array_get_count(param_values));
         }
 
         ut_code_write(src, "\n");
