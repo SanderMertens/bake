@@ -668,6 +668,11 @@ void bake_config_log(
         }
         ut_log_pop();
 
+        ut_log_push("compiler");
+        ut_trace("CC=%s", ut_getenv("CC"));
+        ut_trace("CXX=%s", ut_getenv("CXX"));
+        ut_log_pop();
+
         ut_log_push("configuration");
         ut_trace("set '%s' to '%s'", CFG_SYMBOLS, cfg->symbols ? "true" : "false");
         ut_trace("set '%s' to '%s'", CFG_DEBUG, cfg->debug ? "true" : "false");
