@@ -44,6 +44,10 @@ bool load_bundles = false;
 /* Compile to target other than current */
 const char *target = NULL;
 
+/* Override CC/CXX */
+const char *env_cc = NULL;
+const char *env_cxx = NULL;
+
 /* Override configuration */
 bool strict = false;
 bool optimize = false;
@@ -112,6 +116,8 @@ void bake_usage(void)
     printf("  --cfg <configuration>        Specify configuration id\n");
     printf("  --env <environment>          Specify environment id\n");
     printf("  --target <target>            Specify compilation target\n");
+    printf("  --cc <compiler>              Override CC environment variable\n");
+    printf("  --cxx <compiler>             Override CXX environment variable\n");
     printf("  --strict                     Manually enable strict compiler options\n");
     printf("  --optimize                   Manually enable compiler optimizations\n");
     printf("  --loop-test                  Manually enable vectorization analysis\n");
@@ -306,6 +312,8 @@ int bake_parse_args(
             ARG(0, "env", env = argv[i + 1]; i ++);
             ARG(0, "cfg", cfg = argv[i + 1]; i ++);
             ARG(0, "target", target = argv[i + 1]; i ++);
+            ARG(0, "cc", env_cc = argv[i + 1]; i ++);
+            ARG(0, "cxx", env_cxx = argv[i + 1]; i ++);
             ARG(0, "strict", strict = true );
             ARG(0, "profile-build", profile_build = true );
             ARG(0, "optimize", optimize = true );
@@ -1339,7 +1347,6 @@ void bake_message(
 }
 
 int main(int argc, const char *argv[]) {
-
     if (ut_getenv("BAKE_ENVIRONMENT")) {
         env = ut_getenv("BAKE_ENVIRONMENT");
     }
@@ -1376,6 +1383,19 @@ int main(int argc, const char *argv[]) {
         free(args);
         ut_ok("cwd  #[cyan]%s", ut_cwd());
         ut_log_pop();
+    }
+
+    if (env_cc) {
+        ut_setenv("CC", env_cc);
+        if (!strcmp(env_cc, "gcc")) {
+            ut_setenv("CXX", "g++");
+        } else if (!strcmp(env_cc, "clang")) {
+            ut_setenv("CXX", "clang++");
+        }
+    }
+
+    if (env_cxx) {
+        ut_setenv("CXX", env_cc);
     }
 
     ut_log_push("init");

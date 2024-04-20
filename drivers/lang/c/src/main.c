@@ -95,8 +95,8 @@ static
 const char *cc(
     bake_src_lang lang)
 {
-    const char *default_cxx = NULL, *cxx = ut_getenv("CXX");
-    const char *default_cc = NULL, *cc = ut_getenv("CC");
+    const char *cxx = ut_getenv("CXX");
+    const char *cc = ut_getenv("CC");
 
     if (cc && !strlen(cc)) cc = NULL;
     if (cxx && !strlen(cxx)) cxx = NULL;
