@@ -153,6 +153,7 @@ void gcc_add_std(
         ut_strbuf_appendstr(cmd, " -Wuninitialized");
         ut_strbuf_appendstr(cmd, " -Wmissing-field-initializers");
         ut_strbuf_appendstr(cmd, " -Wundef");
+        ut_strbuf_appendstr(cmd, " -Wunused-function");
 
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wno-unknown-warning-option");
@@ -379,7 +380,7 @@ void gcc_compile_src(
      * add the precompiled header options for the current project header. */
     bool own_source = true;
     char *relative_src = &source[strlen(project->path)];
-    if (strncmp(relative_src, "deps"UT_OS_PS, 5)) {
+    if (!strncmp(relative_src, "deps"UT_OS_PS, 5)) {
         own_source = false;
     }
 

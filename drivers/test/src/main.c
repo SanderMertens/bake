@@ -120,6 +120,67 @@ int generate_suite_testcases(
 }
 
 static
+int generate_suite_params(
+    ut_code *src,
+    JSON_Array *suites)
+{
+    size_t i, count = json_array_get_count(suites);
+
+    /* The JSON structure has already been validated, so no need to do error
+     * checking again. */
+
+    for (i = 0; i < count; i ++) {
+        JSON_Object *suite = json_array_get_object(suites, i);
+        const char *id = json_object_get_string(suite, "id");
+
+        JSON_Object *params = json_object_get_object(suite, "params");
+        if (!params) {
+            continue;
+        }
+
+        /* First generate arrays with parameter values */
+        for (size_t p = 0; p < json_object_get_count(params); p ++) {
+            const char *name = json_object_get_name(params, p);
+            ut_code_write(src, "const char* %s_%s_param[] = {", id, name);
+
+            JSON_Array *param_values = json_object_get_array(params, name);
+            for (size_t v = 0; v < json_array_get_count(param_values); v ++) {
+                const char *value = json_array_get_string(param_values, v);
+                if (v) {
+                    ut_code_write(src, ", ");
+                }
+                ut_code_write(src, "\"%s\"", value);
+            }
+
+            ut_code_write(src, "};\n");
+        }
+
+        ut_code_write(src, "bake_test_param %s_params[] = {\n", id);
+        ut_code_indent(src);
+
+        for (size_t p = 0; p < json_object_get_count(params); p ++) {
+            if (p) {
+                ut_code_write(src, ",\n");
+            }
+
+            const char *name = json_object_get_name(params, p);
+            JSON_Array *param_values = json_object_get_array(params, name);
+            ut_code_write(src, "{\"%s\", (char**)%s_%s_param", name, id, name);
+            ut_code_write(src, ", %d}", json_array_get_count(param_values));
+        }
+
+        ut_code_write(src, "\n");
+        ut_code_dedent(src);
+        ut_code_write(src, "};\n");
+    }
+
+    ut_code_write(src, "\n");
+
+    return 0;
+}
+
+
+static
 int generate_suite_data(
     ut_code *src,
     JSON_Array *suites)
@@ -159,7 +220,17 @@ int generate_suite_data(
         size_t t_count = json_array_get_count(testcases);
 
         ut_code_write(src, "%d,\n", t_count);
-        ut_code_write(src, "%s_testcases\n", id);
+        ut_code_write(src, "%s_testcases", id);
+
+        JSON_Object *params = json_object_get_object(suite, "params");
+        if (params) {
+            size_t p_count = json_object_get_count(params);
+            ut_code_write(src, ",\n");
+            ut_code_write(src, "%d,\n", p_count);
+            ut_code_write(src, "%s_params\n", id);
+        } else {
+            ut_code_write(src, "\n");
+        }
 
         ut_code_dedent(src);
         ut_code_write(src, "}");
@@ -175,6 +246,7 @@ int generate_testmain(
     bake_driver_api *driver,
     bake_config *config,
     bake_project *project,
+    JSON_Object *jo,
     JSON_Array *suites)
 {
     (void)driver;
@@ -207,6 +279,7 @@ int generate_testmain(
 
     generate_testcase_fwd_decls(src, suites);
     generate_suite_testcases(src, suites);
+    generate_suite_params(src, suites);
 
     ut_code_write(src, "static bake_test_suite suites[] = {\n");
     ut_code_indent(src);
@@ -349,7 +422,7 @@ void generate(
                 }
             }
 
-            generate_testmain(driver, config, project, suites);
+            generate_testmain(driver, config, project, jo, suites);
         } else {
             fprintf(stderr, "no 'testsuites' array in test configuration\n");
             project->error = true;

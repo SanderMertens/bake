@@ -13,12 +13,21 @@ typedef struct bake_test_case {
     void (*function)(void);
 } bake_test_case;
 
+typedef struct bake_test_param {
+    const char *name;
+    char **values;
+    int32_t value_count;
+    int32_t value_cur;
+} bake_test_param;
+
 typedef struct bake_test_suite {
     const char *id;
     void (*setup)(void);
     void (*teardown)(void);
     uint32_t testcase_count;
     bake_test_case *testcases;
+    uint32_t param_count;
+    bake_test_param *params;
     uint32_t assert_count;
 } bake_test_suite;
 
@@ -121,6 +130,9 @@ void test_expect_abort(void);
  * if the library under test allows for it. */
 BAKE_TEST_API
 void test_abort(void);
+
+BAKE_TEST_API
+const char* test_param(const char *name);
 
 #define test_assert(cond) _test_assert(cond, #cond, __FILE__, __LINE__)
 #define test_bool(v1, v2) _test_bool(v1, v2, #v1, #v2, __FILE__, __LINE__)
