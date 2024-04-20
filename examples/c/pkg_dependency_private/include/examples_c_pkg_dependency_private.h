@@ -4,5 +4,7 @@
 /* This generated file contains includes for project dependencies */
 #include "examples-c-pkg_dependency/bake_config.h"
 
+void pkg_dependency_private(void);
+
 #endif
 

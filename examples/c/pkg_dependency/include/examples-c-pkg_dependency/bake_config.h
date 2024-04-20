@@ -22,11 +22,11 @@
 
 /* Convenience macro for exporting symbols */
 #ifndef examples_c_pkg_dependency_STATIC
-#if examples_c_pkg_dependency_EXPORTS && (defined(_MSC_VER) || defined(__MINGW32__))
+#if defined(examples_c_pkg_dependency_EXPORTS) && (defined(_MSC_VER) || defined(__MINGW32__))
   #define EXAMPLES_C_PKG_DEPENDENCY_API __declspec(dllexport)
-#elif examples_c_pkg_dependency_EXPORTS
+#elif defined(examples_c_pkg_dependency_EXPORTS)
   #define EXAMPLES_C_PKG_DEPENDENCY_API __attribute__((__visibility__("default")))
-#elif defined _MSC_VER
+#elif defined(_MSC_VER)
   #define EXAMPLES_C_PKG_DEPENDENCY_API __declspec(dllimport)
 #else
   #define EXAMPLES_C_PKG_DEPENDENCY_API

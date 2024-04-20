@@ -214,6 +214,12 @@ void gcc_add_std(
             ut_strbuf_appendstr(cmd, " -Wno-c++11-narrowing");
         }
     }
+
+    /* If project contains imported source files from other projects, warnings
+     * for unused functions are probably not going to be helpful. */
+    if (!own_src) {
+        ut_strbuf_appendstr(cmd, " -Wno-unused-function");
+    }
 }
 
 static
@@ -374,7 +380,7 @@ void gcc_compile_src(
      * add the precompiled header options for the current project header. */
     bool own_source = true;
     char *relative_src = &source[strlen(project->path)];
-    if (strncmp(relative_src, "deps"UT_OS_PS, 5)) {
+    if (!strncmp(relative_src, "deps"UT_OS_PS, 5)) {
         own_source = false;
     }
 
