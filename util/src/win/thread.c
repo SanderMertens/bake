@@ -354,9 +354,9 @@ int ut_sem_free(
 }
 
 int ut_ainc(int* count) {
-    return InterlockedIncrement(count);
+    return InterlockedIncrement((volatile long*)count);
 }
 
 int ut_adec(int* count) {
-    return InterlockedDecrement(count);
+    return InterlockedDecrement((volatile long*)count);
 }
