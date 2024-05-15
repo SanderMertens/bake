@@ -506,15 +506,6 @@ char *msvc_link_to_lib(
 }
 
 static
-void msvc_generate_precompiled_header(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    /* TODO: implement PCHs for msvc */
-}
-
-static
 void msvc_coverage(
     bake_driver_api *driver,
     bake_config *config,
@@ -537,7 +528,6 @@ bake_compiler_interface msvc_get() {
     bake_compiler_interface result = {
         .compile = msvc_compile_src,
         .link = msvc_link_binary,
-        .generate_precompiled_header = msvc_generate_precompiled_header,
         .clean_coverage = msvc_clean_coverage,
         .coverage = msvc_coverage,
         .clean = msvc_clean,

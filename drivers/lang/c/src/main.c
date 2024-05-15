@@ -32,7 +32,6 @@ typedef enum bake_src_lang {
 typedef struct bake_compiler_interface {
     bake_rule_action_cb compile;
     bake_rule_action_cb link;
-    bake_driver_cb generate_precompiled_header;
     bake_driver_cb clean_coverage;
     bake_driver_cb coverage;
     bake_driver_cb clean;
@@ -269,22 +268,6 @@ void init(
             driver->set_attr_string("c-standard", "c99");
         }
     }
-    if (!driver->get_attr("precompile-header")) {
-#ifndef _WIN32
-        char *main_header = ut_asprintf("%s/include/%s.h", 
-            project->path, project->id_base);
-
-        if (ut_file_test(main_header) == 1) {
-            driver->set_attr_bool("precompile-header", true);
-        } else {
-            driver->set_attr_bool("precompile-header", false);
-        }
-        free(main_header);
-#else
-        /* TODO: support precompiled headers on Windows */
-        driver->set_attr_bool("precompile-header", false);
-#endif
-    }
 
     if (!driver->get_attr("static")) {
         driver->set_attr_bool("static", false);
@@ -300,13 +283,6 @@ void init(
         driver->set_attr_bool("export-symbols", false);
     }
 
-    bool cpp = is_cpp(project);
-    if (is_clang(cpp)) {
-        driver->set_attr_string("ext-pch", "pch");
-    } else {
-        driver->set_attr_string("ext-pch", "gch");
-    }
-
     char *tmp_dir  = ut_asprintf(
         CACHE_DIR UT_OS_PS "%s-%s", config->build_target, 
         config->configuration);
@@ -315,10 +291,6 @@ void init(
     char *obj_dir = ut_asprintf("%s"UT_OS_PS"obj", tmp_dir);
     driver->set_attr_string("obj-dir", obj_dir);
     free(obj_dir);
-
-    char *pch_dir = ut_asprintf("%s"UT_OS_PS"include", tmp_dir);
-    driver->set_attr_string("pch-dir", pch_dir);
-    free(pch_dir);
 
     if (!strcmp(driver->get_attr("c-standard")->is.string, "c89")) {
         driver->set_attr_array("cflags", "-D__BAKE_LEGACY__");
@@ -455,11 +427,6 @@ void build(
     bake_config *config,
     bake_project *project)
 {
-    if (driver->get_attr("precompile-header") && 
-        driver->get_attr_bool("precompile-header")) 
-    {
-        cif.generate_precompiled_header(driver, config, project);
-    }
 }
 
 static

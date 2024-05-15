@@ -376,8 +376,7 @@ void gcc_compile_src(
     }
 
     /* Test if the source file is from the project itself. If the project
-     * imports (amalgamated) source files from other projects, we should not
-     * add the precompiled header options for the current project header. */
+     * imports (amalgamated) source files from other projects. */
     bool own_source = true;
     char *relative_src = &source[strlen(project->path)];
     if (!strncmp(relative_src, "deps"UT_OS_PS, 5)) {
@@ -398,24 +397,6 @@ void gcc_compile_src(
     /* Add CFLAGS */
     gcc_add_flags(driver, config, project, lang, &cmd);
 
-    /* Add precompiled header.
-     * Only add the precompiled header if the source file is of the same
-     * language as the project configuration. Header compiled with different
-     * compiler settings cannot be included */
-    if (!file_has_different_language && own_source && driver->get_attr("precompile-header")) {
-        if (driver->get_attr_bool("precompile-header") && !config->assembly) {
-            if (is_clang(lang)) {
-                char *pch_dir = driver->get_attr_string("pch-dir");
-                ut_strbuf_append(&cmd, " -include %s/%s/%s.h", 
-                    project->path, pch_dir, project->id_base);
-            } else {
-                /* Disable PCH for gcc for now, as it seems to slow down builds */
-                //char *tmp_dir = driver->get_attr_string("tmp-dir");
-                //ut_strbuf_append(&cmd, " -I%s", tmp_dir);
-            }
-        }
-    }
-
     /* Add include directories */
     gcc_add_includes(driver, config, project, &cmd);
 
@@ -425,71 +406,6 @@ void gcc_compile_src(
     if (!config->assembly) {
         ut_strbuf_append(&cmd, " -o %s", target);
     }
-
-    /* Execute command */
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
-}
-
-static
-void gcc_generate_precompiled_header(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{   
-    bool cpp = is_cpp(project);
-    bake_src_lang lang = cpp ? BAKE_SRC_LANG_CPP : BAKE_SRC_LANG_C;
-
-    if (config->assembly) {
-        return;
-    }
-
-    if (!is_clang(lang)) {
-        return;
-    }
-
-    ut_strbuf cmd = UT_STRBUF_INIT;
-
-    char *pch_dir = ut_asprintf("%s/%s", 
-        project->path, 
-        driver->get_attr_string("pch-dir"));
-
-    char *source = ut_asprintf("%s/include/%s.h",
-        project->path,
-        project->id_base);
-
-    char *target = ut_asprintf("%s/%s.h.%s",
-        pch_dir,
-        project->id_base,
-        driver->get_attr_string("ext-pch"));
-
-    /* Add source file and object file */
-    ut_strbuf_append(&cmd, 
-        "%s -x %s-header %s -o %s", cc(cpp), cpp ? "c++" : "c", source, target);
-
-    free(target);
-    free(source);
-
-    /* Add misc options */
-    gcc_add_misc(driver, config, project, lang, &cmd);
-
-    /* Add optimization flags */
-    gcc_add_optimization(driver, config, project, lang, &cmd, true);
-
-    /* Add -std option */
-    gcc_add_std(driver, config, project, lang, &cmd, true, true);
-
-    /* Add CFLAGS */
-    gcc_add_flags(driver, config, project, lang, &cmd);
-
-    /* Add include directories */
-    gcc_add_includes(driver, config, project, &cmd);
-
-    /* Make sure PCH directory exists */
-    ut_mkdir(pch_dir);
-
-    free(pch_dir);
 
     /* Execute command */
     char *cmdstr = ut_strbuf_get(&cmd);
@@ -800,22 +716,6 @@ void gcc_link_binary(
     } else {
         gcc_link_dynamic_binary(driver, config, project, source, target);
     }
-}
-
-/* Specify files to clean */
-static
-void gcc_clean(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project)
-{
-    char *header = ut_asprintf("include/%s.h.pch", project->id_base);
-    driver->remove(header);
-    free(header);
-    
-    header = ut_asprintf("include/%s.h.gch", project->id_base);
-    driver->remove(header);
-    free(header);
 }
 
 /* -- Misc functions -- */
@@ -1201,10 +1101,8 @@ bake_compiler_interface gcc_get() {
     bake_compiler_interface result = {
         .compile = gcc_compile_src,
         .link = gcc_link_binary,
-        .generate_precompiled_header = gcc_generate_precompiled_header,
         .clean_coverage = gcc_clean_coverage,
         .coverage = gcc_coverage,
-        .clean = gcc_clean,
         .artefact_name = gcc_artefact_name,
         .link_to_lib = gcc_link_to_lib
     };
