@@ -234,12 +234,15 @@ int16_t bake_project_func_id(
     } else if (!strcmp(argument, "pascalcase")) {
         char *result = ut_strdup(package_id);
         char *ptr, ch;
+        bool capitalize = true;
         for (ptr = result; (ch = *ptr); ptr ++) {
             if (ch == '.') {
-                ptr[0] = toupper(ptr[1]);
-                ptr ++;
-            } else if (ptr == result) {
+                memmove(ptr, ptr + 1, strlen(ptr));
+                capitalize = true;
+                ptr --;
+            } else if (capitalize) {
                 ptr[0] = toupper(ch);
+                capitalize = false;
             }
         }
         ut_strbuf_appendstr(buffer, result);
