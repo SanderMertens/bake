@@ -23,7 +23,7 @@ rem If not found, try in x86 program files
 if "%VSDIR%"=="" (
     for /l %%v in (2050, -1, 2015) do (
         if "%VSDIR%"=="" (
-          if exist "C:\Program Files (x86^)\Microsoft Visual Studio\%%v\Community\" (
+          if exist "C:\Program Files (x86)\Microsoft Visual Studio\%%v\Community\" (
               set VSDIR=C:\Program Files (x86^)\Microsoft Visual Studio\%%v\Community
           )
         )
