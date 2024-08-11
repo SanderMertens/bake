@@ -90,6 +90,7 @@ struct bake_project {
     bool public;            /* Is package public or private */
     bool coverage;          /* Include in coverage analysis (default = true) */
     bool amalgamate;        /* Generate amalgamated source (default = false) */
+    char *amalgamate_path;  /* Output subdirectory project path for amalgamated source (default = .) */
     bool standalone;    /* Copy amalgamated sources from dependencies (default = false) */
     bool recursive;         /* Is this project recursively built */
     ut_ll use;              /* Project dependencies */

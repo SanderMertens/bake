@@ -324,24 +324,32 @@ void generate(
         target_path = project_obj->generate_path;
     }
 
+    char *output_path;
+    if (project_obj->amalgamate_path) {
+        output_path = ut_asprintf("%s/%s", target_path, project_obj->amalgamate_path);
+        ut_mkdir(output_path);
+    } else {
+        output_path = ut_asprintf("%s", target_path);
+    }
+
     /* Create output file strings & check when they were last modified */
-    char *include_file_out = ut_asprintf("%s/%s.h", target_path, project);
-    char *include_file_tmp = ut_asprintf("%s/%s.h.tmp", target_path, project);
+    char *include_file_out = ut_asprintf("%s/%s.h", output_path, project);
+    char *include_file_tmp = ut_asprintf("%s/%s.h.tmp", output_path, project);
     time_t include_modified = 0;
     if (ut_file_test(include_file_out) == 1) {
         include_modified = ut_lastmodified(include_file_out);
     }
 
-    char *src_file_out = ut_asprintf("%s/%s.c", target_path, project);
-    char *src_file_tmp = ut_asprintf("%s/%s.c.tmp", target_path, project);
+    char *src_file_out = ut_asprintf("%s/%s.c", output_path, project);
+    char *src_file_tmp = ut_asprintf("%s/%s.c.tmp", output_path, project);
     time_t src_modified = 0;
     if (ut_file_test(src_file_out) == 1) {
         src_modified = ut_lastmodified(src_file_out);
     }
 
     /* In case project contains Objective C files */
-    char *m_file_out = ut_asprintf("%s/%s_objc.m", target_path, project);
-    char *m_file_tmp = ut_asprintf("%s/%s_objc.m.tmp", target_path, project);
+    char *m_file_out = ut_asprintf("%s/%s_objc.m", output_path, project);
+    char *m_file_tmp = ut_asprintf("%s/%s_objc.m.tmp", output_path, project);
     time_t m_modified = 0;
     if (ut_file_test(m_file_out) == 1) {
         m_modified = ut_lastmodified(m_file_out);
@@ -489,6 +497,7 @@ void generate(
     free(src_file_tmp);
     free(src_path);
     free(include_path);
+    free(output_path);
 
     ut_rb_free(files_parsed);
     ut_rb_free(objc_files_parsed);
