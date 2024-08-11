@@ -376,6 +376,9 @@ int16_t bake_project_parse_value(
         if (!strcmp(member, "amalgamate")) {
            ut_try (bake_json_set_boolean(&p->amalgamate, member, v), NULL);
         } else
+        if (!strcmp(member, "amalgamate_path") || !strcmp(member, "amalgamate-path")) {
+           ut_try (bake_json_set_string(&p->amalgamate_path, member, v), NULL);
+        } else
         if (!strcmp(member, "standalone") || !strcmp(member, "standalone")) {
            ut_try (bake_json_set_boolean(&p->standalone, member, v), NULL);
         } else                
