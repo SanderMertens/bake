@@ -1369,6 +1369,10 @@ int16_t copy_amalgamated_from_dep(
         dep->generate_path = dst_path;
 
         ut_log_push("copy-amalgamate");
+
+        // when amalgamating dependencies, copy them directly into deps/
+        dep->amalgamate_path = NULL;
+
         ut_try( bake_driver__generate(amalg_driver, config, dep), NULL);
         ut_log_pop();
 
