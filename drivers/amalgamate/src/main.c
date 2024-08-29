@@ -367,7 +367,7 @@ void generate(
     }
 
     /* Create amalgamated header file */
-    FILE *include_out = fopen(include_file_tmp, "w");
+    FILE *include_out = fopen(include_file_tmp, "wb");
     if (!include_out) {
         ut_error("cannot open output file '%s'", include_file_out);
         goto error;
@@ -384,7 +384,7 @@ void generate(
     char *src_path = combine_path(project_path, "src");
 
     /* Create amalgamated source file */
-    FILE *src_out = fopen(src_file_tmp, "w");
+    FILE *src_out = fopen(src_file_tmp, "wb");
     if (!src_out) {
         ut_error("cannot open output file '%s'", include_file_out);
         goto error;
@@ -457,7 +457,7 @@ void generate(
         char *file_path = combine_path(src_path, file);
 
         if (!m_out) {
-            m_out = fopen(m_file_tmp, "w");
+            m_out = fopen(m_file_tmp, "wb");
             if (!m_out) {
                 ut_error("cannot open output file '%s'", m_file_tmp);
                 goto error;
