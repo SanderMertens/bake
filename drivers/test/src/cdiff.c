@@ -694,7 +694,7 @@ void cdiff_file_write(
 
     /* If no element specified for writing, write to new text element. */
     if (!file->cur && file->isNew) {
-        cdiff_elem *el = calloc(sizeof(cdiff_elem), 1);
+        cdiff_elem *el = calloc(1, sizeof(cdiff_elem));
         el->kind = CDIFF_TEXT;
         el->body = ut_strbuf_get(&file->writeBuffer);
         if (!file->elements) {
@@ -730,4 +730,3 @@ void cdiff_file_dedent(
     ut_assert(file->indent != 0, "too many dedents");
     file->indent --;
 }
-
