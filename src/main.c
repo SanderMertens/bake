@@ -1347,8 +1347,9 @@ void bake_message(
 }
 
 int main(int argc, const char *argv[]) {
-    if (ut_getenv("BAKE_ENVIRONMENT")) {
-        env = ut_getenv("BAKE_ENVIRONMENT");
+    char* bake_environment = ut_getenv("BAKE_ENVIRONMENT");
+    if (bake_environment) {
+        env = bake_environment;
     }
 
     srand (time(NULL));
