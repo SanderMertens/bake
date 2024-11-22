@@ -746,7 +746,7 @@ char* gcc_artefact_name(
         if (is_emcc()) {
             result = ut_asprintf("%s.js", id);
         } else {
-            result = ut_strdup(id);
+            result = ut_asprintf("%s"UT_OS_BIN_EXT, id);
         }
     }
 
