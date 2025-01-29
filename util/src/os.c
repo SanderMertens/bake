@@ -80,6 +80,23 @@ bool ut_os_match(
         !stricmp(os, "arm7l-" UT_OS_STRING) ||
         !stricmp(os, "arm") ||
         !stricmp(os, "arm7l"))
+
+#elif defined(__wasm32__)
+        !stricmp(os, UT_OS_STRING "-wasm") ||
+        !stricmp(os, UT_OS_STRING "-wasm32") ||
+        !stricmp(os, "wasm-" UT_OS_STRING) ||
+        !stricmp(os, "wasm32-" UT_OS_STRING) ||
+        !stricmp(os, "wasm") ||
+        !stricmp(os, "wasm32"))
+
+#elif defined(__wasm64__)
+        !stricmp(os, UT_OS_STRING "-wasm") ||
+        !stricmp(os, UT_OS_STRING "-wasm64") ||
+        !stricmp(os, "wasm-" UT_OS_STRING) ||
+        !stricmp(os, "wasm64-" UT_OS_STRING) ||
+        !stricmp(os, "wasm") ||
+        !stricmp(os, "wasm64"))
+
 #endif
     {
         return true;

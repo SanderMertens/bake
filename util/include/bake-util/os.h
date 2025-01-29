@@ -42,6 +42,8 @@ extern "C" {
 #define UT_OS_LINUX
 #elif defined(__APPLE__) && defined(__MACH__)
 #define UT_OS_DARWIN
+#elif defined(__EMSCRIPTEN__)
+#define UT_OS_EMSCRIPTEN
 #else
 #warning "Unsupported operating system"
 #endif
@@ -54,6 +56,10 @@ extern "C" {
 #define UT_CPU_STRING  "x64"
 #elif defined(__i386__) || defined(_M_IX86)
 #define UT_CPU_STRING  "x86"
+#elif defined(__wasm32__)
+#define UT_CPU_STRING "wasm32"
+#elif defined(__wasm64__)
+#define UT_CPU_STRING "wasm64"
 #else
 #error "Unsupported CPU architecture"
 #endif
@@ -120,6 +126,20 @@ extern "C" {
 #define UT_GLOBAL_LIB_PATH "/usr/local/lib"
 #define UT_MACOS
 #define UT_LINUX
+#elif defined(UT_OS_EMSCRIPTEN)
+#define UT_OS_STRING "Emscripten"
+#define UT_OS_LIB_EXT ".o"
+#define UT_OS_STATIC_LIB_EXT ".a"
+#define UT_OS_BIN_EXT ""
+#define UT_OS_SCRIPT_EXT ".sh"
+#define UT_OS_LIB_PREFIX "lib"
+#define UT_OS_PS "/"
+#define UT_ENV_HOME "HOME"
+#define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ":"
+#define UT_GLOBAL_BIN_PATH "/usr/local/bin"
+#define UT_GLOBAL_LIB_PATH "/usr/local/lib"
 #endif
 
 #define UT_CMD_OK 0
