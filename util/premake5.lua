@@ -11,12 +11,6 @@ workspace "bake_util"
     location "build"
     targetdir "."
 
-    filter { "system:not emscripten" }
-      kind "SharedLib"
-
-    filter { "system:emscripten" }
-      kind "ConsoleApp"
-
     files { "include/*.h", "src/*.c", "include/bake-util/*.h" }
 
     includedirs { ".", "$(BAKE_HOME)/include" }
@@ -44,9 +38,13 @@ workspace "bake_util"
     filter { "system:linux", "action:gmake"}
       links { "rt", "dl", "pthread", "m" }
 
-    filter { "system:emscripten", "action:gmake" }
-      buildoptions { "-sSIDE_MODULE" }
-      linkoptions { "-sSIDE_MODULE" }
-
     filter { "action:gmake2" }
       links { "shlwapi", "imagehlp", "dbghelp", "ws2_32" }
+
+    filter { "system:not emscripten" }
+      kind "SharedLib"
+
+    filter { "system:emscripten" }
+      kind "ConsoleApp"
+      buildoptions { "-sSIDE_MODULE" }
+      linkoptions { "-sSIDE_MODULE" }

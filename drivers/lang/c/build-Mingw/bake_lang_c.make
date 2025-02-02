@@ -30,7 +30,7 @@ endif
 RESCOMP = windres
 TARGETDIR = ..
 TARGET = $(TARGETDIR)/bake_lang_c.dll
-INCLUDES +=
+INCLUDES += -I.. -I"$(BAKE_HOME)/include"
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -45,18 +45,18 @@ define POSTBUILDCMDS
 endef
 
 ifeq ($(config),debug)
-OBJDIR = obj/debug
+OBJDIR = ../.bake_cache/debug
 DEFINES += -DDEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g
-ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,--out-implib="../bake_lang_c.lib"
+ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,--out-implib="../bake_lang_c.lib"
 
 else ifeq ($(config),release)
-OBJDIR = obj/release
+OBJDIR = ../.bake_cache/release
 DEFINES += -DNDEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2
-ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,--out-implib="../bake_lang_c.lib" -s
+ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,--out-implib="../bake_lang_c.lib" -s
 
 endif
 
@@ -67,6 +67,11 @@ endif
 # File sets
 # #############################################
 
+GENERATED :=
+OBJECTS :=
+
+GENERATED += $(OBJDIR)/main.o
+OBJECTS += $(OBJDIR)/main.o
 
 # Rules
 # #############################################
@@ -74,7 +79,7 @@ endif
 all: $(TARGET)
 	@:
 
-$(TARGET): $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
+$(TARGET): $(GENERATED) $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
 	$(PRELINKCMDS)
 	@echo Linking bake_lang_c
 	$(SILENT) $(LINKCMD)
@@ -129,6 +134,10 @@ endif
 
 # File Rules
 # #############################################
+
+$(OBJDIR)/main.o: ../src/main.c
+	@echo "$(notdir $<)"
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)
 ifneq (,$(PCH))

@@ -11,13 +11,6 @@ workspace "bake_lang_cpp"
     location "build"
     targetdir "."
 
-    filter { "system:not emscripten" }
-      kind "SharedLib"
-      links { "bake_util" }
-
-    filter { "system:emscripten" }
-      kind "ConsoleApp"
-
     objdir ".bake_cache"
 
     files { "include/*.h", "src/*.c" }
@@ -33,6 +26,11 @@ workspace "bake_lang_cpp"
       defines { "NDEBUG" }
       optimize "On"
 
-    filter { "system:emscripten", "action:gmake" }
+    filter { "system:not emscripten" }
+      kind "SharedLib"
+      links { "bake_util" }
+
+    filter { "system:emscripten" }
+      kind "ConsoleApp"
       buildoptions { "-sSIDE_MODULE" }
       linkoptions { "-sSIDE_MODULE" }
