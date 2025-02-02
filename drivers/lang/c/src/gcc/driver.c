@@ -504,7 +504,13 @@ void gcc_link_dynamic_binary(
             hide_symbols = true;
         }
 
-        ut_strbuf_appendstr(&cmd, " -fno-stack-protector -shared");
+        ut_strbuf_appendstr(&cmd, " -fno-stack-protector");
+
+        if (is_emcc()) {
+            ut_strbuf_appendstr(&cmd, " -sSIDE_MODULE");
+        } else {
+            ut_strbuf_appendstr(&cmd, " -shared");
+        }
 
         /* Fail when symbols are not found in library */
         if (!is_clang(cpp) && !is_emcc() && !is_mingw()) {
