@@ -743,13 +743,13 @@ bool _if_test_bool(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%s)", str_v1, v1 ? "true" : "false");
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%s)", str_v2, v2 ? "true" : "false");
         }
@@ -778,13 +778,13 @@ bool _if_test_int(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%lld)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%lld)", str_v2, v2);
         }
@@ -813,13 +813,13 @@ bool _if_test_uint(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%llu)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%llu)", str_v2, v2);
         }
@@ -848,13 +848,13 @@ bool _if_test_flt(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%f)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%f)", str_v2, v2);
         }
