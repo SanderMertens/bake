@@ -128,11 +128,11 @@ extern "C" {
 #define UT_LINUX
 #elif defined(UT_OS_EMSCRIPTEN)
 #define UT_OS_STRING "Emscripten"
-#define UT_OS_LIB_EXT ".o"
+#define UT_OS_LIB_EXT ".wasm"
 #define UT_OS_STATIC_LIB_EXT ".a"
 #define UT_OS_BIN_EXT ""
 #define UT_OS_SCRIPT_EXT ".sh"
-#define UT_OS_LIB_PREFIX "lib"
+#define UT_OS_LIB_PREFIX ""
 #define UT_OS_PS "/"
 #define UT_ENV_HOME "HOME"
 #define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
