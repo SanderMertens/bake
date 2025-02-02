@@ -20,11 +20,12 @@ ifeq ($(config),debug)
   ifeq ($(origin AR), default)
     AR = ar
   endif
+  RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_util.dylib
-  OBJDIR = ../.bake_cache/debug
+  OBJDIR = obj/debug
   DEFINES += -DUT_IMPL -DDEBUG
-  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
@@ -55,11 +56,12 @@ ifeq ($(config),release)
   ifeq ($(origin AR), default)
     AR = ar
   endif
+  RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_util.dylib
-  OBJDIR = ../.bake_cache/release
+  OBJDIR = obj/release
   DEFINES += -DUT_IMPL -DNDEBUG
-  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
@@ -81,31 +83,10 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/code.o \
-	$(OBJDIR)/env.o \
-	$(OBJDIR)/expr.o \
-	$(OBJDIR)/file.o \
-	$(OBJDIR)/fs.o \
-	$(OBJDIR)/iter.o \
-	$(OBJDIR)/jsw_rbtree.o \
-	$(OBJDIR)/ll.o \
-	$(OBJDIR)/load.o \
-	$(OBJDIR)/log.o \
-	$(OBJDIR)/memory.o \
-	$(OBJDIR)/os.o \
-	$(OBJDIR)/parson.o \
-	$(OBJDIR)/path.o \
 	$(OBJDIR)/dl.o \
-	$(OBJDIR)/fs1.o \
+	$(OBJDIR)/fs.o \
 	$(OBJDIR)/proc.o \
 	$(OBJDIR)/thread.o \
-	$(OBJDIR)/proc_common.o \
-	$(OBJDIR)/rb.o \
-	$(OBJDIR)/strbuf.o \
-	$(OBJDIR)/string.o \
-	$(OBJDIR)/time.o \
-	$(OBJDIR)/util.o \
-	$(OBJDIR)/version.o \
 
 RESOURCES := \
 
@@ -152,7 +133,7 @@ endif
 prebuild:
 	$(PREBUILDCMDS)
 
-prelink:
+prelink: $(OBJECTS)
 	$(PRELINKCMDS)
 
 ifneq (,$(PCH))
@@ -164,79 +145,16 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/code.o: ../src/code.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/env.o: ../src/env.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/expr.o: ../src/expr.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/file.o: ../src/file.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/fs.o: ../src/fs.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/iter.o: ../src/iter.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/jsw_rbtree.o: ../src/jsw_rbtree.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/ll.o: ../src/ll.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/load.o: ../src/load.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/log.o: ../src/log.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/memory.o: ../src/memory.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/os.o: ../src/os.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/parson.o: ../src/parson.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/path.o: ../src/path.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/dl.o: ../src/posix/dl.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/fs1.o: ../src/posix/fs.c
+$(OBJDIR)/fs.o: ../src/posix/fs.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/proc.o: ../src/posix/proc.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/thread.o: ../src/posix/thread.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/proc_common.o: ../src/proc_common.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/rb.o: ../src/rb.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/strbuf.o: ../src/strbuf.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/string.o: ../src/string.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/time.o: ../src/time.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/util.o: ../src/util.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/version.o: ../src/version.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

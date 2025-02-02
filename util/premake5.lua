@@ -7,10 +7,15 @@ workspace "bake_util"
     buildoptions { "-std=c99", "-D_XOPEN_SOURCE=600" }
 
   project "bake_util"
-    kind "SharedLib"
     language "C"
     location "build"
     targetdir "."
+
+    filter { "system:not emscripten" }
+      kind "SharedLib"
+
+    filter { "system:emscripten" }
+      kind "ConsoleApp"
 
     files { "include/*.h", "src/*.c", "include/bake-util/*.h" }
 
@@ -38,6 +43,10 @@ workspace "bake_util"
 
     filter { "system:linux", "action:gmake"}
       links { "rt", "dl", "pthread", "m" }
+
+    filter { "system:emscripten", "action:gmake" }
+      buildoptions { "-sSIDE_MODULE" }
+      linkoptions { "-sSIDE_MODULE" }
 
     filter { "action:gmake2" }
       links { "shlwapi", "imagehlp", "dbghelp", "ws2_32" }

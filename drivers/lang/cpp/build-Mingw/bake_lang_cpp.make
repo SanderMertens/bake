@@ -11,17 +11,26 @@ endif
 .PHONY: clean prebuild
 
 SHELLTYPE := posix
-ifeq (.exe,$(findstring .exe,$(ComSpec)))
+ifeq ($(shell echo "test"), "test")
 	SHELLTYPE := msdos
 endif
 
 # Configurations
 # #############################################
 
+ifeq ($(origin CC), default)
+  CC = gcc
+endif
+ifeq ($(origin CXX), default)
+  CXX = g++
+endif
+ifeq ($(origin AR), default)
+  AR = ar
+endif
 RESCOMP = windres
 TARGETDIR = ..
 TARGET = $(TARGETDIR)/bake_lang_cpp.dll
-INCLUDES += -I.. -I"$(BAKE_HOME)/include"
+INCLUDES +=
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -36,18 +45,18 @@ define POSTBUILDCMDS
 endef
 
 ifeq ($(config),debug)
-OBJDIR = ../.bake_cache/debug
+OBJDIR = obj/debug
 DEFINES += -DDEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g
-ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,--out-implib="../bake_lang_cpp.lib"
+ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,--out-implib="../bake_lang_cpp.lib"
 
 else ifeq ($(config),release)
-OBJDIR = ../.bake_cache/release
+OBJDIR = obj/release
 DEFINES += -DNDEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2
-ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,--out-implib="../bake_lang_cpp.lib" -s
+ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,--out-implib="../bake_lang_cpp.lib" -s
 
 endif
 
@@ -58,11 +67,6 @@ endif
 # File sets
 # #############################################
 
-GENERATED :=
-OBJECTS :=
-
-GENERATED += $(OBJDIR)/main.o
-OBJECTS += $(OBJDIR)/main.o
 
 # Rules
 # #############################################
@@ -70,7 +74,7 @@ OBJECTS += $(OBJDIR)/main.o
 all: $(TARGET)
 	@:
 
-$(TARGET): $(GENERATED) $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
+$(TARGET): $(OBJECTS) $(LDDEPS) | $(TARGETDIR)
 	$(PRELINKCMDS)
 	@echo Linking bake_lang_cpp
 	$(SILENT) $(LINKCMD)
@@ -125,10 +129,6 @@ endif
 
 # File Rules
 # #############################################
-
-$(OBJDIR)/main.o: ../src/main.c
-	@echo "$(notdir $<)"
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)
 ifneq (,$(PCH))

@@ -11,12 +11,21 @@ endif
 .PHONY: clean prebuild prelink
 
 ifeq ($(config),debug)
+  ifeq ($(origin CC), default)
+    CC = gcc
+  endif
+  ifeq ($(origin CXX), default)
+    CXX = g++
+  endif
+  ifeq ($(origin AR), default)
+    AR = ar
+  endif
   RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_lang_c.so
-  OBJDIR = ../.bake_cache/debug
+  OBJDIR = obj/debug
   DEFINES += -DDEBUG
-  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
@@ -24,7 +33,7 @@ ifeq ($(config),debug)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -lbake_util
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,-soname=libbake_lang_c.so
+  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libbake_lang_c.so
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -38,12 +47,21 @@ all: prebuild prelink $(TARGET)
 endif
 
 ifeq ($(config),release)
+  ifeq ($(origin CC), default)
+    CC = gcc
+  endif
+  ifeq ($(origin CXX), default)
+    CXX = g++
+  endif
+  ifeq ($(origin AR), default)
+    AR = ar
+  endif
   RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_lang_c.so
-  OBJDIR = ../.bake_cache/release
+  OBJDIR = obj/release
   DEFINES += -DNDEBUG
-  INCLUDES += -I.. -I"$(BAKE_HOME)/include"
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
@@ -51,7 +69,7 @@ ifeq ($(config),release)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS += -lbake_util
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L"$(BAKE_HOME)/lib" -shared -Wl,-soname=libbake_lang_c.so -s
+  ALL_LDFLAGS += $(LDFLAGS) -shared -Wl,-soname=libbake_lang_c.so -s
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -65,7 +83,6 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/main.o \
 
 RESOURCES := \
 
@@ -112,7 +129,7 @@ endif
 prebuild:
 	$(PREBUILDCMDS)
 
-prelink:
+prelink: $(OBJECTS)
 	$(PRELINKCMDS)
 
 ifneq (,$(PCH))
@@ -124,9 +141,6 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/main.o: ../src/main.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)
 ifneq (,$(PCH))
