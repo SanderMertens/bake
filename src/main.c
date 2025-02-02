@@ -1404,13 +1404,6 @@ int main(int argc, const char *argv[]) {
     /* Initialize package loader for default home, arch, os and config */
     ut_load_init(NULL, NULL, NULL, cfg);
 
-    /* If artefact is manually specified, translate to platform specific name */
-    if (artefact) {
-        if (type == BAKE_PACKAGE) {
-            artefact = ut_asprintf("%s%s%s", UT_LIB_PREFIX, artefact, UT_LIB_EXT);
-        }
-    }
-
     ut_trace("configuration: %s", UT_CONFIG);
     ut_trace("environment: %s", env);
     if (target) {
@@ -1500,18 +1493,29 @@ int main(int argc, const char *argv[]) {
 
     config.defines = defines;
 
+    const char *lib_prefix = UT_LIB_PREFIX;
+    const char *lib_ext = UT_LIB_EXT;
     const char *build_os = NULL;
 
     if (target && stricmp(target, UT_PLATFORM_STRING)) {
-        if (!stricmp(target, "em")) {
-            target = "Em";
-            build_os = "Em";
+        if (!stricmp(target, "em") || !stricmp(target, "emscripten")) {
+            target = "Emscripten";
+            build_os = "Emscripten";
+            lib_prefix = "";
+            lib_ext = ".wasm";
             ut_setenv("CC", "emcc");
             ut_setenv("CXX", "emcc");
         } else {
             if (!is_bake_parent) {
                 ut_warning("unknown target '%s'", target);
             }
+        }
+    }
+
+    /* If artefact is manually specified, translate to platform specific name */
+    if (artefact) {
+        if (type == BAKE_PACKAGE) {
+            artefact = ut_asprintf("%s%s%s", lib_prefix, artefact, lib_ext);
         }
     }
 
