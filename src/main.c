@@ -763,7 +763,7 @@ int16_t list_configurations(
             while (ut_iter_hasNext(&it)) {
                 char *cfg = ut_iter_next(&it);
 
-                if (ut_project_in_config(package->id, cfg)) {
+                if (ut_project_in_config(&config->target_info, package->id, cfg)) {
                     if (count) {
                         ut_strbuf_appendstr(&buf, ", ");
                     }
@@ -803,7 +803,7 @@ int bake_info(
 {
     if (type_out) *type_out = BAKE_PACKAGE;
 
-    const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
+    const char *path = ut_locate(&config->target_info, id, NULL, UT_LOCATE_PROJECT);
     if (!path) {
         if (!clean_missing) {
             ut_log("#[green]?#[reset]  #[normal]%s #[red]!not found!#[normal]\n", id);
@@ -822,7 +822,7 @@ int bake_info(
         if (project->language) {
             if (in_current_cfg && project->type == BAKE_PACKAGE) {
                 ut_dl dl = NULL;
-                const char *bin = ut_locate(id, NULL, UT_LOCATE_LIB);
+                const char *bin = ut_locate(&config->target_info, id, NULL, UT_LOCATE_LIB);
                 if (bin) {
                     if (test_lib) {
                         dl = ut_dl_open(bin);
@@ -845,7 +845,7 @@ int bake_info(
 
                     if (dl) ut_dl_close(dl);
                 } else {
-                    const char *lib_static = ut_locate(id, NULL, UT_LOCATE_STATIC);
+                    const char *lib_static = ut_locate(&config->target_info, id, NULL, UT_LOCATE_STATIC);
                     if (lib_static) {
                         if (!clean_missing) {
                             ut_log("#[green]S#[reset]  #[normal]%s #[grey]=> #[normal]%s\n",
@@ -952,16 +952,16 @@ int bake_list(
                  * is under development or not. If the project is under 
                  * development, it means that the revision for the bundle is not
                  * enforced. */
-                const char *located = ut_locate(
+                const char *located = ut_locate(&config->target_info,
                     repo->id, NULL, UT_LOCATE_PROJECT);
 
                 bool in_development = false;
 
                 if (located) {
-                    const char *src = ut_locate(
+                    const char *src = ut_locate(&config->target_info,
                         repo->id, NULL, UT_LOCATE_SOURCE);
 
-                    const char *dev_src = ut_locate(
+                    const char *dev_src = ut_locate(&config->target_info,
                         repo->id, NULL, UT_LOCATE_DEVSRC);
 
                     if (!src && dev_src) {
@@ -1182,7 +1182,7 @@ int bake_foreach_action(
     ut_setenv("BAKE_PROJECT_ID", project->id);
     ut_chdir(project->fullpath);
 
-    char *cmd = ut_envparse("%s", foreach_cmd);
+    char *cmd = ut_envparse("%s --target %s", foreach_cmd, config->build_target);
 
     int result = ut_proc_cmd(cmd, &ret);
     free(cmd);
@@ -1202,7 +1202,7 @@ int bake_test_action(
         
         bake_project_test(config, project);
 
-        char *cmd = ut_asprintf("bake runall %s --cfg test", test_path);
+        char *cmd = ut_asprintf("bake runall %s --cfg test --target %s", test_path, config->build_target);
         int sig = ut_proc_cmd(cmd, &rc);
 
         if (sig || rc) {
@@ -1283,13 +1283,13 @@ int bake_run_template(
     int argc,
     const char *argv[])
 {
-    const char *tmpl_path = ut_locate(path, NULL, UT_LOCATE_TEMPLATE);
+    const char *tmpl_path = ut_locate(&config->target_info, path, NULL, UT_LOCATE_TEMPLATE);
     if (!tmpl_path) {
         ut_throw("cannot find template '%s'", path);
         goto error;
     }
 
-    const char *repo_id = ut_locate(path, NULL, UT_LOCATE_REPO_ID);
+    const char *repo_id = ut_locate(&config->target_info, path, NULL, UT_LOCATE_REPO_ID);
 
     /* Check temporary path, remove if already exists */
     char *tmp_path = ut_envparse("$BAKE_HOME/temp/%s", repo_id);
@@ -1493,18 +1493,20 @@ int main(int argc, const char *argv[]) {
 
     config.defines = defines;
 
-    const char *lib_prefix = UT_LIB_PREFIX;
-    const char *lib_ext = UT_LIB_EXT;
+    ut_target target_info;
     const char *build_os = NULL;
+
+    bool target_is_host = true;
 
     if (target && stricmp(target, UT_PLATFORM_STRING)) {
         if (!stricmp(target, "em") || !stricmp(target, "emscripten")) {
+            target_is_host = false;
             target = "Emscripten";
             build_os = "Emscripten";
-            lib_prefix = "";
-            lib_ext = ".wasm";
             ut_setenv("CC", "emcc");
             ut_setenv("CXX", "emcc");
+
+            config.target_info = ut_target_emscripten();
         } else {
             if (!is_bake_parent) {
                 ut_warning("unknown target '%s'", target);
@@ -1512,10 +1514,14 @@ int main(int argc, const char *argv[]) {
         }
     }
 
+    if (target_is_host) {
+        config.target_info = ut_target_host();
+    }
+
     /* If artefact is manually specified, translate to platform specific name */
     if (artefact) {
         if (type == BAKE_PACKAGE) {
-            artefact = ut_asprintf("%s%s%s", lib_prefix, artefact, lib_ext);
+            artefact = ut_asprintf("%s%s%s", config.target_info.lib_prefix, artefact, config.target_info.lib_ext);
         }
     }
 
@@ -1651,11 +1657,11 @@ int main(int argc, const char *argv[]) {
             list_configurations(&config, &pkg);
             bake_info(&config, path, pkg.cfg, true, true, NULL, false);
 
-            const char *devsrc = ut_locate(path, NULL, UT_LOCATE_DEVSRC);
+            const char *devsrc = ut_locate(&config.target_info, path, NULL, UT_LOCATE_DEVSRC);
             if (devsrc) {
                 ut_log("   #[cyan]%s#[reset] #[yellow](under development)#[reset]\n", devsrc);
             } else {
-                devsrc = ut_locate(path, NULL, UT_LOCATE_DEVSRC);
+                devsrc = ut_locate(&config.target_info, path, NULL, UT_LOCATE_DEVSRC);
                 ut_log("   #[cyan]%s#[reset]\n", devsrc);
             }
         } else if (!strcmp(action, "list")) {

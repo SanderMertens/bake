@@ -294,6 +294,23 @@ error:
 
 #endif
 
+/* Utility function to rebuild a bake project */
+int16_t bake_rebuild_project(
+    bake_config *config,
+    const char *id)
+{
+    char *rebuild_cmd = ut_asprintf(
+      BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild %s --target %s",
+      id, config->build_target);
+
+    ut_try( cmd(rebuild_cmd), "failed to rebuild '%s'", id);
+    free(rebuild_cmd);
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Utility function to bootstrap a bake project while bake is installing */
 int16_t bake_build_make_project(
     const char *path,
@@ -348,7 +365,7 @@ int16_t bake_build_make_project(
         "failed to move '%s' to project bin path", id);
 
     /* On Windows, also copy the .lib file */
-    if (strcmp(os, "Windows") == 0) {
+    if (!strcmp(os, "Windows")) {
       ut_try(ut_rename(
           strarg("%s" UT_OS_PS "%s%s.lib", path, lib_prefix, artefact),
           strarg("%s" UT_OS_PS "%s%s.lib", bin_path, lib_prefix, artefact)),
@@ -384,7 +401,7 @@ int16_t bake_build_make_project_emscripten(
     const char *id,
     const char *artefact)
 {
-    return bake_build_make_project(path, id, artefact, "Emscripten", "Emscripten", "", ".wasm");
+    return bake_build_make_project(path, id, artefact, UT_EM_STRING, "Emscripten", UT_EM_LIB_PREFIX, ".wasm");
 }
 
 /* Uninstall deprecated files from old installation */
@@ -470,7 +487,12 @@ int16_t bake_setup(
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 
-    bool emscripten = strcmp(config->build_target, "Emscripten") == 0;
+    bool emscripten = !strcmp(config->build_target, "Emscripten");
+    if (emscripten) {
+        bake_message(UT_OK, "done", "compiling for emcc");
+    } else {
+        bake_message(UT_OK, "done", "compiling for host");
+    }
     /* TODO: consider warning when compiling on host with CC=emcc */
     int16_t (*make_project)(const char*, const char*, const char*) = emscripten ? bake_build_make_project_emscripten : bake_build_make_project_host;
 
@@ -478,7 +500,6 @@ int16_t bake_setup(
     ut_try( make_project("util", "bake.util", "bake_util"), NULL);
 
     /* Build the C and C++ drivers */
-    /* TODO: dont compile host projects with emcc if set in CC */
     ut_try( make_project("drivers"UT_OS_PS"lang"UT_OS_PS"c",
         "bake.lang.c", "bake_lang_c"), NULL);
 
@@ -486,19 +507,19 @@ int16_t bake_setup(
         "bake.lang.cpp", "bake_lang_cpp"), NULL);
 
     /* Build the bake test framework */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/test"), NULL);
+    ut_try( bake_rebuild_project(config, "drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
 
     /* Build the amalgamation driver */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/amalgamate"), NULL);
+    ut_try( bake_rebuild_project(config, "drivers/amalgamate"), NULL);
     bake_message(UT_OK, "done", "install amalgamate driver");
 
     /* Build the bake libraries (predefined configurations) */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild libraries"), NULL);
+    ut_try( bake_rebuild_project(config, "libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
 
     /* Export the bake templates */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild templates"), NULL);
+    ut_try( bake_rebuild_project(config, "templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
 
     /*

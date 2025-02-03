@@ -64,6 +64,14 @@ extern "C" {
 #error "Unsupported CPU architecture"
 #endif
 
+#define UT_EM_STRING "Emscripten"
+#define UT_EM_LIB_EXT ".wasm"
+#define UT_EM_STATIC_LIB_EXT ".a"
+#define UT_EM_BIN_EXT ".js"
+#define UT_EM_SCRIPT_EXT ".js"
+#define UT_EM_LIB_PREFIX ""
+#define UT_EM_PS "/"
+
 #ifdef __MINGW32__
 #define UT_OS_STRING "Mingw"
 #define UT_OS_LIB_EXT ".dll"
@@ -127,13 +135,13 @@ extern "C" {
 #define UT_MACOS
 #define UT_LINUX
 #elif defined(UT_OS_EMSCRIPTEN)
-#define UT_OS_STRING "Emscripten"
-#define UT_OS_LIB_EXT ".wasm"
-#define UT_OS_STATIC_LIB_EXT ".a"
-#define UT_OS_BIN_EXT ""
-#define UT_OS_SCRIPT_EXT ".sh"
-#define UT_OS_LIB_PREFIX ""
-#define UT_OS_PS "/"
+#define UT_OS_STRING UT_EM_STRING
+#define UT_OS_LIB_EXT UT_EM_LIB_EXT
+#define UT_OS_STATIC_LIB_EXT UT_EM_STATIC_LIB_EXT
+#define UT_OS_BIN_EXT UT_EM_BIN_EXT
+#define UT_OS_SCRIPT_EXT UT_EM_SCRIPT_EXT
+#define UT_OS_LIB_PREFIX UT_EM_LIB_PREFIX
+#define UT_OS_PS UT_EM_PS
 #define UT_ENV_HOME "HOME"
 #define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
 #define UT_ENV_BINPATH "PATH"
@@ -146,6 +154,22 @@ extern "C" {
 #define UT_CMD_ERR ((int8_t)-1)
 
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING
+
+typedef struct ut_target {
+    const char *lib_ext;       /* Target library file extension */
+    const char *static_lib_ext;/* Target static library file extension */
+    const char *bin_ext;       /* Target binary file extension */
+    const char *script_ext;    /* Target script file extension */
+    const char *lib_prefix;    /* Target library file prefix */
+} ut_target;
+
+/* Get target for current machine */
+UT_API
+ut_target ut_target_host(void);
+
+/* Get target for Emscripten */
+UT_API
+ut_target ut_target_emscripten(void);
 
 /* Get hostname of current machine */
 UT_API

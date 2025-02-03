@@ -21,6 +21,28 @@
 
 #include <bake_util.h>
 
+ut_target ut_target_host(void) {
+    ut_target target = {
+        .lib_ext = UT_OS_LIB_EXT,
+        .static_lib_ext = UT_OS_STATIC_LIB_EXT,
+        .bin_ext = UT_OS_BIN_EXT,
+        .script_ext = UT_OS_SCRIPT_EXT,
+        .lib_prefix = UT_OS_LIB_PREFIX
+    };
+    return target;
+}
+
+ut_target ut_target_emscripten(void) {
+    ut_target target = {
+        .lib_ext = UT_EM_LIB_EXT,
+        .static_lib_ext = UT_EM_STATIC_LIB_EXT,
+        .bin_ext = UT_EM_BIN_EXT,
+        .script_ext = UT_EM_SCRIPT_EXT,
+        .lib_prefix = UT_EM_LIB_PREFIX
+    };
+    return target;
+}
+
 char* ut_hostname(void) {
     char buff[256];
     gethostname(buff, sizeof(buff));

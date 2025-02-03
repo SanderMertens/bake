@@ -518,6 +518,10 @@ void gcc_link_dynamic_binary(
         }
     }
 
+    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
+        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE");
+    }
+
     gcc_add_misc_link(
         driver,
         config,
@@ -592,7 +596,7 @@ void gcc_link_dynamic_binary(
                 /* Unpack objects in static lib to temporary directory */
                 char *cwd = strdup(ut_cwd());
                 char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, UT_PLATFORM_STRING, config->configuration);
+                    lib->is.string, config->build_target, config->configuration);
                 char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
 
                 /* The ar command doesn't have an option to output files to a
@@ -658,7 +662,11 @@ void gcc_link_dynamic_binary(
             bake_attr *lib = ut_iter_next(&it);
             const char *mapped = gcc_lib_map(lib->is.string);
             if (mapped) {
-                ut_strbuf_append(&cmd, " -l%s", mapped);
+                if (is_emcc()) {
+                    ut_strbuf_append(&cmd, " %s", mapped);
+                } else {
+                    ut_strbuf_append(&cmd, " -l%s", mapped);
+                }
             }
         }
     }
@@ -737,23 +745,15 @@ char* gcc_artefact_name(
     char *id = project->id_underscore;
 
     if (project->type == BAKE_PACKAGE) {
-        if (is_emcc()) {
-            result = ut_asprintf("lib%s.so", id);
-        } else {
-            bool link_static = driver->get_attr_bool("static");
+        bool link_static = driver->get_attr_bool("static");
 
-            if (link_static) {
-                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_STATIC_LIB_EXT, id);
-            } else {
-                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, id);
-            }
+        if (link_static) {
+            result = ut_asprintf("%s%s%s", config->target_info.lib_prefix, id, config->target_info.static_lib_ext);
+        } else {
+            result = ut_asprintf("%s%s%s", config->target_info.lib_prefix, id, config->target_info.lib_ext);
         }
     } else {
-        if (is_emcc()) {
-            result = ut_asprintf("%s.js", id);
-        } else {
-            result = ut_asprintf("%s"UT_OS_BIN_EXT, id);
-        }
+        result = ut_asprintf("%s%s", id, config->target_info.bin_ext);
     }
 
     return result;
@@ -794,12 +794,12 @@ char *gcc_link_to_lib(
 
     /* Try platform default */
     if (full_path) {
-        char *so = ut_asprintf("%s/"UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, full_path, lib_name);
+        char *so = ut_asprintf("%s/%s%s%s", full_path, config->target_info.lib_prefix, lib_name, config->target_info.lib_ext);
         if (ut_file_test(so)) {
             result = so;
         }
     } else {
-        char *so = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, lib_name);
+        char *so = ut_asprintf("%s%s%s", config->target_info.lib_prefix, lib_name, config->target_info.lib_ext);
         if (ut_file_test(so)) {
             result = so;
         }
