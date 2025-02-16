@@ -311,6 +311,14 @@ void gcc_add_misc(
     }
 
     gcc_add_sanitizers(config, cmd);
+
+    if (is_emcc()) {
+        /* On Emscripten, every object file must be compiled with -pthread if
+         * the final application uses pthread. It is not known whether an
+         * application using this will use pthread, so pthread will be enabled
+         * unconditionally. */
+        ut_strbuf_append(cmd, " -pthread");
+    }
 }
 
 static
@@ -322,6 +330,7 @@ void gcc_add_misc_link(
     ut_strbuf *cmd)
 {
     if (is_emcc()) {
+        ut_strbuf_append(cmd, " -pthread");
         ut_strbuf_append(cmd, " -s ALLOW_MEMORY_GROWTH=1");
         ut_strbuf_append(cmd, " -s EXPORTED_RUNTIME_METHODS=cwrap");
         ut_strbuf_append(cmd, " -s MODULARIZE=1");
