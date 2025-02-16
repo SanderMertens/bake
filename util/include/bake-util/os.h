@@ -65,11 +65,11 @@ extern "C" {
 #endif
 
 #define UT_EM_STRING "Emscripten"
-#define UT_EM_LIB_EXT ".wasm"
 #define UT_EM_STATIC_LIB_EXT ".a"
+#define UT_EM_LIB_EXT UT_EM_STATIC_LIB_EXT
 #define UT_EM_BIN_EXT ".js"
 #define UT_EM_SCRIPT_EXT ".js"
-#define UT_EM_LIB_PREFIX ""
+#define UT_EM_LIB_PREFIX "lib"
 #define UT_EM_PS "/"
 
 #ifdef __MINGW32__

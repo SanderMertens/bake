@@ -401,7 +401,7 @@ int16_t bake_build_make_project_emscripten(
     const char *id,
     const char *artefact)
 {
-    return bake_build_make_project(path, id, artefact, UT_EM_STRING, "Emscripten", UT_EM_LIB_PREFIX, ".wasm");
+    return bake_build_make_project(path, id, artefact, UT_EM_STRING, "Emscripten", UT_EM_LIB_PREFIX, UT_EM_LIB_EXT);
 }
 
 /* Uninstall deprecated files from old installation */

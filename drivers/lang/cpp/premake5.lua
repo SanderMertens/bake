@@ -31,6 +31,4 @@ workspace "bake_lang_cpp"
       links { "bake_util" }
 
     filter { "system:emscripten" }
-      kind "ConsoleApp"
-      buildoptions { "-sSIDE_MODULE" }
-      linkoptions { "-sSIDE_MODULE" }
+      kind "StaticLib"

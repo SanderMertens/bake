@@ -451,6 +451,21 @@ char* gcc_find_static_lib(
 
     free(file);
 
+    /* Find static library in BAKE_HOME if it's different */
+    if (strcmp(config->target, config->home)) {
+        char *file = ut_asprintf("%s/lib/lib%s.a", config->home, lib);
+
+        if ((ret = ut_file_test(file)) == 1) {
+            return file;
+        } else if (ret != 0) {
+            free(file);
+            ut_error("could not access '%s'", file);
+            return NULL;
+        }
+
+        free(file);
+    }
+
     /* If static library is not found in environment, try project libpath */
     bake_attr *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
@@ -474,6 +489,89 @@ char* gcc_find_static_lib(
     return NULL;
 }
 
+/* Unpack objects in static lib to temporary directory */
+static
+char* gcc_unpack_static_lib(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *lib)
+{
+    char *static_lib = gcc_find_static_lib(
+        driver, project, config, lib);
+    if (!static_lib) {
+        return NULL;
+    }
+
+    char *cwd = strdup(ut_cwd());
+    char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
+        lib, config->build_target, config->configuration);
+    char *unpack_cmd = ut_asprintf("%s x %s", is_emcc() ? "emar" : "ar", static_lib);
+
+    /* The ar command doesn't have an option to output files to a specific
+	 * directory, so have to use chdir. This will be an issue for multithreaded builds. */
+    ut_mkdir(obj_path);
+    ut_chdir(obj_path);
+    driver->exec(unpack_cmd);
+    free(unpack_cmd);
+    free(static_lib);
+    ut_chdir(cwd);
+    free(cwd);
+
+    return obj_path;
+}
+
+/* Link a static library */
+static
+void gcc_link_static_binary(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    char *source,
+    char *target)
+{
+    ut_strbuf cmd = UT_STRBUF_INIT;
+    ut_strbuf_append(&cmd, "%s rcs %s %s", is_emcc() ? "emar" : "ar", target, source);
+
+    /* Add project libraries */
+    ut_ll static_object_paths = NULL;
+    if (is_emcc()) {
+        ut_iter it = ut_ll_iter(project->link);
+        while (ut_iter_hasNext(&it)) {
+            char *lib = ut_iter_next(&it);
+            char *obj_path = gcc_unpack_static_lib(
+                driver, config, project, lib);
+            if (!obj_path) {
+                continue;
+            }
+
+            ut_strbuf_append(&cmd, " %s/*", obj_path);
+
+            if (!static_object_paths) {
+                static_object_paths = ut_ll_new();
+            }
+
+            /* Add path with object files to static_object_paths. These will
+             * be cleaned up after the compile command */
+            ut_ll_append(static_object_paths, obj_path);
+        }
+    }
+
+    char *cmdstr = ut_strbuf_get(&cmd);
+    driver->exec(cmdstr);
+    free(cmdstr);
+
+    /* If static libraries were unpacked, cleanup temporary directories */
+    ut_iter it = ut_ll_iter(static_object_paths);
+    while (ut_iter_hasNext(&it)) {
+        char *obj_path = ut_iter_next(&it);
+        ut_rm(obj_path);
+        free(obj_path);
+    }
+
+    ut_ll_free(static_object_paths);
+}
+
 /* Link a binary */
 static
 void gcc_link_dynamic_binary(
@@ -483,6 +581,16 @@ void gcc_link_dynamic_binary(
     char *source,
     char *target)
 {
+    if (is_emcc() && project->type == BAKE_PACKAGE) {
+        /* Generate a static library instead of a shared library. This is done
+         * on Emscripten because Emscripten appears to only look for shared
+         * libraries in the current working directory when the program is ran.
+         * LD_LIBRARY_PATH and the -L flag do not change where Emscripten looks
+         * for libraries. */
+        gcc_link_static_binary(driver, config, project, source, target);
+        return;
+    }
+
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool hide_symbols = false;
     ut_ll static_object_paths = NULL;
@@ -504,22 +612,12 @@ void gcc_link_dynamic_binary(
             hide_symbols = true;
         }
 
-        ut_strbuf_appendstr(&cmd, " -fno-stack-protector");
-
-        if (is_emcc()) {
-            ut_strbuf_appendstr(&cmd, " -sSIDE_MODULE");
-        } else {
-            ut_strbuf_appendstr(&cmd, " -shared");
-        }
+        ut_strbuf_appendstr(&cmd, " -fno-stack-protector -shared");
 
         /* Fail when symbols are not found in library */
         if (!is_clang(cpp) && !is_emcc() && !is_mingw()) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
-    }
-
-    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
-        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE");
     }
 
     gcc_add_misc_link(
@@ -584,31 +682,15 @@ void gcc_link_dynamic_binary(
                 ut_strbuf_append(&cmd, " -l%s", lib->is.string);
             } else {
                 /* If hiding symbols and linking with static library, unpack
-                 * library objects to temp directory. If the library would be
-                 * linked as-is, symbols would be exported, even though
-                 * fvisibility is set to hidden */
-                char *static_lib = gcc_find_static_lib(
-                    driver, project, config, lib->is.string);
-                if (!static_lib) {
+                 * the library objects. If the library would be linked as-is,
+                 * symbols would be exported, even though fvisibility is set to
+                 * hidden */
+                char *obj_path = gcc_unpack_static_lib(
+                    driver, config, project, lib->is.string);
+                if (!obj_path) {
                     continue;
                 }
 
-                /* Unpack objects in static lib to temporary directory */
-                char *cwd = strdup(ut_cwd());
-                char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, config->build_target, config->configuration);
-                char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
-
-                /* The ar command doesn't have an option to output files to a
-                 * specific directory, so have to use chdir. This will be an
-                 * issue for multithreaded builds. */
-                ut_mkdir(obj_path);
-                ut_chdir(obj_path);
-                driver->exec(unpack_cmd);
-                free(unpack_cmd);
-                free(static_lib);
-                ut_chdir(cwd);
-                free(cwd);
                 ut_strbuf_append(&cmd, " %s/*", obj_path);
 
                 if (!static_object_paths) {
@@ -696,22 +778,6 @@ void gcc_link_dynamic_binary(
     }
 
     ut_ll_free(static_object_paths);
-}
-
-/* Link a static library */
-static
-void gcc_link_static_binary(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-    ut_strbuf cmd = UT_STRBUF_INIT;
-    ut_strbuf_append(&cmd, "ar rcs %s %s", target, source);
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
 }
 
 /* Link a library */
