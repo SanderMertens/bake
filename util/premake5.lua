@@ -46,3 +46,4 @@ workspace "bake_util"
 
     filter { "system:emscripten" }
       kind "StaticLib"
+	  pic "On"
