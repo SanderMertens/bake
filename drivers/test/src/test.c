@@ -376,15 +376,19 @@ int8_t bake_test_run_suite(
         cur += ctx[i].count;
     }
 
-    // Run jobs
-    for (i = 0; i < job_count; i ++) {
-        ctx[i].job = ut_thread_new(
-            (ut_thread_cb)bake_test_run_suite_range, &ctx[i]);
-    }
+    if (job_count == 1) {
+        bake_test_run_suite_range(&ctx[0]);
+    } else {
+        // Run jobs
+        for (i = 0; i < job_count; i ++) {
+            ctx[i].job = ut_thread_new(
+                (ut_thread_cb)bake_test_run_suite_range, &ctx[i]);
+        }
 
-    // Wait for jobs to complete
-    for (i = 0; i < job_count; i ++) {
-        ut_thread_join(ctx[i].job, NULL);
+        // Wait for jobs to complete
+        for (i = 0; i < job_count; i ++) {
+            ut_thread_join(ctx[i].job, NULL);
+        }
     }
 
     // Collect results
