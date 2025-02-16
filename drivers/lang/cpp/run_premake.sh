@@ -1,7 +1,6 @@
 rm -rf build-Darwin
 rm -rf build-Linux
 rm -rf build-Mingw
-rm -rf build-Emscripten
 ../../../../premake5 --os=macosx gmake
 mv build build-Darwin
 ../../../../premake5 --os=linux gmake
