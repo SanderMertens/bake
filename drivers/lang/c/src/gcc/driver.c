@@ -509,7 +509,7 @@ char* gcc_unpack_static_lib(
     char *unpack_cmd = ut_asprintf("%s x %s", is_emcc() ? "emar" : "ar", static_lib);
 
     /* The ar command doesn't have an option to output files to a specific
-	 * directory, so have to use chdir. This will be an issue for multithreaded builds. */
+     * directory, so have to use chdir. This will be an issue for multithreaded builds. */
     ut_mkdir(obj_path);
     ut_chdir(obj_path);
     driver->exec(unpack_cmd);
@@ -618,6 +618,10 @@ void gcc_link_dynamic_binary(
         if (!is_clang(cpp) && !is_emcc() && !is_mingw()) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
+    }
+
+    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
+        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE");
     }
 
     gcc_add_misc_link(
