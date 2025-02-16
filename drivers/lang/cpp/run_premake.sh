@@ -8,5 +8,3 @@ mv build build-Darwin
 mv build build-Linux
 ../../../../premake5 --os=windows gmake2
 mv build build-Mingw
-../../../../premake5 --os=emscripten gmake
-mv build build-Emscripten

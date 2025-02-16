@@ -493,18 +493,21 @@ int16_t bake_setup(
     } else {
         bake_message(UT_OK, "done", "compiling for host");
     }
+
     /* TODO: consider warning when compiling on host with CC=emcc */
     int16_t (*make_project)(const char*, const char*, const char*) = emscripten ? bake_build_make_project_emscripten : bake_build_make_project_host;
 
     /* Build bake util */
     ut_try( make_project("util", "bake.util", "bake_util"), NULL);
 
-    /* Build the C and C++ drivers */
-    ut_try( make_project("drivers"UT_OS_PS"lang"UT_OS_PS"c",
-        "bake.lang.c", "bake_lang_c"), NULL);
+    if (!emscripten) {
+        /* Build the C and C++ drivers */
+        ut_try( bake_build_make_project_host("drivers"UT_OS_PS"lang"UT_OS_PS"c",
+            "bake.lang.c", "bake_lang_c"), NULL);
 
-    ut_try( make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp",
-        "bake.lang.cpp", "bake_lang_cpp"), NULL);
+        ut_try( bake_build_make_project_host("drivers"UT_OS_PS"lang"UT_OS_PS"cpp",
+            "bake.lang.cpp", "bake_lang_cpp"), NULL);
+    }
 
     /* Build the bake test framework */
     ut_try( bake_rebuild_project(config, "drivers/test"), NULL);
