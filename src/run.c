@@ -576,7 +576,7 @@ int bake_run(
 
         /* If project is found, point to executable in project bin */
         app_bin = ut_asprintf("bin"UT_OS_PS"%s-%s"UT_OS_PS"%s",
-            UT_PLATFORM_STRING, config->configuration, app_name);
+            config->build_target, config->configuration, app_name);
     } else {
         /* If project directory is not found, locate the binary in the
          * package repository. This only allows for running the

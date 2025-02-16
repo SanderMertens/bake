@@ -1506,6 +1506,10 @@ int main(int argc, const char *argv[]) {
             ut_setenv("CC", "emcc");
             ut_setenv("CXX", "emcc");
 
+            /* This is the only method to get emcc to include a shebang for
+             * generated Javascript files */
+            ut_setenv("EMMAKEN_JUST_CONFIGURE", "1");
+
             config.target_info = ut_target_emscripten();
         } else {
             if (!is_bake_parent) {
