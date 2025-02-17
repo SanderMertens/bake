@@ -288,7 +288,7 @@ void* bake_test_run_suite_range(
             /* Testcase is empty. No action required, but print the
              * test command on command line */
             empty ++;
-        } else if (rc != -1) {
+        } else if (rc != -1 && rc != 0) {
             /* If return code is not -1, this was not a simple
              * testcase failure (which already has been reported) */
             ut_log(
@@ -297,7 +297,7 @@ void* bake_test_run_suite_range(
 
             result = -1;
             fail ++;
-        } else {
+        } else if (rc != 0) {
             /* Normal test failure */
             result = -1;
             fail ++;
