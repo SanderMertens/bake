@@ -793,6 +793,25 @@ void gcc_link_dynamic_binary(
     }
 
     ut_ll_free(static_object_paths);
+
+    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
+        /* Add shebang */
+        char *code = ut_file_load(target);
+        FILE *file = ut_file_open(target, "w");
+        char* new_code = ut_asprintf("#!/usr/bin/env -S node "
+            "--experimental-wasm-threads --experimental-wasm-bulk-memory\n%s",
+            code);
+        size_t new_code_len = strlen(new_code);
+        if (fwrite(new_code, 1, new_code_len, file) != new_code_len) {
+            ut_throw("cannot write to '%s': %s", target, strerror(errno));
+        }
+        free(code);
+        ut_file_close(file);
+
+        /* Set executable bit */
+        ut_setperm(target, 0755);
+    }
+
 }
 
 /* Link a library */
