@@ -632,7 +632,7 @@ void gcc_link_dynamic_binary(
     }
 
     if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
-        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE");
+        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE -Wno-experimental");
     }
 
     gcc_add_misc_link(
