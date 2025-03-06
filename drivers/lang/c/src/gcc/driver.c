@@ -138,7 +138,7 @@ void gcc_add_std(
             driver->get_attr_string("c-standard"));
     }
 
-    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra -pedantic"); 
+    ut_strbuf_appendstr(cmd, " -Wall -W -Wextra"); 
 
     /* If strict, enable lots of warnings & treat warnings as errors */
     if (config->strict) {
@@ -154,6 +154,7 @@ void gcc_add_std(
         ut_strbuf_appendstr(cmd, " -Wmissing-field-initializers");
         ut_strbuf_appendstr(cmd, " -Wundef");
         ut_strbuf_appendstr(cmd, " -Wunused-function");
+        ut_strbuf_appendstr(cmd, " -pedantic");
 
         if (is_clang(lang)) {
             ut_strbuf_appendstr(cmd, " -Wno-unknown-warning-option");
