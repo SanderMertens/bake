@@ -12,29 +12,28 @@ endif
 
 ifeq ($(config),debug)
   ifeq ($(origin CC), default)
-    CC = clang
+    CC = emcc
   endif
   ifeq ($(origin CXX), default)
-    CXX = clang++
+    CXX = em++
   endif
   ifeq ($(origin AR), default)
-    AR = ar
+    AR = emar
   endif
-  RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libbake_util.dylib
+  TARGET = $(TARGETDIR)/libbake_util.a
   OBJDIR = ../.bake_cache/debug
   DEFINES += -DUT_IMPL -DDEBUG
   INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600 -pthread
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -fPIC -g -std=c99 -D_XOPEN_SOURCE=600 -pthread
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -ldl -lpthread
+  LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_util.dylib
-  LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
+  ALL_LDFLAGS += $(LDFLAGS) -pthread
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -48,29 +47,28 @@ endif
 
 ifeq ($(config),release)
   ifeq ($(origin CC), default)
-    CC = clang
+    CC = emcc
   endif
   ifeq ($(origin CXX), default)
-    CXX = clang++
+    CXX = em++
   endif
   ifeq ($(origin AR), default)
-    AR = ar
+    AR = emar
   endif
-  RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/libbake_util.dylib
+  TARGET = $(TARGETDIR)/libbake_util.a
   OBJDIR = ../.bake_cache/release
   DEFINES += -DUT_IMPL -DNDEBUG
   INCLUDES += -I.. -I"$(BAKE_HOME)/include"
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600 -pthread
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC -std=c99 -D_XOPEN_SOURCE=600 -pthread
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -ldl -lpthread
+  LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -dynamiclib -Wl,-install_name,@rpath/libbake_util.dylib
-  LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
+  ALL_LDFLAGS += $(LDFLAGS) -pthread
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
