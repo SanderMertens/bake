@@ -255,17 +255,26 @@ void gcc_add_sanitizers(
     bake_config *config,
     ut_strbuf *cmd)
 {
+    bool has_san = false;
+
     if (config->sanitize_memory) {
         ut_strbuf_appendstr(cmd, " -fsanitize=address");
+        has_san = true;
     }
 
     if (config->sanitize_undefined) {
         ut_strbuf_appendstr(cmd, " -fsanitize=undefined");
+        has_san = true;
     }
 
     if (config->sanitize_thread) {
         ut_strbuf_appendstr(cmd, " -fsanitize=thread");
-    }    
+        has_san = true;
+    }
+
+    if (has_san) {
+        ut_strbuf_appendstr(cmd, " -fno-sanitize-recover=all");
+    }
 }
 
 static
