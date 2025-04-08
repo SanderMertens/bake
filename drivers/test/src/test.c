@@ -521,8 +521,11 @@ int8_t bake_test_run_all_tests(
                 result = -1;
             }
         } else {
-            bake_test_run_suite_for_param(
-                test_id, exec, suite, &fail, &empty, &pass, job_count, 0);
+            if (bake_test_run_suite_for_param(
+                test_id, exec, suite, &fail, &empty, &pass, job_count, 0))
+            {
+                result = -1;
+            }
         }
 
         if (empty || fail) {
