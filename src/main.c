@@ -1399,6 +1399,9 @@ int main(int argc, const char *argv[]) {
         ut_setenv("CXX", env_cc);
     }
 
+    /* Silences "malloc: nano zone abandoned due to inability to reserve vm space." */
+    ut_setenv("MallocNanoZone", "0");
+
     ut_log_push("init");
 
     /* Initialize package loader for default home, arch, os and config */
