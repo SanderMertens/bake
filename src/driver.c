@@ -551,7 +551,8 @@ static
 bool bake_driver_exists_cb(
     const char *id)
 {
-    return ut_locate(id, NULL, UT_LOCATE_PROJECT) != NULL;
+    ut_target target = ut_target_host();
+    return ut_locate(&target, id, NULL, UT_LOCATE_PROJECT) != NULL;
 }
 
 bake_config* bake_driver_config_cb(void)
@@ -568,7 +569,8 @@ bake_project* bake_driver_lookup_cb(
     bake_project *project = bake_crawler_get(id);
 
     if (!project) {
-        const char *path = ut_locate(id, NULL, UT_LOCATE_PROJECT);
+        ut_target target = ut_target_host();
+        const char *path = ut_locate(&target, id, NULL, UT_LOCATE_PROJECT);
         if (path) {
             project = bake_project_new(path, config);
             if (!project) {
@@ -999,7 +1001,8 @@ bake_driver* bake_driver_get_intern(
         ut_dl dl = NULL;
 
         /* Load package library and bakemain symbol */
-        buildmain_cb cb = ut_load_sym(package_id, &dl, "bakemain");
+        ut_target target = ut_target_host();
+        buildmain_cb cb = ut_load_sym(&target, package_id, &dl, "bakemain");
         if (!dl) {
             ut_throw("could not load driver '%s'", package_id);
             goto error;
