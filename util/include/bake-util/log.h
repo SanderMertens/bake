@@ -64,7 +64,7 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-    void ut_enable_console_color();
+    void ut_enable_console_color(int);
 #endif
 
 /* -- Setting & getting verbosity level -- */
