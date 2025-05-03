@@ -356,12 +356,12 @@ ut_ll cdiff_parse(char *src) {
     while ((ptr = cdiff_parseElem(ptr, id, &header, &body)) && *ptr) {
         char *h = ut_strbuf_get(&header);
         char *b = ut_strbuf_get(&body);
-        cdiff_addElem(elements, id[0] ? strdup(id) : NULL, h, b);
+        cdiff_addElem(elements, id[0] ? ut_strdup(id) : NULL, h, b);
     }
 
     char *h = ut_strbuf_get(&header);
     char *b = ut_strbuf_get(&body);
-    cdiff_addElem(elements, id[0] ? strdup(id) : NULL, h, b);
+    cdiff_addElem(elements, id[0] ? ut_strdup(id) : NULL, h, b);
 
     return elements;
 }

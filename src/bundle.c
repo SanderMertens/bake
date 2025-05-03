@@ -45,7 +45,7 @@ int16_t bake_use(
         bundle ++;
     }
 
-    const char *path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
+    const char *path = ut_locate(&config->target_info, pkg, NULL, UT_LOCATE_PROJECT);
     if (!path) {
         /* Check if bundle is registered as a repository */
         bake_repository *repo = bake_find_repository(config, pkg);
@@ -55,7 +55,7 @@ int16_t bake_use(
 
             /* Reset locate cache, as project will have been cloned to env */
             ut_locate_reset(pkg);
-            path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
+            path = ut_locate(&config->target_info, pkg, NULL, UT_LOCATE_PROJECT);
         }
     }
 
@@ -117,7 +117,7 @@ int16_t bake_unuse(
         goto error;
     }
 
-    const char *path = ut_locate(pkg, NULL, UT_LOCATE_PROJECT);
+    const char *path = ut_locate(&config->target_info, pkg, NULL, UT_LOCATE_PROJECT);
     if (!path) {
         ut_error("cannot find project '%s'", pkg);
         goto error;
