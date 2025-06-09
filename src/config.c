@@ -206,36 +206,51 @@ int16_t bake_config_loadConfiguration(
     int i;
     for (i = 0; i < json_object_get_count(cfg); i++) {
         JSON_Value *value = json_object_get_value_at(cfg, i);
+        const char *json_name = json_object_get_name(cfg, i);
+        if (!json_object_has_value(cfg, json_name)) {
+            goto error;
+        }
 
-        if (bake_json_set_boolean(&cfg_out->symbols, CFG_SYMBOLS, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->debug, CFG_DEBUG, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->optimizations, CFG_OPTIMIZATIONS, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->coverage, CFG_COVERAGE, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->strict, CFG_STRICT, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->sanitize_memory, CFG_SANITIZE_MEMORY, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->sanitize_thread, CFG_SANITIZE_THREAD, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->sanitize_undefined, CFG_SANITIZE_UNDEFINED, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->loop_test, CFG_LOOP_TEST, value)) {
-            goto error;
-        }
-        if (bake_json_set_boolean(&cfg_out->assembly, CFG_ASSEMBLY, value)) {
-            goto error;
+        if (strcmp(json_name, CFG_SYMBOLS) == 0) {
+            if (bake_json_set_boolean(&cfg_out->symbols, CFG_SYMBOLS, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_DEBUG) == 0) {
+            if (bake_json_set_boolean(&cfg_out->debug, CFG_DEBUG, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_OPTIMIZATIONS) == 0) {
+            if (bake_json_set_boolean(&cfg_out->optimizations, CFG_OPTIMIZATIONS, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_COVERAGE) == 0) {
+            if (bake_json_set_boolean(&cfg_out->coverage, CFG_COVERAGE, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_STRICT) == 0) {
+            if (bake_json_set_boolean(&cfg_out->strict, CFG_STRICT, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_SANITIZE_MEMORY) == 0) {
+            if (bake_json_set_boolean(&cfg_out->sanitize_memory, CFG_SANITIZE_MEMORY, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_SANITIZE_THREAD) == 0) {
+            if (bake_json_set_boolean(&cfg_out->sanitize_thread, CFG_SANITIZE_THREAD, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_SANITIZE_UNDEFINED) == 0) {
+            if (bake_json_set_boolean(&cfg_out->sanitize_undefined, CFG_SANITIZE_UNDEFINED, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_LOOP_TEST) == 0) {
+            if (bake_json_set_boolean(&cfg_out->loop_test, CFG_LOOP_TEST, value)) {
+                goto error;
+            }
+        } else if (strcmp(json_name, CFG_ASSEMBLY) == 0) {
+            if (bake_json_set_boolean(&cfg_out->assembly, CFG_ASSEMBLY, value)) {
+                goto error;
+            }
         }
     }
     ut_log_pop();
