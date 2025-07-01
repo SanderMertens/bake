@@ -31,7 +31,7 @@ int16_t bake_config_load_bundle(
     const char *bundle)
 {
     /* First try to load project and bundle, to make it is available */
-    const char *project_path = ut_locate(project_id, NULL, UT_LOCATE_PROJECT);
+    const char *project_path = ut_locate(&cfg->target_info, project_id, NULL, UT_LOCATE_PROJECT);
     if (!project_path) {
         ut_throw("cannot load bundle '%s:%s', project not found",
             project_id, bundle);
