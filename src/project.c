@@ -2533,6 +2533,48 @@ char *bake_project_template_filename(
     return result;
 }
 
+static
+void bake_replace_id_underscore(
+    bake_project *project,
+    JSON_Value *json_val)
+{
+    size_t i = 0, count = 0;
+    size_t sub_length = strlen("${id underscore}");
+    size_t new_sub_length = strlen(project->id_underscore);
+    char *replace = "${id underscore}";
+    char *json_val_str = json_serialize_to_string(json_val);
+
+    while (json_val_str[i]) {
+        if (strstr(&json_val_str[i], replace) == &json_val_str[i]) {
+            count++;
+            i += sub_length - 1;
+        } else {
+            i++;
+        }
+    }
+
+    if (count == 0) {
+        return;
+    }
+
+    char *final_json_val = malloc(i + count * (new_sub_length - sub_length) + 1);
+
+    i = 0;
+    while (*json_val_str) {
+        if (strstr(json_val_str, replace) == json_val_str) {
+            strcpy(&final_json_val[i], project->id_underscore);
+            i += new_sub_length;
+            json_val_str += sub_length;
+        } else {
+            final_json_val[i++] = *json_val_str++;
+        }
+    }
+
+    final_json_val[i] = '\0';
+    json_value_free(json_val);
+    json_val = json_parse_string_with_comments(final_json_val);
+}
+
 /* Setup a new project from a template */
 int16_t bake_project_setup_w_template(
     bake_config *config,
@@ -2606,7 +2648,7 @@ int16_t bake_project_setup_w_template(
     char *template_json = ut_asprintf("%s"UT_OS_PS"project.json", template_path);
     JSON_Value *value = json_parse_file_with_comments(template_json);
     if (!value) {
-        ut_throw("failed to load project.json of template '%s", template_id);
+        ut_throw("failed to load project.json of template '%s'", template_id);
         goto error;
     }
 
@@ -2625,8 +2667,67 @@ int16_t bake_project_setup_w_template(
     char *project_json = ut_asprintf("%s"UT_OS_PS"project.json", project->path);
     json_serialize_to_file_pretty(value, project_json);
     free(project_json);
+    json_value_free(value);
 
     ut_try( bake_project_create_gitignore(project), NULL);
+
+    /* Copy .vscode directory from template */
+    char *vscode_dst = ut_asprintf("%s"UT_OS_PS".vscode", project->path);
+    char *template_launch_json_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS".vscode"UT_OS_PS"launch.json", template_root, project->language);
+    char *project_launch_json_path = ut_asprintf("%s"UT_OS_PS".vscode"UT_OS_PS"launch.json", project->path);
+    JSON_Value *launch_json = json_parse_file_with_comments(template_launch_json_path);
+    if (launch_json) {
+        bool success = true;
+        if (ut_mkdir(vscode_dst, NULL)) {
+            ut_throw("failed make directory .vscode for '%s'", project->id);
+            success = false;
+        }
+
+        bake_replace_id_underscore(project, launch_json);
+
+        if (json_serialize_to_file_pretty(launch_json, project_launch_json_path)) {
+            ut_throw("failed to load .vscode/launch.json of template '%s'", template_id);
+            success = false;
+        }
+        
+        if (!success) {
+            free(template_launch_json_path);
+            free(project_launch_json_path);
+            free(vscode_dst);
+            goto error;
+        }
+    }
+    
+    char *template_tasks_json_path = ut_asprintf("%s"UT_OS_PS"%s"UT_OS_PS".vscode"UT_OS_PS"tasks.json", template_root, project->language);
+    char *project_tasks_json_path = ut_asprintf("%s"UT_OS_PS".vscode"UT_OS_PS"tasks.json", project->path);
+    JSON_Value *tasks_json = json_parse_file_with_comments(template_tasks_json_path);
+    if (tasks_json) {
+        bool success = true;
+        if (ut_mkdir(vscode_dst, NULL)) {
+            ut_throw("failed make directory .vscode for '%s'", project->id);
+            success = false;
+        }
+
+        bake_replace_id_underscore(project, tasks_json);
+
+        if (json_serialize_to_file_pretty(tasks_json, project_tasks_json_path)) {
+            ut_throw("failed to load .vscode/tasks.json of template '%s'", template_id);
+            success = false;
+        }
+        
+        if (!success) {
+            free(template_tasks_json_path);
+            free(project_tasks_json_path);
+            free(vscode_dst);
+            goto error;
+        }
+    }
+
+    free(template_launch_json_path);
+    free(project_launch_json_path);
+    free(template_tasks_json_path);
+    free(project_tasks_json_path);
+    free(vscode_dst);
 
     ut_log("Created new %s %s with id '%s' from template '%s'\n\n",
         project->language, 
