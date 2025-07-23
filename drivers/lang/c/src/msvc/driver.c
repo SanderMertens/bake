@@ -54,6 +54,9 @@ void msvc_add_flags(
                 ut_strbuf_append(cmd, " %s", attr->is.string);
             }
         }
+
+        ut_strbuf_append(cmd, " /std:%s ",
+            driver->get_attr_string("c-standard"));
     } else {
         /* CXXFLAGS for c4cpp projects */
         bake_attr *flags_attr = driver->get_attr("cxxflags");
@@ -64,6 +67,9 @@ void msvc_add_flags(
                 ut_strbuf_append(cmd, " %s", attr->is.string);
             }
         }
+
+        ut_strbuf_append(cmd, " /std:%s",
+            driver->get_attr_string("cpp-standard"));
     }
 
     /* Add defines */
