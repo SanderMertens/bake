@@ -615,7 +615,7 @@ int bakemain(bake_driver_api *driver)
     bake_config *cfg = driver->config();
 
     if (!strcmp(cfg->build_os, "Darwin")) {
-        driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx|*.m");
+        driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx|*.m|*.mm");
     } else {
         driver->pattern("SOURCES", "//*.c|*.cpp|*.cxx");
     }

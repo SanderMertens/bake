@@ -349,18 +349,16 @@ int16_t bake_check_includes(
         /* If a directory is found, check if it has the right name */
         else if (ut_isdir(file_path)) {
             if (file[0] != '.' && strcmp(file, project->id_dash)) {
-                ut_error(
-                    "project '%s' has directory with illegal name ('include/%s'), expected 'include/%s'",
+                ut_warning(
+                    "project '%s' has directory with unexpected name ('include/%s'), expected 'include/%s'",
                     project->id, file, project->id_dash);
-                result = -1;
             }
         }
 
         /* If filename is different from main header, throw error */
         else if (file[0] != '.' && strcmp(file, header)) {
-            ut_error("project '%s' has file with illegal name '%s' in include directory, expected '%s.h'",
+            ut_warning("project '%s' has file with unexpected name '%s' in include directory, expected '%s.h'",
                 project->id, file, project->id_underscore);
-            result = -1;
         }
 
         free(file_path);

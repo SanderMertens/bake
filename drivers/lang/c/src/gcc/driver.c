@@ -273,6 +273,9 @@ void gcc_add_sanitizers(
     }
 
     if (has_san) {
+        // This causes the process to abort on all sanitizer errors, but 
+        // unfortunately on darwin can prevent showing stack traces. Comment out
+        // for better debugging experience.
         ut_strbuf_appendstr(cmd, " -fno-sanitize-recover=all");
     }
 }
@@ -285,9 +288,12 @@ void gcc_add_misc(
     bake_src_lang lang,
     ut_strbuf *cmd)
 {
-    ut_strbuf_append(cmd, 
-        " -fPIC"
-        " -fvisibility=hidden");
+    bool export_symbols = driver->get_attr_bool("export-symbols");
+    if (!export_symbols) {
+        ut_strbuf_append(cmd, " -fvisibility=hidden");
+    }
+
+    ut_strbuf_append(cmd, " -fPIC");
 
     /* Include debugging information */
     if (config->symbols) {
