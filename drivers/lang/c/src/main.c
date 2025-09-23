@@ -259,7 +259,7 @@ void init(
     driver->set_attr_array("cxxflags", "-D__BAKE__");
 
     if (!driver->get_attr("cpp-standard")) {
-        driver->set_attr_string("cpp-standard", "c++0x");
+        driver->set_attr_string("cpp-standard", "c++17");
     }
     if (!driver->get_attr("c-standard")) {
         if (is_gcc() || is_clang(BAKE_SRC_LANG_C)) {

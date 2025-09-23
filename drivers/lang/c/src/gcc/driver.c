@@ -274,9 +274,11 @@ void gcc_add_sanitizers(
 
     if (has_san) {
         // This causes the process to abort on all sanitizer errors, but 
-        // unfortunately on darwin can prevent showing stack traces. Comment out
-        // for better debugging experience.
-        ut_strbuf_appendstr(cmd, " -fno-sanitize-recover=all");
+        // unfortunately on darwin can prevent showing stack traces. Only enable
+        // in CI so tests won't silently fail.
+        if (ut_getenv("CI")) {
+            ut_strbuf_appendstr(cmd, " -fno-sanitize-recover=all");
+        }
     }
 }
 
