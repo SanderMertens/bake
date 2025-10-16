@@ -17,7 +17,7 @@ link | list[string] | List of objects and (static) library files to provide to t
 include | list[string] | List of paths to look for include files
 static | bool | Create static library (packages only, default=false)
 c-standard | string | Specify C standard (default=c99)
-cpp-standard | string | Specify C++ standard (default=c++0x)
+cpp-standard | string | Specify C++ standard (default=c++17)
 export-symbols | bool | Export all library symbols (default=false)
 precompile-header | bool | Precompile main project header (default=true)
 
