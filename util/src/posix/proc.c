@@ -21,6 +21,8 @@
 
 #include <bake_util.h>
 
+#ifndef UT_OS_EMSCRIPTEN
+
 ut_proc ut_proc_run(
     const char* exec,
     const char *argv[])
@@ -223,3 +225,52 @@ int ut_beingTraced(void) {
 ut_proc _ut_proc(void) {
     return getpid();
 }
+
+#else
+
+/* Processes do not exist on Emscripten */
+
+ut_proc ut_proc_run(
+    const char* exec,
+    const char *argv[])
+{
+    errno = ENOTSUP;
+    return -1;
+}
+
+ut_proc ut_proc_runRedirect(
+    const char* exec,
+    const char *argv[],
+    FILE *in,
+    FILE *out,
+    FILE *err)
+{
+    errno = ENOTSUP;
+    return -1;
+}
+
+int ut_proc_kill(ut_proc pid, ut_procsignal sig) {
+    errno = ENOTSUP;
+    return -1;
+}
+
+int ut_proc_wait(ut_proc pid, int8_t *rc) {
+    errno = ENOTSUP;
+    return -1;
+}
+
+int ut_proc_check(ut_proc pid, int8_t *rc) {
+    errno = ENOTSUP;
+    return -1;
+}
+
+/* Check whether process is being debugged */
+int ut_beingTraced(void) {
+    return 0;
+}
+
+ut_proc _ut_proc(void) {
+    return 1;
+}
+
+#endif

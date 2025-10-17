@@ -46,15 +46,6 @@ char *UT_JAVA_PATH;
 char *UT_HOME_LIB_PATH;
 char *UT_HOME_BIN_PATH;
 
-/* File extensions for binaries for current target */
-char *UT_SHARED_LIB_EXT;
-char *UT_STATIC_LIB_EXT;
-char *UT_EXECUTABLE_EXT;
-char *UT_BIN_EXT;
-char *UT_LIB_EXT;
-char *UT_STATIC_LIB_EXT;
-char *UT_LIB_PREFIX;
-
 /* Lock protecting the package administration */
 extern ut_mutex_s UT_LOAD_LOCK;
 
@@ -287,6 +278,7 @@ int ut_load_libraryAction(
 
 static
 int16_t ut_locate_binary(
+    ut_target *target,
     const char *id,
     const char *config,
     struct ut_loaded *loaded,
@@ -317,7 +309,7 @@ int16_t ut_locate_binary(
     }
 
     /* Test for dynamic library */
-    bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_SHARED_LIB_EXT);
+    bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, target->lib_prefix, id_bin, target->lib_ext);
     ut_debug("test for shared library file '%s'", bin);
     if ((ret = ut_file_test(bin)) == 1) {
         /* Library found */
@@ -338,7 +330,7 @@ int16_t ut_locate_binary(
 
     /* Test for static library */
     if (ret == 0) {
-        bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, UT_LIB_PREFIX, id_bin, UT_STATIC_LIB_EXT);
+        bin = ut_asprintf("%s"UT_OS_PS "%s%s%s", lib_path, target->lib_prefix, id_bin, target->static_lib_ext);
         ut_debug("test for static library file '%s'", bin);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Library found */
@@ -361,7 +353,7 @@ int16_t ut_locate_binary(
 
     /* Test for executable */
     if (ret == 0) {
-        bin = ut_asprintf("%s"UT_OS_PS"%s%s", bin_path, id_bin, UT_EXECUTABLE_EXT);
+        bin = ut_asprintf("%s"UT_OS_PS"%s%s", bin_path, id_bin, target->bin_ext);
         ut_debug("test for executable file '%s'", bin);
         if ((ret = ut_file_test(bin)) == 1) {
             /* Executable found */
@@ -444,7 +436,8 @@ int16_t ut_locate_src(
 
 /* Locate various paths for projects in the bake environment */
 const char* ut_locate(
-    const char* id,
+    ut_target *target,
+    const char *id,
     ut_dl *dl_out,
     ut_locate_kind kind)
 {
@@ -559,7 +552,7 @@ const char* ut_locate(
     case UT_LOCATE_BIN:
         if (!loaded->tried_binary) {
             ut_debug("try locating binary for '%s'", id);
-            ut_try (ut_locate_binary(id, UT_CONFIG, loaded, NULL), NULL);
+            ut_try (ut_locate_binary(target, id, UT_CONFIG, loaded, NULL), NULL);
             loaded->tried_binary = true;
         }
         if (kind == UT_LOCATE_LIB) result = loaded->lib;
@@ -602,11 +595,12 @@ bool ut_project_is_buildtool(
 }
 
 bool ut_project_in_config(
+    ut_target *target,
     const char *id,
     const char *config)
 {
     int found = 0;
-    ut_locate_binary(id, config, NULL, &found);
+    ut_locate_binary(target, id, config, NULL, &found);
     return found;
 }
 
@@ -847,6 +841,7 @@ error:
 }
 
 void* ut_load_sym(
+    ut_target *target,
     const char *package,
     ut_dl *dl_out,
     const char *symbol)
@@ -857,7 +852,7 @@ void* ut_load_sym(
     ut_dl dl = dl_out ? *dl_out : NULL;
 
     if (!dl) {
-        const char *lib = ut_locate(package, &dl, UT_LOCATE_LIB);
+        const char *lib = ut_locate(target, package, &dl, UT_LOCATE_LIB);
         if (!dl) {
             if (lib) {
                 dl = ut_dl_open(lib);
@@ -899,15 +894,17 @@ error:
 }
 
 void(*ut_load_proc(
+    ut_target *target,
     const char *package,
     ut_dl *dl_out,
     const char *symbol))(void)
 {
-    return (void(*)(void))(uintptr_t)ut_load_sym(package, dl_out, symbol);
+    return (void(*)(void))(uintptr_t)ut_load_sym(target, package, dl_out, symbol);
 }
 
 /* Load file with no extension */
 int ut_file_loader(
+    ut_target* target,
     char* package,
     int argc,
     char* argv[],
@@ -918,7 +915,7 @@ int ut_file_loader(
     int result;
     ut_dl dl = NULL;
 
-    fileName = ut_locate(package, &dl, UT_LOCATE_LIB);
+    fileName = ut_locate(target, package, &dl, UT_LOCATE_LIB);
     if (!fileName) {
         ut_throw("failed to locate package '%s' as library", package);
         return -1;
@@ -1052,16 +1049,6 @@ int16_t ut_load_init(
     UT_JAVA_PATH = ut_asprintf("%s"UT_OS_PS"java", UT_HOME_PATH);
     UT_HOME_LIB_PATH = ut_asprintf("%s"UT_OS_PS"lib", UT_HOME_PATH);
     UT_HOME_BIN_PATH = ut_asprintf("%s"UT_OS_PS"bin", UT_HOME_PATH);
-
-    /* For now, default to current platform */
-    UT_SHARED_LIB_EXT = UT_OS_LIB_EXT;
-    UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
-    UT_EXECUTABLE_EXT = UT_OS_BIN_EXT;
-    UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
-    UT_BIN_EXT = UT_OS_BIN_EXT;
-    UT_LIB_EXT = UT_OS_LIB_EXT;
-    UT_STATIC_LIB_EXT = UT_OS_STATIC_LIB_EXT;
-    UT_LIB_PREFIX = UT_OS_LIB_PREFIX;
 
     /* Set environment variables */
     ut_setenv("BAKE_HOME", UT_HOME_PATH);

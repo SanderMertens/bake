@@ -329,6 +329,15 @@ void gcc_add_misc(
     }
 
     gcc_add_sanitizers(config, cmd);
+
+    if (is_emcc()) {
+        /* On Emscripten, every object file must be compiled with -pthread if
+         * the final application uses pthread. It is not known whether an
+         * application using this will use pthread, so pthread will be enabled
+         * unconditionally. */
+        ut_strbuf_append(cmd, " -pthread");
+        ut_strbuf_append(cmd, " -fexceptions");
+    }
 }
 
 static
@@ -340,9 +349,11 @@ void gcc_add_misc_link(
     ut_strbuf *cmd)
 {
     if (is_emcc()) {
+        ut_strbuf_append(cmd, " -pthread");
+        ut_strbuf_append(cmd, " -fexceptions");
         ut_strbuf_append(cmd, " -s ALLOW_MEMORY_GROWTH=1");
+        ut_strbuf_append(cmd, " -Wno-pthreads-mem-growth");
         ut_strbuf_append(cmd, " -s EXPORTED_RUNTIME_METHODS=cwrap");
-        ut_strbuf_append(cmd, " -s MODULARIZE=1");
         ut_strbuf_append(cmd, " -s EXPORT_NAME=\"%s\"", project->id_underscore);
 
         ut_ll embeds = driver->get_attr_array("embed");
@@ -469,6 +480,21 @@ char* gcc_find_static_lib(
 
     free(file);
 
+    /* Find static library in BAKE_HOME if it's different */
+    if (strcmp(config->target, config->home)) {
+        char *file = ut_asprintf("%s/lib/lib%s.a", config->home, lib);
+
+        if ((ret = ut_file_test(file)) == 1) {
+            return file;
+        } else if (ret != 0) {
+            free(file);
+            ut_error("could not access '%s'", file);
+            return NULL;
+        }
+
+        free(file);
+    }
+
     /* If static library is not found in environment, try project libpath */
     bake_attr *libpath_attr = driver->get_attr("libpath");
     if (libpath_attr) {
@@ -492,6 +518,89 @@ char* gcc_find_static_lib(
     return NULL;
 }
 
+/* Unpack objects in static lib to temporary directory */
+static
+char* gcc_unpack_static_lib(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    const char *lib)
+{
+    char *static_lib = gcc_find_static_lib(
+        driver, project, config, lib);
+    if (!static_lib) {
+        return NULL;
+    }
+
+    char *cwd = strdup(ut_cwd());
+    char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
+        lib, config->build_target, config->configuration);
+    char *unpack_cmd = ut_asprintf("%s x %s", is_emcc() ? "emar" : "ar", static_lib);
+
+    /* The ar command doesn't have an option to output files to a specific
+     * directory, so have to use chdir. This will be an issue for multithreaded builds. */
+    ut_mkdir(obj_path);
+    ut_chdir(obj_path);
+    driver->exec(unpack_cmd);
+    free(unpack_cmd);
+    free(static_lib);
+    ut_chdir(cwd);
+    free(cwd);
+
+    return obj_path;
+}
+
+/* Link a static library */
+static
+void gcc_link_static_binary(
+    bake_driver_api *driver,
+    bake_config *config,
+    bake_project *project,
+    char *source,
+    char *target)
+{
+    ut_strbuf cmd = UT_STRBUF_INIT;
+    ut_strbuf_append(&cmd, "%s rcs %s %s", is_emcc() ? "emar" : "ar", target, source);
+
+    /* Add project libraries */
+    ut_ll static_object_paths = NULL;
+    if (is_emcc()) {
+        ut_iter it = ut_ll_iter(project->link);
+        while (ut_iter_hasNext(&it)) {
+            char *lib = ut_iter_next(&it);
+            char *obj_path = gcc_unpack_static_lib(
+                driver, config, project, lib);
+            if (!obj_path) {
+                continue;
+            }
+
+            ut_strbuf_append(&cmd, " %s/*", obj_path);
+
+            if (!static_object_paths) {
+                static_object_paths = ut_ll_new();
+            }
+
+            /* Add path with object files to static_object_paths. These will
+             * be cleaned up after the compile command */
+            ut_ll_append(static_object_paths, obj_path);
+        }
+    }
+
+    char *cmdstr = ut_strbuf_get(&cmd);
+    driver->exec(cmdstr);
+    free(cmdstr);
+
+    /* If static libraries were unpacked, cleanup temporary directories */
+    ut_iter it = ut_ll_iter(static_object_paths);
+    while (ut_iter_hasNext(&it)) {
+        char *obj_path = ut_iter_next(&it);
+        ut_rm(obj_path);
+        free(obj_path);
+    }
+
+    ut_ll_free(static_object_paths);
+}
+
 /* Link a binary */
 static
 void gcc_link_dynamic_binary(
@@ -501,6 +610,16 @@ void gcc_link_dynamic_binary(
     char *source,
     char *target)
 {
+    if (is_emcc() && project->type == BAKE_PACKAGE) {
+        /* Generate a static library instead of a shared library. This is done
+         * on Emscripten because Emscripten appears to only look for shared
+         * libraries in the current working directory when the program is ran.
+         * LD_LIBRARY_PATH and the -L flag do not change where Emscripten looks
+         * for libraries. */
+        gcc_link_static_binary(driver, config, project, source, target);
+        return;
+    }
+
     ut_strbuf cmd = UT_STRBUF_INIT;
     bool hide_symbols = false;
     ut_ll static_object_paths = NULL;
@@ -528,6 +647,10 @@ void gcc_link_dynamic_binary(
         if (!is_clang(cpp) && !is_emcc() && !is_mingw()) {
             ut_strbuf_appendstr(&cmd, " -z defs");
         }
+    }
+
+    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
+        ut_strbuf_appendstr(&cmd, " -sMAIN_MODULE -Wno-experimental");
     }
 
     gcc_add_misc_link(
@@ -592,31 +715,15 @@ void gcc_link_dynamic_binary(
                 ut_strbuf_append(&cmd, " -l%s", lib->is.string);
             } else {
                 /* If hiding symbols and linking with static library, unpack
-                 * library objects to temp directory. If the library would be
-                 * linked as-is, symbols would be exported, even though
-                 * fvisibility is set to hidden */
-                char *static_lib = gcc_find_static_lib(
-                    driver, project, config, lib->is.string);
-                if (!static_lib) {
+                 * the library objects. If the library would be linked as-is,
+                 * symbols would be exported, even though fvisibility is set to
+                 * hidden */
+                char *obj_path = gcc_unpack_static_lib(
+                    driver, config, project, lib->is.string);
+                if (!obj_path) {
                     continue;
                 }
 
-                /* Unpack objects in static lib to temporary directory */
-                char *cwd = strdup(ut_cwd());
-                char *obj_path = ut_asprintf(".bake_cache/obj_%s/%s-%s",
-                    lib->is.string, UT_PLATFORM_STRING, config->configuration);
-                char *unpack_cmd = ut_asprintf("ar x %s", static_lib);
-
-                /* The ar command doesn't have an option to output files to a
-                 * specific directory, so have to use chdir. This will be an
-                 * issue for multithreaded builds. */
-                ut_mkdir(obj_path);
-                ut_chdir(obj_path);
-                driver->exec(unpack_cmd);
-                free(unpack_cmd);
-                free(static_lib);
-                ut_chdir(cwd);
-                free(cwd);
                 ut_strbuf_append(&cmd, " %s/*", obj_path);
 
                 if (!static_object_paths) {
@@ -670,7 +777,11 @@ void gcc_link_dynamic_binary(
             bake_attr *lib = ut_iter_next(&it);
             const char *mapped = gcc_lib_map(lib->is.string);
             if (mapped) {
-                ut_strbuf_append(&cmd, " -l%s", mapped);
+                if (is_emcc()) {
+                    ut_strbuf_append(&cmd, " %s", mapped);
+                } else {
+                    ut_strbuf_append(&cmd, " -l%s", mapped);
+                }
             }
         }
     }
@@ -700,22 +811,25 @@ void gcc_link_dynamic_binary(
     }
 
     ut_ll_free(static_object_paths);
-}
 
-/* Link a static library */
-static
-void gcc_link_static_binary(
-    bake_driver_api *driver,
-    bake_config *config,
-    bake_project *project,
-    char *source,
-    char *target)
-{
-    ut_strbuf cmd = UT_STRBUF_INIT;
-    ut_strbuf_append(&cmd, "ar rcs %s %s", target, source);
-    char *cmdstr = ut_strbuf_get(&cmd);
-    driver->exec(cmdstr);
-    free(cmdstr);
+    if (is_emcc() && (project->type == BAKE_APPLICATION || project->type == BAKE_TOOL)) {
+        /* Add shebang */
+        char *code = ut_file_load(target);
+        FILE *file = ut_file_open(target, "w");
+        char* new_code = ut_asprintf("#!/usr/bin/env -S node "
+            "--experimental-wasm-threads --experimental-wasm-bulk-memory\n%s",
+            code);
+        size_t new_code_len = strlen(new_code);
+        if (fwrite(new_code, 1, new_code_len, file) != new_code_len) {
+            ut_throw("cannot write to '%s': %s", target, strerror(errno));
+        }
+        free(code);
+        ut_file_close(file);
+
+        /* Set executable bit */
+        ut_setperm(target, 0755);
+    }
+
 }
 
 /* Link a library */
@@ -749,23 +863,15 @@ char* gcc_artefact_name(
     char *id = project->id_underscore;
 
     if (project->type == BAKE_PACKAGE) {
-        if (is_emcc()) {
-            result = ut_asprintf("lib%s.so", id);
-        } else {
-            bool link_static = driver->get_attr_bool("static");
+        bool link_static = driver->get_attr_bool("static");
 
-            if (link_static) {
-                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_STATIC_LIB_EXT, id);
-            } else {
-                result = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, id);
-            }
+        if (link_static) {
+            result = ut_asprintf("%s%s%s", config->target_info.lib_prefix, id, config->target_info.static_lib_ext);
+        } else {
+            result = ut_asprintf("%s%s%s", config->target_info.lib_prefix, id, config->target_info.lib_ext);
         }
     } else {
-        if (is_emcc()) {
-            result = ut_asprintf("%s.js", id);
-        } else {
-            result = ut_asprintf("%s"UT_OS_BIN_EXT, id);
-        }
+        result = ut_asprintf("%s%s", id, config->target_info.bin_ext);
     }
 
     return result;
@@ -806,12 +912,12 @@ char *gcc_link_to_lib(
 
     /* Try platform default */
     if (full_path) {
-        char *so = ut_asprintf("%s/"UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, full_path, lib_name);
+        char *so = ut_asprintf("%s/%s%s%s", full_path, config->target_info.lib_prefix, lib_name, config->target_info.lib_ext);
         if (ut_file_test(so)) {
             result = so;
         }
     } else {
-        char *so = ut_asprintf(UT_OS_LIB_PREFIX"%s"UT_OS_LIB_EXT, lib_name);
+        char *so = ut_asprintf("%s%s%s", config->target_info.lib_prefix, lib_name, config->target_info.lib_ext);
         if (ut_file_test(so)) {
             result = so;
         }
