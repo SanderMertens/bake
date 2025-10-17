@@ -1,0 +1,7 @@
+{
+    "id":"examples.c.app_w_clangd",
+    "type":"application",
+    "value":{
+        "clangd":true
+    }
+}

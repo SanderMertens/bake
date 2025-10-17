@@ -102,6 +102,7 @@ struct bake_project {
     ut_ll includes;         /* Paths to include files */
     bool keep_binary;       /* Keep artefact when cleaning project */
     char *dependee_json;    /* Build instructions for dependees */
+    bool clangd;            /* Generate clangd configuration file */
 
     char *default_host;     /* Optional default git repository host */
     ut_ll use_bundle;       /* Global bundle dependencies */

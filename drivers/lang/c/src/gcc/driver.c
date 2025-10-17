@@ -22,6 +22,7 @@
 /* Driver code for gcc compilers and similar (clang, emcc) */
 
 #include <bake.h>
+#include <stdio.h>
 
 static
 void gcc_add_includes(
@@ -368,6 +369,30 @@ void gcc_add_misc_link(
     gcc_add_sanitizers(config, cmd);
 }
 
+static
+void write_clangd(
+    const char *cmd,
+    const char *fullpath)
+{
+    printf("cmd: %s\n", cmd);
+    printf("path: %s\n", fullpath);
+    int n = snprintf(NULL, 0, "%s/compile_flags.txt", fullpath) + 1;
+    char *file_name = calloc(n, sizeof(char));
+    snprintf(file_name, n, "%s/compile_flags.txt", fullpath);
+    FILE *file = fopen(file_name, "w");
+
+    const char *ptr = cmd;
+    while(*ptr != ' ') ptr++;
+    ptr++;
+    while(*ptr) {
+        fputc(*ptr == ' ' ? '\n' : *ptr, file);
+        ptr++;
+    }
+
+    fclose(file);
+    free(file_name);
+}
+
 /* Compile source file */
 static
 void gcc_compile_src(
@@ -417,6 +442,14 @@ void gcc_compile_src(
 
     /* Add include directories */
     gcc_add_includes(driver, config, project, &cmd);
+
+    if(project->clangd) {
+        char *cmdstr = ut_strbuf_get(&cmd);
+        write_clangd(cmdstr, project->fullpath);
+        cmd = UT_STRBUF_INIT;
+        ut_strbuf_append(&cmd, "%s", cmdstr);
+        free(cmdstr);
+    }
 
     /* Add source file and object file */
     ut_strbuf_append(&cmd, " -c %s", source);
