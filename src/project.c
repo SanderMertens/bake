@@ -438,6 +438,9 @@ int16_t bake_project_parse_value(
         } else
         if (!strcmp(member, "keep_binary") || !strcmp(member, "keep-binary")) {
             ut_try (bake_json_set_boolean(&p->keep_binary, member, v), NULL);
+        } else
+        if (!strcmp(member, "clangd")) {
+            ut_try (bake_json_set_boolean(&p->clangd, member, v), NULL);
         } else {
             ut_warning("unknown member '%s' in project.json of '%s'", member, p->id);
         }
