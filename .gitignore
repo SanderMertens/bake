@@ -11,3 +11,4 @@ bin
 *.exp
 *.pdb
 bake
+result
