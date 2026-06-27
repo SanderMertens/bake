@@ -187,16 +187,12 @@ bool ut_strbuf_append_intern(
                 ut_strbuf_grow(b);
 
                 /* Copy the remainder to the new buffer */
-                if (n) {
-                    /* If a max number of characters to write is set, only a
-                     * subset of the string should be copied to the buffer */
-                    strncpy(
-                        ut_strbuf_ptr(b),
-                        str + memLeftInElement,
-                        memRequired);
-                } else {
-                    strcpy(ut_strbuf_ptr(b), str + memLeftInElement);
-                }
+                /* Copy remainder to new buffer with explicit null termination */
+                memcpy(
+                    ut_strbuf_ptr(b),
+                    str + memLeftInElement,
+                    memRequired);
+                ut_strbuf_ptr(b)[memRequired] = '\0';
 
                 /* Update to number of characters copied to new buffer */
                 b->current->pos += memRequired;
@@ -215,7 +211,7 @@ bool ut_strbuf_append_intern(
                 ut_strbuf_grow(b);
 
                 /* Copy entire string to new buffer */
-                vsprintf(ut_strbuf_ptr(b), str, arg_cpy);
+                vsnprintf(ut_strbuf_ptr(b), memRequired + 1, str, arg_cpy);
 
                 /* Ignore the part of the string that was copied into the
                  * previous buffer. The string copied into the new buffer could
@@ -229,7 +225,7 @@ bool ut_strbuf_append_intern(
                 /* Resulting string does not fit in standard-size buffer.
                  * Allocate a new buffer that can hold the entire string. */
                 char *dst = malloc(memRequired + 1);
-                vsprintf(dst, str, arg_cpy);
+                vsnprintf(dst, memRequired + 1, str, arg_cpy);
                 ut_strbuf_grow_str(b, dst, dst, memRequired);
             }
         }
