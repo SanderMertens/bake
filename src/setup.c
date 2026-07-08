@@ -38,9 +38,6 @@
 #define BAKE_CMD_PREFIX ""
 #endif
 
-#define BAKE_LIB_EXT UT_OS_LIB_EXT
-#define BAKE_LIB_PREFIX UT_OS_LIB_PREFIX
-
 static bool bake_in_path = false;
 
 /* Utility function for running a setup command */
@@ -297,16 +294,37 @@ error:
 
 #endif
 
+/* Utility function to rebuild a bake project */
+int16_t bake_rebuild_project(
+    bake_config *config,
+    const char *id)
+{
+    char *rebuild_cmd = ut_asprintf(
+      BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild %s --target %s",
+      id, config->build_target);
+
+    ut_try( cmd(rebuild_cmd), "failed to rebuild '%s'", id);
+    free(rebuild_cmd);
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Utility function to bootstrap a bake project while bake is installing */
 int16_t bake_build_make_project(
     const char *path,
     const char *id,
-    const char *artefact)
+    const char *artefact,
+    const char *os,
+    const char *platform,
+    const char *lib_prefix,
+    const char *lib_ext)
 {
     /* Install header files to include folder in bake environment */
     char *install_cmd = ut_asprintf(
-      BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --package --includes include",
-      path, id);
+      BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --package --includes include --target %s",
+      path, id, platform);
 
     ut_try( cmd(install_cmd), "failed to install '%s' include files", id);
     free(install_cmd);
@@ -319,11 +337,11 @@ int16_t bake_build_make_project(
 #if defined(_WIN32) && !defined(__MINGW32__)
     char *cwd = ut_strdup(ut_cwd());
     char *driver_path = ut_asprintf(
-        "%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, UT_OS_STRING);
+        "%s"UT_OS_PS"%s"UT_OS_PS"build-%s", ut_cwd(), path, os);
     make_cmd = ut_asprintf("nmake /NOLOGO /F Makefile clean all");
     ut_try( ut_chdir(driver_path), NULL);
 #else
-    make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, UT_OS_STRING);
+    make_cmd = ut_asprintf("make -C %s/build-%s clean all", path, os);
 #endif
     ut_try( cmd(make_cmd), "failed to build '%s'", id);
     free(make_cmd);
@@ -337,28 +355,28 @@ int16_t bake_build_make_project(
 
     /* Create the bake bin path (makefiles copy binary to project root) */
     char *bin_path = ut_asprintf(
-        "%s"UT_OS_PS"bin"UT_OS_PS"%s-debug", path, UT_PLATFORM_STRING);
+        "%s"UT_OS_PS"bin"UT_OS_PS"%s-debug", path, platform);
     ut_try(ut_mkdir(bin_path), "failed to create bin path for %s", id);
 
     /* Move binary from project root to bake bin path */
     ut_try (ut_rename(
-      strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s" BAKE_LIB_EXT, path, artefact),
-      strarg("%s" UT_OS_PS UT_OS_LIB_PREFIX "%s" UT_OS_LIB_EXT, bin_path, artefact)),
+      strarg("%s" UT_OS_PS "%s%s%s", path, lib_prefix, artefact, lib_ext),
+      strarg("%s" UT_OS_PS "%s%s%s", bin_path, lib_prefix, artefact, lib_ext)),
         "failed to move '%s' to project bin path", id);
 
     /* On Windows, also copy the .lib file */
-#if defined(_WIN32)
-    ut_try(ut_rename(
-        strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s.lib", path, artefact),
-        strarg("%s" UT_OS_PS BAKE_LIB_PREFIX "%s.lib", bin_path, artefact)),
-            "failed to move '%s' to project bin path", id);
-#endif
+    if (!strcmp(os, "Windows")) {
+      ut_try(ut_rename(
+          strarg("%s" UT_OS_PS "%s%s.lib", path, lib_prefix, artefact),
+          strarg("%s" UT_OS_PS "%s%s.lib", bin_path, lib_prefix, artefact)),
+              "failed to move '%s' to project bin path", id);
+    }
     free(bin_path);
 
     /* Install binary to bake environment */
     install_cmd = ut_asprintf(
-        BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --artefact %s --package",
-        path, id, artefact);
+        BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " meta-install %s --id %s --artefact %s --package --target %s",
+        path, id, artefact, platform);
     ut_try(cmd(install_cmd), "failed to install bake %s library", id);
 
     /* Done */
@@ -368,6 +386,22 @@ int16_t bake_build_make_project(
     return 0;
 error:
     return -1;
+}
+
+int16_t bake_build_make_project_host(
+    const char *path,
+    const char *id,
+    const char *artefact)
+{
+    return bake_build_make_project(path, id, artefact, UT_OS_STRING, UT_PLATFORM_STRING, UT_OS_LIB_PREFIX, UT_OS_LIB_EXT);
+}
+
+int16_t bake_build_make_project_emscripten(
+    const char *path,
+    const char *id,
+    const char *artefact)
+{
+    return bake_build_make_project(path, id, artefact, UT_EM_STRING, "Emscripten", UT_EM_LIB_PREFIX, UT_EM_LIB_EXT);
 }
 
 /* Uninstall deprecated files from old installation */
@@ -453,30 +487,42 @@ int16_t bake_setup(
         "failed to install bake include files");
     bake_message(UT_OK, "done", "install bake include files");
 
+    bool emscripten = !strcmp(config->build_target, "Emscripten");
+    if (emscripten) {
+        bake_message(UT_OK, "done", "compiling for emcc");
+    } else {
+        bake_message(UT_OK, "done", "compiling for host");
+    }
+
+    /* TODO: consider warning when compiling on host with CC=emcc */
+    int16_t (*make_project)(const char*, const char*, const char*) = emscripten ? bake_build_make_project_emscripten : bake_build_make_project_host;
+
     /* Build bake util */
-    ut_try( bake_build_make_project("util", "bake.util", "bake_util"), NULL);
+    ut_try( make_project("util", "bake.util", "bake_util"), NULL);
 
-    /* Build the C and C++ drivers */
-    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"c", 
-        "bake.lang.c", "bake_lang_c"), NULL);
+    if (!emscripten) {
+        /* Build the C and C++ drivers */
+        ut_try( bake_build_make_project_host("drivers"UT_OS_PS"lang"UT_OS_PS"c",
+            "bake.lang.c", "bake_lang_c"), NULL);
 
-    ut_try( bake_build_make_project("drivers"UT_OS_PS"lang"UT_OS_PS"cpp", 
-        "bake.lang.cpp", "bake_lang_cpp"), NULL);
+        ut_try( bake_build_make_project_host("drivers"UT_OS_PS"lang"UT_OS_PS"cpp",
+            "bake.lang.cpp", "bake_lang_cpp"), NULL);
+    }
 
     /* Build the bake test framework */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/test"), NULL);
+    ut_try( bake_rebuild_project(config, "drivers/test"), NULL);
     bake_message(UT_OK, "done", "install test framework");
 
     /* Build the amalgamation driver */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild drivers/amalgamate"), NULL);
+    ut_try( bake_rebuild_project(config, "drivers/amalgamate"), NULL);
     bake_message(UT_OK, "done", "install amalgamate driver");
 
     /* Build the bake libraries (predefined configurations) */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild libraries"), NULL);
+    ut_try( bake_rebuild_project(config, "libraries"), NULL);
     bake_message(UT_OK, "done", "install library configuration packages");
 
     /* Export the bake templates */
-    ut_try(cmd(BAKE_CMD_PREFIX"bake" UT_OS_BIN_EXT " rebuild templates"), NULL);
+    ut_try( bake_rebuild_project(config, "templates"), NULL);
     bake_message(UT_OK, "done", "install template packages");
 
     /*

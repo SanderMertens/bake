@@ -22,6 +22,8 @@
 #ifndef UT_LOAD_H_
 #define UT_LOAD_H_
 
+#include "os.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,14 +50,6 @@ extern char *UT_LIB_PATH;
 extern char *UT_JAVA_PATH;
 extern char *UT_HOME_LIB_PATH;
 extern char *UT_HOME_BIN_PATH;
-
-/* Extensions for the used target */
-extern char *UT_SHARED_LIB_EXT;
-extern char *UT_STATIC_LIB_EXT;
-extern char *UT_EXECUTABLE_EXT;
-extern char *UT_BIN_EXT;
-extern char *UT_LIB_EXT;
-extern char *UT_LIB_PREFIX;
 
 /** Load a resource.
  * The ut_use function provides a single interface to loading files or
@@ -159,6 +153,7 @@ typedef enum ut_locate_kind {
  */
 UT_API
 const char* ut_locate(
+    ut_target *target,
     const char *package,
     ut_dl *dl_out,
     ut_locate_kind kind);
@@ -171,6 +166,7 @@ bool ut_project_is_buildtool(
 /** Test if package is available for config */
 UT_API
 bool ut_project_in_config(
+    ut_target *target,
     const char *id,
     const char *cfg);
 
@@ -219,6 +215,7 @@ void ut_locate_reset(
  */
 UT_API
 void* ut_load_sym(
+    ut_target *target,
     const char *package,
     ut_dl *dl_out,
     const char *symbol);
@@ -229,6 +226,7 @@ void* ut_load_sym(
  */
 UT_API
 void (*ut_load_proc(
+    ut_target *target,
     const char *package,
     ut_dl *dl_out,
     const char *symbol))(void);

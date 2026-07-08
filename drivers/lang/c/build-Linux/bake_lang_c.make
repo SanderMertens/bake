@@ -11,6 +11,15 @@ endif
 .PHONY: clean prebuild prelink
 
 ifeq ($(config),debug)
+  ifeq ($(origin CC), default)
+    CC = gcc
+  endif
+  ifeq ($(origin CXX), default)
+    CXX = g++
+  endif
+  ifeq ($(origin AR), default)
+    AR = ar
+  endif
   RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_lang_c.so
@@ -38,6 +47,15 @@ all: prebuild prelink $(TARGET)
 endif
 
 ifeq ($(config),release)
+  ifeq ($(origin CC), default)
+    CC = gcc
+  endif
+  ifeq ($(origin CXX), default)
+    CXX = g++
+  endif
+  ifeq ($(origin AR), default)
+    AR = ar
+  endif
   RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/libbake_lang_c.so
@@ -112,7 +130,7 @@ endif
 prebuild:
 	$(PREBUILDCMDS)
 
-prelink:
+prelink: $(OBJECTS)
 	$(PRELINKCMDS)
 
 ifneq (,$(PCH))
