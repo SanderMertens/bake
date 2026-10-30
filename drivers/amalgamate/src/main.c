@@ -208,9 +208,10 @@ bool is_disabled_define(
 }
 
 static
-bool eval_defined_expr(
+const char* parse_defined_term(
     const char *expr,
     ut_ll disable,
+    bool *known_out,
     bool *value_out)
 {
     const char *p = skip_ws(expr);
@@ -220,8 +221,8 @@ bool eval_defined_expr(
         p = skip_ws(p + 1);
     }
 
-    if (strncmp(p, "defined", 7)) {
-        return false;
+    if (strncmp(p, "defined", 7) || is_ident_char(p[7])) {
+        return NULL;
     }
     p += 7;
 
@@ -231,7 +232,7 @@ bool eval_defined_expr(
         had_paren = true;
         p = skip_ws(p + 1);
     } else if (!is_ident_char(p[0])) {
-        return false;
+        return NULL;
     }
 
     const char *name = p;
@@ -243,21 +244,69 @@ bool eval_defined_expr(
     p = skip_ws(p);
     if (had_paren) {
         if (p[0] != ')') {
-            return false;
+            return NULL;
         }
         p = skip_ws(p + 1);
     }
 
-    if (p[0] != '\0' && p[0] != '\n' && p[0] != '\r') {
-        return false;
+    *known_out = disable_contains(disable, name, name_len);
+    *value_out = negate;
+    return p;
+}
+
+static
+bool eval_defined_expr(
+    const char *expr,
+    ut_ll disable,
+    bool *value_out)
+{
+    const char *p = expr;
+    char op = '\0';
+    bool has_true = false, has_false = false, all_known = true;
+
+    while (true) {
+        bool known = false, value = false;
+        p = parse_defined_term(p, disable, &known, &value);
+        if (!p) {
+            return false;
+        }
+
+        if (!known) {
+            all_known = false;
+        } else if (value) {
+            has_true = true;
+        } else {
+            has_false = true;
+        }
+
+        if (p[0] == '\0' || p[0] == '\n' || p[0] == '\r') {
+            break;
+        }
+
+        if ((p[0] != '&' && p[0] != '|') || p[1] != p[0]) {
+            return false;
+        }
+
+        if (op && op != p[0]) {
+            return false;
+        }
+
+        op = p[0];
+        p += 2;
     }
 
-    if (!disable_contains(disable, name, name_len)) {
-        return false;
+    bool is_or = op == '|';
+    if (is_or ? has_true : has_false) {
+        *value_out = is_or;
+        return true;
     }
 
-    *value_out = negate ? true : false;
-    return true;
+    if (all_known) {
+        *value_out = !is_or;
+        return true;
+    }
+
+    return false;
 }
 
 static
