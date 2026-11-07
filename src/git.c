@@ -237,7 +237,7 @@ int16_t bake_update_dependency_list(
 
         const char *src_path = NULL;
         if (to_env) {
-            src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+            src_path = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_SOURCE);
         }
 
         if (src_path) {
@@ -246,7 +246,7 @@ int16_t bake_update_dependency_list(
             git_reset(config, dep, src_path, true);
         } else if (!always_clone) {
             /* If source is a project under development, just build it */
-            src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
+            src_path = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_DEVSRC);
             if (src_path) {
                 bake_message(UT_LOG, 
                     "skip", 
@@ -275,7 +275,7 @@ int16_t bake_update_dependency_list(
                 /* Check if the project is known to bake. If it is, just print
                  * a friendly message to the console telling the user what bake
                  * is up to. */
-                if (ut_locate(dep, NULL, UT_LOCATE_PROJECT)) {
+                if (ut_locate(&config->target_info, dep, NULL, UT_LOCATE_PROJECT)) {
                     bake_message(UT_LOG, "note", "found '%s' but cloning anyway because source is missing", dep);
                 }
             }
@@ -314,9 +314,9 @@ int16_t bake_update_dependency_list(
             }
 
             if (should_reset) {
-                const char *src_path = ut_locate(dep, NULL, UT_LOCATE_SOURCE);
+                const char *src_path = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_SOURCE);
                 if (!src_path) {
-                    src_path = ut_locate(dep, NULL, UT_LOCATE_DEVSRC);
+                    src_path = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_DEVSRC);
                 }
 
                 if (!src_path) {

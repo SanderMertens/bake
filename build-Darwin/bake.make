@@ -20,6 +20,7 @@ ifeq ($(config),debug)
   ifeq ($(origin AR), default)
     AR = ar
   endif
+  RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/debug
@@ -55,6 +56,7 @@ ifeq ($(config),release)
   ifeq ($(origin AR), default)
     AR = ar
   endif
+  RESCOMP = windres
   TARGETDIR = ..
   TARGET = $(TARGETDIR)/bake
   OBJDIR = ../.bake_cache/release
@@ -167,7 +169,7 @@ endif
 prebuild:
 	$(PREBUILDCMDS)
 
-prelink:
+prelink: $(OBJECTS)
 	$(PRELINKCMDS)
 
 ifneq (,$(PCH))

@@ -7,7 +7,6 @@ workspace "bake_util"
     buildoptions { "-std=c99", "-D_XOPEN_SOURCE=600" }
 
   project "bake_util"
-    kind "SharedLib"
     language "C"
     location "build"
     targetdir "."
@@ -41,3 +40,12 @@ workspace "bake_util"
 
     filter { "action:gmake2" }
       links { "shlwapi", "imagehlp", "dbghelp", "ws2_32" }
+
+    filter { "system:not emscripten" }
+      kind "SharedLib"
+
+    filter { "system:emscripten" }
+      kind "StaticLib"
+      pic "On"
+      buildoptions { "-pthread" }
+      linkoptions { "-pthread" }

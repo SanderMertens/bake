@@ -134,10 +134,10 @@ int16_t bake_uninstall_from_cfg(
     bool uninstall)
 {
     /* Try removing all possible artefacts, in case project type changed */
-    ut_rm( strarg("%s"UT_OS_PS"%s%s%s", config->lib, UT_LIB_PREFIX, project->id_underscore, UT_SHARED_LIB_EXT));
-    ut_rm( strarg("%s"UT_OS_PS"%s%s%s", config->lib, UT_LIB_PREFIX, project->id_underscore, UT_STATIC_LIB_EXT));
-    ut_rm( strarg("%s"UT_OS_PS"%s%s", config->bin, project->id_underscore, UT_EXECUTABLE_EXT));
-    ut_rm( strarg("%s"UT_OS_PS"%s%s", config->target, project->id_underscore, UT_EXECUTABLE_EXT));
+    ut_rm( strarg("%s"UT_OS_PS"%s%s%s", config->lib, config->target_info.lib_prefix, project->id_underscore, config->target_info.lib_ext));
+    ut_rm( strarg("%s"UT_OS_PS"%s%s%s", config->lib, config->target_info.lib_prefix, project->id_underscore, config->target_info.static_lib_ext));
+    ut_rm( strarg("%s"UT_OS_PS"%s%s", config->bin, project->id_underscore, config->target_info.bin_ext));
+    ut_rm( strarg("%s"UT_OS_PS"%s%s", config->target, project->id_underscore, config->target_info.bin_ext));
 
     return 0;
 error:
@@ -198,11 +198,11 @@ int16_t bake_install_uninstall(
         goto error;
     }
 
-    const char *project_dir = ut_locate(project_id, NULL, UT_LOCATE_PROJECT);
+    const char *project_dir = ut_locate(&config->target_info, project_id, NULL, UT_LOCATE_PROJECT);
     if (!project_dir) {
         ut_throw("project '%s' not found", project_id);
 
-        if (ut_locate(project_id, NULL, UT_LOCATE_TEMPLATE)) {
+        if (ut_locate(&config->target_info, project_id, NULL, UT_LOCATE_TEMPLATE)) {
             ut_info("Did you mean:");
             ut_info("  bake uninstall %s --template\n", project_id);
         }
@@ -234,7 +234,7 @@ int16_t bake_install_uninstall_template(
         goto error;
     }
 
-    const char *project_dir = ut_locate(project_id, NULL, UT_LOCATE_TEMPLATE);
+    const char *project_dir = ut_locate(&config->target_info, project_id, NULL, UT_LOCATE_TEMPLATE);
     if (!project_dir) {
         ut_throw("project '%s' not found", project_id);
         goto error;

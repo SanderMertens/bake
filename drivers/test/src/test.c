@@ -1,6 +1,14 @@
 
 #include <bake_test.h>
 
+#ifdef UT_OS_EMSCRIPTEN
+#define BAKE_TEST_NO_PROCESS
+
+#include <setjmp.h>
+
+static jmp_buf test_exit_jmp;
+#endif
+
 static bake_test_suite *current_testsuite;
 static bake_test_case *current_testcase;
 
@@ -9,6 +17,20 @@ static bool test_flaky = false;
 
 static const char *params[1024];
 static uint32_t param_count = 0;
+
+static
+void test_exit_with_status(int8_t status) {
+#ifdef BAKE_TEST_NO_PROCESS
+    longjmp(test_exit_jmp, status);
+#else
+    exit(status);
+#endif
+}
+
+static
+void test_exit(void) {
+    test_exit_with_status(!test_flaky * -1);
+}
 
 static
 void test_empty(void)
@@ -28,7 +50,7 @@ void test_empty(void)
     ut_log("#[yellow]EMPTY#[reset] %s.%s (add test statements)\n", 
         current_testsuite->id, current_testcase->id);
 
-    exit(2);
+    test_exit_with_status(2);
 }
 
 static
@@ -37,7 +59,7 @@ void test_no_abort(void)
     ut_log("#[red]FAIL#[reset]: %s.%s (expected abort signal)\n", 
         current_testsuite->id, current_testcase->id);
 
-    exit(-1);
+    test_exit_with_status(-1);
 }
 
 static
@@ -231,8 +253,8 @@ void* bake_test_run_suite_range(
     int8_t result = 0;
     uint32_t fail = 0, empty = 0, pass = 0;
     uint32_t offset = ctx->offset, count = ctx->count;
-    const char *exec = ctx->exec;
     bake_test_suite *suite = ctx->suite;
+    const char *exec = ctx->exec;
     const char *prefix = ut_getenv("BAKE_TEST_PREFIX");
 
     uint32_t t;
@@ -240,14 +262,6 @@ void* bake_test_run_suite_range(
         bake_test_case *test = &suite->testcases[t];
 
         char *test_name = ut_asprintf("%s.%s", suite->id, test->id);
-        ut_proc proc;
-        int8_t rc = 0;
-        int sig = 0;
-        bool proc_fail = false;
-        int32_t retry_count = 0;
-
-retry:
-        memset(&proc, 0, sizeof(ut_proc));
 
         ut_strbuf cmd = UT_STRBUF_INIT;
         if (prefix) {
@@ -261,6 +275,49 @@ retry:
         }
 
         char *cmd_str = ut_strbuf_get(&cmd);
+
+#ifdef BAKE_TEST_NO_PROCESS
+        bool ran = false;
+        int8_t rc = setjmp(test_exit_jmp);
+        if (!ran) {
+            ran = true;
+            rc = bake_test_run_single_test(suite, 1, test->id);
+        }
+
+        if (rc == 2) {
+            /* Testcase is empty. No action required, but print the
+             * test command on command line */
+            empty ++;
+        } else if (rc != -1 && rc != 0) {
+            /* If return code is not -1, this was not a simple
+             * testcase failure (which already has been reported) */
+            ut_log(
+                "#[red]FAIL#[reset]: %s failed with return code %d\n", 
+                test_name, rc);
+
+            result = -1;
+            fail ++;
+        } else if (rc != 0) {
+            /* Normal test failure */
+            result = -1;
+            fail ++;
+        }
+
+        if (rc) {
+            ut_catch();
+            print_dbg_command(ctx->test_project, cmd_str);
+        }
+
+#else
+        ut_proc proc;
+        int8_t rc = 0;
+        int sig = 0;
+        bool proc_fail = false;
+        int32_t retry_count = 0;
+
+retry:
+        memset(&proc, 0, sizeof(ut_proc));
+
         sig = ut_proc_cmd(cmd_str, &rc);
 
         if (sig || rc) {
@@ -323,7 +380,7 @@ retry:
             }
             pass ++;
         }
-
+#endif
         free(cmd_str);
         free(test_name);
     }
@@ -376,15 +433,19 @@ int8_t bake_test_run_suite(
         cur += ctx[i].count;
     }
 
-    // Run jobs
-    for (i = 0; i < job_count; i ++) {
-        ctx[i].job = ut_thread_new(
-            (ut_thread_cb)bake_test_run_suite_range, &ctx[i]);
-    }
+    if (job_count == 1) {
+        bake_test_run_suite_range(&ctx[0]);
+    } else {
+        // Run jobs
+        for (i = 0; i < job_count; i ++) {
+            ctx[i].job = ut_thread_new(
+                (ut_thread_cb)bake_test_run_suite_range, &ctx[i]);
+        }
 
-    // Wait for jobs to complete
-    for (i = 0; i < job_count; i ++) {
-        ut_thread_join(ctx[i].job, NULL);
+        // Wait for jobs to complete
+        for (i = 0; i < job_count; i ++) {
+            ut_thread_join(ctx[i].job, NULL);
+        }
     }
 
     // Collect results
@@ -652,7 +713,13 @@ int bake_test_run(
         job_count = 8; /* run on 8 threads by default */
     }
 
+#ifdef UT_OS_EMSCRIPTEN
+    /* Emscripten seems to get stuck when multithreading is used */
+    job_count = 1;
+#endif
+
     int result = 0;
+
 
     if (single_test) {
         result = bake_test_run_single_test(suites, suite_count, argv[1]);
@@ -694,11 +761,6 @@ void test_fail(
         ut_log("#[yellow]FLAKY#[reset]: %s.%s:%d: %s\n", 
             current_testsuite->id, current_testcase->id, line, err);
     }
-}
-
-static 
-void test_exit(void) {
-    exit(!test_flaky * -1);
 }
 
 bool _if_test_assert(
@@ -746,13 +808,13 @@ bool _if_test_bool(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%s)", str_v1, v1 ? "true" : "false");
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%s)", str_v2, v2 ? "true" : "false");
         }
@@ -781,13 +843,13 @@ bool _if_test_int(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%lld)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%lld)", str_v2, v2);
         }
@@ -816,13 +878,13 @@ bool _if_test_uint(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%llu)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%llu)", str_v2, v2);
         }
@@ -851,13 +913,13 @@ bool _if_test_flt(
     if (v1 != v2) {
         char *sv1, *sv2;
         if (isdigit(*str_v1) || (*str_v1 == '-')) {
-            sv1 = strdup(str_v1);
+            sv1 = ut_strdup(str_v1);
         } else {
             sv1 = ut_asprintf("%s (%f)", str_v1, v1);
         }
 
         if (isdigit(*str_v2) || (*str_v2 == '-')) {
-            sv2 = strdup(str_v2);
+            sv2 = ut_strdup(str_v2);
         } else {
             sv2 = ut_asprintf("%s (%f)", str_v2, v2);
         }
@@ -1061,10 +1123,10 @@ static
 void abort_handler(int sig)
 {
     if (test_expect_abort_signal) {
-        exit(0);
+        test_exit_with_status(0);
     } else {
         ut_error("bake.test: unexpected abort");
-        exit(-1);
+        test_exit_with_status(-1);
     }
 }
 
@@ -1084,5 +1146,5 @@ void test_is_flaky(void) {
 void test_quarantine(const char *date) {
     ut_log("#[yellow]SKIP#[reset]: %s.%s: test was quarantined on %s\n", 
         current_testsuite->id, current_testcase->id, date);
-    exit(0);
+    test_exit_with_status(0);
 }

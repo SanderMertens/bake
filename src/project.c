@@ -774,7 +774,7 @@ int16_t bake_project_add_dependee_config(
 {
     ut_locate_reset(dependency);
 
-    const char *libpath = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+    const char *libpath = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_PROJECT);
     if (libpath) {
         /* Check if dependency has a dependee file with build instructions */
         char *file = ut_asprintf("%s"UT_OS_PS"dependee.json", libpath);
@@ -1429,7 +1429,7 @@ int16_t copy_amalgamated_from_dep(
 
     ut_ll_append(amalg_copied[0], strdup(dependency));
 
-    const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
+    const char *src_path = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_DEVSRC);
     if (!src_path) {
         /* Possible that project is only config and no sources */
         ut_trace("cannot find sources for dependency '%s'", dependency);
@@ -1474,7 +1474,7 @@ int16_t copy_amalgamated_from_dep(
     }
 
     if (!dep) {
-        const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+        const char *path = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_PROJECT);
         if (!path) {
             ut_throw("cannot find dependency '%s' of project '%s'", 
                 dependency, p->id);
@@ -1523,7 +1523,7 @@ int16_t bake_check_dependency(
     ut_locate_reset(dependency);
 
     /* Try to find dependency path & project settings */
-    const char *path = ut_locate(dependency, NULL, UT_LOCATE_PROJECT);
+    const char *path = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_PROJECT);
     bake_project *dep = NULL;
     bool dep_has_lib = false;
 
@@ -1545,7 +1545,7 @@ int16_t bake_check_dependency(
     }
 
     /* Copy files from etc folder of dependency */
-    const char *src_path = ut_locate(dependency, NULL, UT_LOCATE_DEVSRC);
+    const char *src_path = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_DEVSRC);
     if (src_path) {
         char *etc_path = ut_asprintf("%s"UT_OS_PS"etc", src_path);
         if (ut_file_test("%s", etc_path)) {
@@ -1567,7 +1567,7 @@ int16_t bake_check_dependency(
         goto proceed;
     }
 
-    const char *lib = ut_locate(dependency, NULL, UT_LOCATE_BIN);
+    const char *lib = ut_locate(&config->target_info, dependency, NULL, UT_LOCATE_BIN);
     if (!lib) {
         ut_throw("binary for dependency '%s' not found", dependency);
         goto error;
@@ -1833,6 +1833,7 @@ void bake_project_link_cleanup(
 /* Copy libraries in link to bake environment */
 static
 ut_ll bake_project_copy_libs(
+    bake_config *config,
     bake_project *p,
     const char *path)
 {
@@ -1856,7 +1857,7 @@ ut_ll bake_project_copy_libs(
 #endif
 
         char *target_link = ut_asprintf("%s"UT_OS_PS"%s%s_%s",
-            path, UT_LIB_PREFIX, p->id_underscore, link_lib);
+            path, config->target_info.lib_prefix, p->id_underscore, link_lib);
 
         /* Copy to path */
         if (ut_cp(link, target_link)) {
@@ -1887,6 +1888,7 @@ error:
 /* Add dependency to project */
 static
 int16_t bake_project_add_dependency(
+    bake_config *config,
     bake_project *p,
     const char *dep)
 {
@@ -1896,14 +1898,14 @@ int16_t bake_project_add_dependency(
 
     ut_locate_reset(dep);
 
-    const char *libpath = ut_locate(dep, NULL, UT_LOCATE_PROJECT);
+    const char *libpath = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_PROJECT);
     if (!libpath) {
         ut_throw(
             "missing dependency '%s'", dep, p->id);
         goto error;
     }
 
-    const char *lib = ut_locate(dep, NULL, UT_LOCATE_LIB);
+    const char *lib = ut_locate(&config->target_info, dep, NULL, UT_LOCATE_LIB);
     if (lib) {
         char *dep_lib = ut_strdup(dep);
         char *ptr, ch;
@@ -1928,6 +1930,7 @@ error:
 /* Add dependencies to project */
 static
 int16_t bake_project_add_dependencies(
+    bake_config *config,
     bake_project *p)
 {
     bool error = false;
@@ -1943,7 +1946,7 @@ int16_t bake_project_add_dependencies(
         ut_iter it = ut_ll_iter(p->use);
         while (ut_iter_hasNext(&it)) {
             char *dep = ut_iter_next(&it);
-            if (bake_project_add_dependency(p, dep)) {
+            if (bake_project_add_dependency(config, p, dep)) {
                 error = true;
             }
         }
@@ -1954,7 +1957,7 @@ int16_t bake_project_add_dependencies(
         ut_iter it = ut_ll_iter(p->use_private);
         while (ut_iter_hasNext(&it)) {
             char *dep = ut_iter_next(&it);
-            if (bake_project_add_dependency(p, dep)) {
+            if (bake_project_add_dependency(config, p, dep)) {
                 error = true;
             }
         }
@@ -2041,14 +2044,14 @@ int16_t bake_project_build(
 
     /* Copy libraries to libpath, return list with local library names */
     ut_ll old_link = project->link;
-    project->link = bake_project_copy_libs(project, UT_LIB_PATH);
+    project->link = bake_project_copy_libs(config, project, UT_LIB_PATH);
     if (!project->link) {
         ut_throw(NULL);
         goto error;
     }
 
     /* Add use dependencies to the link attribute */
-    if (bake_project_add_dependencies(project)) {
+    if (bake_project_add_dependencies(config, project)) {
         goto error;
     }
 
@@ -2676,7 +2679,7 @@ int16_t bake_project_setup_w_template(
     const char *template_id)
 {
     char *template_path = NULL;
-    const char *template_root = ut_locate(
+    const char *template_root = ut_locate(&config->target_info,
             template_id, NULL, UT_LOCATE_TEMPLATE);
     if (!template_root) {
         ut_throw("template '%s' not found", template_id);

@@ -36,6 +36,7 @@ bake_attr* bake_attr_parse_value(
  * include path, etc path, metadata path and path to the project binary. */
 static
 int16_t bake_project_func_locate(
+    bake_config *config,
     bake_project *project,
     const char *package_id,
     ut_strbuf *buffer,
@@ -52,23 +53,23 @@ int16_t bake_project_func_locate(
     }
 
     if (!strcmp(argument, "package")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_PROJECT);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_PROJECT);
     } else if (!strcmp(argument, "template")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_TEMPLATE);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_TEMPLATE);
     } else if (!strcmp(argument, "include")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_INCLUDE);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_INCLUDE);
     } else if (!strcmp(argument, "etc")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_ETC);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_ETC);
     } else if (!strcmp(argument, "lib")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_LIB);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_LIB);
     } else if (!strcmp(argument, "app")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_APP);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_APP);
     } else if (!strcmp(argument, "bin")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_BIN);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_BIN);
     } else if (!strcmp(argument, "src")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_SOURCE);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_SOURCE);
     } else if (!strcmp(argument, "devsrc")) {
-        value = ut_locate(package_id, NULL, UT_LOCATE_DEVSRC);
+        value = ut_locate(&config->target_info, package_id, NULL, UT_LOCATE_DEVSRC);
     }
     
     if (value) {
@@ -319,7 +320,7 @@ int16_t bake_attr_func(
     const char *argument)
 {
     if (!strcmp(function, "locate")) {
-        return bake_project_func_locate(project, package_id, buffer, argument);
+        return bake_project_func_locate(config, project, package_id, buffer, argument);
     } else if (!strcmp(function, "os") || !strcmp(function, "target")) {
         return bake_project_func_os(config, project, package_id, buffer, argument);
     } else if (!strcmp(function, "language") || !strcmp(function, "lang")) {

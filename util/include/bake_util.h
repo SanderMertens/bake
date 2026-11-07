@@ -37,7 +37,7 @@
 #define UT_API
 #endif
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
 #define ENABLE_BACKTRACE
 #endif
 

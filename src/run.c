@@ -261,6 +261,7 @@ ut_ll wait_for_changes(
 
 static
 int build_project(
+    bake_config *config,
     const char *path)
 {
     int8_t procResult = 0;
@@ -270,7 +271,9 @@ int build_project(
         BAKE_EXEC,
         (char*)path,
         "-r",
-         NULL
+        "--target",
+        config->build_target,
+        NULL
     });
 
     if (!pid) {
@@ -328,6 +331,7 @@ ut_proc run_exec(
 
 static
 int16_t run_interactive(
+    bake_config *config,
     const char *project_dir,
     const char *app_bin,
     const char *app_id,
@@ -347,7 +351,7 @@ int16_t run_interactive(
             }
 
             /* Build the project */
-            build_project(project_dir);
+            build_project(config, project_dir);
             rebuild++;
         }
 
@@ -515,7 +519,7 @@ int bake_run(
 
         /* If project is not found, lookup in package repositories */
         if (!project_dir) {
-            package_path = ut_locate(app_id, NULL, UT_LOCATE_PROJECT);
+            package_path = ut_locate(&config->target_info, app_id, NULL, UT_LOCATE_PROJECT);
             if (!package_path) {
                 ut_throw("failed to find application '%s'", app_id);
                 goto error;
@@ -572,12 +576,12 @@ int bake_run(
 
         /* If project is found, point to executable in project bin */
         app_bin = ut_asprintf("bin"UT_OS_PS"%s-%s"UT_OS_PS"%s",
-            UT_PLATFORM_STRING, config->configuration, app_name);
+            config->build_target, config->configuration, app_name);
     } else {
         /* If project directory is not found, locate the binary in the
          * package repository. This only allows for running the
          * application, not for interactive building */
-        app_bin = ut_locate(app_id, NULL, UT_LOCATE_BIN);
+        app_bin = ut_locate(&config->target_info, app_id, NULL, UT_LOCATE_BIN);
         if (!app_bin) {
             /* We have no project dir and no executable. No idea how to
              * build this project! */
@@ -585,7 +589,7 @@ int bake_run(
             goto error;
         }
 
-        if (ut_locate(app_id, NULL, UT_LOCATE_LIB)) {
+        if (ut_locate(&config->target_info, app_id, NULL, UT_LOCATE_LIB)) {
             is_package = true;
         }
     }
@@ -612,7 +616,7 @@ int bake_run(
 
         if (interactive) {
             /* Run process & monitor source for changes */
-            if (run_interactive(project_dir, app_bin, app_id, prefix, argc, argv)) {
+            if (run_interactive(config, project_dir, app_bin, app_id, prefix, argc, argv)) {
                 goto error;
             }
         } else {
@@ -621,7 +625,7 @@ int bake_run(
             ut_trace("starting process '%s'", app_bin);
 
             if (project_dir) {
-                ut_try( build_project("."), "build failed, cannot run");
+                ut_try( build_project(config, "."), "build failed, cannot run");
             }
 
             if (argc) {

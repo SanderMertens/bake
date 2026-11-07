@@ -42,6 +42,8 @@ extern "C" {
 #define UT_OS_LINUX
 #elif defined(__APPLE__) && defined(__MACH__)
 #define UT_OS_DARWIN
+#elif defined(__EMSCRIPTEN__)
+#define UT_OS_EMSCRIPTEN
 #else
 #warning "Unsupported operating system"
 #endif
@@ -54,9 +56,21 @@ extern "C" {
 #define UT_CPU_STRING  "x64"
 #elif defined(__i386__) || defined(_M_IX86)
 #define UT_CPU_STRING  "x86"
+#elif defined(__wasm32__)
+#define UT_CPU_STRING "wasm32"
+#elif defined(__wasm64__)
+#define UT_CPU_STRING "wasm64"
 #else
 #error "Unsupported CPU architecture"
 #endif
+
+#define UT_EM_STRING "Emscripten"
+#define UT_EM_STATIC_LIB_EXT ".a"
+#define UT_EM_LIB_EXT UT_EM_STATIC_LIB_EXT
+#define UT_EM_BIN_EXT ".js"
+#define UT_EM_SCRIPT_EXT ".js"
+#define UT_EM_LIB_PREFIX "lib"
+#define UT_EM_PS "/"
 
 #ifdef __MINGW32__
 #define UT_OS_STRING "Mingw"
@@ -120,12 +134,42 @@ extern "C" {
 #define UT_GLOBAL_LIB_PATH "/usr/local/lib"
 #define UT_MACOS
 #define UT_LINUX
+#elif defined(UT_OS_EMSCRIPTEN)
+#define UT_OS_STRING UT_EM_STRING
+#define UT_OS_LIB_EXT UT_EM_LIB_EXT
+#define UT_OS_STATIC_LIB_EXT UT_EM_STATIC_LIB_EXT
+#define UT_OS_BIN_EXT UT_EM_BIN_EXT
+#define UT_OS_SCRIPT_EXT UT_EM_SCRIPT_EXT
+#define UT_OS_LIB_PREFIX UT_EM_LIB_PREFIX
+#define UT_OS_PS UT_EM_PS
+#define UT_ENV_HOME "HOME"
+#define UT_ENV_LIBPATH "LD_LIBRARY_PATH"
+#define UT_ENV_BINPATH "PATH"
+#define UT_ENV_PATH_SEPARATOR ":"
+#define UT_GLOBAL_BIN_PATH "/usr/local/bin"
+#define UT_GLOBAL_LIB_PATH "/usr/local/lib"
 #endif
 
 #define UT_CMD_OK 0
 #define UT_CMD_ERR ((int8_t)-1)
 
 #define UT_PLATFORM_STRING UT_CPU_STRING "-" UT_OS_STRING
+
+typedef struct ut_target {
+    const char *lib_ext;       /* Target library file extension */
+    const char *static_lib_ext;/* Target static library file extension */
+    const char *bin_ext;       /* Target binary file extension */
+    const char *script_ext;    /* Target script file extension */
+    const char *lib_prefix;    /* Target library file prefix */
+} ut_target;
+
+/* Get target for current machine */
+UT_API
+ut_target ut_target_host(void);
+
+/* Get target for Emscripten */
+UT_API
+ut_target ut_target_emscripten(void);
 
 /* Get hostname of current machine */
 UT_API

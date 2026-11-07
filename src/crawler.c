@@ -84,9 +84,9 @@ int16_t bake_crawler_lookupDependency(
     bake_project *dep = ut_rb_find(crawler->nodes, use);
 
     if (!dep || !dep->path) {
-        const char *src = ut_locate(use, NULL, UT_LOCATE_DEVSRC);
+        const char *src = ut_locate(&config->target_info, use, NULL, UT_LOCATE_DEVSRC);
         if (!src) {
-            src = ut_locate(use, NULL, UT_LOCATE_SOURCE);
+            src = ut_locate(&config->target_info, use, NULL, UT_LOCATE_SOURCE);
         }
 
         if (src) {
@@ -104,7 +104,7 @@ int16_t bake_crawler_lookupDependency(
             /* If source for dependency is not available, that doesn't mean we
              * have no binary. If a binary exists in the environment, there is
              * no need to take further action */
-            if (!ut_locate(use, NULL, UT_LOCATE_BIN)) {
+            if (!ut_locate(&config->target_info, use, NULL, UT_LOCATE_BIN)) {
 
                 /* If the binary doesn't exist, check if the project can be
                  * found in any of the registered repositories */
